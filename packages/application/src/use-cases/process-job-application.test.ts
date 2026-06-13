@@ -4,11 +4,10 @@ import {
   ProcessJobApplicationUseCase,
   RunMatchAnalysisUseCase
 } from "../index.js";
-import type { JobSiteScraper } from "@link2cv/domain";
+import type { AiProvider, AiGenerateParams, JobSiteScraper } from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
-  LocalHeuristicMatchingProvider
 } from "@link2cv/infrastructure";
 
 describe("ProcessJobApplicationUseCase", () => {
@@ -32,7 +31,7 @@ describe("ProcessJobApplicationUseCase", () => {
       sourceUrl: "https://www.linkedin.com/jobs/view/123"
     });
     const scraper = createScraper();
-    const matching = new RunMatchAnalysisUseCase(new LocalHeuristicMatchingProvider(), jobApplications);
+    const matching = new RunMatchAnalysisUseCase(createMockAiProvider(), jobApplications);
     const documents = new GenerateDocumentsUseCase(
       {
         async render() {
@@ -104,6 +103,22 @@ function createScraper(): JobSiteScraper {
         careerPageUrl: "https://example.com/careers",
         raw: input
       };
+    }
+  };
+}
+
+function createMockAiProvider(): AiProvider {
+  return {
+    async generate<T>(params: AiGenerateParams<T>): Promise<T> {
+      return params.outputSchema.parse({
+        matchScore: 85,
+        missingSkills: ["Kubernetes"],
+        strongSkills: ["TypeScript"],
+        recommendedAchievements: ["Built reliable automation"],
+        customizedSummary: "Experienced TypeScript engineer with relevant skills.",
+        interviewTips: ["Prepare examples of automation work"],
+        coverLetterGuidance: ["Highlight TypeScript experience"]
+      });
     }
   };
 }

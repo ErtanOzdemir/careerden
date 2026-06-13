@@ -128,6 +128,9 @@ importers:
 
   packages/application:
     dependencies:
+      '@link2cv/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@link2cv/domain':
         specifier: workspace:*
         version: link:../domain
@@ -172,6 +175,10 @@ importers:
         version: 2.1.9(@types/node@22.19.21)
 
   packages/domain:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
     devDependencies:
       typescript:
         specifier: ^5.7.2

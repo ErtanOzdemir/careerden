@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@link2cv/contracts": "workspace:*",
     "@link2cv/domain": "workspace:*"
   },
   "devDependencies": {

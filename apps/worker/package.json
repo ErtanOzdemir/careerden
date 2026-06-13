@@ -12,6 +12,7 @@
   "dependencies": {
     "@link2cv/application": "workspace:*",
     "@link2cv/config": "workspace:*",
+    "@link2cv/domain": "workspace:*",
     "@link2cv/infrastructure": "workspace:*",
     "bullmq": "^5.34.2",
     "ioredis": "^5.4.2",

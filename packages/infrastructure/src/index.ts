@@ -1,3 +1,4 @@
+export * from "./ai/matching-provider.factory.js";
 export * from "./ai/providers/deepseek-matching.provider.js";
 export * from "./ai/providers/gemini-matching.provider.js";
 export * from "./ai/providers/local-heuristic-matching.provider.js";

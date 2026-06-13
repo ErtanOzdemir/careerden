@@ -123,7 +123,6 @@ export class LinkedInSessionManager {
 
   async getStatus(): Promise<LinkedInSessionStatusResult> {
     if (this.activeLogin) {
-      console.log("ACTIVE LOGIN");
       return {
         status: "login_in_progress",
         message:
@@ -131,7 +130,7 @@ export class LinkedInSessionManager {
         updatedAt: this.activeLogin.startedAt,
       };
     }
-    console.log("INACTIVE LOGIN");
+
     try {
       const state = await this.readEncryptedState();
       const file = await stat(this.sessionPath);

@@ -10,6 +10,7 @@ export * from "./documents/html-template-renderer.js";
 export * from "./documents/playwright-pdf-renderer.js";
 export * from "./queues/bullmq-job-application.queue.js";
 export * from "./queues/in-memory-job-application.queue.js";
+export * from "./queues/unavailable-job-application.queue.js";
 export * from "./scraping/adapters/career-page.scraper.js";
 export * from "./scraping/adapters/company-website.scraper.js";
 export * from "./scraping/adapters/linkedin-company.scraper.js";

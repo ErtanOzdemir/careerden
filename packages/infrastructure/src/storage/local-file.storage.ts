@@ -21,7 +21,7 @@ export class LocalFileStorage implements FileStorage {
       fileName: file.fileName,
       contentType: file.contentType,
       size: file.body.byteLength,
-      url: `file://${join(rootDir, fileName)}`
+      url: `file://${join(rootDir, fileName)}`,
     };
   }
 

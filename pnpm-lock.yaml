@@ -97,6 +97,9 @@ importers:
       '@link2cv/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@link2cv/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@link2cv/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure

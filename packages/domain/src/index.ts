@@ -5,7 +5,7 @@ export * from "./entities/user-profile.js";
 export * from "./entities/scraped-data.js";
 export * from "./entities/match-analysis.js";
 export * from "./entities/generated-document.js";
-export * from "./interfaces/ai-matching-provider.js";
+export * from "./interfaces/ai-provider.js";
 export * from "./interfaces/document-renderer.js";
 export * from "./interfaces/file-storage.js";
 export * from "./interfaces/job-application-repository.js";

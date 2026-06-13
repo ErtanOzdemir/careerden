@@ -9,7 +9,7 @@ import {
   LinkedInJobScraper,
   LinkedInSessionManager,
   LocalFileStorage,
-  MatchingProviderFactory,
+  AiProviderFactory,
   PlaywrightPdfRenderer,
   PostgresJobApplicationRepository,
   PostgresUserProfileRepository,
@@ -47,7 +47,7 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     env.LINKEDIN_SESSION_SECRET,
   );
 
-  const matchingProvider = new MatchingProviderFactory({
+  const aiProvider = new AiProviderFactory({
     aiProvider: env.AI_PROVIDER,
     openaiApiKey: env.OPENAI_API_KEY,
     geminiApiKey: env.GEMINI_API_KEY,
@@ -55,7 +55,7 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
   }).create();
 
   const runMatchAnalysis = new RunMatchAnalysisUseCase(
-    matchingProvider,
+    aiProvider,
     jobApplications,
   );
 

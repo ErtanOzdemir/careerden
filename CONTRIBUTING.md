@@ -32,22 +32,26 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 1. **Fork** the repository on GitHub.
 
 2. **Clone** your fork:
+
    ```bash
    git clone git@github.com:<your-username>/link2cv.git
    cd link2cv
    ```
 
 3. **Install dependencies**:
+
    ```bash
    pnpm install
    ```
 
 4. **Start local services**:
+
    ```bash
    docker compose up -d
    ```
 
 5. **Set up environment**:
+
    ```bash
    cp .env.example .env
    # Edit .env with your API keys if needed
@@ -70,14 +74,14 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 Use descriptive branch names with a type prefix:
 
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `feat/` | New feature | `feat/add-cover-letter-template` |
-| `fix/` | Bug fix | `fix/scraping-timeout-handling` |
-| `docs/` | Documentation | `docs/update-api-reference` |
-| `refactor/` | Code restructuring | `refactor/extract-pdf-renderer` |
-| `test/` | Adding tests | `test/add-match-analysis-tests` |
-| `chore/` | Maintenance | `chore/update-dependencies` |
+| Prefix      | Purpose            | Example                          |
+| ----------- | ------------------ | -------------------------------- |
+| `feat/`     | New feature        | `feat/add-cover-letter-template` |
+| `fix/`      | Bug fix            | `fix/scraping-timeout-handling`  |
+| `docs/`     | Documentation      | `docs/update-api-reference`      |
+| `refactor/` | Code restructuring | `refactor/extract-pdf-renderer`  |
+| `test/`     | Adding tests       | `test/add-match-analysis-tests`  |
+| `chore/`    | Maintenance        | `chore/update-dependencies`      |
 
 ## Commit Messages
 
@@ -92,6 +96,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -100,6 +105,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore`: Maintenance tasks
 
 **Examples:**
+
 ```
 feat(api): add job application filtering by status
 fix(worker): handle LinkedIn rate limiting gracefully
@@ -150,6 +156,7 @@ test(contracts): add schema validation tests for profiles
 - Keep files small and focused.
 - One exported entity per file when possible.
 - Follow existing naming conventions in each package.
+- Organize backend code by context inside each package, such as `profiles`, `job-applications`, `scraping`, `matching`, and `documents`.
 
 ### Imports
 
@@ -186,9 +193,9 @@ pnpm vitest --filter @link2cv/contracts
 
 ### New API Endpoint
 
-1. Define the Zod schema in `packages/contracts`.
-2. Create the use case in `packages/application`.
-3. Add the route in `apps/api/src/routes`.
+1. Define the Zod schema in the relevant `packages/contracts/src/<context>` folder.
+2. Create the use case in the relevant `packages/application/src/<context>` folder.
+3. Add the route in the relevant `apps/api/src/<context>` folder.
 4. Register the route in `apps/api/src/app.ts`.
 5. Add tests.
 

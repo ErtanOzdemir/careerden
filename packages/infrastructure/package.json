@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/documents/templates dist/db/migrations && cp src/documents/templates/*.html dist/documents/templates/ && cp src/db/migrations/*.cjs dist/db/migrations/",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/documents/templates dist/persistence/migrations && cp src/documents/templates/*.html dist/documents/templates/ && cp src/persistence/migrations/*.cjs dist/persistence/migrations/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },

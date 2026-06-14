@@ -1,4 +1,4 @@
-import type { JobApplicationStatus } from "../workflow-status.js";
+import type { JobApplicationStatus } from "./workflow-status.js";
 
 export interface JobApplication {
   id: string;

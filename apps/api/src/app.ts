@@ -2,9 +2,9 @@ import cors from "cors";
 import express from "express";
 import type { Express } from "express";
 import { CreateProfileUseCase, SubmitJobApplicationUseCase } from "@link2cv/application";
-import { createJobApplicationRouter } from "./routes/job-applications.routes.js";
-import { createLinkedInSessionRouter } from "./routes/linkedin-session.routes.js";
-import { createProfileRouter } from "./routes/profiles.routes.js";
+import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
+import { createLinkedInSessionRouter } from "./scraping/linkedin-session.routes.js";
+import { createProfileRouter } from "./profiles/profiles.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import {
   createApiDependencies,

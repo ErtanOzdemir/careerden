@@ -1,8 +1,8 @@
-import type { GeneratedDocument, GeneratedDocumentKind } from "../entities/generated-document.js";
-import type { JobApplication, CreateJobApplicationInput } from "../entities/job-application.js";
-import type { MatchAnalysisResult } from "../entities/match-analysis.js";
-import type { ScrapeBundle } from "../entities/scraped-data.js";
-import type { JobApplicationStatus } from "../workflow-status.js";
+import type { GeneratedDocument, GeneratedDocumentKind } from "../documents/generated-document.js";
+import type { MatchAnalysisResult } from "../matching/match-analysis.js";
+import type { ScrapeBundle } from "../scraping/scraped-data.js";
+import type { JobApplication, CreateJobApplicationInput } from "./job-application.js";
+import type { JobApplicationStatus } from "./workflow-status.js";
 
 export interface AttachGeneratedDocumentInput {
   jobApplicationId: string;

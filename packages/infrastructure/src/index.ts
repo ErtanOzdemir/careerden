@@ -4,6 +4,7 @@ export * from "./ai/providers/gemini-ai.provider.js";
 export * from "./ai/providers/openai-ai.provider.js";
 export * from "./db/in-memory-job-application.repository.js";
 export * from "./db/in-memory-user-profile.repository.js";
+export * from "./db/knex.js";
 export * from "./db/postgres-job-application.repository.js";
 export * from "./db/postgres-user-profile.repository.js";
 export * from "./documents/html-template-renderer.js";

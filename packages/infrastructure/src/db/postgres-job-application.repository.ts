@@ -1,4 +1,4 @@
-import type { Pool } from "pg";
+import type { Knex } from "knex";
 import type {
   AttachGeneratedDocumentInput,
   GeneratedDocument,
@@ -11,43 +11,41 @@ import type { CreateJobApplicationInput, JobApplicationStatus } from "@link2cv/d
 import { randomUUID } from "node:crypto";
 
 export class PostgresJobApplicationRepository implements JobApplicationRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly db: Knex) {}
 
   async create(input: CreateJobApplicationInput): Promise<JobApplication> {
     const id = randomUUID();
-    const result = await this.pool.query(
-      `
-        insert into job_applications (id, profile_id, source_url, status)
-        values ($1, $2, $3, 'queued')
-        returning *
-      `,
-      [id, input.profileId, input.sourceUrl]
-    );
+    const [row] = await this.db("job_applications")
+      .insert({
+        id,
+        profile_id: input.profileId,
+        source_url: input.sourceUrl,
+        status: "queued",
+      })
+      .returning("*");
 
-    return toJobApplication(result.rows[0]);
+    return toJobApplication(row);
   }
 
   async findById(id: string): Promise<JobApplication | null> {
-    const result = await this.pool.query("select * from job_applications where id = $1", [id]);
-    return result.rows[0] ? toJobApplication(result.rows[0]) : null;
+    const row = await this.db("job_applications").where({ id }).first();
+    return row ? toJobApplication(row) : null;
   }
 
   async listByProfileId(profileId: string): Promise<JobApplication[]> {
-    const result = await this.pool.query(
-      "select * from job_applications where profile_id = $1 order by created_at desc",
-      [profileId]
-    );
+    const rows = await this.db("job_applications")
+      .where({ profile_id: profileId })
+      .orderBy("created_at", "desc");
 
-    return result.rows.map(toJobApplication);
+    return rows.map(toJobApplication);
   }
 
   async listByStatus(status: JobApplicationStatus): Promise<JobApplication[]> {
-    const result = await this.pool.query(
-      "select * from job_applications where status = $1 order by created_at asc",
-      [status]
-    );
+    const rows = await this.db("job_applications")
+      .where({ status })
+      .orderBy("created_at", "asc");
 
-    return result.rows.map(toJobApplication);
+    return rows.map(toJobApplication);
   }
 
   async updateStatus(
@@ -55,70 +53,71 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
     status: JobApplicationStatus,
     failureReason?: string
   ): Promise<void> {
-    await this.pool.query(
-      `
-        update job_applications
-        set status = $2, failure_reason = $3, updated_at = now()
-        where id = $1
-      `,
-      [id, status, failureReason ?? null]
-    );
+    await this.db("job_applications")
+      .where({ id })
+      .update({
+        status,
+        failure_reason: failureReason ?? null,
+        updated_at: this.db.fn.now(),
+      });
   }
 
   async saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void> {
-    await this.pool.query(
-      "update job_applications set scrape_bundle = $2, updated_at = now() where id = $1",
-      [id, JSON.stringify(scrape)]
-    );
+    await this.db("job_applications")
+      .where({ id })
+      .update({
+        scrape_bundle: JSON.stringify(scrape),
+        updated_at: this.db.fn.now(),
+      });
   }
 
   async getScrapeBundle(id: string): Promise<ScrapeBundle | null> {
-    const result = await this.pool.query("select scrape_bundle from job_applications where id = $1", [id]);
-    return (result.rows[0]?.scrape_bundle as ScrapeBundle | undefined) ?? null;
+    const row = await this.db("job_applications")
+      .select("scrape_bundle")
+      .where({ id })
+      .first();
+    return (row?.scrape_bundle as ScrapeBundle | undefined) ?? null;
   }
 
   async saveMatchAnalysis(id: string, result: MatchAnalysisResult): Promise<void> {
-    await this.pool.query(
-      "update job_applications set match_analysis = $2, updated_at = now() where id = $1",
-      [id, JSON.stringify(result)]
-    );
+    await this.db("job_applications")
+      .where({ id })
+      .update({
+        match_analysis: JSON.stringify(result),
+        updated_at: this.db.fn.now(),
+      });
   }
 
   async getMatchAnalysis(id: string): Promise<MatchAnalysisResult | null> {
-    const result = await this.pool.query("select match_analysis from job_applications where id = $1", [id]);
-    return (result.rows[0]?.match_analysis as MatchAnalysisResult | undefined) ?? null;
+    const row = await this.db("job_applications")
+      .select("match_analysis")
+      .where({ id })
+      .first();
+    return (row?.match_analysis as MatchAnalysisResult | undefined) ?? null;
   }
 
   async attachGeneratedDocument(input: AttachGeneratedDocumentInput): Promise<GeneratedDocument> {
     const id = randomUUID();
-    const result = await this.pool.query(
-      `
-        insert into generated_documents (
-          id, job_application_id, kind, file_id, file_name, content_type
-        )
-        values ($1, $2, $3, $4, $5, $6)
-        returning *
-      `,
-      [
+    const [row] = await this.db("generated_documents")
+      .insert({
         id,
-        input.jobApplicationId,
-        input.kind,
-        input.fileId,
-        input.fileName,
-        input.contentType
-      ]
-    );
+        job_application_id: input.jobApplicationId,
+        kind: input.kind,
+        file_id: input.fileId,
+        file_name: input.fileName,
+        content_type: input.contentType,
+      })
+      .returning("*");
 
-    return toGeneratedDocument(result.rows[0]);
+    return toGeneratedDocument(row);
   }
 
   async listGeneratedDocuments(jobApplicationId: string): Promise<GeneratedDocument[]> {
-    const result = await this.pool.query(
-      "select * from generated_documents where job_application_id = $1 order by created_at asc",
-      [jobApplicationId]
-    );
+    const rows = await this.db("generated_documents")
+      .where({ job_application_id: jobApplicationId })
+      .orderBy("created_at", "asc");
 
-    return result.rows.map(toGeneratedDocument);
+    return rows.map(toGeneratedDocument);
   }
 }
 

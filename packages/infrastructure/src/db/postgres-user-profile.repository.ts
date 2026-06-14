@@ -1,4 +1,4 @@
-import type { Pool } from "pg";
+import type { Knex } from "knex";
 import type {
   CreateUserProfileInput,
   ProfileExperience,
@@ -8,36 +8,29 @@ import type {
 import { randomUUID } from "node:crypto";
 
 export class PostgresUserProfileRepository implements UserProfileRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly db: Knex) {}
 
   async create(input: CreateUserProfileInput): Promise<UserProfile> {
     const id = randomUUID();
-    const result = await this.pool.query(
-      `
-        insert into user_profiles (
-          id, full_name, email, headline, location, summary, skills, experience
-        )
-        values ($1, $2, $3, $4, $5, $6, $7, $8)
-        returning *
-      `,
-      [
+    const [row] = await this.db("user_profiles")
+      .insert({
         id,
-        input.fullName,
-        input.email,
-        input.headline ?? null,
-        input.location ?? null,
-        input.summary ?? null,
-        JSON.stringify(input.skills),
-        JSON.stringify(input.experience)
-      ]
-    );
+        full_name: input.fullName,
+        email: input.email,
+        headline: input.headline ?? null,
+        location: input.location ?? null,
+        summary: input.summary ?? null,
+        skills: JSON.stringify(input.skills),
+        experience: JSON.stringify(input.experience),
+      })
+      .returning("*");
 
-    return toUserProfile(result.rows[0]);
+    return toUserProfile(row);
   }
 
   async findById(id: string): Promise<UserProfile | null> {
-    const result = await this.pool.query("select * from user_profiles where id = $1", [id]);
-    return result.rows[0] ? toUserProfile(result.rows[0]) : null;
+    const row = await this.db("user_profiles").where({ id }).first();
+    return row ? toUserProfile(row) : null;
   }
 }
 

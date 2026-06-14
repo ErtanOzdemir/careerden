@@ -4,9 +4,9 @@ import type {
   JobApplicationRepository,
   UserProfileRepository,
 } from "@link2cv/domain";
-import { Pool } from "pg";
 import {
   BullMqJobApplicationQueue,
+  createDb,
   InMemoryJobApplicationQueue,
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
@@ -34,21 +34,21 @@ export interface ApiDependencies {
 }
 
 export function createApiDependencies(options: ApiAppOptions): ApiDependencies {
-  const pool = options.databaseUrl
-    ? new Pool({ connectionString: options.databaseUrl })
+  const db = options.databaseUrl
+    ? createDb(options.databaseUrl)
     : undefined;
 
-  const profiles = pool
-    ? new PostgresUserProfileRepository(pool)
+  const profiles = db
+    ? new PostgresUserProfileRepository(db)
     : new InMemoryUserProfileRepository();
 
-  const jobApplications = pool
-    ? new PostgresJobApplicationRepository(pool)
+  const jobApplications = db
+    ? new PostgresJobApplicationRepository(db)
     : new InMemoryJobApplicationRepository();
 
   const queue = createQueue({
     redisUrl: options.redisUrl,
-    requiresPersistentQueue: Boolean(pool),
+    requiresPersistentQueue: Boolean(db),
   });
 
   const storage = new LocalFileStorage(options.storageDir ?? "./storage");

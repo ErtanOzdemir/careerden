@@ -1,9 +1,9 @@
 import type { AppEnv } from "@link2cv/config";
 import type { JobApplicationRepository, JobSiteScraper } from "@link2cv/domain";
-import { Pool } from "pg";
 import {
   CareerPageScraper,
   CompanyWebsiteScraper,
+  createDb,
   HtmlTemplateRenderer,
   LinkedInCompanyScraper,
   LinkedInJobScraper,
@@ -35,9 +35,9 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     port: Number(redisUrl.port || 6379),
   };
 
-  const pool = new Pool({ connectionString: env.DATABASE_URL });
-  const jobApplications = new PostgresJobApplicationRepository(pool);
-  const profiles = new PostgresUserProfileRepository(pool);
+  const db = createDb(env.DATABASE_URL);
+  const jobApplications = new PostgresJobApplicationRepository(db);
+  const profiles = new PostgresUserProfileRepository(db);
 
   const __dirname = fileURLToPath(new URL(".", import.meta.url));
   const sessionDir = resolve(__dirname, "../../../storage/linkedin-session");

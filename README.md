@@ -28,6 +28,9 @@ docker compose up -d
 # Copy environment variables
 cp .env.example .env
 
+# Apply database migrations
+pnpm db:migrate
+
 # Start development servers
 pnpm dev
 ```
@@ -132,6 +135,15 @@ pnpm test
 
 # Build all packages
 pnpm build
+
+# Apply PostgreSQL migrations
+pnpm db:migrate
+
+# Check migration status
+pnpm db:status
+
+# Roll back the latest migration batch
+pnpm db:rollback
 
 # Run a specific package's dev script
 pnpm --filter @link2cv/api dev

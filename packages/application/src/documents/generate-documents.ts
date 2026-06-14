@@ -5,7 +5,7 @@ import type {
   JobApplicationRepository,
   MatchAnalysisResult,
   TemplateRenderer,
-  UserProfile
+  UserProfile,
 } from "@link2cv/domain";
 
 export class GenerateDocumentsUseCase {
@@ -13,7 +13,7 @@ export class GenerateDocumentsUseCase {
     private readonly templates: TemplateRenderer,
     private readonly documents: DocumentRenderer,
     private readonly storage: FileStorage,
-    private readonly jobApplications: JobApplicationRepository
+    private readonly jobApplications: JobApplicationRepository,
   ) {}
 
   async execute(input: {
@@ -26,7 +26,7 @@ export class GenerateDocumentsUseCase {
 
     for (const template of [
       { id: "cv.default", kind: "cv" as const, fileName: "cv.pdf" },
-      { id: "cover-letter.default", kind: "cover_letter" as const, fileName: "cover-letter.pdf" }
+      { id: "cover-letter.default", kind: "cover_letter" as const, fileName: "cover-letter.pdf" },
     ]) {
       const html = await this.templates.render(template.id, data);
       const pdf = await this.documents.htmlToPdf(html.toString());
@@ -36,8 +36,8 @@ export class GenerateDocumentsUseCase {
         body: pdf,
         metadata: {
           jobApplicationId: input.jobApplicationId,
-          kind: template.kind
-        }
+          kind: template.kind,
+        },
       });
 
       generated.push(
@@ -46,8 +46,8 @@ export class GenerateDocumentsUseCase {
           kind: template.kind,
           fileId: stored.id,
           fileName: template.fileName,
-          contentType: "application/pdf"
-        })
+          contentType: "application/pdf",
+        }),
       );
     }
 
@@ -55,7 +55,10 @@ export class GenerateDocumentsUseCase {
   }
 }
 
-function toTemplateData(profile: UserProfile, analysis: MatchAnalysisResult): Record<string, unknown> {
+function toTemplateData(
+  profile: UserProfile,
+  analysis: MatchAnalysisResult,
+): Record<string, unknown> {
   return {
     full_name: profile.fullName,
     email: profile.email,
@@ -70,6 +73,6 @@ function toTemplateData(profile: UserProfile, analysis: MatchAnalysisResult): Re
     recommended_achievements: analysis.recommendedAchievements,
     customized_summary: analysis.customizedSummary,
     interview_tips: analysis.interviewTips,
-    cover_letter_guidance: analysis.coverLetterGuidance ?? []
+    cover_letter_guidance: analysis.coverLetterGuidance ?? [],
   };
 }

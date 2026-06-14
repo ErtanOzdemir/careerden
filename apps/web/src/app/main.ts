@@ -46,7 +46,7 @@ const state: {
   profile: loadProfile(),
   jobs: [],
   linkedInStatus: "missing",
-  messageTone: "info"
+  messageTone: "info",
 };
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -175,14 +175,15 @@ function render() {
 
   document.querySelector("#profile-form")?.addEventListener("submit", onProfileSubmit);
   document.querySelector("#job-form")?.addEventListener("submit", onJobSubmit);
-  document.querySelector("#start-linkedin-session")?.addEventListener("click", onStartLinkedInSession);
-  document.querySelector("#save-linkedin-session")?.addEventListener("click", onSaveLinkedInSession);
+  document
+    .querySelector("#start-linkedin-session")
+    ?.addEventListener("click", onStartLinkedInSession);
+  document
+    .querySelector("#save-linkedin-session")
+    ?.addEventListener("click", onSaveLinkedInSession);
   document.querySelectorAll<HTMLButtonElement>("[data-download-document]").forEach((button) => {
     button.addEventListener("click", () => {
-      void downloadDocument(
-        button.dataset.jobId ?? "",
-        button.dataset.downloadDocument ?? "",
-      );
+      void downloadDocument(button.dataset.jobId ?? "", button.dataset.downloadDocument ?? "");
     });
   });
 }
@@ -212,10 +213,10 @@ async function onProfileSubmit(event: Event) {
             {
               company,
               title,
-              achievements
-            }
+              achievements,
+            },
           ]
-        : []
+        : [],
   };
 
   try {
@@ -255,7 +256,7 @@ async function onJobSubmit(event: Event) {
   try {
     await postJson<JobApplication>("/job-applications", {
       profileId: state.profile.id,
-      sourceUrl: String(data.get("sourceUrl") ?? "").trim()
+      sourceUrl: String(data.get("sourceUrl") ?? "").trim(),
     });
 
     form.reset();
@@ -280,7 +281,7 @@ async function onStartLinkedInSession() {
   try {
     const result = await postJson<{ status: LinkedInSessionStatus; message?: string }>(
       "/linkedin-session/start",
-      {}
+      {},
     );
 
     state.linkedInStatus = result.status;
@@ -304,7 +305,7 @@ async function onSaveLinkedInSession() {
   try {
     const result = await postJson<{ status: LinkedInSessionStatus; message?: string }>(
       "/linkedin-session/save",
-      {}
+      {},
     );
 
     state.linkedInStatus = result.status;
@@ -320,7 +321,9 @@ async function onSaveLinkedInSession() {
 }
 
 async function refreshLinkedInStatus() {
-  const result = await getJson<{ status: LinkedInSessionStatus; message?: string }>("/linkedin-session/status").catch((error) => {
+  const result = await getJson<{ status: LinkedInSessionStatus; message?: string }>(
+    "/linkedin-session/status",
+  ).catch((error) => {
     state.message = errorMessage(error);
     state.messageTone = "error";
     return undefined;
@@ -344,7 +347,7 @@ async function refreshJobs() {
   }
 
   state.jobs = await getJson<JobApplication[]>(
-    `/job-applications?profileId=${encodeURIComponent(state.profile.id)}`
+    `/job-applications?profileId=${encodeURIComponent(state.profile.id)}`,
   ).catch(() => []);
   render();
 }
@@ -363,7 +366,7 @@ async function downloadDocument(jobId: string, documentId: string) {
 
   try {
     const result = await getJson<{ url: string }>(
-      `/job-applications/${encodeURIComponent(jobId)}/documents/${encodeURIComponent(documentId)}/download`
+      `/job-applications/${encodeURIComponent(jobId)}/documents/${encodeURIComponent(documentId)}/download`,
     );
 
     window.location.href = result.url;
@@ -397,12 +400,16 @@ function renderJobRows(): string {
             ${renderDocumentButton(job, "cover_letter", "Cover Letter")}
           </td>
         </tr>
-      `
+      `,
     )
     .join("");
 }
 
-function renderDocumentButton(job: JobApplication, kind: "cv" | "cover_letter", label: string): string {
+function renderDocumentButton(
+  job: JobApplication,
+  kind: "cv" | "cover_letter",
+  label: string,
+): string {
   const document = job.documents?.find((item) => item.kind === kind);
 
   return `
@@ -432,9 +439,9 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

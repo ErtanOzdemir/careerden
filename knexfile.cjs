@@ -1,8 +1,6 @@
 const { join } = require("node:path");
 
-const databaseUrl =
-  process.env.DATABASE_URL ??
-  "postgres://link2cv:link2cv@localhost:5432/link2cv";
+const databaseUrl = process.env.DATABASE_URL ?? "postgres://link2cv:link2cv@localhost:5432/link2cv";
 
 module.exports = {
   client: "pg",

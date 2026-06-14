@@ -20,11 +20,7 @@ exports.up = async function up(knex) {
   if (!hasJobApplications) {
     await knex.schema.createTable("job_applications", (table) => {
       table.uuid("id").primary();
-      table
-        .uuid("profile_id")
-        .notNullable()
-        .references("id")
-        .inTable("user_profiles");
+      table.uuid("profile_id").notNullable().references("id").inTable("user_profiles");
       table.text("source_url").notNullable();
       table.text("status").notNullable();
       table.text("failure_reason");
@@ -39,11 +35,7 @@ exports.up = async function up(knex) {
   if (!hasGeneratedDocuments) {
     await knex.schema.createTable("generated_documents", (table) => {
       table.uuid("id").primary();
-      table
-        .uuid("job_application_id")
-        .notNullable()
-        .references("id")
-        .inTable("job_applications");
+      table.uuid("job_application_id").notNullable().references("id").inTable("job_applications");
       table.text("kind").notNullable();
       table.text("file_id").notNullable();
       table.text("file_name").notNullable();

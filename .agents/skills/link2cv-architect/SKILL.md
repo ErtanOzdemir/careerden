@@ -15,6 +15,8 @@ Use this skill to keep Link2CV modular and expandable while building the backend
 - Push long-running work into queue workers; keep HTTP handlers thin and synchronous.
 - Validate external inputs and AI output with schemas before persisting or rendering anything.
 - Preserve raw scrape payloads alongside normalized data for traceability.
+- Keep backend source organized by bounded context inside each package; do not reintroduce broad `entities`, `interfaces`, `schemas`, `routes`, or `use-cases` buckets.
+- Preserve ESLint and Prettier cleanliness; after code or docs changes, run the relevant `pnpm lint` and `pnpm format:check` verification.
 
 ## When To Load References
 
@@ -35,3 +37,4 @@ Use this skill to keep Link2CV modular and expandable while building the backend
 - Keep business rules in application/domain code, not in controllers or workers.
 - Keep infrastructure code isolated to database, scraping, AI, PDF, and storage integrations.
 - Add tests at the level of the behavior being changed: unit for logic, integration for queues and persistence, contract for provider boundaries.
+- For structural refactors, verify `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, and `pnpm build`.

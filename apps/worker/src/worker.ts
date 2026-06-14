@@ -23,9 +23,7 @@ new Worker(
   { connection },
 );
 
-console.log(
-  `Link2CV worker listening on queue ${jobApplicationProcessingQueueName}`,
-);
+console.log(`Link2CV worker listening on queue ${jobApplicationProcessingQueueName}`);
 
 async function requeueQueuedJobApplications(): Promise<void> {
   const queue = new BullMqJobApplicationQueue(connection);

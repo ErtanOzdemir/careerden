@@ -10,7 +10,7 @@ export class PlaywrightPdfRenderer implements DocumentRenderer {
       await page.setContent(html, { waitUntil: "networkidle" });
       return await page.pdf({
         format: "A4",
-        printBackground: true
+        printBackground: true,
       });
     } finally {
       await browser.close();

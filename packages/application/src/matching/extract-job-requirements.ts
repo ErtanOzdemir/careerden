@@ -4,10 +4,7 @@ import type { AiProvider, ScrapedJob } from "@link2cv/domain";
 export class ExtractJobRequirementsUseCase {
   constructor(private readonly aiProvider: AiProvider) {}
 
-  async execute(input: {
-    jobApplicationId: string;
-    job: ScrapedJob;
-  }): Promise<ScrapedJob> {
+  async execute(input: { jobApplicationId: string; job: ScrapedJob }): Promise<ScrapedJob> {
     const result = await this.aiProvider.generate({
       system: [
         "You extract job requirements from scraped job descriptions.",

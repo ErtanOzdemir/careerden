@@ -3,7 +3,10 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 
 export class GeminiAiProvider implements AiProvider {
-  constructor(private readonly apiKey: string, private readonly model = "gemini-2.5-flash") {}
+  constructor(
+    private readonly apiKey: string,
+    private readonly model = "gemini-2.5-flash",
+  ) {}
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const google = createGoogleGenerativeAI({ apiKey: this.apiKey });

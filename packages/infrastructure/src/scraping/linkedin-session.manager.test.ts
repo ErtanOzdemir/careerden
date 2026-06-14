@@ -10,7 +10,7 @@ describe("LinkedInSessionManager", () => {
     const manager = new LinkedInSessionManager(dir, "test-secret");
 
     await expect(manager.getStatus()).resolves.toMatchObject({
-      status: "missing"
+      status: "missing",
     });
   });
 
@@ -19,12 +19,12 @@ describe("LinkedInSessionManager", () => {
     const manager = new LinkedInSessionManager(dir, "test-secret", {
       async launchBrowser() {
         throw new Error("GUI is unavailable");
-      }
+      },
     });
 
     await expect(manager.startLogin()).resolves.toMatchObject({
       status: "missing",
-      message: expect.stringContaining("GUI is unavailable")
+      message: expect.stringContaining("GUI is unavailable"),
     });
   });
 });

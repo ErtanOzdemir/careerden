@@ -1,4 +1,9 @@
-import type { CompanyLookupInput, JobSiteScraper, ScrapedCompany, ScrapedJob } from "@link2cv/domain";
+import type {
+  CompanyLookupInput,
+  JobSiteScraper,
+  ScrapedCompany,
+  ScrapedJob,
+} from "@link2cv/domain";
 import { chromium } from "playwright";
 import type { Page } from "playwright";
 import type { LinkedInSessionManager } from "../linkedin-session.manager.js";
@@ -8,7 +13,9 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
 
   canHandle(url: string): boolean {
     const parsed = parseUrl(url);
-    return Boolean(parsed?.hostname.endsWith("linkedin.com") && parsed.pathname.includes("/company/"));
+    return Boolean(
+      parsed?.hostname.endsWith("linkedin.com") && parsed.pathname.includes("/company/"),
+    );
   }
 
   async scrapeJob(url: string): Promise<ScrapedJob> {
@@ -26,19 +33,24 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
           adapter: "linkedin-company",
           input,
           websiteExtracted: false,
-          reason: "missing_linkedin_company_url"
-        }
+          reason: "missing_linkedin_company_url",
+        },
       };
     }
 
     if (!this.linkedInSessionManager) {
-      throw new Error("linkedin_session_required: LinkedIn company scraping requires a saved browser session");
+      throw new Error(
+        "linkedin_session_required: LinkedIn company scraping requires a saved browser session",
+      );
     }
 
-    const storageState = await this.linkedInSessionManager.getStorageState().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "LinkedIn session is not connected";
-      throw new Error(`linkedin_session_required: ${message}`);
-    });
+    const storageState = await this.linkedInSessionManager
+      .getStorageState()
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : "LinkedIn session is not connected";
+        throw new Error(`linkedin_session_required: ${message}`);
+      });
     const browser = await chromium.launch({ headless: true });
 
     try {
@@ -56,7 +68,7 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
       const description = await firstText(page, [
         ".org-about-us-organization-description__text",
         ".org-page-details__definition-text",
-        "section.org-page-details-module"
+        "section.org-page-details-module",
       ]);
 
       return {
@@ -70,8 +82,8 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
           aboutUrl,
           finalUrl: page.url(),
           websiteExtracted: Boolean(websiteUrl),
-          scrapedAt: new Date().toISOString()
-        }
+          scrapedAt: new Date().toISOString(),
+        },
       };
     } finally {
       await browser.close();
@@ -97,7 +109,9 @@ export function normalizeLinkedInCompanyAboutUrl(linkedInUrl?: string): string |
   return `${parsed.origin}/company/${slug}/about/`;
 }
 
-export function chooseExternalCompanyWebsiteUrl(candidates: Array<string | undefined>): string | undefined {
+export function chooseExternalCompanyWebsiteUrl(
+  candidates: Array<string | undefined>,
+): string | undefined {
   for (const candidate of candidates) {
     const normalized = normalizeExternalWebsiteCandidate(candidate);
 
@@ -135,9 +149,8 @@ async function extractLinkedInCompanyWebsiteUrl(page: Page): Promise<string | un
 
   const value = websiteDefinition.locator("xpath=following-sibling::dd[1]");
   const link = value.locator("a[href]").first();
-  const href = (await link.count()) > 0
-    ? await link.getAttribute("href").catch(() => undefined)
-    : undefined;
+  const href =
+    (await link.count()) > 0 ? await link.getAttribute("href").catch(() => undefined) : undefined;
   const text = await value.textContent().catch(() => undefined);
 
   return chooseLinkedInAboutWebsiteUrl([
@@ -189,7 +202,7 @@ function normalizeExternalWebsiteCandidate(candidate: string | undefined): strin
 function normalizeUrlCandidate(candidate: string | undefined): string | undefined {
   const value = candidate
     ?.trim()
-    .replace(/^["'(<\[]+/, "")
+    .replace(/^["'(<[]+/, "")
     .replace(/[)"'>\],.]+$/, "");
 
   if (!value || value.startsWith("mailto:") || value.startsWith("tel:")) {
@@ -209,9 +222,7 @@ function normalizeUrlCandidate(candidate: string | undefined): string | undefine
 
 function isExternalHttpUrl(url: URL | undefined): url is URL {
   return Boolean(
-    url &&
-      ["http:", "https:"].includes(url.protocol) &&
-      !url.hostname.endsWith("linkedin.com")
+    url && ["http:", "https:"].includes(url.protocol) && !url.hostname.endsWith("linkedin.com"),
   );
 }
 

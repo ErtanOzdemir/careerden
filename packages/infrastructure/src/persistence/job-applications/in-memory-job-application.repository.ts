@@ -4,7 +4,7 @@ import type {
   JobApplication,
   JobApplicationRepository,
   MatchAnalysisResult,
-  ScrapeBundle
+  ScrapeBundle,
 } from "@link2cv/domain";
 import type { CreateJobApplicationInput } from "@link2cv/domain";
 import type { JobApplicationStatus } from "@link2cv/domain";
@@ -24,7 +24,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       sourceUrl: input.sourceUrl,
       status: "queued",
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
 
     this.jobApplications.set(jobApplication.id, jobApplication);
@@ -46,7 +46,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   async updateStatus(
     id: string,
     status: JobApplicationStatus,
-    failureReason?: string
+    failureReason?: string,
   ): Promise<void> {
     const existing = this.jobApplications.get(id);
 
@@ -58,7 +58,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status,
       failureReason,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -82,7 +82,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const document: GeneratedDocument = {
       id: randomUUID(),
       ...input,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
     const current = this.documents.get(input.jobApplicationId) ?? [];
 

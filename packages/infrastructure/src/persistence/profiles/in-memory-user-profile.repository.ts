@@ -1,8 +1,4 @@
-import type {
-  CreateUserProfileInput,
-  UserProfile,
-  UserProfileRepository
-} from "@link2cv/domain";
+import type { CreateUserProfileInput, UserProfile, UserProfileRepository } from "@link2cv/domain";
 import { randomUUID } from "node:crypto";
 
 export class InMemoryUserProfileRepository implements UserProfileRepository {
@@ -14,7 +10,7 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
       id: randomUUID(),
       ...input,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
 
     this.profiles.set(profile.id, profile);

@@ -7,7 +7,7 @@ export const aiMatchResultSchema = z.object({
   recommendedAchievements: z.array(z.string().min(1)),
   customizedSummary: z.string().min(1),
   interviewTips: z.array(z.string().min(1)),
-  coverLetterGuidance: z.array(z.string().min(1)).optional()
+  coverLetterGuidance: z.array(z.string().min(1)).optional(),
 });
 
 export type AiMatchResultDto = z.infer<typeof aiMatchResultSchema>;

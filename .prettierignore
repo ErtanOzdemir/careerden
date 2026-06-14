@@ -1,0 +1,12 @@
+dist/
+node_modules/
+.turbo/
+.agents/
+.codex/
+.opencode/
+coverage/
+playwright-report/
+storage/
+test-results/
+*.timestamp-*.mjs
+pnpm-lock.yaml

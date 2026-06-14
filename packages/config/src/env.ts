@@ -19,7 +19,7 @@ export const envSchema = z.object({
   RUSTFS_REGION: z.string().min(1).default("us-east-1"),
   RUSTFS_PUBLIC_ENDPOINT: z.string().url().optional(),
   LINKEDIN_SESSION_STORAGE_DIR: z.string().default("./storage/linkedin-session"),
-  LINKEDIN_SESSION_SECRET: z.string().default("dev-only-linkedin-session-secret")
+  LINKEDIN_SESSION_SECRET: z.string().default("dev-only-linkedin-session-secret"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -32,10 +32,7 @@ export function loadEnv(input?: NodeJS.ProcessEnv): AppEnv {
 
   return {
     ...parsed,
-    LINKEDIN_SESSION_STORAGE_DIR: resolvePath(
-      baseDirectory,
-      parsed.LINKEDIN_SESSION_STORAGE_DIR
-    )
+    LINKEDIN_SESSION_STORAGE_DIR: resolvePath(baseDirectory, parsed.LINKEDIN_SESSION_STORAGE_DIR),
   };
 }
 

@@ -67,8 +67,20 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 1. Create a new branch from `main` (see [Branch Naming](#branch-naming)).
 2. Make your changes in small, focused commits.
 3. Write or update tests for your changes.
-4. Run `pnpm typecheck` and `pnpm test` to verify.
+4. Run the relevant verification commands before opening a PR.
 5. Push your branch and open a pull request.
+
+For source changes, the full local verification set is:
+
+```bash
+pnpm lint
+pnpm format:check
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Use `pnpm lint:fix` and `pnpm format` for mechanical cleanup. Do not hand-format code to work around Prettier; let the formatter own whitespace and wrapping.
 
 ## Branch Naming
 
@@ -125,8 +137,11 @@ test(contracts): add schema validation tests for profiles
 ### PR Checklist
 
 - [ ] Branch is up to date with `main`
+- [ ] Lint passes (`pnpm lint`)
+- [ ] Formatting passes (`pnpm format:check`)
 - [ ] Code compiles without errors (`pnpm typecheck`)
 - [ ] All tests pass (`pnpm test`)
+- [ ] Build passes when source files changed (`pnpm build`)
 - [ ] New code has corresponding tests
 - [ ] Documentation is updated (if applicable)
 - [ ] Commit messages follow conventions
@@ -157,6 +172,28 @@ test(contracts): add schema validation tests for profiles
 - One exported entity per file when possible.
 - Follow existing naming conventions in each package.
 - Organize backend code by context inside each package, such as `profiles`, `job-applications`, `scraping`, `matching`, and `documents`.
+- Do not add broad backend buckets such as `entities`, `interfaces`, `schemas`, `routes`, or `use-cases`; place files in the relevant context folder instead.
+
+Context placement by layer:
+
+| Layer                   | Place context code in                              |
+| ----------------------- | -------------------------------------------------- |
+| Domain models/contracts | `packages/domain/src/<context>`                    |
+| Use cases               | `packages/application/src/<context>`               |
+| Zod/API contracts       | `packages/contracts/src/<context>`                 |
+| Infrastructure adapters | `packages/infrastructure/src/<adapter-or-context>` |
+| API routes              | `apps/api/src/<context>`                           |
+| Worker queue/processors | `apps/worker/src/<context>`                        |
+| Frontend UI             | `apps/web/src`                                     |
+
+Current backend contexts are `profiles`, `job-applications`, `scraping`, `matching`, `documents`, `storage`, `persistence`, and `queue`.
+
+### Linting and Formatting
+
+- ESLint uses the root `eslint.config.mjs` flat config.
+- Prettier uses `.prettierrc.json` and `.prettierignore`.
+- Run `pnpm lint` and `pnpm format:check` before opening a PR.
+- Run `pnpm lint:fix` or `pnpm format` when the tools can safely make mechanical changes.
 
 ### Imports
 
@@ -185,8 +222,8 @@ pnpm vitest --filter @link2cv/contracts
 
 ### New Provider (Scraper, AI, etc.)
 
-1. Define the interface in `packages/domain`.
-2. Implement the adapter in `packages/infrastructure`.
+1. Define the interface in the relevant `packages/domain/src/<context>` folder.
+2. Implement the adapter in the relevant `packages/infrastructure/src/<context-or-adapter>` folder.
 3. Add configuration to `packages/config`.
 4. Register in the composition root (`apps/api` or `apps/worker`).
 5. Add tests for the implementation.

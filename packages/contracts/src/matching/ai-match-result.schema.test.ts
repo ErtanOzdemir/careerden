@@ -10,8 +10,8 @@ describe("aiMatchResultSchema", () => {
         strongSkills: ["TypeScript"],
         recommendedAchievements: ["Reduced processing time by 30%"],
         customizedSummary: "A short profile-aware summary.",
-        interviewTips: ["Prepare a system design example."]
-      })
+        interviewTips: ["Prepare a system design example."],
+      }),
     ).not.toThrow();
   });
 
@@ -23,8 +23,8 @@ describe("aiMatchResultSchema", () => {
         strongSkills: [],
         recommendedAchievements: [],
         customizedSummary: "Invalid score.",
-        interviewTips: []
-      })
+        interviewTips: [],
+      }),
     ).toThrow();
   });
 });

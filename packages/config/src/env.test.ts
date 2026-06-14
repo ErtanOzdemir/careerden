@@ -137,7 +137,7 @@ describe("loadEnv", () => {
     const resolvedTempDirectory = realpathSync(tempDirectory);
 
     expect(env.LINKEDIN_SESSION_STORAGE_DIR).toBe(
-      join(resolvedTempDirectory, "storage", "linkedin-session")
+      join(resolvedTempDirectory, "storage", "linkedin-session"),
     );
   });
 });

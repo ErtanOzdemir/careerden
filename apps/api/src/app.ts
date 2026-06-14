@@ -6,10 +6,7 @@ import { createJobApplicationRouter } from "./job-applications/job-applications.
 import { createLinkedInSessionRouter } from "./scraping/linkedin-session.routes.js";
 import { createProfileRouter } from "./profiles/profiles.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
-import {
-  createApiDependencies,
-  type ApiAppOptions,
-} from "./composition-root.js";
+import { createApiDependencies, type ApiAppOptions } from "./composition-root.js";
 
 export type { ApiAppOptions } from "./composition-root.js";
 
@@ -37,11 +34,7 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
   app.use(
     "/job-applications",
     createJobApplicationRouter({
-      submitJobApplication: new SubmitJobApplicationUseCase(
-        jobApplications,
-        profiles,
-        queue,
-      ),
+      submitJobApplication: new SubmitJobApplicationUseCase(jobApplications, profiles, queue),
       jobApplications,
       storage,
     }),

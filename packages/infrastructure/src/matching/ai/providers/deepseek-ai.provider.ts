@@ -3,7 +3,10 @@ import { createDeepSeek } from "@ai-sdk/deepseek";
 import { generateText, Output } from "ai";
 
 export class DeepSeekAiProvider implements AiProvider {
-  constructor(private readonly apiKey: string, private readonly model = "deepseek-chat") {}
+  constructor(
+    private readonly apiKey: string,
+    private readonly model = "deepseek-chat",
+  ) {}
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const deepseek = createDeepSeek({ apiKey: this.apiKey });

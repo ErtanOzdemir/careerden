@@ -1,5 +1,7 @@
 # Contracts
 
+For source placement and bounded-context rules, read `architecture.md` first.
+
 ## Core Interfaces
 
 - `JobSiteScraper`

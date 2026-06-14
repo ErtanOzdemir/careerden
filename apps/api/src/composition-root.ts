@@ -6,12 +6,12 @@ import type {
 } from "@link2cv/domain";
 import {
   BullMqJobApplicationQueue,
+  createFileStorage,
   createDb,
   InMemoryJobApplicationQueue,
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
   LinkedInSessionManager,
-  LocalFileStorage,
   PostgresJobApplicationRepository,
   PostgresUserProfileRepository,
   UnavailableJobApplicationQueue,
@@ -22,7 +22,12 @@ export interface ApiAppOptions {
   linkedInSessionSecret?: string;
   linkedInSessionStorageDir?: string;
   redisUrl?: string;
-  storageDir?: string;
+  rustFsEndpoint?: string;
+  rustFsAccessKey?: string;
+  rustFsSecretKey?: string;
+  rustFsBucket?: string;
+  rustFsRegion?: string;
+  rustFsPublicEndpoint?: string;
 }
 
 export interface ApiDependencies {
@@ -51,7 +56,14 @@ export function createApiDependencies(options: ApiAppOptions): ApiDependencies {
     requiresPersistentQueue: Boolean(db),
   });
 
-  const storage = new LocalFileStorage(options.storageDir ?? "./storage");
+  const storage = createFileStorage({
+    endpoint: options.rustFsEndpoint ?? "http://localhost:9000",
+    accessKeyId: options.rustFsAccessKey ?? "rustfsadmin",
+    secretAccessKey: options.rustFsSecretKey ?? "rustfsadmin",
+    bucket: options.rustFsBucket ?? "link2cv-files",
+    region: options.rustFsRegion ?? "us-east-1",
+    publicEndpoint: options.rustFsPublicEndpoint,
+  });
 
   const linkedInSessionManager = new LinkedInSessionManager(
     options.linkedInSessionStorageDir ?? "./storage/linkedin-session",

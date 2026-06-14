@@ -3,12 +3,12 @@ import type { JobApplicationRepository, JobSiteScraper } from "@link2cv/domain";
 import {
   CareerPageScraper,
   CompanyWebsiteScraper,
+  createFileStorage,
   createDb,
   HtmlTemplateRenderer,
   LinkedInCompanyScraper,
   LinkedInJobScraper,
   LinkedInSessionManager,
-  LocalFileStorage,
   AiProviderFactory,
   PlaywrightPdfRenderer,
   PostgresJobApplicationRepository,
@@ -59,7 +59,14 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     jobApplications,
   );
 
-  const storage = new LocalFileStorage(env.FILE_STORAGE_DIR);
+  const storage = createFileStorage({
+    endpoint: env.RUSTFS_ENDPOINT,
+    accessKeyId: env.RUSTFS_ACCESS_KEY,
+    secretAccessKey: env.RUSTFS_SECRET_KEY,
+    bucket: env.RUSTFS_BUCKET,
+    region: env.RUSTFS_REGION,
+    publicEndpoint: env.RUSTFS_PUBLIC_ENDPOINT,
+  });
   const generateDocuments = new GenerateDocumentsUseCase(
     new HtmlTemplateRenderer(),
     new PlaywrightPdfRenderer(),

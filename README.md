@@ -10,7 +10,7 @@ Turn LinkedIn job postings into profile-aware CV and cover-letter PDFs. Link2CV 
 
 - **Node.js** 22+ (run `nvm use` to auto-select)
 - **pnpm** 9.15+
-- **Docker** (for PostgreSQL and Redis)
+- **Docker** (for PostgreSQL, Redis, and RustFS)
 
 ### Setup
 
@@ -22,7 +22,7 @@ cd link2cv
 # Install dependencies
 pnpm install
 
-# Start local services (PostgreSQL + Redis)
+# Start local services (PostgreSQL + Redis + RustFS)
 docker compose up -d
 
 # Copy environment variables
@@ -94,7 +94,12 @@ Copy `.env.example` to `.env` and configure:
 | `OPENAI_API_KEY`               | OpenAI API key                                      | —                                                   |
 | `GEMINI_API_KEY`               | Google Gemini API key                               | —                                                   |
 | `DEEPSEEK_API_KEY`             | DeepSeek API key                                    | —                                                   |
-| `FILE_STORAGE_DIR`             | File storage directory                              | `./storage`                                         |
+| `RUSTFS_ENDPOINT`              | RustFS S3 endpoint                                  | `http://localhost:9000`                             |
+| `RUSTFS_ACCESS_KEY`            | RustFS access key                                   | `rustfsadmin`                                      |
+| `RUSTFS_SECRET_KEY`            | RustFS secret key                                   | `rustfsadmin`                                      |
+| `RUSTFS_BUCKET`                | RustFS bucket for generated documents               | `link2cv-files`                                    |
+| `RUSTFS_REGION`                | S3 region used by the RustFS client                 | `us-east-1`                                        |
+| `RUSTFS_PUBLIC_ENDPOINT`       | Optional endpoint used in generated signed URLs     | —                                                   |
 | `LINKEDIN_SESSION_STORAGE_DIR` | LinkedIn session storage                            | `./storage/linkedin-session`                        |
 | `LINKEDIN_SESSION_SECRET`      | Secret for LinkedIn session encryption              | —                                                   |
 

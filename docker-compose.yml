@@ -15,5 +15,29 @@ services:
     ports:
       - "6379:6379"
 
+  rustfs_perms:
+    image: alpine:3.20
+    user: root
+    volumes:
+      - rustfs_data:/fix_path
+    command: chown -R 10001:10001 /fix_path
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    depends_on:
+      rustfs_perms:
+        condition: service_completed_successfully
+    environment:
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs_data:/data
+    command: /data
+
 volumes:
   postgres_data:
+  rustfs_data:

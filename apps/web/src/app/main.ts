@@ -179,7 +179,10 @@ function render() {
   document.querySelector("#save-linkedin-session")?.addEventListener("click", onSaveLinkedInSession);
   document.querySelectorAll<HTMLButtonElement>("[data-download-document]").forEach((button) => {
     button.addEventListener("click", () => {
-      void downloadDocument(button.dataset.jobId ?? "", button.dataset.downloadDocument ?? "");
+      void downloadDocument(
+        button.dataset.jobId ?? "",
+        button.dataset.downloadDocument ?? "",
+      );
     });
   });
 }
@@ -347,11 +350,28 @@ async function refreshJobs() {
 }
 
 async function downloadDocument(jobId: string, documentId: string) {
-  const result = await getJson<{ url: string }>(
-    `/job-applications/${encodeURIComponent(jobId)}/documents/${encodeURIComponent(documentId)}/download`
-  );
+  if (!jobId || !documentId) {
+    state.message = "Document is not available yet.";
+    state.messageTone = "error";
+    render();
+    return;
+  }
 
-  window.location.href = result.url;
+  state.message = "Preparing document download...";
+  state.messageTone = "info";
+  render();
+
+  try {
+    const result = await getJson<{ url: string }>(
+      `/job-applications/${encodeURIComponent(jobId)}/documents/${encodeURIComponent(documentId)}/download`
+    );
+
+    window.location.href = result.url;
+  } catch (error) {
+    state.message = errorMessage(error);
+    state.messageTone = "error";
+    render();
+  }
 }
 
 function renderJobRows(): string {

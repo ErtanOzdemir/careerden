@@ -12,7 +12,12 @@ export const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
-  FILE_STORAGE_DIR: z.string().default("./storage"),
+  RUSTFS_ENDPOINT: z.string().url().default("http://localhost:9000"),
+  RUSTFS_ACCESS_KEY: z.string().default("rustfsadmin"),
+  RUSTFS_SECRET_KEY: z.string().default("rustfsadmin"),
+  RUSTFS_BUCKET: z.string().min(1).default("link2cv-files"),
+  RUSTFS_REGION: z.string().min(1).default("us-east-1"),
+  RUSTFS_PUBLIC_ENDPOINT: z.string().url().optional(),
   LINKEDIN_SESSION_STORAGE_DIR: z.string().default("./storage/linkedin-session"),
   LINKEDIN_SESSION_SECRET: z.string().default("dev-only-linkedin-session-secret")
 });
@@ -27,7 +32,6 @@ export function loadEnv(input?: NodeJS.ProcessEnv): AppEnv {
 
   return {
     ...parsed,
-    FILE_STORAGE_DIR: resolvePath(baseDirectory, parsed.FILE_STORAGE_DIR),
     LINKEDIN_SESSION_STORAGE_DIR: resolvePath(
       baseDirectory,
       parsed.LINKEDIN_SESSION_STORAGE_DIR

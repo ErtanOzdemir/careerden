@@ -3,7 +3,7 @@ import type {
   JobApplicationRepository,
   UserProfileRepository,
 } from "@link2cv/domain";
-import { Pool } from "pg";
+import { createDb } from "./db/knex.js";
 import { InMemoryJobApplicationRepository } from "./db/in-memory-job-application.repository.js";
 import { InMemoryUserProfileRepository } from "./db/in-memory-user-profile.repository.js";
 import { PostgresJobApplicationRepository } from "./db/postgres-job-application.repository.js";
@@ -18,16 +18,16 @@ export function createRepositories(config: {
   profiles: UserProfileRepository;
   jobApplications: JobApplicationRepository;
 } {
-  const pool = config.databaseUrl
-    ? new Pool({ connectionString: config.databaseUrl })
+  const db = config.databaseUrl
+    ? createDb(config.databaseUrl)
     : undefined;
 
   return {
-    profiles: pool
-      ? new PostgresUserProfileRepository(pool)
+    profiles: db
+      ? new PostgresUserProfileRepository(db)
       : new InMemoryUserProfileRepository(),
-    jobApplications: pool
-      ? new PostgresJobApplicationRepository(pool)
+    jobApplications: db
+      ? new PostgresJobApplicationRepository(db)
       : new InMemoryJobApplicationRepository(),
   };
 }

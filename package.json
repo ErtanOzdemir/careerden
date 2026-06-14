@@ -5,6 +5,9 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "turbo run build",
+    "db:migrate": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:latest",
+    "db:rollback": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:rollback",
+    "db:status": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:status",
     "dev": "turbo run dev --parallel",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test"

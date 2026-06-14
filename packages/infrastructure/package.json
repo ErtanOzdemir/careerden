@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/documents/templates && cp src/documents/templates/*.html dist/documents/templates/",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/documents/templates dist/db/migrations && cp src/documents/templates/*.html dist/documents/templates/ && cp src/db/migrations/*.cjs dist/db/migrations/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -25,12 +25,12 @@
     "ai": "^6.0.0",
     "bullmq": "^5.34.2",
     "ioredis": "^5.4.2",
+    "knex": "^3.1.0",
     "pg": "^8.13.1",
     "playwright": "^1.49.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.10",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

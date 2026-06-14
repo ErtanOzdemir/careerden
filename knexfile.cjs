@@ -8,9 +8,8 @@ module.exports = {
   client: "pg",
   connection: databaseUrl,
   migrations: {
-    directory: join(__dirname, "packages/infrastructure/src/db/migrations"),
+    directory: join(__dirname, "packages/infrastructure/src/persistence/migrations"),
     extension: "cjs",
     loadExtensions: [".cjs"],
   },
 };
-

@@ -3,14 +3,14 @@ import type {
   JobApplicationRepository,
   UserProfileRepository,
 } from "@link2cv/domain";
-import { createDb } from "./db/knex.js";
-import { InMemoryJobApplicationRepository } from "./db/in-memory-job-application.repository.js";
-import { InMemoryUserProfileRepository } from "./db/in-memory-user-profile.repository.js";
-import { PostgresJobApplicationRepository } from "./db/postgres-job-application.repository.js";
-import { PostgresUserProfileRepository } from "./db/postgres-user-profile.repository.js";
-import { BullMqJobApplicationQueue } from "./queues/bullmq-job-application.queue.js";
-import { InMemoryJobApplicationQueue } from "./queues/in-memory-job-application.queue.js";
-import { UnavailableJobApplicationQueue } from "./queues/unavailable-job-application.queue.js";
+import { createDb } from "./persistence/knex.js";
+import { InMemoryJobApplicationRepository } from "./persistence/job-applications/in-memory-job-application.repository.js";
+import { PostgresJobApplicationRepository } from "./persistence/job-applications/postgres-job-application.repository.js";
+import { InMemoryUserProfileRepository } from "./persistence/profiles/in-memory-user-profile.repository.js";
+import { PostgresUserProfileRepository } from "./persistence/profiles/postgres-user-profile.repository.js";
+import { BullMqJobApplicationQueue } from "./queue/job-applications/bullmq-job-application.queue.js";
+import { InMemoryJobApplicationQueue } from "./queue/job-applications/in-memory-job-application.queue.js";
+import { UnavailableJobApplicationQueue } from "./queue/job-applications/unavailable-job-application.queue.js";
 
 export function createRepositories(config: {
   databaseUrl?: string;

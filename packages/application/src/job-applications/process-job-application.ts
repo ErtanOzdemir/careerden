@@ -5,9 +5,9 @@ import type {
   UserProfileRepository
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
-import type { ExtractJobRequirementsUseCase } from "./extract-job-requirements.js";
-import type { GenerateDocumentsUseCase } from "./generate-documents.js";
-import type { RunMatchAnalysisUseCase } from "./run-match-analysis.js";
+import type { GenerateDocumentsUseCase } from "../documents/generate-documents.js";
+import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.js";
+import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.js";
 
 export class ProcessJobApplicationUseCase {
   constructor(

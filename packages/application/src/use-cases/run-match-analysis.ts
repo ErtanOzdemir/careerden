@@ -22,6 +22,8 @@ export class RunMatchAnalysisUseCase {
       system: [
         "You are an expert career matching assistant.",
         "Compare the scraped job details with the user's saved career profile.",
+        "Treat scrapedJob.requirements as the canonical extracted job requirements.",
+        "Use scrapedJob.description only as supporting context when requirements need clarification.",
         "Return concise, factual, profile-grounded recommendations.",
         "Do not invent experience, employers, credentials, or skills that are not present in the profile.",
       ].join(" "),
@@ -33,6 +35,8 @@ export class RunMatchAnalysisUseCase {
           website: input.scrape.companyWebsite,
           careerPage: input.scrape.careerPage,
         },
+        requirementGuidance:
+          "Use scrapedJob.requirements as the primary basis for missingSkills, strongSkills, recommendedAchievements, and interviewTips.",
         requiredOutput: {
           matchScore: "Integer 0-100",
           missingSkills: "Skills or criteria from the job that are not evident in the profile",

@@ -5,6 +5,7 @@ import type {
   UserProfileRepository
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
+import type { ExtractJobRequirementsUseCase } from "./extract-job-requirements.js";
 import type { GenerateDocumentsUseCase } from "./generate-documents.js";
 import type { RunMatchAnalysisUseCase } from "./run-match-analysis.js";
 
@@ -18,6 +19,7 @@ export class ProcessJobApplicationUseCase {
       companyWebsite: JobSiteScraper;
       careerPage: JobSiteScraper;
     },
+    private readonly requirementExtraction: ExtractJobRequirementsUseCase,
     private readonly matching: RunMatchAnalysisUseCase,
     private readonly documentGeneration: GenerateDocumentsUseCase
   ) {}
@@ -38,7 +40,11 @@ export class ProcessJobApplicationUseCase {
     try {
       await this.transition(jobApplicationId, jobApplication.status, "scraping");
 
-      const job = await this.scrapers.job.scrapeJob(jobApplication.sourceUrl);
+      const scrapedJob = await this.scrapers.job.scrapeJob(jobApplication.sourceUrl);
+      const job = await this.requirementExtraction.execute({
+        jobApplicationId,
+        job: scrapedJob
+      });
       const companyLinkedIn = await this.scrapers.companyLinkedIn.scrapeCompany({
         companyName: job.companyName,
         linkedInUrl: job.companyLinkedInUrl

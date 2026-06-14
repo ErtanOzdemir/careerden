@@ -19,3 +19,5 @@ export * from "./scraping/adapters/linkedin-job.scraper.js";
 export * from "./scraping/linkedin-session.manager.js";
 export * from "./scraping/scraper-factory.js";
 export * from "./storage/local-file.storage.js";
+export * from "./storage/rustfs-file.storage.js";
+export * from "./storage/storage.factory.js";

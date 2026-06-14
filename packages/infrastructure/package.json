@@ -20,6 +20,8 @@
     "@ai-sdk/deepseek": "^2.0.0",
     "@ai-sdk/google": "^2.0.0",
     "@ai-sdk/openai": "^2.0.0",
+    "@aws-sdk/client-s3": "^3.744.0",
+    "@aws-sdk/s3-request-presigner": "^3.744.0",
     "@link2cv/contracts": "workspace:*",
     "@link2cv/domain": "workspace:*",
     "ai": "^6.0.0",

@@ -15,6 +15,7 @@ import {
   PostgresUserProfileRepository,
 } from "@link2cv/infrastructure";
 import {
+  ExtractJobRequirementsUseCase,
   GenerateDocumentsUseCase,
   ProcessJobApplicationUseCase,
   RunMatchAnalysisUseCase,
@@ -58,6 +59,7 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     aiProvider,
     jobApplications,
   );
+  const extractJobRequirements = new ExtractJobRequirementsUseCase(aiProvider);
 
   const storage = createFileStorage({
     endpoint: env.RUSTFS_ENDPOINT,
@@ -81,7 +83,7 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     careerPage: JobSiteScraper;
   } = {
     job: new LinkedInJobScraper(linkedInSessionManager),
-    companyLinkedIn: new LinkedInCompanyScraper(),
+    companyLinkedIn: new LinkedInCompanyScraper(linkedInSessionManager),
     companyWebsite: new CompanyWebsiteScraper(),
     careerPage: new CareerPageScraper(),
   };
@@ -90,6 +92,7 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     jobApplications,
     profiles,
     scrapers,
+    extractJobRequirements,
     runMatchAnalysis,
     generateDocuments,
   );

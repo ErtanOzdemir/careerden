@@ -1,66 +1,89 @@
-import type { CompanyLookupInput, JobSiteScraper, ScrapedCompany, ScrapedJob } from "@link2cv/domain";
+import type {
+  CompanyLookupInput,
+  JobSiteScraper,
+  ScrapedCompany,
+  ScrapedJob,
+} from "@link2cv/domain";
 import { chromium } from "playwright";
 import type { Page } from "playwright";
 import type { LinkedInSessionManager } from "../linkedin-session.manager.js";
 
 export class LinkedInJobScraper implements JobSiteScraper {
-  constructor(private readonly linkedInSessionManager?: LinkedInSessionManager) {}
+  constructor(
+    private readonly linkedInSessionManager?: LinkedInSessionManager,
+  ) {}
 
   canHandle(url: string): boolean {
     const parsed = new URL(url);
-    return parsed.hostname.endsWith("linkedin.com") && parsed.pathname.includes("/jobs/");
+    return (
+      parsed.hostname.endsWith("linkedin.com") &&
+      parsed.pathname.includes("/jobs/")
+    );
   }
 
   async scrapeJob(url: string): Promise<ScrapedJob> {
     if (!this.linkedInSessionManager) {
-      throw new Error("linkedin_session_required: LinkedIn job scraping requires a saved browser session");
+      throw new Error(
+        "linkedin_session_required: LinkedIn job scraping requires a saved browser session",
+      );
     }
 
-    const storageState = await this.linkedInSessionManager.getStorageState().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "LinkedIn session is not connected";
-      throw new Error(`linkedin_session_required: ${message}`);
-    });
-    const browser = await chromium.launch({ headless: true });
+    const storageState = await this.linkedInSessionManager
+      .getStorageState()
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "LinkedIn session is not connected";
+        throw new Error(`linkedin_session_required: ${message}`);
+      });
+    const browser = await chromium.launch({ headless: false });
 
     try {
       const context = await browser.newContext({ storageState });
       const page = await context.newPage();
 
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-      await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => undefined);
+      await page
+        .waitForLoadState("networkidle", { timeout: 15000 })
+        .catch(() => undefined);
 
       if (page.url().includes("/login")) {
-        throw new Error("linkedin_session_required: LinkedIn redirected to login");
+        throw new Error(
+          "linkedin_session_required: LinkedIn redirected to login",
+        );
       }
 
       const title = await firstText(page, [
         "h1",
         ".job-details-jobs-unified-top-card__job-title",
-        ".top-card-layout__title"
+        ".top-card-layout__title",
       ]);
       const companyName = await firstText(page, [
         ".job-details-jobs-unified-top-card__company-name a",
         ".job-details-jobs-unified-top-card__company-name",
         ".topcard__org-name-link",
-        ".top-card-layout__second-subline a"
+        ".top-card-layout__second-subline a",
       ]);
       const location = await firstText(page, [
         ".job-details-jobs-unified-top-card__primary-description-container span",
         ".topcard__flavor--bullet",
-        ".job-search-card__location"
+        ".job-search-card__location",
       ]);
       const description = await firstText(page, [
         "#job-details",
         ".jobs-description-content__text",
-        ".description__text"
+        ".description__text",
       ]);
       const companyLinkedInUrl = await firstHref(page, [
         ".job-details-jobs-unified-top-card__company-name a",
-        ".topcard__org-name-link"
+        ".topcard__org-name-link",
       ]);
 
       if (!description || title.toLowerCase().includes("sign in")) {
-        throw new Error("linkedin_session_required: LinkedIn did not expose job details for this session");
+        throw new Error(
+          "linkedin_session_required: LinkedIn did not expose job details for this session",
+        );
       }
 
       return {
@@ -68,14 +91,14 @@ export class LinkedInJobScraper implements JobSiteScraper {
         companyName: companyName || "Unknown company",
         location,
         description,
-        requirements: extractRequirements(description),
+        requirements: [],
         companyLinkedInUrl,
         raw: {
           sourceUrl: url,
           finalUrl: page.url(),
           adapter: "linkedin-job",
-          scrapedAt: new Date().toISOString()
-        }
+          scrapedAt: new Date().toISOString(),
+        },
       };
     } finally {
       await browser.close();
@@ -88,8 +111,8 @@ export class LinkedInJobScraper implements JobSiteScraper {
       linkedInUrl: input.linkedInUrl,
       raw: {
         adapter: "linkedin-company",
-        input
-      }
+        input,
+      },
     };
   }
 }
@@ -112,7 +135,10 @@ async function firstText(page: Page, selectors: string[]): Promise<string> {
   return "";
 }
 
-async function firstHref(page: Page, selectors: string[]): Promise<string | undefined> {
+async function firstHref(
+  page: Page,
+  selectors: string[],
+): Promise<string | undefined> {
   for (const selector of selectors) {
     const locator = page.locator(selector).first();
 
@@ -128,14 +154,6 @@ async function firstHref(page: Page, selectors: string[]): Promise<string | unde
   }
 
   return undefined;
-}
-
-function extractRequirements(description: string): string[] {
-  return description
-    .split(/\n|•|·|-/)
-    .map((line) => normalizeWhitespace(line))
-    .filter((line) => line.length >= 8)
-    .slice(0, 30);
 }
 
 function normalizeWhitespace(value: string): string {

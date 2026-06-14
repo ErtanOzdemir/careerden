@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ExtractJobRequirementsUseCase,
   GenerateDocumentsUseCase,
   ProcessJobApplicationUseCase,
   RunMatchAnalysisUseCase
@@ -31,7 +32,9 @@ describe("ProcessJobApplicationUseCase", () => {
       sourceUrl: "https://www.linkedin.com/jobs/view/123"
     });
     const scraper = createScraper();
-    const matching = new RunMatchAnalysisUseCase(createMockAiProvider(), jobApplications);
+    const aiProvider = createMockAiProvider();
+    const requirementExtraction = new ExtractJobRequirementsUseCase(aiProvider);
+    const matching = new RunMatchAnalysisUseCase(aiProvider, jobApplications);
     const documents = new GenerateDocumentsUseCase(
       {
         async render() {
@@ -68,14 +71,20 @@ describe("ProcessJobApplicationUseCase", () => {
         companyWebsite: scraper,
         careerPage: scraper
       },
+      requirementExtraction,
       matching,
       documents
     ).execute(jobApplication.id);
 
     const completed = await jobApplications.findById(jobApplication.id);
     const generated = await jobApplications.listGeneratedDocuments(jobApplication.id);
+    const scrape = await jobApplications.getScrapeBundle(jobApplication.id);
 
     expect(completed?.status).toBe("completed");
+    expect(scrape?.job.requirements).toEqual([
+      "TypeScript",
+      "Kubernetes"
+    ]);
     expect(generated).toHaveLength(2);
   });
 });
@@ -90,7 +99,7 @@ function createScraper(): JobSiteScraper {
         title: "Backend Engineer",
         companyName: "Example Inc",
         description: "Build TypeScript services",
-        requirements: ["TypeScript"],
+        requirements: [],
         companyLinkedInUrl: "https://www.linkedin.com/company/example",
         raw: { url }
       };
@@ -110,6 +119,19 @@ function createScraper(): JobSiteScraper {
 function createMockAiProvider(): AiProvider {
   return {
     async generate<T>(params: AiGenerateParams<T>): Promise<T> {
+      const prompt = JSON.parse(params.prompt) as {
+        description?: string;
+        scrapedJob?: { requirements?: string[] };
+      };
+
+      if ("description" in prompt) {
+        return params.outputSchema.parse({
+          requirements: ["TypeScript", "Kubernetes"]
+        }) as T;
+      }
+
+      expect(prompt.scrapedJob?.requirements).toEqual(["TypeScript", "Kubernetes"]);
+
       return params.outputSchema.parse({
         matchScore: 85,
         missingSkills: ["Kubernetes"],

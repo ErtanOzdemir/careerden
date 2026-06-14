@@ -14,7 +14,7 @@ Closes # (issue number)
 
 ## Changes Made
 
-- 
+-
 
 ## How Has This Been Tested?
 
@@ -25,6 +25,7 @@ Describe the tests you ran to verify your changes:
 - [ ] Manual testing
 
 **Test environment:**
+
 - OS:
 - Node.js version:
 

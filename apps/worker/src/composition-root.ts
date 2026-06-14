@@ -55,10 +55,7 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     deepseekApiKey: env.DEEPSEEK_API_KEY,
   }).create();
 
-  const runMatchAnalysis = new RunMatchAnalysisUseCase(
-    aiProvider,
-    jobApplications,
-  );
+  const runMatchAnalysis = new RunMatchAnalysisUseCase(aiProvider, jobApplications);
   const extractJobRequirements = new ExtractJobRequirementsUseCase(aiProvider);
 
   const storage = createFileStorage({

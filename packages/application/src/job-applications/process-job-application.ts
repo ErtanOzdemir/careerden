@@ -2,7 +2,7 @@ import type {
   JobApplicationRepository,
   JobSiteScraper,
   ScrapeBundle,
-  UserProfileRepository
+  UserProfileRepository,
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import type { GenerateDocumentsUseCase } from "../documents/generate-documents.js";
@@ -21,7 +21,7 @@ export class ProcessJobApplicationUseCase {
     },
     private readonly requirementExtraction: ExtractJobRequirementsUseCase,
     private readonly matching: RunMatchAnalysisUseCase,
-    private readonly documentGeneration: GenerateDocumentsUseCase
+    private readonly documentGeneration: GenerateDocumentsUseCase,
   ) {}
 
   async execute(jobApplicationId: string): Promise<void> {
@@ -43,22 +43,22 @@ export class ProcessJobApplicationUseCase {
       const scrapedJob = await this.scrapers.job.scrapeJob(jobApplication.sourceUrl);
       const job = await this.requirementExtraction.execute({
         jobApplicationId,
-        job: scrapedJob
+        job: scrapedJob,
       });
       const companyLinkedIn = await this.scrapers.companyLinkedIn.scrapeCompany({
         companyName: job.companyName,
-        linkedInUrl: job.companyLinkedInUrl
+        linkedInUrl: job.companyLinkedInUrl,
       });
       const companyWebsite = companyLinkedIn.websiteUrl
         ? await this.scrapers.companyWebsite.scrapeCompany({
             companyName: job.companyName,
-            websiteUrl: companyLinkedIn.websiteUrl
+            websiteUrl: companyLinkedIn.websiteUrl,
           })
         : undefined;
       const careerPage = companyWebsite?.careerPageUrl
         ? await this.scrapers.careerPage.scrapeCompany({
             companyName: job.companyName,
-            websiteUrl: companyWebsite.careerPageUrl
+            websiteUrl: companyWebsite.careerPageUrl,
           })
         : undefined;
 
@@ -66,7 +66,7 @@ export class ProcessJobApplicationUseCase {
         job,
         companyLinkedIn,
         companyWebsite,
-        careerPage
+        careerPage,
       };
 
       await this.jobApplications.saveScrapeBundle(jobApplicationId, scrape);
@@ -75,7 +75,7 @@ export class ProcessJobApplicationUseCase {
       const analysis = await this.matching.execute({
         jobApplicationId,
         profile,
-        scrape
+        scrape,
       });
 
       await this.transition(jobApplicationId, "analyzing", "generating_documents");
@@ -83,7 +83,7 @@ export class ProcessJobApplicationUseCase {
       await this.documentGeneration.execute({
         jobApplicationId,
         profile,
-        analysis
+        analysis,
       });
 
       await this.transition(jobApplicationId, "generating_documents", "completed");
@@ -97,7 +97,7 @@ export class ProcessJobApplicationUseCase {
   private async transition(
     jobApplicationId: string,
     from: Parameters<typeof canTransitionJobApplicationStatus>[0],
-    to: Parameters<typeof canTransitionJobApplicationStatus>[1]
+    to: Parameters<typeof canTransitionJobApplicationStatus>[1],
   ): Promise<void> {
     if (!canTransitionJobApplicationStatus(from, to)) {
       throw new Error(`Invalid job application status transition: ${from} -> ${to}`);

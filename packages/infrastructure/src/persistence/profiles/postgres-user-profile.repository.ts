@@ -3,7 +3,7 @@ import type {
   CreateUserProfileInput,
   ProfileExperience,
   UserProfile,
-  UserProfileRepository
+  UserProfileRepository,
 } from "@link2cv/domain";
 import { randomUUID } from "node:crypto";
 
@@ -45,7 +45,7 @@ function toUserProfile(row: Record<string, unknown>): UserProfile {
     skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
     experience: Array.isArray(row.experience) ? (row.experience as ProfileExperience[]) : [],
     createdAt: new Date(String(row.created_at)),
-    updatedAt: new Date(String(row.updated_at))
+    updatedAt: new Date(String(row.updated_at)),
   };
 }
 

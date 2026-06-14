@@ -5,7 +5,7 @@ import type {
   JobApplication,
   JobApplicationRepository,
   MatchAnalysisResult,
-  ScrapeBundle
+  ScrapeBundle,
 } from "@link2cv/domain";
 import type { CreateJobApplicationInput, JobApplicationStatus } from "@link2cv/domain";
 import { randomUUID } from "node:crypto";
@@ -41,9 +41,7 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
   }
 
   async listByStatus(status: JobApplicationStatus): Promise<JobApplication[]> {
-    const rows = await this.db("job_applications")
-      .where({ status })
-      .orderBy("created_at", "asc");
+    const rows = await this.db("job_applications").where({ status }).orderBy("created_at", "asc");
 
     return rows.map(toJobApplication);
   }
@@ -51,7 +49,7 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
   async updateStatus(
     id: string,
     status: JobApplicationStatus,
-    failureReason?: string
+    failureReason?: string,
   ): Promise<void> {
     await this.db("job_applications")
       .where({ id })
@@ -72,10 +70,7 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
   }
 
   async getScrapeBundle(id: string): Promise<ScrapeBundle | null> {
-    const row = await this.db("job_applications")
-      .select("scrape_bundle")
-      .where({ id })
-      .first();
+    const row = await this.db("job_applications").select("scrape_bundle").where({ id }).first();
     return (row?.scrape_bundle as ScrapeBundle | undefined) ?? null;
   }
 
@@ -89,10 +84,7 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
   }
 
   async getMatchAnalysis(id: string): Promise<MatchAnalysisResult | null> {
-    const row = await this.db("job_applications")
-      .select("match_analysis")
-      .where({ id })
-      .first();
+    const row = await this.db("job_applications").select("match_analysis").where({ id }).first();
     return (row?.match_analysis as MatchAnalysisResult | undefined) ?? null;
   }
 
@@ -129,7 +121,7 @@ function toJobApplication(row: Record<string, unknown>): JobApplication {
     status: row.status as JobApplicationStatus,
     failureReason: nullableString(row.failure_reason),
     createdAt: new Date(String(row.created_at)),
-    updatedAt: new Date(String(row.updated_at))
+    updatedAt: new Date(String(row.updated_at)),
   };
 }
 
@@ -141,7 +133,7 @@ function toGeneratedDocument(row: Record<string, unknown>): GeneratedDocument {
     fileId: String(row.file_id),
     fileName: String(row.file_name),
     contentType: "application/pdf",
-    createdAt: new Date(String(row.created_at))
+    createdAt: new Date(String(row.created_at)),
   };
 }
 

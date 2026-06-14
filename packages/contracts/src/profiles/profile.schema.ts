@@ -5,7 +5,7 @@ export const profileExperienceSchema = z.object({
   title: z.string().min(1),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  achievements: z.array(z.string().min(1)).default([])
+  achievements: z.array(z.string().min(1)).default([]),
 });
 
 export const createProfileSchema = z.object({
@@ -15,7 +15,7 @@ export const createProfileSchema = z.object({
   location: z.string().optional(),
   summary: z.string().optional(),
   skills: z.array(z.string().min(1)).default([]),
-  experience: z.array(profileExperienceSchema).default([])
+  experience: z.array(profileExperienceSchema).default([]),
 });
 
 export type CreateProfileDto = z.infer<typeof createProfileSchema>;

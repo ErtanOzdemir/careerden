@@ -10,7 +10,7 @@ export const linkedInJobUrlSchema = z
 
 export const createJobApplicationSchema = z.object({
   profileId: z.string().min(1),
-  sourceUrl: linkedInJobUrlSchema
+  sourceUrl: linkedInJobUrlSchema,
 });
 
 export type CreateJobApplicationDto = z.infer<typeof createJobApplicationSchema>;

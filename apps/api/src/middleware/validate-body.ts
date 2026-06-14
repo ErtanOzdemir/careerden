@@ -8,7 +8,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
     if (!result.success) {
       response.status(400).json({
         error: "Invalid request body",
-        issues: result.error.issues
+        issues: result.error.issues,
       });
       return;
     }

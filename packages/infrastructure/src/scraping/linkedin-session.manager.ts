@@ -1,17 +1,7 @@
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  randomBytes,
-} from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type {
-  Browser,
-  BrowserContext,
-  BrowserContextOptions,
-  Page,
-} from "playwright";
+import type { Browser, BrowserContext, BrowserContextOptions, Page } from "playwright";
 import { chromium } from "playwright";
 import type { LinkedInSessionStatusResult } from "@link2cv/domain";
 
@@ -101,8 +91,7 @@ export class LinkedInSessionManager {
       return this.getStatus();
     }
 
-    const state =
-      (await this.activeLogin.context.storageState()) as LinkedInStorageState;
+    const state = (await this.activeLogin.context.storageState()) as LinkedInStorageState;
 
     if (!hasLinkedInAuthCookie(state)) {
       return {
@@ -125,8 +114,7 @@ export class LinkedInSessionManager {
     if (this.activeLogin) {
       return {
         status: "login_in_progress",
-        message:
-          "Complete LinkedIn login in the opened browser, then save the session",
+        message: "Complete LinkedIn login in the opened browser, then save the session",
         updatedAt: this.activeLogin.startedAt,
       };
     }
@@ -135,10 +123,7 @@ export class LinkedInSessionManager {
       const state = await this.readEncryptedState();
       const file = await stat(this.sessionPath);
 
-      if (
-        !hasLinkedInAuthCookie(state) ||
-        hasExpiredLinkedInAuthCookie(state)
-      ) {
+      if (!hasLinkedInAuthCookie(state) || hasExpiredLinkedInAuthCookie(state)) {
         return {
           status: "expired",
           message: "LinkedIn session is missing or expired; reconnect it",
@@ -187,43 +172,26 @@ export class LinkedInSessionManager {
   }
 
   private launchBrowser(): Promise<Browser> {
-    return (
-      this.options.launchBrowser?.() ?? chromium.launch({ headless: false })
-    );
+    return this.options.launchBrowser?.() ?? chromium.launch({ headless: false });
   }
 
-  private async writeEncryptedState(
-    state: LinkedInStorageState,
-  ): Promise<void> {
+  private async writeEncryptedState(state: LinkedInStorageState): Promise<void> {
     await mkdir(this.storageDir, { recursive: true });
 
     const iv = randomBytes(12);
-    const cipher = createCipheriv(
-      "aes-256-gcm",
-      keyFromSecret(this.secret),
-      iv,
-    );
-    const payload = Buffer.concat([
-      cipher.update(JSON.stringify(state), "utf8"),
-      cipher.final(),
-    ]);
+    const cipher = createCipheriv("aes-256-gcm", keyFromSecret(this.secret), iv);
+    const payload = Buffer.concat([cipher.update(JSON.stringify(state), "utf8"), cipher.final()]);
     const encrypted: EncryptedSessionFile = {
       iv: iv.toString("base64"),
       tag: cipher.getAuthTag().toString("base64"),
       payload: payload.toString("base64"),
     };
 
-    await writeFile(
-      this.sessionPath,
-      JSON.stringify(encrypted, null, 2),
-      "utf8",
-    );
+    await writeFile(this.sessionPath, JSON.stringify(encrypted, null, 2), "utf8");
   }
 
   private async readEncryptedState(): Promise<LinkedInStorageState> {
-    const encrypted = JSON.parse(
-      await readFile(this.sessionPath, "utf8"),
-    ) as EncryptedSessionFile;
+    const encrypted = JSON.parse(await readFile(this.sessionPath, "utf8")) as EncryptedSessionFile;
     const decipher = createDecipheriv(
       "aes-256-gcm",
       keyFromSecret(this.secret),
@@ -247,16 +215,14 @@ function keyFromSecret(secret: string): Buffer {
 
 function hasLinkedInAuthCookie(state: LinkedInStorageState): boolean {
   return state.cookies.some(
-    (cookie) =>
-      cookie.domain.includes("linkedin.com") && cookie.name === "li_at",
+    (cookie) => cookie.domain.includes("linkedin.com") && cookie.name === "li_at",
   );
 }
 
 function hasExpiredLinkedInAuthCookie(state: LinkedInStorageState): boolean {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const cookie = state.cookies.find(
-    (candidate) =>
-      candidate.domain.includes("linkedin.com") && candidate.name === "li_at",
+    (candidate) => candidate.domain.includes("linkedin.com") && candidate.name === "li_at",
   );
 
   return Boolean(cookie && cookie.expires > 0 && cookie.expires <= nowSeconds);
@@ -264,10 +230,7 @@ function hasExpiredLinkedInAuthCookie(state: LinkedInStorageState): boolean {
 
 function isMissingFileError(error: unknown): boolean {
   const isMissing =
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "ENOENT";
+    typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
   if (isMissing) {
     console.error("LinkedInSessionManager ENOENT error:", error);
   }
@@ -275,7 +238,5 @@ function isMissingFileError(error: unknown): boolean {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "Unknown browser launch error.";
+  return error instanceof Error ? error.message : "Unknown browser launch error.";
 }

@@ -12,20 +12,14 @@ import { BullMqJobApplicationQueue } from "./queue/job-applications/bullmq-job-a
 import { InMemoryJobApplicationQueue } from "./queue/job-applications/in-memory-job-application.queue.js";
 import { UnavailableJobApplicationQueue } from "./queue/job-applications/unavailable-job-application.queue.js";
 
-export function createRepositories(config: {
-  databaseUrl?: string;
-}): {
+export function createRepositories(config: { databaseUrl?: string }): {
   profiles: UserProfileRepository;
   jobApplications: JobApplicationRepository;
 } {
-  const db = config.databaseUrl
-    ? createDb(config.databaseUrl)
-    : undefined;
+  const db = config.databaseUrl ? createDb(config.databaseUrl) : undefined;
 
   return {
-    profiles: db
-      ? new PostgresUserProfileRepository(db)
-      : new InMemoryUserProfileRepository(),
+    profiles: db ? new PostgresUserProfileRepository(db) : new InMemoryUserProfileRepository(),
     jobApplications: db
       ? new PostgresJobApplicationRepository(db)
       : new InMemoryJobApplicationRepository(),

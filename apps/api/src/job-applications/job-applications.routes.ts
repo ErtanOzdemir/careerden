@@ -59,7 +59,9 @@ export function createJobApplicationRouter(dependencies: {
         return;
       }
 
-      const documents = await dependencies.jobApplications.listGeneratedDocuments(request.params.id);
+      const documents = await dependencies.jobApplications.listGeneratedDocuments(
+        request.params.id,
+      );
       response.json({ ...jobApplication, documents });
     } catch (error) {
       next(error);

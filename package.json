@@ -9,14 +9,24 @@
     "db:rollback": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:rollback",
     "db:status": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:status",
     "dev": "turbo run dev --parallel",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.2",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
     "tsx": "^4.19.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.61.0",
     "vitest": "^2.1.8"
   }
 }

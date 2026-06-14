@@ -9,16 +9,11 @@ import type { Page } from "playwright";
 import type { LinkedInSessionManager } from "../linkedin-session.manager.js";
 
 export class LinkedInJobScraper implements JobSiteScraper {
-  constructor(
-    private readonly linkedInSessionManager?: LinkedInSessionManager,
-  ) {}
+  constructor(private readonly linkedInSessionManager?: LinkedInSessionManager) {}
 
   canHandle(url: string): boolean {
     const parsed = new URL(url);
-    return (
-      parsed.hostname.endsWith("linkedin.com") &&
-      parsed.pathname.includes("/jobs/")
-    );
+    return parsed.hostname.endsWith("linkedin.com") && parsed.pathname.includes("/jobs/");
   }
 
   async scrapeJob(url: string): Promise<ScrapedJob> {
@@ -32,9 +27,7 @@ export class LinkedInJobScraper implements JobSiteScraper {
       .getStorageState()
       .catch((error: unknown) => {
         const message =
-          error instanceof Error
-            ? error.message
-            : "LinkedIn session is not connected";
+          error instanceof Error ? error.message : "LinkedIn session is not connected";
         throw new Error(`linkedin_session_required: ${message}`);
       });
     const browser = await chromium.launch({ headless: false });
@@ -44,14 +37,10 @@ export class LinkedInJobScraper implements JobSiteScraper {
       const page = await context.newPage();
 
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-      await page
-        .waitForLoadState("networkidle", { timeout: 15000 })
-        .catch(() => undefined);
+      await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => undefined);
 
       if (page.url().includes("/login")) {
-        throw new Error(
-          "linkedin_session_required: LinkedIn redirected to login",
-        );
+        throw new Error("linkedin_session_required: LinkedIn redirected to login");
       }
 
       const title = await firstText(page, [
@@ -135,10 +124,7 @@ async function firstText(page: Page, selectors: string[]): Promise<string> {
   return "";
 }
 
-async function firstHref(
-  page: Page,
-  selectors: string[],
-): Promise<string | undefined> {
+async function firstHref(page: Page, selectors: string[]): Promise<string | undefined> {
   for (const selector of selectors) {
     const locator = page.locator(selector).first();
 

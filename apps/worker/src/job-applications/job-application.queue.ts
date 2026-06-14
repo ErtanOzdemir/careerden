@@ -1,4 +1,4 @@
 export {
   BullMqJobApplicationQueue,
-  jobApplicationProcessingQueueName
+  jobApplicationProcessingQueueName,
 } from "@link2cv/infrastructure";

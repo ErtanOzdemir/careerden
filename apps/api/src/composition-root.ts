@@ -39,13 +39,9 @@ export interface ApiDependencies {
 }
 
 export function createApiDependencies(options: ApiAppOptions): ApiDependencies {
-  const db = options.databaseUrl
-    ? createDb(options.databaseUrl)
-    : undefined;
+  const db = options.databaseUrl ? createDb(options.databaseUrl) : undefined;
 
-  const profiles = db
-    ? new PostgresUserProfileRepository(db)
-    : new InMemoryUserProfileRepository();
+  const profiles = db ? new PostgresUserProfileRepository(db) : new InMemoryUserProfileRepository();
 
   const jobApplications = db
     ? new PostgresJobApplicationRepository(db)

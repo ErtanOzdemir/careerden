@@ -3,7 +3,7 @@ import {
   ExtractJobRequirementsUseCase,
   GenerateDocumentsUseCase,
   ProcessJobApplicationUseCase,
-  RunMatchAnalysisUseCase
+  RunMatchAnalysisUseCase,
 } from "../index.js";
 import type { AiProvider, AiGenerateParams, JobSiteScraper } from "@link2cv/domain";
 import {
@@ -23,13 +23,13 @@ describe("ProcessJobApplicationUseCase", () => {
         {
           company: "Analytical Engines",
           title: "Engineer",
-          achievements: ["Built reliable automation"]
-        }
-      ]
+          achievements: ["Built reliable automation"],
+        },
+      ],
     });
     const jobApplication = await jobApplications.create({
       profileId: profile.id,
-      sourceUrl: "https://www.linkedin.com/jobs/view/123"
+      sourceUrl: "https://www.linkedin.com/jobs/view/123",
     });
     const scraper = createScraper();
     const aiProvider = createMockAiProvider();
@@ -39,12 +39,12 @@ describe("ProcessJobApplicationUseCase", () => {
       {
         async render() {
           return "<html><body>Document</body></html>";
-        }
+        },
       },
       {
         async htmlToPdf() {
           return Buffer.from("pdf");
-        }
+        },
       },
       {
         async put(file) {
@@ -52,14 +52,14 @@ describe("ProcessJobApplicationUseCase", () => {
             id: "file-1",
             fileName: file.fileName,
             contentType: file.contentType,
-            size: file.body.byteLength
+            size: file.body.byteLength,
           };
         },
         async getSignedUrl() {
           return "file://file-1";
-        }
+        },
       },
-      jobApplications
+      jobApplications,
     );
 
     await new ProcessJobApplicationUseCase(
@@ -69,11 +69,11 @@ describe("ProcessJobApplicationUseCase", () => {
         job: scraper,
         companyLinkedIn: scraper,
         companyWebsite: scraper,
-        careerPage: scraper
+        careerPage: scraper,
       },
       requirementExtraction,
       matching,
-      documents
+      documents,
     ).execute(jobApplication.id);
 
     const completed = await jobApplications.findById(jobApplication.id);
@@ -81,10 +81,7 @@ describe("ProcessJobApplicationUseCase", () => {
     const scrape = await jobApplications.getScrapeBundle(jobApplication.id);
 
     expect(completed?.status).toBe("completed");
-    expect(scrape?.job.requirements).toEqual([
-      "TypeScript",
-      "Kubernetes"
-    ]);
+    expect(scrape?.job.requirements).toEqual(["TypeScript", "Kubernetes"]);
     expect(generated).toHaveLength(2);
   });
 });
@@ -101,7 +98,7 @@ function createScraper(): JobSiteScraper {
         description: "Build TypeScript services",
         requirements: [],
         companyLinkedInUrl: "https://www.linkedin.com/company/example",
-        raw: { url }
+        raw: { url },
       };
     },
     async scrapeCompany(input) {
@@ -110,9 +107,9 @@ function createScraper(): JobSiteScraper {
         linkedInUrl: input.linkedInUrl,
         websiteUrl: input.websiteUrl ?? "https://example.com",
         careerPageUrl: "https://example.com/careers",
-        raw: input
+        raw: input,
       };
-    }
+    },
   };
 }
 
@@ -126,7 +123,7 @@ function createMockAiProvider(): AiProvider {
 
       if ("description" in prompt) {
         return params.outputSchema.parse({
-          requirements: ["TypeScript", "Kubernetes"]
+          requirements: ["TypeScript", "Kubernetes"],
         }) as T;
       }
 
@@ -139,8 +136,8 @@ function createMockAiProvider(): AiProvider {
         recommendedAchievements: ["Built reliable automation"],
         customizedSummary: "Experienced TypeScript engineer with relevant skills.",
         interviewTips: ["Prepare examples of automation work"],
-        coverLetterGuidance: ["Highlight TypeScript experience"]
+        coverLetterGuidance: ["Highlight TypeScript experience"],
       });
-    }
+    },
   };
 }

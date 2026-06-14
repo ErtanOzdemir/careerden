@@ -4,7 +4,7 @@ export const jobApplicationStatuses = [
   "analyzing",
   "generating_documents",
   "completed",
-  "failed"
+  "failed",
 ] as const;
 
 export type JobApplicationStatus = (typeof jobApplicationStatuses)[number];
@@ -15,12 +15,12 @@ const allowedTransitions: Record<JobApplicationStatus, JobApplicationStatus[]> =
   analyzing: ["generating_documents", "failed"],
   generating_documents: ["completed", "failed"],
   completed: [],
-  failed: []
+  failed: [],
 };
 
 export function canTransitionJobApplicationStatus(
   from: JobApplicationStatus,
-  to: JobApplicationStatus
+  to: JobApplicationStatus,
 ): boolean {
   return allowedTransitions[from].includes(to);
 }

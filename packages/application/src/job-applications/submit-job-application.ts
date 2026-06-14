@@ -3,14 +3,14 @@ import type {
   JobApplication,
   JobApplicationQueue,
   JobApplicationRepository,
-  UserProfileRepository
+  UserProfileRepository,
 } from "@link2cv/domain";
 
 export class SubmitJobApplicationUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
-    private readonly queue: JobApplicationQueue
+    private readonly queue: JobApplicationQueue,
   ) {}
 
   async execute(input: CreateJobApplicationInput): Promise<JobApplication> {

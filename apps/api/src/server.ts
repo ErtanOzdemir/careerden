@@ -12,7 +12,7 @@ const app = createApiApp({
   rustFsSecretKey: env.RUSTFS_SECRET_KEY,
   rustFsBucket: env.RUSTFS_BUCKET,
   rustFsRegion: env.RUSTFS_REGION,
-  rustFsPublicEndpoint: env.RUSTFS_PUBLIC_ENDPOINT
+  rustFsPublicEndpoint: env.RUSTFS_PUBLIC_ENDPOINT,
 });
 
 app.listen(env.PORT, () => {

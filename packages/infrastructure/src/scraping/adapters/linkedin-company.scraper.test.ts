@@ -8,9 +8,9 @@ import {
 
 describe("LinkedInCompanyScraper", () => {
   it("normalizes LinkedIn company URLs to the about page", () => {
-    expect(
-      normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun"),
-    ).toBe("https://www.linkedin.com/company/ogretmenbulun/about/");
+    expect(normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun")).toBe(
+      "https://www.linkedin.com/company/ogretmenbulun/about/",
+    );
     expect(
       normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun/"),
     ).toBe("https://www.linkedin.com/company/ogretmenbulun/about/");
@@ -21,8 +21,12 @@ describe("LinkedInCompanyScraper", () => {
 
   it("ignores missing or non-LinkedIn company URLs", () => {
     expect(normalizeLinkedInCompanyAboutUrl()).toBeUndefined();
-    expect(normalizeLinkedInCompanyAboutUrl("https://example.com/company/ogretmenbulun")).toBeUndefined();
-    expect(normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/jobs/view/123")).toBeUndefined();
+    expect(
+      normalizeLinkedInCompanyAboutUrl("https://example.com/company/ogretmenbulun"),
+    ).toBeUndefined();
+    expect(
+      normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/jobs/view/123"),
+    ).toBeUndefined();
   });
 
   it("extracts a direct external website candidate", () => {
@@ -69,11 +73,9 @@ describe("LinkedInCompanyScraper", () => {
   });
 
   it("falls back to Website definition text when no anchor exists", () => {
-    expect(
-      chooseLinkedInAboutWebsiteUrl([
-        { label: "Website", text: "www.withcherry.com" },
-      ]),
-    ).toBe("https://www.withcherry.com/");
+    expect(chooseLinkedInAboutWebsiteUrl([{ label: "Website", text: "www.withcherry.com" }])).toBe(
+      "https://www.withcherry.com/",
+    );
   });
 
   it("does not infer a website from non-Website definition fields", () => {

@@ -27,10 +27,7 @@ describe("job applications route behavior", () => {
       ),
     });
 
-    const result = await listJobApplicationsWithDocuments(
-      jobApplications,
-      "profile-1",
-    );
+    const result = await listJobApplicationsWithDocuments(jobApplications, "profile-1");
 
     expect(jobApplications.listByProfileId).toHaveBeenCalledWith("profile-1");
     expect(jobApplications.listGeneratedDocuments).toHaveBeenCalledWith("job-1");
@@ -128,9 +125,7 @@ function createJobApplication(overrides: Partial<JobApplication> = {}): JobAppli
   };
 }
 
-function createGeneratedDocument(
-  overrides: Partial<GeneratedDocument> = {},
-): GeneratedDocument {
+function createGeneratedDocument(overrides: Partial<GeneratedDocument> = {}): GeneratedDocument {
   return {
     id: "doc-1",
     jobApplicationId: "job-1",

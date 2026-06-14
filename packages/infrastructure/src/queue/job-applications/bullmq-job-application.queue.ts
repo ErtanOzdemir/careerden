@@ -8,7 +8,7 @@ export class BullMqJobApplicationQueue implements JobApplicationQueue {
 
   constructor(connection: { host: string; port: number }) {
     this.queue = new Queue<JobApplicationQueuePayload>(jobApplicationProcessingQueueName, {
-      connection
+      connection,
     });
   }
 
@@ -16,7 +16,7 @@ export class BullMqJobApplicationQueue implements JobApplicationQueue {
     await this.queue.add("process-job-application", payload, {
       jobId: payload.jobApplicationId,
       removeOnComplete: 100,
-      removeOnFail: 500
+      removeOnFail: 500,
     });
   }
 }

@@ -1,4 +1,9 @@
-import type { CompanyLookupInput, JobSiteScraper, ScrapedCompany, ScrapedJob } from "@link2cv/domain";
+import type {
+  CompanyLookupInput,
+  JobSiteScraper,
+  ScrapedCompany,
+  ScrapedJob,
+} from "@link2cv/domain";
 
 export class CompanyWebsiteScraper implements JobSiteScraper {
   canHandle(url: string): boolean {
@@ -16,8 +21,8 @@ export class CompanyWebsiteScraper implements JobSiteScraper {
       websiteUrl: input.websiteUrl,
       raw: {
         adapter: "company-website",
-        input
-      }
+        input,
+      },
     };
   }
 }

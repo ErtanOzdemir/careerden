@@ -1,5 +1,7 @@
 # Workflow
 
+For source placement and bounded-context rules, read `architecture.md` first.
+
 ## Submission Flow
 
 1. Validate the LinkedIn job URL.

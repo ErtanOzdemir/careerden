@@ -55,6 +55,8 @@ link2cv/
 │   └── config/       Environment loading (dotenv + Zod)
 ```
 
+Backend source is organized by bounded context inside those packages. Common contexts include `profiles`, `job-applications`, `scraping`, `matching`, `documents`, `storage`, `persistence`, and `queue`.
+
 ### Tech Stack
 
 | Layer           | Technology                               |
@@ -71,6 +73,8 @@ link2cv/
 | Validation      | Zod 3                                    |
 | Frontend        | Vite 6                                   |
 | Testing         | Vitest 2                                 |
+| Linting         | ESLint 10                                |
+| Formatting      | Prettier 3                               |
 
 ### Data Flow
 
@@ -95,10 +99,10 @@ Copy `.env.example` to `.env` and configure:
 | `GEMINI_API_KEY`               | Google Gemini API key                               | —                                                   |
 | `DEEPSEEK_API_KEY`             | DeepSeek API key                                    | —                                                   |
 | `RUSTFS_ENDPOINT`              | RustFS S3 endpoint                                  | `http://localhost:9000`                             |
-| `RUSTFS_ACCESS_KEY`            | RustFS access key                                   | `rustfsadmin`                                      |
-| `RUSTFS_SECRET_KEY`            | RustFS secret key                                   | `rustfsadmin`                                      |
-| `RUSTFS_BUCKET`                | RustFS bucket for generated documents               | `link2cv-files`                                    |
-| `RUSTFS_REGION`                | S3 region used by the RustFS client                 | `us-east-1`                                        |
+| `RUSTFS_ACCESS_KEY`            | RustFS access key                                   | `rustfsadmin`                                       |
+| `RUSTFS_SECRET_KEY`            | RustFS secret key                                   | `rustfsadmin`                                       |
+| `RUSTFS_BUCKET`                | RustFS bucket for generated documents               | `link2cv-files`                                     |
+| `RUSTFS_REGION`                | S3 region used by the RustFS client                 | `us-east-1`                                         |
 | `RUSTFS_PUBLIC_ENDPOINT`       | Optional endpoint used in generated signed URLs     | —                                                   |
 | `LINKEDIN_SESSION_STORAGE_DIR` | LinkedIn session storage                            | `./storage/linkedin-session`                        |
 | `LINKEDIN_SESSION_SECRET`      | Secret for LinkedIn session encryption              | —                                                   |
@@ -134,6 +138,16 @@ Copy `.env.example` to `.env` and configure:
 ```bash
 # Type check all packages
 pnpm typecheck
+
+# Lint all source files
+pnpm lint
+
+# Check Prettier formatting
+pnpm format:check
+
+# Apply ESLint and Prettier mechanical fixes
+pnpm lint:fix
+pnpm format
 
 # Run all tests
 pnpm test

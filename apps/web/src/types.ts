@@ -1,12 +1,8 @@
-export type ApplicationStatus =
-  | "Applied"
-  | "Interviewing"
-  | "Offer"
-  | "Rejected";
+export type ApplicationStatus = "Applied" | "Interviewing" | "Offer" | "Rejected";
 
 export type Priority = "High" | "Mid" | "Low";
 
-export type MilestoneStatus = "completed" | "upcoming";
+export type MilestoneStatus = "cancelled" | "completed" | "upcoming";
 
 export interface TimelineMilestone {
   id: string;
@@ -17,9 +13,22 @@ export interface TimelineMilestone {
   type?: string;
 }
 
+export type ProcessingLogStatus = "completed" | "failed";
+
+export interface ProcessingLogItem {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  status: ProcessingLogStatus;
+}
+
 export interface Contact {
+  email?: string;
   initials: string;
   name: string;
+  notes?: string;
+  phone?: string;
   role: string;
   color?: string;
 }
@@ -49,6 +58,12 @@ export interface JobApplication {
   description?: string;
   requirements?: string[];
   timeline?: TimelineMilestone[];
+  processingStatus?: string;
+  processingStatusLabel?: string;
+  processingFailureReason?: string;
+  processingLog?: ProcessingLogItem[];
+  metadata?: Record<string, unknown>;
+  interviewNotes?: string;
   contacts?: Contact[];
   aiMatch?: {
     score: number;

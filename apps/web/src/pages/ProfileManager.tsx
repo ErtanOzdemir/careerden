@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { mockProfile } from "../mockData";
-import type { SkillCategory } from "../types";
+import { useEffect, useState } from "react";
+import type { Profile, SkillCategory } from "../types";
+import { requireDefaultProfileId } from "../api/config";
+import { mapApiProfileToUi } from "../api/mappers";
+import { profilesApi } from "../api/profiles";
 
 type Tab = "experiences" | "skills" | "education" | "documents";
 
@@ -19,30 +21,72 @@ const skillIconColors: Record<string, string> = {
 
 export default function ProfileManager() {
   const [activeTab, setActiveTab] = useState<Tab>("experiences");
-  const profile = mockProfile;
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfile() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const apiProfile = await profilesApi.get(requireDefaultProfileId());
+
+        if (isMounted) {
+          setProfile(mapApiProfileToUi(apiProfile));
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError(loadError instanceof Error ? loadError.message : "Failed to load profile.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in max-w-max-width mx-auto py-2xl text-center text-secondary">
+        Loading profile...
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="animate-fade-in max-w-max-width mx-auto py-2xl text-center text-error">
+        {error ?? "Profile data is unavailable."}
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in max-w-max-width mx-auto py-xl">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-lg mb-xl">
         <div>
-          <h2 className="font-display text-display text-on-surface">
-            Profile Manager
-          </h2>
+          <h2 className="font-display text-display text-on-surface">Profile Manager</h2>
           <p className="font-body-lg text-on-surface-variant mt-sm">
             Curate your professional presence and assets.
           </p>
         </div>
         <div className="flex gap-md">
           <button className="flex items-center gap-2 px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[20px]">
-              share
-            </span>
+            <span className="material-symbols-outlined text-[20px]">share</span>
             <span className="font-label-md">Public Link</span>
           </button>
           <button className="flex items-center gap-2 px-lg py-sm bg-primary text-on-primary rounded-lg hover:shadow-lg transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[20px]">
-              cloud_upload
-            </span>
+            <span className="material-symbols-outlined text-[20px]">cloud_upload</span>
             <span className="font-label-md">Quick Add</span>
           </button>
         </div>
@@ -68,26 +112,18 @@ export default function ProfileManager() {
               {profile.title}
             </span>
           </div>
-          <p className="font-body-md text-on-surface-variant max-w-[42rem]">
-            {profile.headline}
-          </p>
+          <p className="font-body-md text-on-surface-variant max-w-[42rem]">{profile.headline}</p>
           <div className="flex flex-wrap justify-center md:justify-start gap-lg mt-md">
             <div className="flex items-center gap-2 text-outline">
-              <span className="material-symbols-outlined text-[18px]">
-                location_on
-              </span>
+              <span className="material-symbols-outlined text-[18px]">location_on</span>
               <span className="font-label-md">{profile.location}</span>
             </div>
             <div className="flex items-center gap-2 text-outline">
-              <span className="material-symbols-outlined text-[18px]">
-                mail
-              </span>
+              <span className="material-symbols-outlined text-[18px]">mail</span>
               <span className="font-label-md">{profile.email}</span>
             </div>
             <div className="flex items-center gap-2 text-outline">
-              <span className="material-symbols-outlined text-[18px]">
-                link
-              </span>
+              <span className="material-symbols-outlined text-[18px]">link</span>
               <span className="font-label-md">{profile.portfolio}</span>
             </div>
           </div>
@@ -117,9 +153,7 @@ export default function ProfileManager() {
           <div className="flex justify-between items-center mb-sm">
             <h4 className="font-headline-md text-on-surface">Work History</h4>
             <button className="text-primary font-label-md flex items-center gap-1 hover:underline cursor-pointer">
-              <span className="material-symbols-outlined text-[18px]">
-                add_circle
-              </span>
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
               Add New Position
             </button>
           </div>
@@ -130,20 +164,14 @@ export default function ProfileManager() {
                 className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col md:flex-row gap-lg group hover:shadow-md transition-all"
               >
                 <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-primary">
-                    {exp.icon}
-                  </span>
+                  <span className="material-symbols-outlined text-primary">{exp.icon}</span>
                 </div>
                 <div className="flex-1">
                   <div className="flex flex-col md:flex-row justify-between items-start mb-sm">
                     <div>
-                      <h5 className="font-headline-md text-on-surface">
-                        {exp.title}
-                      </h5>
+                      <h5 className="font-headline-md text-on-surface">{exp.title}</h5>
                       <div className="flex items-center gap-2 text-outline mt-1">
-                        <span className="font-label-md text-secondary">
-                          {exp.company}
-                        </span>
+                        <span className="font-label-md text-secondary">{exp.company}</span>
                         <span className="text-xs">&bull;</span>
                         <span className="font-label-md">{exp.period}</span>
                       </div>
@@ -171,19 +199,14 @@ export default function ProfileManager() {
         <div className="space-y-xl animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
             {profile.skills.map((cat: SkillCategory) => (
-              <div
-                key={cat.name}
-                className="bg-surface-container-low p-lg rounded-2xl"
-              >
+              <div key={cat.name} className="bg-surface-container-low p-lg rounded-2xl">
                 <div className="flex items-center gap-3 mb-lg">
                   <span
                     className={`material-symbols-outlined ${skillIconColors[cat.icon] || "text-primary"}`}
                   >
                     {cat.icon}
                   </span>
-                  <h4 className="font-headline-md text-on-surface">
-                    {cat.name}
-                  </h4>
+                  <h4 className="font-headline-md text-on-surface">{cat.name}</h4>
                 </div>
                 <div className="flex flex-wrap gap-sm">
                   {cat.skills.map((skill) => (
@@ -215,15 +238,9 @@ export default function ProfileManager() {
                   </span>
                 </div>
                 <div>
-                  <h5 className="font-headline-md text-on-surface">
-                    {edu.degree}
-                  </h5>
-                  <p className="font-body-md text-secondary">
-                    {edu.institution}
-                  </p>
-                  <p className="font-label-md text-outline mt-sm">
-                    {edu.period}
-                  </p>
+                  <h5 className="font-headline-md text-on-surface">{edu.degree}</h5>
+                  <p className="font-body-md text-secondary">{edu.institution}</p>
+                  <p className="font-label-md text-outline mt-sm">{edu.period}</p>
                 </div>
               </div>
             ))}
@@ -248,14 +265,10 @@ export default function ProfileManager() {
                 )}
                 <div className="flex items-center gap-md mb-lg">
                   <div className="p-sm bg-error-container rounded-lg">
-                    <span className="material-symbols-outlined text-error">
-                      picture_as_pdf
-                    </span>
+                    <span className="material-symbols-outlined text-error">picture_as_pdf</span>
                   </div>
                   <div>
-                    <h5 className="font-label-md text-on-surface truncate pr-8">
-                      {doc.name}
-                    </h5>
+                    <h5 className="font-label-md text-on-surface truncate pr-8">{doc.name}</h5>
                     <p className="text-[10px] text-outline">
                       Uploaded {doc.uploaded} &bull; {doc.size}
                     </p>
@@ -272,9 +285,7 @@ export default function ProfileManager() {
               </div>
             ))}
             <button className="border-2 border-dashed border-outline-variant rounded-xl p-lg flex flex-col items-center justify-center gap-sm hover:bg-surface-container-low hover:border-primary text-outline hover:text-primary transition-all cursor-pointer">
-              <span className="material-symbols-outlined text-[32px]">
-                add_circle
-              </span>
+              <span className="material-symbols-outlined text-[32px]">add_circle</span>
               <span className="font-label-md">Upload New Document</span>
             </button>
           </div>

@@ -1,8 +1,4 @@
-import type {
-  DashboardStats,
-  JobApplication,
-  Profile,
-} from "./types";
+import type { DashboardStats, JobApplication, Profile } from "./types";
 
 export const mockApplications: JobApplication[] = [
   {
@@ -150,8 +146,7 @@ export const mockApplications: JobApplication[] = [
         { keyword: "Fintech", match: false },
         { keyword: "SQL", match: false },
       ],
-      recommendation:
-        "Apply to CV",
+      recommendation: "Apply to CV",
       currentSummary:
         "Product Designer with 5 years experience in building web apps. Specialized in user research and Figma.",
       enhancedSummary:
@@ -509,7 +504,8 @@ export const mockProfile: Profile = {
   id: "p1",
   fullName: "Alex Rivera",
   title: "Senior UI/UX",
-  headline: "Crafting seamless digital experiences through systematic design and user-centric problem solving. Currently open to roles in FinTech and Healthcare sectors.",
+  headline:
+    "Crafting seamless digital experiences through systematic design and user-centric problem solving. Currently open to roles in FinTech and Healthcare sectors.",
   summary: "Product Designer with 5 years experience building web apps.",
   location: "San Francisco, CA",
   email: "alex.rivera@trackly.io",
@@ -554,23 +550,13 @@ export const mockProfile: Profile = {
       name: "Development",
       icon: "code",
       color: "tertiary",
-      skills: [
-        "HTML/CSS",
-        "Tailwind CSS",
-        "React Basics",
-        "GitHub",
-      ],
+      skills: ["HTML/CSS", "Tailwind CSS", "React Basics", "GitHub"],
     },
     {
       name: "Soft Skills",
       icon: "groups",
       color: "secondary",
-      skills: [
-        "Leadership",
-        "Stakeholder Management",
-        "Public Speaking",
-        "Strategic Thinking",
-      ],
+      skills: ["Leadership", "Stakeholder Management", "Public Speaking", "Strategic Thinking"],
     },
   ],
   education: [

@@ -1,6 +1,8 @@
+import LinkedInSessionButton from "./LinkedInSessionButton";
+
 export default function TopNav() {
   return (
-    <header className="lg:ml-64 flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-sm bg-surface border-b border-outline-variant z-40 fixed top-0 bg-white/80 backdrop-blur-md lg:static lg:bg-transparent lg:border-none">
+    <header className="fixed left-0 right-0 top-0 z-40 flex items-center justify-between bg-surface bg-white/80 px-margin-mobile py-sm border-b border-outline-variant backdrop-blur-md md:px-margin-desktop lg:static lg:ml-64 lg:bg-transparent lg:border-none">
       <h1 className="lg:hidden font-headline-md text-headline-md font-bold text-primary">
         Trackly
       </h1>
@@ -20,7 +22,8 @@ export default function TopNav() {
           Quick Add
         </button>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4">
+        <LinkedInSessionButton />
         <button className="material-symbols-outlined text-secondary hover:bg-surface-container-low p-2 rounded-full transition-colors cursor-pointer">
           notifications
         </button>

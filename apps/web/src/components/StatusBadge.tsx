@@ -7,15 +7,9 @@ const statusStyles: Record<ApplicationStatus, string> = {
   Rejected: "bg-error-container text-on-error-container",
 };
 
-export default function StatusBadge({
-  status,
-}: {
-  status: ApplicationStatus;
-}) {
+export default function StatusBadge({ status }: { status: ApplicationStatus }) {
   return (
-    <span
-      className={`px-3 py-1 rounded-full text-label-sm font-bold ${statusStyles[status]}`}
-    >
+    <span className={`px-3 py-1 rounded-full text-label-sm font-bold ${statusStyles[status]}`}>
       {status}
     </span>
   );

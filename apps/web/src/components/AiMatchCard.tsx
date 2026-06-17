@@ -12,17 +12,14 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
 
   const scoreRadius = 56;
   const circumference = 2 * Math.PI * scoreRadius;
-  const offset =
-    circumference - (aiMatch.score / 100) * circumference;
+  const offset = circumference - (aiMatch.score / 100) * circumference;
 
   return (
     <section className="bg-inverse-surface text-inverse-on-surface p-lg rounded-xl shadow-lg relative overflow-hidden">
       <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary opacity-20 rounded-full blur-3xl" />
       <div className="flex items-center justify-between mb-lg relative">
         <h3 className="font-display font-headline-md flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary-fixed-dim">
-            auto_awesome
-          </span>
+          <span className="material-symbols-outlined text-primary-fixed-dim">auto_awesome</span>
           AI Match Intelligence
         </h3>
         <span className="bg-primary px-3 py-1 rounded-full text-label-sm font-bold text-on-primary">
@@ -77,19 +74,13 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
                 <span className="font-display text-display text-primary-fixed-dim leading-none">
                   {aiMatch.score}
                 </span>
-                <span className="text-label-sm uppercase opacity-70">
-                  Match
-                </span>
+                <span className="text-label-sm uppercase opacity-70">Match</span>
               </div>
             </div>
-            <p className="text-body-md text-center px-4 opacity-80 italic">
-              {aiMatch.summary}
-            </p>
+            <p className="text-body-md text-center px-4 opacity-80 italic">{aiMatch.summary}</p>
           </div>
           <div>
-            <h4 className="text-label-md font-bold uppercase mb-sm opacity-60">
-              Keyword Analysis
-            </h4>
+            <h4 className="text-label-md font-bold uppercase mb-sm opacity-60">Keyword Analysis</h4>
             <div className="flex flex-wrap gap-2">
               {aiMatch.keywords.map((kw) => (
                 <span
@@ -114,13 +105,9 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
       {activeTab === "Summary" && (
         <div className="space-y-md relative z-10 animate-fade-in">
           <div className="flex items-center justify-between">
-            <h4 className="text-label-md font-bold uppercase opacity-60">
-              AI Recommendation
-            </h4>
+            <h4 className="text-label-md font-bold uppercase opacity-60">AI Recommendation</h4>
             <div className="flex items-center gap-2">
-              <span className="text-label-sm opacity-70">
-                {aiMatch.recommendation}
-              </span>
+              <span className="text-label-sm opacity-70">{aiMatch.recommendation}</span>
               <div className="w-8 h-4 bg-primary rounded-full relative">
                 <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full" />
               </div>
@@ -141,9 +128,7 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
             <span className="text-label-sm bg-green-500/20 text-green-300 px-2 py-0.5 rounded mb-2 inline-block">
               AI Enhanced
             </span>
-            <p className="text-body-md text-inverse-on-surface">
-              {aiMatch.enhancedSummary}
-            </p>
+            <p className="text-body-md text-inverse-on-surface">{aiMatch.enhancedSummary}</p>
           </div>
         </div>
       )}
@@ -158,9 +143,7 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
                     corporate_fare
                   </span>
                   <div>
-                    <h5 className="text-body-md font-bold text-inverse-on-surface">
-                      {exp.title}
-                    </h5>
+                    <h5 className="text-body-md font-bold text-inverse-on-surface">{exp.title}</h5>
                     <p className="text-label-sm opacity-60">{exp.company}</p>
                   </div>
                 </div>
@@ -196,9 +179,7 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
                       {exp.enhancedAchievements.map((ach, j) => (
                         <li key={j} className="flex gap-2">
                           <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-                          <p className="text-body-md text-inverse-on-surface italic">
-                            {ach}
-                          </p>
+                          <p className="text-body-md text-inverse-on-surface italic">{ach}</p>
                         </li>
                       ))}
                     </ul>
@@ -233,9 +214,7 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
                         Apply
                       </button>
                     </div>
-                    <p className="text-body-md text-inverse-on-surface italic">
-                      {opt.enhanced}
-                    </p>
+                    <p className="text-body-md text-inverse-on-surface italic">{opt.enhanced}</p>
                   </div>
                 </div>
               ))}
@@ -248,9 +227,7 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
         <div className="space-y-md relative z-10 animate-fade-in">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="text-label-md font-bold uppercase opacity-60 mb-2">
-                Your Skills
-              </h4>
+              <h4 className="text-label-md font-bold uppercase opacity-60 mb-2">Your Skills</h4>
               <div className="flex flex-wrap gap-1">
                 {aiMatch.yourSkills.map((skill) => (
                   <span
@@ -272,10 +249,7 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
                     key={skill}
                     className="px-2 py-0.5 bg-primary/20 border border-primary/40 rounded text-label-sm flex items-center gap-1 hover:bg-primary/40 transition-colors cursor-pointer"
                   >
-                    {skill}{" "}
-                    <span className="material-symbols-outlined text-[14px]">
-                      add
-                    </span>
+                    {skill} <span className="material-symbols-outlined text-[14px]">add</span>
                   </button>
                 ))}
               </div>
@@ -285,10 +259,7 @@ export default function AiMatchCard({ aiMatch }: AiMatchCardProps) {
       )}
 
       <button className="w-full py-4 bg-primary-container text-on-primary-container font-display font-headline-md rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center gap-3 mt-xl relative z-10 cursor-pointer">
-        <span
-          className="material-symbols-outlined"
-          style={{ fontVariationSettings: "'FILL' 1" }}
-        >
+        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
           file_download
         </span>
         Export Personalized CV

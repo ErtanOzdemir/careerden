@@ -1,0 +1,394 @@
+import type {
+  ApiApplicationPriority,
+  ApiApplicationStatus,
+  ApiJobApplication,
+  ApiJobApplicationAnalytics,
+  ApiJobApplicationDetail,
+  ApiJobApplicationEvent,
+  ApiJobApplicationInterview,
+  ApiMatchAnalysis,
+  ApiProfile,
+} from "./types";
+import type {
+  ApplicationStatus,
+  DashboardStats,
+  JobApplication,
+  Priority,
+  ProcessingLogItem,
+  Profile,
+  TimelineMilestone,
+  UpcomingInterview,
+} from "../types";
+
+export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
+  switch (status) {
+    case "offer":
+      return "Offer";
+    case "rejected":
+      return "Rejected";
+    case "interview":
+    case "phone_screen":
+      return "Interviewing";
+    case "applied":
+      return "Applied";
+  }
+}
+
+export function mapUiStatusToApi(status: ApplicationStatus): ApiApplicationStatus {
+  switch (status) {
+    case "Offer":
+      return "offer";
+    case "Rejected":
+      return "rejected";
+    case "Interviewing":
+      return "interview";
+    case "Applied":
+      return "applied";
+  }
+}
+
+export function mapApiPriorityToUi(priority: ApiApplicationPriority): Priority {
+  switch (priority) {
+    case "high":
+      return "High";
+    case "low":
+      return "Low";
+    case "medium":
+      return "Mid";
+  }
+}
+
+export function mapUiPriorityToApi(priority: Priority): ApiApplicationPriority {
+  switch (priority) {
+    case "High":
+      return "high";
+    case "Low":
+      return "low";
+    case "Mid":
+      return "medium";
+  }
+}
+
+export function mapApiJobApplicationToUi(
+  application: ApiJobApplication | ApiJobApplicationDetail,
+): JobApplication {
+  const detail = isJobApplicationDetail(application) ? application : undefined;
+  const scrapeJob = detail?.scrapeBundle?.job;
+  const company = application.tracking.companyName ?? scrapeJob?.companyName ?? "Unknown company";
+  const role = application.tracking.roleTitle ?? scrapeJob?.title ?? "Untitled role";
+  const dateSource = application.tracking.dateApplied ?? application.createdAt;
+
+  return {
+    id: application.id,
+    company,
+    domain: getDomain(application.tracking.jobUrl ?? application.sourceUrl),
+    role,
+    location: scrapeJob?.location ?? application.tracking.roleType ?? "Location not set",
+    dateApplied: formatDate(dateSource),
+    dateLabel: formatRelativeDate(dateSource),
+    status: mapApiStatusToUi(application.tracking.applicationStatus),
+    priority: mapApiPriorityToUi(application.tracking.priority),
+    tags: application.tracking.tags,
+    description: scrapeJob?.description,
+    requirements: scrapeJob?.requirements,
+    timeline: detail ? mapTimeline(detail.interviews) : undefined,
+    processingStatus: application.status,
+    processingStatusLabel: formatProcessingStatus(application.status),
+    processingFailureReason: application.failureReason,
+    processingLog: detail ? mapProcessingLog(detail.events) : undefined,
+    metadata: application.tracking.metadata,
+    interviewNotes: stringFromMetadata(application.tracking.metadata, "interviewNotes"),
+    contacts: detail?.contacts.map((contact) => ({
+      initials: getInitials(contact.name),
+      name: contact.name,
+      role: contact.role ?? "Contact",
+    })),
+    aiMatch: detail?.matchAnalysis ? mapMatchAnalysis(detail.matchAnalysis) : undefined,
+  };
+}
+
+export function mapApiProfileToUi(profile: ApiProfile): Profile {
+  return {
+    id: profile.id,
+    fullName: profile.fullName,
+    title: getProfileTitle(profile),
+    headline: profile.headline ?? profile.summary ?? "No headline added yet.",
+    summary: profile.summary ?? "",
+    location: profile.location ?? "Location not set",
+    email: profile.email,
+    portfolio: profile.projects.find((project) => project.url)?.url ?? "Portfolio not set",
+    experiences: profile.experience.map((experience, index) => ({
+      id: `${profile.id}-experience-${index}`,
+      title: experience.title,
+      company: experience.company,
+      period: formatPeriod(experience.startDate, experience.endDate),
+      achievements:
+        experience.achievements.length > 0
+          ? experience.achievements
+          : [experience.description ?? "No achievements added yet."],
+      icon: "work",
+    })),
+    skills: [
+      {
+        name: "Skills",
+        icon: "design_services",
+        skills: profile.skills,
+      },
+    ],
+    education: profile.education.map((education, index) => ({
+      id: `${profile.id}-education-${index}`,
+      degree: [education.degree, education.field].filter(Boolean).join(", ") || "Education",
+      institution: education.institution,
+      period: formatPeriod(education.startDate, education.endDate),
+      icon: "school",
+    })),
+    documents: [],
+  };
+}
+
+export function mapApiDashboardStats(
+  analytics: ApiJobApplicationAnalytics,
+  details: ApiJobApplicationDetail[],
+): DashboardStats {
+  const activeInterviews =
+    (analytics.byStatus.phone_screen ?? 0) + (analytics.byStatus.interview ?? 0);
+  const rejectionRate =
+    analytics.total === 0
+      ? 0
+      : Math.round(((analytics.byStatus.rejected ?? 0) / analytics.total) * 100);
+  const weeklyTrend = Object.entries(analytics.applicationsOverTime)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, count]) => count)
+    .slice(-8);
+  const paddedWeeklyTrend = weeklyTrend.length > 0 ? weeklyTrend : [0];
+
+  return {
+    totalApplications: analytics.total,
+    activeInterviews,
+    offers: analytics.offers,
+    rejectionRate,
+    weeklyTrend: paddedWeeklyTrend,
+    applicationsByStatus: [
+      { status: "Applied", count: analytics.byStatus.applied ?? 0 },
+      {
+        status: "Interviewing",
+        count: activeInterviews,
+      },
+      { status: "Offer", count: analytics.byStatus.offer ?? 0 },
+      { status: "Rejected", count: analytics.byStatus.rejected ?? 0 },
+    ],
+    kpis: {
+      totalApplications: {
+        value: analytics.total,
+        label: `${analytics.total} total`,
+        positive: true,
+      },
+      activeInterviews: {
+        value: activeInterviews,
+        label: `${Math.round(analytics.interviewConversionRate * 100)}% conversion`,
+        positive: true,
+      },
+      offers: {
+        value: analytics.offers,
+        label: `${analytics.offers} offers`,
+        positive: true,
+      },
+      rejectionRate: {
+        value: rejectionRate,
+        label: `${analytics.rejections} rejected`,
+        positive: false,
+      },
+    },
+    statusDistributionTotal: analytics.total,
+    upcomingInterviews: mapUpcomingInterviews(details),
+  };
+}
+
+function mapTimeline(interviews: ApiJobApplicationInterview[]): TimelineMilestone[] {
+  const interviewMilestones = interviews.map((interview) => ({
+    milestone: {
+      id: interview.id,
+      title: interview.title,
+      description: interview.prepNotes ?? interview.notes ?? interview.type ?? "Interview",
+      date: formatShortDate(interview.scheduledAt),
+      status: interview.status,
+      type: interview.type,
+    } satisfies TimelineMilestone,
+    timestamp: Date.parse(interview.scheduledAt),
+  }));
+
+  return interviewMilestones
+    .sort((left, right) => left.timestamp - right.timestamp)
+    .map((item) => item.milestone);
+}
+
+function mapProcessingLog(events: ApiJobApplicationEvent[]): ProcessingLogItem[] {
+  return events
+    .filter((event) => event.type === "processing")
+    .map((event) => ({
+      item: {
+        id: event.id,
+        title: event.title,
+        description: event.body ?? "Processing update",
+        date: formatShortDate(event.occurredAt),
+        status: event.title.toLowerCase().includes("failed") ? "failed" : "completed",
+      } satisfies ProcessingLogItem,
+      timestamp: Date.parse(event.occurredAt),
+    }))
+    .sort((left, right) => left.timestamp - right.timestamp)
+    .map((entry) => entry.item);
+}
+
+function mapUpcomingInterviews(details: ApiJobApplicationDetail[]): UpcomingInterview[] {
+  return details
+    .flatMap((application) =>
+      application.interviews
+        .filter((interview) => interview.status === "upcoming")
+        .map((interview) => ({
+          interview,
+          application,
+          scheduledAt: new Date(interview.scheduledAt),
+        })),
+    )
+    .filter((item) => !Number.isNaN(item.scheduledAt.getTime()))
+    .sort((left, right) => left.scheduledAt.getTime() - right.scheduledAt.getTime())
+    .slice(0, 5)
+    .map(({ application, interview, scheduledAt }) => ({
+      month: scheduledAt.toLocaleString(undefined, { month: "short" }),
+      day: scheduledAt.getDate(),
+      time: scheduledAt.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      company:
+        application.tracking.companyName ??
+        application.scrapeBundle?.job.companyName ??
+        "Unknown company",
+      role: interview.title,
+      meetType: "video_call",
+      meetLabel: interview.type ?? "Interview",
+    }));
+}
+
+function mapMatchAnalysis(match: ApiMatchAnalysis): NonNullable<JobApplication["aiMatch"]> {
+  return {
+    score: match.matchScore,
+    summary: match.interviewTips[0] ?? "AI analysis is available for this application.",
+    keywords: [
+      ...match.strongSkills.map((skill) => ({ keyword: skill, match: true })),
+      ...match.missingSkills.map((skill) => ({ keyword: skill, match: false })),
+    ],
+    recommendation: match.matchScore >= 70 ? "Apply to CV" : "Review before applying",
+    currentSummary: "Current profile summary",
+    enhancedSummary: match.customizedSummary,
+    bulletOptimizations: match.recommendedAchievements.map((achievement) => ({
+      original: "Existing profile achievement",
+      enhanced: achievement,
+    })),
+    yourSkills: match.strongSkills,
+    suggestedSkills: match.missingSkills,
+  };
+}
+
+function isJobApplicationDetail(
+  application: ApiJobApplication | ApiJobApplicationDetail,
+): application is ApiJobApplicationDetail {
+  return "events" in application && "contacts" in application && "interviews" in application;
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date not set";
+  }
+
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function formatProcessingStatus(status: string): string {
+  return status
+    .split("_")
+    .filter(Boolean)
+    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
+    .join(" ");
+}
+
+function stringFromMetadata(metadata: Record<string, unknown>, key: string): string | undefined {
+  const value = metadata[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function formatRelativeDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const days = Math.round((Date.now() - date.getTime()) / 86_400_000);
+
+  if (days <= 0) {
+    return "Today";
+  }
+
+  if (days === 1) {
+    return "Yesterday";
+  }
+
+  return `${days} days ago`;
+}
+
+function getDomain(value?: string): string {
+  if (!value) {
+    return "No source";
+  }
+
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "No source";
+  }
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function getProfileTitle(profile: ApiProfile): string {
+  if (!profile.headline) {
+    return "Profile";
+  }
+
+  return profile.headline.split(/[|,]/)[0]?.trim() || "Profile";
+}
+
+function formatPeriod(startDate?: string, endDate?: string): string {
+  if (!startDate && !endDate) {
+    return "Dates not set";
+  }
+
+  return `${startDate ?? "Start not set"} - ${endDate ?? "Present"}`;
+}

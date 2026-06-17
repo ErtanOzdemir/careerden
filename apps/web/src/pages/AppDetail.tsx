@@ -1,23 +1,174 @@
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { mockApplications } from "../mockData";
 import Timeline from "../components/Timeline";
+import type { TimelineInterviewInput } from "../components/Timeline";
+import ProcessingLog from "../components/ProcessingLog";
 import AiMatchCard from "../components/AiMatchCard";
+import { jobApplicationsApi } from "../api/jobApplications";
+import { mapApiJobApplicationToUi, mapUiStatusToApi } from "../api/mappers";
+import type { ApplicationStatus, JobApplication } from "../types";
+
+const statusOptions: ApplicationStatus[] = ["Applied", "Interviewing", "Offer", "Rejected"];
 
 export default function AppDetail() {
   const { id } = useParams();
-  const app = mockApplications.find((a) => a.id === id);
+  const [app, setApp] = useState<JobApplication | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isAddingContact, setIsAddingContact] = useState(false);
+  const [isAddingInterview, setIsAddingInterview] = useState(false);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
+  const [interviewNotes, setInterviewNotes] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadApplication() {
+      if (!id) {
+        setError("Application ID is missing.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        const detail = await jobApplicationsApi.get(id);
+
+        if (isMounted) {
+          const mapped = mapApiJobApplicationToUi(detail);
+          setApp(mapped);
+          setInterviewNotes(mapped.interviewNotes ?? "");
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError(loadError instanceof Error ? loadError.message : "Failed to load application.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadApplication();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  async function handleStatusChange(status: ApplicationStatus) {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setIsUpdatingStatus(true);
+      setError(null);
+      await jobApplicationsApi.update(id, { applicationStatus: mapUiStatusToApi(status) });
+      await refreshApplication(id);
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Failed to update status.");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
+  async function refreshApplication(jobApplicationId: string) {
+    const detail = await jobApplicationsApi.get(jobApplicationId);
+    const mapped = mapApiJobApplicationToUi(detail);
+
+    setApp(mapped);
+    setInterviewNotes(mapped.interviewNotes ?? "");
+  }
+
+  async function handleAddInterview(input: TimelineInterviewInput) {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setIsAddingInterview(true);
+      setError(null);
+      await jobApplicationsApi.createInterview(id, {
+        scheduledAt: input.scheduledAt,
+        title: input.title,
+        type: input.type,
+      });
+      await refreshApplication(id);
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : "Failed to add interview.");
+    } finally {
+      setIsAddingInterview(false);
+    }
+  }
+
+  async function handleAddContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!id || !contactForm.name.trim()) {
+      return;
+    }
+
+    try {
+      setIsAddingContact(true);
+      setError(null);
+      await jobApplicationsApi.createContact(id, {
+        email: contactForm.email.trim() || undefined,
+        name: contactForm.name.trim(),
+        role: contactForm.role.trim() || undefined,
+      });
+      setContactForm({ name: "", role: "", email: "" });
+      setIsContactFormOpen(false);
+      await refreshApplication(id);
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : "Failed to add contact.");
+    } finally {
+      setIsAddingContact(false);
+    }
+  }
+
+  async function handleSaveInterviewNotes(nextNotes = interviewNotes) {
+    if (!id || !app) {
+      return;
+    }
+
+    try {
+      setIsSavingNotes(true);
+      setError(null);
+      await jobApplicationsApi.update(id, {
+        metadata: {
+          ...(app.metadata ?? {}),
+          interviewNotes: nextNotes.trim(),
+        },
+      });
+      await refreshApplication(id);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save interview notes.");
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-2xl gap-4 text-secondary">
+        Loading application...
+      </div>
+    );
+  }
 
   if (!app) {
     return (
       <div className="flex flex-col items-center justify-center py-2xl gap-4">
-        <span className="material-symbols-outlined text-6xl text-outline">
-          search_off
-        </span>
-        <p className="font-headline-md">Application not found</p>
-        <Link
-          to="/applications"
-          className="text-primary font-label-md hover:underline"
-        >
+        <span className="material-symbols-outlined text-6xl text-outline">search_off</span>
+        <p className="font-headline-md">{error ?? "Application not found"}</p>
+        <Link to="/applications" className="text-primary font-label-md hover:underline">
           Back to Applications
         </Link>
       </div>
@@ -31,41 +182,39 @@ export default function AppDetail() {
           to="/applications"
           className="hover:text-primary transition-colors flex items-center gap-1 font-label-md"
         >
-          <span className="material-symbols-outlined text-[18px]">
-            arrow_back
-          </span>
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           Back to Boards
         </Link>
       </nav>
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-2xl">
         <div>
-          <h2 className="font-display font-headline-lg text-on-surface">
-            {app.role}
-          </h2>
+          <h2 className="font-display font-headline-lg text-on-surface">{app.role}</h2>
           <p className="font-body-lg text-secondary flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px]">
-              corporate_fare
-            </span>
+            <span className="material-symbols-outlined text-[20px]">corporate_fare</span>
             {app.company}, Inc. &bull; {app.location}
           </p>
         </div>
         <div className="flex items-center gap-sm">
           <div className="bg-surface-container-high px-4 py-2 rounded-lg flex items-center gap-3 border border-outline-variant">
-            <span className="font-label-md text-on-surface-variant">
-              Status:
-            </span>
-            <select className="bg-transparent border-none font-bold text-primary focus:ring-0 cursor-pointer p-0 pr-8 outline-none">
-              <option>Applied</option>
-              <option selected={app.status === "Interviewing"}>
-                Interviewing
-              </option>
-              <option>Offer Received</option>
-              <option>Rejected</option>
+            <span className="font-label-md text-on-surface-variant">Status:</span>
+            <select
+              value={app.status}
+              onChange={(event) => void handleStatusChange(event.target.value as ApplicationStatus)}
+              disabled={isUpdatingStatus}
+              className="bg-transparent border-none font-bold text-primary focus:ring-0 cursor-pointer p-0 pr-8 outline-none disabled:opacity-60"
+            >
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
             </select>
           </div>
         </div>
       </div>
+
+      {error && <p className="mb-lg text-body-md text-error">{error}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
         <div className="lg:col-span-7 space-y-lg">
@@ -73,14 +222,12 @@ export default function AppDetail() {
             <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm">
               <div className="flex items-center justify-between mb-md">
                 <h3 className="font-display font-headline-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">
-                    description
-                  </span>
+                  <span className="material-symbols-outlined text-primary">description</span>
                   Role Summary
                 </h3>
-                <span className="text-label-md text-secondary">
-                  Scraped 2 days ago
-                </span>
+                {app.processingStatusLabel && (
+                  <span className="text-label-md text-secondary">{app.processingStatusLabel}</span>
+                )}
               </div>
               <div className="font-body-md text-on-surface-variant space-y-md">
                 <p>{app.description}</p>
@@ -95,23 +242,35 @@ export default function AppDetail() {
             </section>
           )}
 
+          {app.processingLog && (
+            <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm">
+              <div className="flex items-center justify-between mb-lg">
+                <h3 className="font-display font-headline-md flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">manage_search</span>
+                  Scraping Log
+                </h3>
+              </div>
+              <ProcessingLog
+                currentStatus={app.processingStatusLabel}
+                failureReason={app.processingFailureReason}
+                items={app.processingLog}
+              />
+            </section>
+          )}
+
           {app.timeline && (
             <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm">
               <div className="flex items-center justify-between mb-lg">
                 <h3 className="font-display font-headline-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">
-                    event_upcoming
-                  </span>
+                  <span className="material-symbols-outlined text-primary">event_upcoming</span>
                   Interview Timeline
                 </h3>
-                <button className="flex items-center gap-1 text-primary font-label-md hover:underline cursor-pointer">
-                  <span className="material-symbols-outlined text-[18px]">
-                    add_circle
-                  </span>
-                  Add Milestone
-                </button>
               </div>
-              <Timeline milestones={app.timeline} />
+              <Timeline
+                isAdding={isAddingInterview}
+                milestones={app.timeline}
+                onAddInterview={handleAddInterview}
+              />
             </section>
           )}
 
@@ -120,15 +279,72 @@ export default function AppDetail() {
               <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm flex flex-col">
                 <div className="flex items-center justify-between mb-md">
                   <h3 className="font-display font-headline-md flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">
-                      contacts
-                    </span>
+                    <span className="material-symbols-outlined text-primary">contacts</span>
                     Key Contacts
                   </h3>
-                  <button className="text-primary material-symbols-outlined hover:bg-surface-container-high rounded-full p-1 transition-colors cursor-pointer">
+                  <button
+                    className="text-primary material-symbols-outlined hover:bg-surface-container-high rounded-full p-1 transition-colors cursor-pointer"
+                    onClick={() => setIsContactFormOpen((current) => !current)}
+                    title="Add contact"
+                    type="button"
+                  >
                     person_add
                   </button>
                 </div>
+                {isContactFormOpen && (
+                  <form
+                    className="mb-md grid grid-cols-1 gap-sm rounded-lg bg-surface-container-low p-sm"
+                    onSubmit={(event) => void handleAddContact(event)}
+                  >
+                    <input
+                      className="bg-transparent border-b border-outline-variant focus:border-primary focus:ring-0 text-body-md py-1 outline-none"
+                      onChange={(event) =>
+                        setContactForm((current) => ({ ...current, name: event.target.value }))
+                      }
+                      placeholder="Name"
+                      required
+                      type="text"
+                      value={contactForm.name}
+                    />
+                    <input
+                      className="bg-transparent border-b border-outline-variant focus:border-primary focus:ring-0 text-body-md py-1 outline-none"
+                      onChange={(event) =>
+                        setContactForm((current) => ({ ...current, role: event.target.value }))
+                      }
+                      placeholder="Role"
+                      type="text"
+                      value={contactForm.role}
+                    />
+                    <input
+                      className="bg-transparent border-b border-outline-variant focus:border-primary focus:ring-0 text-body-md py-1 outline-none"
+                      onChange={(event) =>
+                        setContactForm((current) => ({ ...current, email: event.target.value }))
+                      }
+                      placeholder="Email"
+                      type="email"
+                      value={contactForm.email}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        className="flex-1 text-label-md bg-primary text-on-primary rounded py-1 cursor-pointer disabled:opacity-60"
+                        disabled={isAddingContact}
+                        type="submit"
+                      >
+                        {isAddingContact ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        className="px-3 text-label-md bg-surface-variant rounded py-1 cursor-pointer"
+                        onClick={() => {
+                          setIsContactFormOpen(false);
+                          setContactForm({ name: "", role: "", email: "" });
+                        }}
+                        type="button"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
                 <div className="space-y-md flex-1">
                   {app.contacts.map((contact, i) => (
                     <div key={i} className="flex items-center gap-sm">
@@ -136,12 +352,8 @@ export default function AppDetail() {
                         {contact.initials}
                       </div>
                       <div>
-                        <div className="font-body-md font-bold">
-                          {contact.name}
-                        </div>
-                        <div className="font-label-md text-secondary">
-                          {contact.role}
-                        </div>
+                        <div className="font-body-md font-bold">{contact.name}</div>
+                        <div className="font-label-md text-secondary">{contact.role}</div>
                       </div>
                     </div>
                   ))}
@@ -152,20 +364,28 @@ export default function AppDetail() {
             <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm flex flex-col">
               <div className="flex items-center justify-between mb-md">
                 <h3 className="font-display font-headline-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">
-                    edit_note
-                  </span>
+                  <span className="material-symbols-outlined text-primary">edit_note</span>
                   Interview Notes
                 </h3>
                 <div className="flex gap-1">
                   <button
                     className="text-secondary hover:text-error material-symbols-outlined text-[20px] transition-colors cursor-pointer"
+                    onClick={() => {
+                      setInterviewNotes("");
+                      void handleSaveInterviewNotes("");
+                    }}
                     title="Clear"
+                    type="button"
                   >
                     delete
                   </button>
-                  <button className="text-primary hover:bg-primary/10 px-2 rounded font-label-md transition-colors cursor-pointer">
-                    Save
+                  <button
+                    className="text-primary hover:bg-primary/10 px-2 rounded font-label-md transition-colors cursor-pointer disabled:opacity-60"
+                    disabled={isSavingNotes}
+                    onClick={() => void handleSaveInterviewNotes()}
+                    type="button"
+                  >
+                    {isSavingNotes ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
@@ -183,7 +403,9 @@ export default function AppDetail() {
                 </div>
                 <textarea
                   className="w-full h-24 p-0 border-none bg-transparent focus:ring-0 text-body-md text-on-surface-variant resize-none custom-scrollbar outline-none"
+                  onChange={(event) => setInterviewNotes(event.target.value)}
                   placeholder="Start typing your prep notes..."
+                  value={interviewNotes}
                 />
               </div>
             </section>
@@ -200,12 +422,8 @@ export default function AppDetail() {
                   <span className="material-symbols-outlined">attachment</span>
                 </div>
                 <div>
-                  <div className="font-body-md font-bold">
-                    Original Resume.pdf
-                  </div>
-                  <div className="font-label-md text-secondary">
-                    Uploaded Sep 15, 2023
-                  </div>
+                  <div className="font-body-md font-bold">Original Resume.pdf</div>
+                  <div className="font-label-md text-secondary">Uploaded Sep 15, 2023</div>
                 </div>
               </div>
               <button className="text-secondary hover:text-primary transition-colors cursor-pointer">

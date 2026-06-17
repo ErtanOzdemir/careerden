@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { mockDashboardStats } from "../mockData";
-
-const maxWeekly = Math.max(...mockDashboardStats.weeklyTrend);
+import type { DashboardStats } from "../types";
+import { requireDefaultProfileId } from "../api/config";
+import { jobApplicationsApi } from "../api/jobApplications";
+import { mapApiDashboardStats } from "../api/mappers";
 
 const kpiCards = [
   {
@@ -44,15 +46,71 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const stats = mockDashboardStats;
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDashboard() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const profileId = requireDefaultProfileId();
+        const [analytics, applications] = await Promise.all([
+          jobApplicationsApi.analytics(profileId),
+          jobApplicationsApi.list({ profileId }),
+        ]);
+        const details = await Promise.all(
+          applications.slice(0, 25).map((application) => jobApplicationsApi.get(application.id)),
+        );
+
+        if (isMounted) {
+          setStats(mapApiDashboardStats(analytics, details));
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError(loadError instanceof Error ? loadError.message : "Failed to load dashboard.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in max-w-7xl mx-auto py-2xl text-center text-secondary">
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="animate-fade-in max-w-7xl mx-auto py-2xl text-center text-error">
+        {error ?? "Dashboard data is unavailable."}
+      </div>
+    );
+  }
+
+  const maxWeekly = Math.max(...stats.weeklyTrend, 1);
 
   return (
     <div className="animate-fade-in space-y-xl max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-md">
         <div>
-          <h2 className="font-display text-display text-on-surface">
-            Application Dashboard
-          </h2>
+          <h2 className="font-display text-display text-on-surface">Application Dashboard</h2>
           <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
             Tracking your journey to the next big role.
           </p>
@@ -78,13 +136,9 @@ export default function Dashboard() {
             >
               <div className="flex justify-between items-start">
                 <div className={`${card.iconBg} p-2 rounded-lg`}>
-                  <span className={`material-symbols-outlined ${card.iconColor}`}>
-                    {card.icon}
-                  </span>
+                  <span className={`material-symbols-outlined ${card.iconColor}`}>{card.icon}</span>
                 </div>
-                <span className={`text-xs font-bold ${card.trendColor}`}>
-                  {kpi.label}
-                </span>
+                <span className={`text-xs font-bold ${card.trendColor}`}>{kpi.label}</span>
               </div>
               <div className="mt-md">
                 <p className="text-secondary font-label-md text-label-md uppercase tracking-tight">
@@ -115,9 +169,7 @@ export default function Dashboard() {
               <button className="px-3 py-1 text-xs font-bold bg-white rounded shadow-sm cursor-pointer">
                 3 Months
               </button>
-              <button className="px-3 py-1 text-xs text-secondary cursor-pointer">
-                6 Months
-              </button>
+              <button className="px-3 py-1 text-xs text-secondary cursor-pointer">6 Months</button>
             </div>
           </div>
           <div className="h-64 relative overflow-hidden">
@@ -198,14 +250,15 @@ export default function Dashboard() {
 
       <section className="bg-white/70 backdrop-blur border border-outline-variant/80 rounded-xl shadow-sm flex flex-col">
         <div className="p-lg border-b border-outline-variant flex justify-between items-center">
-          <h4 className="font-headline-md text-headline-md text-on-surface">
-            Upcoming Interviews
-          </h4>
+          <h4 className="font-headline-md text-headline-md text-on-surface">Upcoming Interviews</h4>
           <span className="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-label-sm">
             Next 7 Days
           </span>
         </div>
         <div className="divide-y divide-outline-variant">
+          {stats.upcomingInterviews.length === 0 && (
+            <div className="p-lg text-secondary">No upcoming interviews.</div>
+          )}
           {stats.upcomingInterviews.map((interview, i) => (
             <div
               key={i}
@@ -215,18 +268,14 @@ export default function Dashboard() {
                 <span className="block text-label-sm text-secondary font-bold uppercase">
                   {interview.month}
                 </span>
-                <span className="block text-headline-md text-primary">
-                  {interview.day}
-                </span>
+                <span className="block text-headline-md text-primary">{interview.day}</span>
               </div>
               <div className="flex-1">
                 <div className="flex justify-between">
                   <h5 className="font-headline-md text-on-surface group-hover:text-primary transition-colors">
                     {interview.role}
                   </h5>
-                  <span className="text-body-md text-secondary">
-                    {interview.time}
-                  </span>
+                  <span className="text-body-md text-secondary">{interview.time}</span>
                 </div>
                 <p className="text-body-md font-bold text-secondary-fixed-dim bg-secondary/10 inline-block px-2 rounded mt-1">
                   {interview.company}
@@ -240,9 +289,7 @@ export default function Dashboard() {
                     Prep Notes
                   </Link>
                   <span className="text-label-sm text-outline flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">
-                      {interview.meetType}
-                    </span>
+                    <span className="material-symbols-outlined text-sm">{interview.meetType}</span>
                     {interview.meetLabel}
                   </span>
                 </div>

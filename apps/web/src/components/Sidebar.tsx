@@ -13,9 +13,7 @@ export default function Sidebar() {
         <h1 className="font-display font-headline-lg text-headline-lg font-bold text-primary">
           Trackly
         </h1>
-        <p className="font-display font-body-md text-body-md text-secondary">
-          Job Tracker
-        </p>
+        <p className="font-display font-body-md text-body-md text-secondary">Job Tracker</p>
       </div>
       <nav className="flex-1 space-y-2">
         {links.map((link) => (
@@ -47,9 +45,7 @@ export default function Sidebar() {
           </div>
           <div className="overflow-hidden">
             <p className="text-label-md font-bold truncate">Alex Chen</p>
-            <p className="text-label-sm text-secondary truncate text-[10px]">
-              Premium Account
-            </p>
+            <p className="text-label-sm text-secondary truncate text-[10px]">Premium Account</p>
           </div>
         </div>
       </div>

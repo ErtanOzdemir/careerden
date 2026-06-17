@@ -4,11 +4,7 @@ interface PaginationProps {
   pageSize: number;
 }
 
-export default function Pagination({
-  current,
-  total,
-  pageSize,
-}: PaginationProps) {
+export default function Pagination({ current, total, pageSize }: PaginationProps) {
   const totalPages = Math.ceil(total / pageSize);
   const from = (current - 1) * pageSize + 1;
   const to = Math.min(current * pageSize, total);
@@ -29,9 +25,7 @@ export default function Pagination({
           <button
             key={page}
             className={`w-10 h-10 rounded-lg text-label-md font-bold transition-colors ${
-              page === current
-                ? "bg-primary text-on-primary"
-                : "hover:bg-surface-container-high"
+              page === current ? "bg-primary text-on-primary" : "hover:bg-surface-container-high"
             }`}
           >
             {page}

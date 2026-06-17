@@ -34,4 +34,38 @@ describe("SubmitJobApplicationUseCase", () => {
     expect(jobApplication?.status).toBe("failed");
     expect(jobApplication?.failureReason).toBe("REDIS_URL is required");
   });
+
+  it("creates manual tracker applications without enqueueing background work", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: ["TypeScript"],
+      experience: [],
+    });
+    const queue: JobApplicationQueue = {
+      async enqueue() {
+        throw new Error("Manual applications should not be queued");
+      },
+    };
+
+    const jobApplication = await new SubmitJobApplicationUseCase(
+      jobApplications,
+      profiles,
+      queue,
+    ).execute({
+      profileId: profile.id,
+      companyName: "Example Inc",
+      roleTitle: "Backend Engineer",
+      priority: "high",
+      tags: ["Remote"],
+    });
+
+    expect(jobApplication.status).toBe("completed");
+    expect(jobApplication.sourceUrl).toBeUndefined();
+    expect(jobApplication.tracking.companyName).toBe("Example Inc");
+    expect(jobApplication.tracking.roleTitle).toBe("Backend Engineer");
+    expect(jobApplication.tracking.priority).toBe("high");
+  });
 });

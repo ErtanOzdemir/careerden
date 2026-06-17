@@ -37,8 +37,17 @@ export class ProcessJobApplicationUseCase {
       throw new Error(`Profile ${jobApplication.profileId} was not found`);
     }
 
+    if (!jobApplication.sourceUrl) {
+      throw new Error(`Job application ${jobApplicationId} does not have a source URL to scrape`);
+    }
+
     try {
       await this.transition(jobApplicationId, jobApplication.status, "scraping");
+      await this.jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "Scraping started",
+      });
 
       const scrapedJob = await this.scrapers.job.scrapeJob(jobApplication.sourceUrl);
       const job = await this.requirementExtraction.execute({
@@ -70,7 +79,18 @@ export class ProcessJobApplicationUseCase {
       };
 
       await this.jobApplications.saveScrapeBundle(jobApplicationId, scrape);
+      await this.jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "Scraping completed",
+        metadata: { companyName: job.companyName, roleTitle: job.title },
+      });
       await this.transition(jobApplicationId, "scraping", "analyzing");
+      await this.jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "AI analysis started",
+      });
 
       const analysis = await this.matching.execute({
         jobApplicationId,
@@ -78,7 +98,18 @@ export class ProcessJobApplicationUseCase {
         scrape,
       });
 
+      await this.jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "AI analysis completed",
+        metadata: { matchScore: analysis.matchScore },
+      });
       await this.transition(jobApplicationId, "analyzing", "generating_documents");
+      await this.jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "Document generation started",
+      });
 
       await this.documentGeneration.execute({
         jobApplicationId,
@@ -87,9 +118,20 @@ export class ProcessJobApplicationUseCase {
       });
 
       await this.transition(jobApplicationId, "generating_documents", "completed");
+      await this.jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "Document generation completed",
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown processing error";
       await this.jobApplications.updateStatus(jobApplicationId, "failed", message);
+      await this.jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "Processing failed",
+        body: message,
+      });
       throw error;
     }
   }

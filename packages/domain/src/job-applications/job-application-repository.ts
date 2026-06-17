@@ -1,7 +1,21 @@
 import type { GeneratedDocument, GeneratedDocumentKind } from "../documents/generated-document.js";
 import type { MatchAnalysisResult } from "../matching/match-analysis.js";
 import type { ScrapeBundle } from "../scraping/scraped-data.js";
-import type { JobApplication, CreateJobApplicationInput } from "./job-application.js";
+import type {
+  ApplicationPriority,
+  ApplicationStatus,
+  CreateJobApplicationContactInput,
+  CreateJobApplicationEventInput,
+  CreateJobApplicationInterviewInput,
+  CreateJobApplicationInput,
+  JobApplication,
+  JobApplicationContact,
+  JobApplicationEvent,
+  JobApplicationInterview,
+  UpdateJobApplicationContactInput,
+  UpdateJobApplicationInterviewInput,
+  UpdateJobApplicationTrackingInput,
+} from "./job-application.js";
 import type { JobApplicationStatus } from "./workflow-status.js";
 
 export interface AttachGeneratedDocumentInput {
@@ -12,16 +26,56 @@ export interface AttachGeneratedDocumentInput {
   contentType: "application/pdf";
 }
 
+export type JobApplicationSortField =
+  | "dateApplied"
+  | "companyName"
+  | "roleTitle"
+  | "applicationStatus"
+  | "updatedAt";
+
+export interface ListJobApplicationsFilter {
+  applicationStatus?: ApplicationStatus;
+  company?: string;
+  role?: string;
+  roleType?: string;
+  priority?: ApplicationPriority;
+  tag?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  sortBy?: JobApplicationSortField;
+  sortDirection?: "asc" | "desc";
+}
+
 export interface JobApplicationRepository {
   create(input: CreateJobApplicationInput): Promise<JobApplication>;
   findById(id: string): Promise<JobApplication | null>;
-  listByProfileId(profileId: string): Promise<JobApplication[]>;
+  listByProfileId(profileId: string, filter?: ListJobApplicationsFilter): Promise<JobApplication[]>;
   listByStatus(status: JobApplicationStatus): Promise<JobApplication[]>;
   updateStatus(id: string, status: JobApplicationStatus, failureReason?: string): Promise<void>;
+  updateTracking(id: string, input: UpdateJobApplicationTrackingInput): Promise<JobApplication>;
   saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void>;
   getScrapeBundle(id: string): Promise<ScrapeBundle | null>;
   saveMatchAnalysis(id: string, result: MatchAnalysisResult): Promise<void>;
   getMatchAnalysis(id: string): Promise<MatchAnalysisResult | null>;
+  addEvent(input: CreateJobApplicationEventInput): Promise<JobApplicationEvent>;
+  listEvents(jobApplicationId: string): Promise<JobApplicationEvent[]>;
+  createContact(input: CreateJobApplicationContactInput): Promise<JobApplicationContact>;
+  findContactById(id: string): Promise<JobApplicationContact | null>;
+  listContacts(jobApplicationId: string): Promise<JobApplicationContact[]>;
+  updateContact(
+    id: string,
+    input: UpdateJobApplicationContactInput,
+  ): Promise<JobApplicationContact>;
+  deleteContact(id: string): Promise<void>;
+  createInterview(input: CreateJobApplicationInterviewInput): Promise<JobApplicationInterview>;
+  findInterviewById(id: string): Promise<JobApplicationInterview | null>;
+  listInterviews(jobApplicationId: string): Promise<JobApplicationInterview[]>;
+  updateInterview(
+    id: string,
+    input: UpdateJobApplicationInterviewInput,
+  ): Promise<JobApplicationInterview>;
+  deleteInterview(id: string): Promise<void>;
   attachGeneratedDocument(input: AttachGeneratedDocumentInput): Promise<GeneratedDocument>;
   listGeneratedDocuments(jobApplicationId: string): Promise<GeneratedDocument[]>;
 }

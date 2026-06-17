@@ -1,7 +1,9 @@
 import type { Knex } from "knex";
 import type {
   CreateUserProfileInput,
+  ProfileEducation,
   ProfileExperience,
+  ProfileProject,
   UserProfile,
   UserProfileRepository,
 } from "@link2cv/domain";
@@ -22,6 +24,9 @@ export class PostgresUserProfileRepository implements UserProfileRepository {
         summary: input.summary ?? null,
         skills: JSON.stringify(input.skills),
         experience: JSON.stringify(input.experience),
+        education: JSON.stringify(input.education ?? []),
+        certifications: JSON.stringify(input.certifications ?? []),
+        projects: JSON.stringify(input.projects ?? []),
       })
       .returning("*");
 
@@ -44,6 +49,9 @@ function toUserProfile(row: Record<string, unknown>): UserProfile {
     summary: nullableString(row.summary),
     skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
     experience: Array.isArray(row.experience) ? (row.experience as ProfileExperience[]) : [],
+    education: Array.isArray(row.education) ? (row.education as ProfileEducation[]) : [],
+    certifications: Array.isArray(row.certifications) ? row.certifications.map(String) : [],
+    projects: Array.isArray(row.projects) ? (row.projects as ProfileProject[]) : [],
     createdAt: new Date(String(row.created_at)),
     updatedAt: new Date(String(row.updated_at)),
   };

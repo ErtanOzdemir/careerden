@@ -79,10 +79,16 @@ describe("ProcessJobApplicationUseCase", () => {
     const completed = await jobApplications.findById(jobApplication.id);
     const generated = await jobApplications.listGeneratedDocuments(jobApplication.id);
     const scrape = await jobApplications.getScrapeBundle(jobApplication.id);
+    const events = await jobApplications.listEvents(jobApplication.id);
+    const enrichedJob = await jobApplications.findById(jobApplication.id);
 
     expect(completed?.status).toBe("completed");
     expect(scrape?.job.requirements).toEqual(["TypeScript", "Kubernetes"]);
+    expect(enrichedJob?.tracking.companyName).toBe("Example Inc");
+    expect(enrichedJob?.tracking.roleTitle).toBe("Backend Engineer");
     expect(generated).toHaveLength(2);
+    expect(events.map((event) => event.title)).toContain("Scraping completed");
+    expect(events.map((event) => event.title)).toContain("Document generation completed");
   });
 });
 

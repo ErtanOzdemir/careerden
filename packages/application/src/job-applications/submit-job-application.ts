@@ -22,6 +22,10 @@ export class SubmitJobApplicationUseCase {
 
     const jobApplication = await this.jobApplications.create(input);
 
+    if (!input.sourceUrl) {
+      return jobApplication;
+    }
+
     try {
       await this.queue.enqueue({ jobApplicationId: jobApplication.id });
     } catch (error) {

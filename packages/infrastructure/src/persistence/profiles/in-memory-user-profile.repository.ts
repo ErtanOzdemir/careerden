@@ -9,6 +9,9 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
     const profile: UserProfile = {
       id: randomUUID(),
       ...input,
+      education: input.education ?? [],
+      certifications: input.certifications ?? [],
+      projects: input.projects ?? [],
       createdAt: now,
       updatedAt: now,
     };

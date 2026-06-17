@@ -5,6 +5,25 @@ export const profileExperienceSchema = z.object({
   title: z.string().min(1),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  description: z.string().optional(),
+  skills: z.array(z.string().min(1)).default([]),
+  achievements: z.array(z.string().min(1)).default([]),
+});
+
+export const profileEducationSchema = z.object({
+  institution: z.string().min(1),
+  degree: z.string().optional(),
+  field: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  achievements: z.array(z.string().min(1)).default([]),
+});
+
+export const profileProjectSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  url: z.string().url().optional(),
+  skills: z.array(z.string().min(1)).default([]),
   achievements: z.array(z.string().min(1)).default([]),
 });
 
@@ -16,6 +35,9 @@ export const createProfileSchema = z.object({
   summary: z.string().optional(),
   skills: z.array(z.string().min(1)).default([]),
   experience: z.array(profileExperienceSchema).default([]),
+  education: z.array(profileEducationSchema).default([]),
+  certifications: z.array(z.string().min(1)).default([]),
+  projects: z.array(profileProjectSchema).default([]),
 });
 
 export type CreateProfileDto = z.infer<typeof createProfileSchema>;

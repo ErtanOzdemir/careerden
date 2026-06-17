@@ -8,3 +8,4 @@ playwright-report/
 test-results/
 *.timestamp-*.mjs
 storage/*
+.opencode/plugins/emdash-notifications.js

@@ -1,17 +1,23 @@
 import type {
+  DocumentRenderer,
+  DocxTemplateRenderer,
   FileStorage,
   JobApplicationQueue,
   JobApplicationRepository,
+  TemplateRenderer,
   UserProfileRepository,
 } from "@link2cv/domain";
 import {
   BullMqJobApplicationQueue,
   createFileStorage,
   createDb,
+  DocxtemplaterTemplateRenderer,
+  HtmlTemplateRenderer,
   InMemoryJobApplicationQueue,
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
   LinkedInSessionManager,
+  PlaywrightPdfRenderer,
   PostgresJobApplicationRepository,
   PostgresUserProfileRepository,
   UnavailableJobApplicationQueue,
@@ -35,6 +41,9 @@ export interface ApiDependencies {
   jobApplications: JobApplicationRepository;
   queue: JobApplicationQueue;
   storage: FileStorage;
+  templates: TemplateRenderer;
+  documents: DocumentRenderer;
+  docxTemplates: DocxTemplateRenderer;
   linkedInSessionManager: LinkedInSessionManager;
 }
 
@@ -60,13 +69,25 @@ export function createApiDependencies(options: ApiAppOptions): ApiDependencies {
     region: options.rustFsRegion ?? "us-east-1",
     publicEndpoint: options.rustFsPublicEndpoint,
   });
+  const templates = new HtmlTemplateRenderer();
+  const documents = new PlaywrightPdfRenderer();
+  const docxTemplates = new DocxtemplaterTemplateRenderer();
 
   const linkedInSessionManager = new LinkedInSessionManager(
     options.linkedInSessionStorageDir ?? "./storage/linkedin-session",
     options.linkedInSessionSecret ?? "dev-only-linkedin-session-secret",
   );
 
-  return { profiles, jobApplications, queue, storage, linkedInSessionManager };
+  return {
+    profiles,
+    jobApplications,
+    queue,
+    storage,
+    templates,
+    documents,
+    docxTemplates,
+    linkedInSessionManager,
+  };
 }
 
 function createQueue(input: {

@@ -2,11 +2,41 @@ import { describe, expect, it } from "vitest";
 import {
   chooseExternalCompanyWebsiteUrl,
   chooseLinkedInAboutWebsiteUrl,
+  chooseLinkedInCompanyLogoUrl,
   LinkedInCompanyScraper,
   normalizeLinkedInCompanyAboutUrl,
 } from "./linkedin-company.scraper.js";
 
 describe("LinkedInCompanyScraper", () => {
+  it("selects the largest LinkedIn-hosted company logo candidate", () => {
+    expect(
+      chooseLinkedInCompanyLogoUrl([
+        {
+          src: "https://media.licdn.com/dms/image/small-logo",
+          srcset:
+            "https://media.licdn.com/dms/image/small-logo 100w, https://media.licdn.com/dms/image/large-logo 200w",
+        },
+      ]),
+    ).toBe("https://media.licdn.com/dms/image/large-logo");
+  });
+
+  it("rejects non-LinkedIn company logo URLs", () => {
+    expect(
+      chooseLinkedInCompanyLogoUrl([{ src: "https://images.example.com/company.png" }]),
+    ).toBeUndefined();
+  });
+
+  it("uses a lazy-loaded LinkedIn logo when src is only a placeholder", () => {
+    expect(
+      chooseLinkedInCompanyLogoUrl([
+        {
+          src: "data:image/gif;base64,placeholder",
+          delayedUrl: "https://media.licdn.com/dms/image/lazy-logo",
+        },
+      ]),
+    ).toBe("https://media.licdn.com/dms/image/lazy-logo");
+  });
+
   it("normalizes LinkedIn company URLs to the about page", () => {
     expect(normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun")).toBe(
       "https://www.linkedin.com/company/ogretmenbulun/about/",

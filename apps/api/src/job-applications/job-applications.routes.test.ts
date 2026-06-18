@@ -27,18 +27,24 @@ describe("job applications route behavior", () => {
     });
     const jobApplications = createJobApplicationRepository({
       listByProfileId: vi.fn(async () => [job]),
+      getCompanyLogoFileId: vi.fn(async () => "logos/acme.png"),
       listGeneratedDocuments: vi.fn(async (jobApplicationId: string) =>
         jobApplicationId === job.id ? [document] : [],
       ),
     });
 
-    const result = await listJobApplicationsWithDocuments(jobApplications, "profile-1");
+    const storage = createFileStorage({
+      getSignedUrl: vi.fn(async () => "http://localhost:9000/signed-logo"),
+    });
+    const result = await listJobApplicationsWithDocuments(jobApplications, storage, "profile-1");
 
     expect(jobApplications.listByProfileId).toHaveBeenCalledWith("profile-1", {});
     expect(jobApplications.listGeneratedDocuments).toHaveBeenCalledWith("job-1");
+    expect(storage.getSignedUrl).toHaveBeenCalledWith("logos/acme.png");
     expect(result).toEqual([
       {
         ...job,
+        companyLogoUrl: "http://localhost:9000/signed-logo",
         documents: [document],
       },
     ]);
@@ -127,18 +133,39 @@ describe("job applications route behavior", () => {
       listInterviews: vi.fn(async () => [interview]),
       listEvents: vi.fn(async () => [event]),
       listGeneratedDocuments: vi.fn(async () => []),
-      getScrapeBundle: vi.fn(async () => null),
+      getScrapeBundle: vi.fn(async () => ({
+        job: {
+          title: "Engineer",
+          companyName: "Acme",
+          description: "Build software",
+          requirements: [],
+          raw: {},
+        },
+        companyLinkedIn: {
+          name: "Acme",
+          logoFileId: "logos/acme.png",
+          logoUrl: "https://media.licdn.com/acme.png",
+          raw: {},
+        },
+      })),
       getMatchAnalysis: vi.fn(async () => null),
+      getCompanyLogoFileId: vi.fn(async () => "logos/acme.png"),
+    });
+    const storage = createFileStorage({
+      getSignedUrl: vi.fn(async () => "http://localhost:9000/signed-logo"),
     });
 
     const detail = await getJobApplicationDetail({
       jobApplications,
+      storage,
       jobApplication: job,
     });
 
     expect(detail.contacts).toEqual([contact]);
     expect(detail.interviews).toEqual([interview]);
     expect(detail.events).toEqual([event]);
+    expect(detail.companyLogoUrl).toBe("http://localhost:9000/signed-logo");
+    expect(detail.scrapeBundle?.companyLinkedIn).toEqual({ name: "Acme", raw: {} });
   });
 });
 
@@ -154,6 +181,7 @@ function createJobApplicationRepository(
     updateTracking: vi.fn(),
     saveScrapeBundle: vi.fn(),
     getScrapeBundle: vi.fn(),
+    getCompanyLogoFileId: vi.fn(async () => null),
     saveMatchAnalysis: vi.fn(),
     getMatchAnalysis: vi.fn(),
     addEvent: vi.fn(),
@@ -177,6 +205,7 @@ function createJobApplicationRepository(
 function createFileStorage(overrides: Partial<FileStorage> = {}): FileStorage {
   return {
     put: vi.fn(),
+    get: vi.fn(),
     getSignedUrl: vi.fn(),
     ...overrides,
   } as FileStorage;
@@ -214,6 +243,7 @@ function createGeneratedDocument(overrides: Partial<GeneratedDocument> = {}): Ge
     id: "doc-1",
     jobApplicationId: "job-1",
     kind: "cv",
+    format: "pdf",
     fileId: "object-key/cv.pdf",
     fileName: "cv.pdf",
     contentType: "application/pdf",

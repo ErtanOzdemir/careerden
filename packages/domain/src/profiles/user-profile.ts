@@ -46,3 +46,5 @@ export type CreateUserProfileInput = Omit<
   "id" | "createdAt" | "updatedAt" | "education" | "certifications" | "projects"
 > &
   Partial<Pick<UserProfile, "education" | "certifications" | "projects">>;
+
+export type UpdateUserProfileInput = Partial<CreateUserProfileInput>;

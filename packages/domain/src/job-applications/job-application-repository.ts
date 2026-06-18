@@ -1,4 +1,8 @@
-import type { GeneratedDocument, GeneratedDocumentKind } from "../documents/generated-document.js";
+import type {
+  GeneratedDocument,
+  GeneratedDocumentFormat,
+  GeneratedDocumentKind,
+} from "../documents/generated-document.js";
 import type { MatchAnalysisResult } from "../matching/match-analysis.js";
 import type { ScrapeBundle } from "../scraping/scraped-data.js";
 import type {
@@ -21,9 +25,10 @@ import type { JobApplicationStatus } from "./workflow-status.js";
 export interface AttachGeneratedDocumentInput {
   jobApplicationId: string;
   kind: GeneratedDocumentKind;
+  format: GeneratedDocumentFormat;
   fileId: string;
   fileName: string;
-  contentType: "application/pdf";
+  contentType: string;
 }
 
 export type JobApplicationSortField =
@@ -56,6 +61,7 @@ export interface JobApplicationRepository {
   updateTracking(id: string, input: UpdateJobApplicationTrackingInput): Promise<JobApplication>;
   saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void>;
   getScrapeBundle(id: string): Promise<ScrapeBundle | null>;
+  getCompanyLogoFileId(id: string): Promise<string | null>;
   saveMatchAnalysis(id: string, result: MatchAnalysisResult): Promise<void>;
   getMatchAnalysis(id: string): Promise<MatchAnalysisResult | null>;
   addEvent(input: CreateJobApplicationEventInput): Promise<JobApplicationEvent>;

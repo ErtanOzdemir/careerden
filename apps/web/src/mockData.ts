@@ -37,8 +37,13 @@ export const mockApplications: JobApplication[] = [
       },
     ],
     contacts: [
-      { initials: "LK", name: "Laura Kim", role: "Talent Partner" },
-      { initials: "RJ", name: "Raul Jimenez", role: "Design Lead" },
+      { email: "laura.kim@vercel.com", initials: "LK", name: "Laura Kim", role: "Talent Partner" },
+      {
+        email: "raul.jimenez@vercel.com",
+        initials: "RJ",
+        name: "Raul Jimenez",
+        role: "Design Lead",
+      },
     ],
     aiMatch: {
       score: 72,
@@ -72,23 +77,41 @@ export const mockApplications: JobApplication[] = [
         {
           title: "Senior Product Designer",
           company: "Flow Systems",
-          originalAchievements: [
-            "Led the design of a new enterprise SaaS platform, resulting in a 40% increase in user productivity within the first quarter of launch.",
-            "Mentored a team of 4 junior designers and established a comprehensive design system now used across 3 major product lines.",
-          ],
-          enhancedAchievements: [
-            "Architected and launched an enterprise SaaS platform serving 1M+ developers, driving a 40% productivity increase through intuitive UX and developer-first workflows.",
-            "Established a scalable design system with 120+ components while mentoring 4 junior designers, adopted across 3 product lines and reducing design-to-dev handoff by 40%.",
+          items: [
+            {
+              kind: "description",
+              actual:
+                "Owned end-to-end product design for enterprise SaaS workflows across discovery, prototyping, and launch.",
+              enhanced:
+                "Led end-to-end enterprise SaaS product design for developer platform workflows, translating discovery insights into scalable prototypes and launch-ready experiences.",
+            },
+            {
+              kind: "achievement",
+              actual:
+                "Led the design of a new enterprise SaaS platform, resulting in a 40% increase in user productivity within the first quarter of launch.",
+              enhanced:
+                "Architected and launched an enterprise SaaS platform serving 1M+ developers, driving a 40% productivity increase through intuitive UX and developer-first workflows.",
+            },
+            {
+              kind: "achievement",
+              actual:
+                "Mentored a team of 4 junior designers and established a comprehensive design system now used across 3 major product lines.",
+              enhanced:
+                "Established a scalable design system with 120+ components while mentoring 4 junior designers, adopted across 3 product lines and reducing design-to-dev handoff by 40%.",
+            },
           ],
         },
         {
           title: "UI/UX Designer",
           company: "Creative Core Agency",
-          originalAchievements: [
-            "Shipped over 15 client projects ranging from mobile apps to responsive marketing websites for Fortune 500 companies.",
-          ],
-          enhancedAchievements: [
-            "Delivered 15+ high-impact digital products for Fortune 500 clients, ranging from mobile applications to responsive web platforms, driving measurable engagement improvements across all projects.",
+          items: [
+            {
+              kind: "achievement",
+              actual:
+                "Shipped over 15 client projects ranging from mobile apps to responsive marketing websites for Fortune 500 companies.",
+              enhanced:
+                "Delivered 15+ high-impact digital products for Fortune 500 clients, ranging from mobile applications to responsive web platforms, driving measurable engagement improvements across all projects.",
+            },
           ],
         },
       ],
@@ -132,8 +155,18 @@ export const mockApplications: JobApplication[] = [
       },
     ],
     contacts: [
-      { initials: "SH", name: "Sarah Hughes", role: "Recruitment Lead" },
-      { initials: "RM", name: "Ryan Miller", role: "Hiring Manager" },
+      {
+        email: "sarah.hughes@stripe.com",
+        initials: "SH",
+        name: "Sarah Hughes",
+        role: "Recruitment Lead",
+      },
+      {
+        email: "ryan.miller@stripe.com",
+        initials: "RM",
+        name: "Ryan Miller",
+        role: "Hiring Manager",
+      },
     ],
     aiMatch: {
       score: 85,
@@ -167,23 +200,41 @@ export const mockApplications: JobApplication[] = [
         {
           title: "Senior Product Designer",
           company: "Flow Systems",
-          originalAchievements: [
-            "Led the design of a new enterprise SaaS platform, resulting in a 40% increase in user productivity within the first quarter of launch.",
-            "Mentored a team of 4 junior designers and established a comprehensive design system now used across 3 major product lines.",
-          ],
-          enhancedAchievements: [
-            "Spearheaded the design and launch of a high-scale enterprise SaaS payments platform, driving a 40% boost in user productivity across 15K+ active users within the first quarter.",
-            "Mentored and upskilled a team of 4 junior designers while architecting a comprehensive design system adopted by 3 product lines, reducing UI development time by 35%.",
+          items: [
+            {
+              kind: "description",
+              actual:
+                "Owned end-to-end product design for enterprise SaaS workflows across discovery, prototyping, and launch.",
+              enhanced:
+                "Led end-to-end product design for SaaS payment workflows, connecting discovery, Figma prototyping, and conversion-focused launch execution.",
+            },
+            {
+              kind: "achievement",
+              actual:
+                "Led the design of a new enterprise SaaS platform, resulting in a 40% increase in user productivity within the first quarter of launch.",
+              enhanced:
+                "Spearheaded the design and launch of a high-scale enterprise SaaS payments platform, driving a 40% boost in user productivity across 15K+ active users within the first quarter.",
+            },
+            {
+              kind: "achievement",
+              actual:
+                "Mentored a team of 4 junior designers and established a comprehensive design system now used across 3 major product lines.",
+              enhanced:
+                "Mentored and upskilled a team of 4 junior designers while architecting a comprehensive design system adopted by 3 product lines, reducing UI development time by 35%.",
+            },
           ],
         },
         {
           title: "UI/UX Designer",
           company: "Creative Core Agency",
-          originalAchievements: [
-            "Shipped over 15 client projects ranging from mobile apps to responsive marketing websites for Fortune 500 companies.",
-          ],
-          enhancedAchievements: [
-            "Delivered 15+ end-to-end digital products for Fortune 500 clients including mobile apps and responsive web platforms, consistently exceeding client satisfaction targets by 20%.",
+          items: [
+            {
+              kind: "achievement",
+              actual:
+                "Shipped over 15 client projects ranging from mobile apps to responsive marketing websites for Fortune 500 companies.",
+              enhanced:
+                "Delivered 15+ end-to-end digital products for Fortune 500 clients including mobile apps and responsive web platforms, consistently exceeding client satisfaction targets by 20%.",
+            },
           ],
         },
       ],
@@ -226,8 +277,18 @@ export const mockApplications: JobApplication[] = [
       },
     ],
     contacts: [
-      { initials: "JD", name: "Jamie Diaz", role: "Research Lead" },
-      { initials: "PN", name: "Priya Nair", role: "HR Coordinator" },
+      {
+        email: "jamie.diaz@healthtap.com",
+        initials: "JD",
+        name: "Jamie Diaz",
+        role: "Research Lead",
+      },
+      {
+        email: "priya.nair@healthtap.com",
+        initials: "PN",
+        name: "Priya Nair",
+        role: "HR Coordinator",
+      },
     ],
     aiMatch: {
       score: 38,
@@ -300,8 +361,13 @@ export const mockApplications: JobApplication[] = [
       },
     ],
     contacts: [
-      { initials: "TC", name: "Tuomas Ch", role: "Engineering Manager" },
-      { initials: "KR", name: "Karri R", role: "Cofounder" },
+      {
+        email: "tuomas.ch@linear.app",
+        initials: "TC",
+        name: "Tuomas Ch",
+        role: "Engineering Manager",
+      },
+      { email: "karri.r@linear.app", initials: "KR", name: "Karri R", role: "Cofounder" },
     ],
     aiMatch: {
       score: 92,
@@ -379,8 +445,18 @@ export const mockApplications: JobApplication[] = [
       },
     ],
     contacts: [
-      { initials: "AC", name: "Alice Chen", role: "Design Recruiter" },
-      { initials: "MT", name: "Mike Torres", role: "VP of Design" },
+      {
+        email: "alice.chen@airbnb.com",
+        initials: "AC",
+        name: "Alice Chen",
+        role: "Design Recruiter",
+      },
+      {
+        email: "mike.torres@airbnb.com",
+        initials: "MT",
+        name: "Mike Torres",
+        role: "VP of Design",
+      },
     ],
     aiMatch: {
       score: 78,

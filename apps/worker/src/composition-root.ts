@@ -3,20 +3,18 @@ import type { JobApplicationRepository, JobSiteScraper } from "@link2cv/domain";
 import {
   CareerPageScraper,
   CompanyWebsiteScraper,
-  createFileStorage,
   createDb,
-  HtmlTemplateRenderer,
+  createFileStorage,
+  HttpRemoteImageFetcher,
   LinkedInCompanyScraper,
   LinkedInJobScraper,
   LinkedInSessionManager,
   AiProviderFactory,
-  PlaywrightPdfRenderer,
   PostgresJobApplicationRepository,
   PostgresUserProfileRepository,
 } from "@link2cv/infrastructure";
 import {
   ExtractJobRequirementsUseCase,
-  GenerateDocumentsUseCase,
   ProcessJobApplicationUseCase,
   RunMatchAnalysisUseCase,
 } from "@link2cv/application";
@@ -39,6 +37,14 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
   const db = createDb(env.DATABASE_URL);
   const jobApplications = new PostgresJobApplicationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
+  const storage = createFileStorage({
+    endpoint: env.RUSTFS_ENDPOINT,
+    accessKeyId: env.RUSTFS_ACCESS_KEY,
+    secretAccessKey: env.RUSTFS_SECRET_KEY,
+    bucket: env.RUSTFS_BUCKET,
+    region: env.RUSTFS_REGION,
+    publicEndpoint: env.RUSTFS_PUBLIC_ENDPOINT,
+  });
 
   const __dirname = fileURLToPath(new URL(".", import.meta.url));
   const sessionDir = resolve(__dirname, "../../../storage/linkedin-session");
@@ -58,21 +64,6 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
   const runMatchAnalysis = new RunMatchAnalysisUseCase(aiProvider, jobApplications);
   const extractJobRequirements = new ExtractJobRequirementsUseCase(aiProvider);
 
-  const storage = createFileStorage({
-    endpoint: env.RUSTFS_ENDPOINT,
-    accessKeyId: env.RUSTFS_ACCESS_KEY,
-    secretAccessKey: env.RUSTFS_SECRET_KEY,
-    bucket: env.RUSTFS_BUCKET,
-    region: env.RUSTFS_REGION,
-    publicEndpoint: env.RUSTFS_PUBLIC_ENDPOINT,
-  });
-  const generateDocuments = new GenerateDocumentsUseCase(
-    new HtmlTemplateRenderer(),
-    new PlaywrightPdfRenderer(),
-    storage,
-    jobApplications,
-  );
-
   const scrapers: {
     job: JobSiteScraper;
     companyLinkedIn: JobSiteScraper;
@@ -91,7 +82,8 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
     scrapers,
     extractJobRequirements,
     runMatchAnalysis,
-    generateDocuments,
+    storage,
+    new HttpRemoteImageFetcher(),
   );
 
   return { processor, connection, jobApplications };

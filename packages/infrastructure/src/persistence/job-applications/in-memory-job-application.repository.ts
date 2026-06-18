@@ -148,6 +148,10 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     return this.scrapeBundles.get(id) ?? null;
   }
 
+  async getCompanyLogoFileId(id: string): Promise<string | null> {
+    return this.scrapeBundles.get(id)?.companyLinkedIn?.logoFileId ?? null;
+  }
+
   async saveMatchAnalysis(id: string, result: MatchAnalysisResult): Promise<void> {
     this.matchAnalyses.set(id, result);
   }
@@ -325,7 +329,9 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
 
   async attachGeneratedDocument(input: AttachGeneratedDocumentInput): Promise<GeneratedDocument> {
     const current = this.documents.get(input.jobApplicationId) ?? [];
-    const existing = current.find((document) => document.kind === input.kind);
+    const existing = current.find(
+      (document) => document.kind === input.kind && document.format === input.format,
+    );
     const document: GeneratedDocument = {
       id: existing?.id ?? randomUUID(),
       ...input,

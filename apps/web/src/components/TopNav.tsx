@@ -17,22 +17,9 @@ export default function TopNav() {
             type="text"
           />
         </div>
-        <button className="hidden xl:flex items-center gap-1.5 px-4 py-2 bg-primary-container text-on-primary-container rounded-xl text-label-md font-bold hover:bg-primary transition-colors cursor-pointer whitespace-nowrap">
-          <span className="material-symbols-outlined text-[18px]">bolt</span>
-          Quick Add
-        </button>
       </div>
       <div className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4">
         <LinkedInSessionButton />
-        <button className="material-symbols-outlined text-secondary hover:bg-surface-container-low p-2 rounded-full transition-colors cursor-pointer">
-          notifications
-        </button>
-        <button className="material-symbols-outlined text-secondary hover:bg-surface-container-low p-2 rounded-full transition-colors cursor-pointer">
-          settings
-        </button>
-        <button className="md:hidden material-symbols-outlined text-secondary p-2 cursor-pointer">
-          menu
-        </button>
       </div>
     </header>
   );

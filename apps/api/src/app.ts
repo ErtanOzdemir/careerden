@@ -1,7 +1,13 @@
 import cors from "cors";
 import express from "express";
 import type { Express } from "express";
-import { CreateProfileUseCase, SubmitJobApplicationUseCase } from "@link2cv/application";
+import {
+  CreateProfileUseCase,
+  GenerateDocumentsUseCase,
+  GenerateJobApplicationDocumentsUseCase,
+  SubmitJobApplicationUseCase,
+  UpdateProfileUseCase,
+} from "@link2cv/application";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { createLinkedInSessionRouter } from "./scraping/linkedin-session.routes.js";
 import { createProfileRouter } from "./profiles/profiles.routes.js";
@@ -11,8 +17,16 @@ import { createApiDependencies, type ApiAppOptions } from "./composition-root.js
 export type { ApiAppOptions } from "./composition-root.js";
 
 export function createApiApp(options: ApiAppOptions = {}): Express {
-  const { profiles, jobApplications, queue, storage, linkedInSessionManager } =
-    createApiDependencies(options);
+  const {
+    profiles,
+    jobApplications,
+    queue,
+    storage,
+    templates,
+    documents,
+    docxTemplates,
+    linkedInSessionManager,
+  } = createApiDependencies(options);
 
   const app = express();
 
@@ -27,7 +41,10 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
     "/profiles",
     createProfileRouter({
       createProfile: new CreateProfileUseCase(profiles),
+      updateProfile: new UpdateProfileUseCase(profiles),
       profiles,
+      storage,
+      docxTemplates,
     }),
   );
 
@@ -35,6 +52,18 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
     "/job-applications",
     createJobApplicationRouter({
       submitJobApplication: new SubmitJobApplicationUseCase(jobApplications, profiles, queue),
+      generateJobApplicationDocuments: new GenerateJobApplicationDocumentsUseCase(
+        jobApplications,
+        profiles,
+        new GenerateDocumentsUseCase(
+          templates,
+          documents,
+          storage,
+          jobApplications,
+          profiles,
+          docxTemplates,
+        ),
+      ),
       jobApplications,
       storage,
     }),

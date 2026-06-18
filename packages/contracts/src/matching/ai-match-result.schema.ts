@@ -8,6 +8,15 @@ export const aiMatchResultSchema = z.object({
   customizedSummary: z.string().min(1),
   interviewTips: z.array(z.string().min(1)),
   coverLetterGuidance: z.array(z.string().min(1)).optional(),
+  experienceEnhancements: z
+    .array(
+      z.object({
+        experienceIndex: z.number().int().min(0),
+        enhancedDescription: z.string().min(1).optional(),
+        enhancedAchievements: z.array(z.string().min(1)).optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type AiMatchResultDto = z.infer<typeof aiMatchResultSchema>;

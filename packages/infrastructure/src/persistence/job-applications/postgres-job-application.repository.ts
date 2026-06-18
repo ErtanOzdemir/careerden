@@ -125,20 +125,33 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
   }
 
   async saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void> {
-    await this.db("job_applications")
-      .where({ id })
-      .update({
-        scrape_bundle: JSON.stringify(scrape),
-        company_name: this.db.raw("coalesce(company_name, ?)", [scrape.job.companyName]),
-        role_title: this.db.raw("coalesce(role_title, ?)", [scrape.job.title]),
-        job_url: this.db.raw("coalesce(job_url, source_url)"),
-        updated_at: this.db.fn.now(),
-      });
+    const update: Record<string, unknown> = {
+      scrape_bundle: JSON.stringify(scrape),
+      company_name: this.db.raw("coalesce(company_name, ?)", [scrape.job.companyName]),
+      role_title: this.db.raw("coalesce(role_title, ?)", [scrape.job.title]),
+      job_url: this.db.raw("coalesce(job_url, source_url)"),
+      updated_at: this.db.fn.now(),
+    };
+
+    if (scrape.companyLinkedIn?.logoFileId) {
+      update.company_logo_file_id = scrape.companyLinkedIn.logoFileId;
+    }
+
+    await this.db("job_applications").where({ id }).update(update);
   }
 
   async getScrapeBundle(id: string): Promise<ScrapeBundle | null> {
     const row = await this.db("job_applications").select("scrape_bundle").where({ id }).first();
     return (row?.scrape_bundle as ScrapeBundle | undefined) ?? null;
+  }
+
+  async getCompanyLogoFileId(id: string): Promise<string | null> {
+    const row = await this.db("job_applications")
+      .select("company_logo_file_id")
+      .where({ id })
+      .first();
+
+    return nullableString(row?.company_logo_file_id) ?? null;
   }
 
   async saveMatchAnalysis(id: string, result: MatchAnalysisResult): Promise<void> {
@@ -312,6 +325,7 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
       .where({
         job_application_id: input.jobApplicationId,
         kind: input.kind,
+        format: input.format,
       })
       .first();
 
@@ -335,6 +349,7 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
         id,
         job_application_id: input.jobApplicationId,
         kind: input.kind,
+        format: input.format,
         file_id: input.fileId,
         file_name: input.fileName,
         content_type: input.contentType,
@@ -385,9 +400,10 @@ function toGeneratedDocument(row: Record<string, unknown>): GeneratedDocument {
     id: String(row.id),
     jobApplicationId: String(row.job_application_id),
     kind: row.kind as GeneratedDocument["kind"],
+    format: (nullableString(row.format) ?? "pdf") as GeneratedDocument["format"],
     fileId: String(row.file_id),
     fileName: String(row.file_name),
-    contentType: "application/pdf",
+    contentType: String(row.content_type),
     createdAt: new Date(String(row.created_at)),
   };
 }

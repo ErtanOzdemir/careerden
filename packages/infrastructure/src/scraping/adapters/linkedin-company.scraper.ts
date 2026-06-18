@@ -65,6 +65,7 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
       }
 
       const websiteUrl = await extractLinkedInCompanyWebsiteUrl(page);
+      const logoUrl = await extractLinkedInCompanyLogoUrl(page);
       const description = await firstText(page, [
         ".org-about-us-organization-description__text",
         ".org-page-details__definition-text",
@@ -76,12 +77,14 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
         linkedInUrl: input.linkedInUrl,
         websiteUrl,
         description: description || undefined,
+        logoUrl,
         raw: {
           adapter: "linkedin-company",
           input,
           aboutUrl,
           finalUrl: page.url(),
           websiteExtracted: Boolean(websiteUrl),
+          logoExtracted: Boolean(logoUrl),
           scrapedAt: new Date().toISOString(),
         },
       };
@@ -89,6 +92,30 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
       await browser.close();
     }
   }
+}
+
+export function chooseLinkedInCompanyLogoUrl(
+  candidates: Array<{ delayedUrl?: string; src?: string; srcset?: string }>,
+): string | undefined {
+  for (const candidate of candidates) {
+    const urls = [...parseSrcset(candidate.srcset), candidate.delayedUrl, candidate.src].filter(
+      (value): value is string => Boolean(value),
+    );
+
+    for (const value of urls) {
+      const parsed = parseUrl(value);
+
+      if (
+        parsed &&
+        parsed.protocol === "https:" &&
+        (parsed.hostname === "media.licdn.com" || parsed.hostname.endsWith(".licdn.com"))
+      ) {
+        return parsed.href;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 export function normalizeLinkedInCompanyAboutUrl(linkedInUrl?: string): string | undefined {
@@ -107,6 +134,33 @@ export function normalizeLinkedInCompanyAboutUrl(linkedInUrl?: string): string |
   }
 
   return `${parsed.origin}/company/${slug}/about/`;
+}
+
+async function extractLinkedInCompanyLogoUrl(page: Page): Promise<string | undefined> {
+  const selectors = [
+    ".org-top-card-primary-content__logo-container img",
+    "img.org-top-card-primary-content__logo",
+    ".org-top-card-primary-content__logo img",
+    'img[alt*="logo" i]',
+  ];
+  const candidates: Array<{ delayedUrl?: string; src?: string; srcset?: string }> = [];
+
+  for (const selector of selectors) {
+    const locator = page.locator(selector).first();
+
+    if ((await locator.count()) === 0) {
+      continue;
+    }
+
+    candidates.push({
+      delayedUrl:
+        (await locator.getAttribute("data-delayed-url").catch(() => undefined)) ?? undefined,
+      src: (await locator.getAttribute("src").catch(() => undefined)) ?? undefined,
+      srcset: (await locator.getAttribute("srcset").catch(() => undefined)) ?? undefined,
+    });
+  }
+
+  return chooseLinkedInCompanyLogoUrl(candidates);
 }
 
 export function chooseExternalCompanyWebsiteUrl(
@@ -240,4 +294,16 @@ function parseUrl(value: string | undefined): URL | undefined {
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function parseSrcset(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((candidate) => candidate.trim().split(/\s+/)[0])
+    .filter(Boolean)
+    .reverse();
 }

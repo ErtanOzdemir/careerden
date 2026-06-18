@@ -35,11 +35,7 @@ export default function Sidebar() {
         ))}
       </nav>
       <div className="mt-auto pt-lg border-t border-outline-variant">
-        <button className="w-full flex items-center justify-center gap-2 bg-primary-container text-on-primary text-body-md font-semibold py-3 px-4 rounded-lg shadow-sm hover:opacity-90 transition-opacity cursor-pointer">
-          <span className="material-symbols-outlined">add_circle</span>
-          Add Application
-        </button>
-        <div className="mt-md flex items-center gap-3 px-2">
+        <div className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold border border-outline-variant">
             AC
           </div>

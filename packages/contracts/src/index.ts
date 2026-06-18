@@ -1,3 +1,4 @@
+export * from "./documents/document-template.schema.js";
 export * from "./matching/ai-job-requirements.schema.js";
 export * from "./matching/ai-match-result.schema.js";
 export * from "./job-applications/job-application.schema.js";

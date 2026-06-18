@@ -17,16 +17,91 @@ export interface ApiJobApplicationTracking {
 }
 
 export interface ApiGeneratedDocument {
-  contentType: "application/pdf";
+  contentType: string;
   createdAt: string;
   fileId: string;
   fileName: string;
+  format: "docx" | "pdf";
   id: string;
   jobApplicationId: string;
   kind: "cover_letter" | "cv";
 }
 
+export type ApiDocumentTemplateField =
+  | "company_name"
+  | "customized_summary"
+  | "education_list"
+  | "email"
+  | "experience_list"
+  | "full_name"
+  | "headline"
+  | "job_description"
+  | "job_location"
+  | "location"
+  | "missing_skills"
+  | "recommended_achievements"
+  | "role_title"
+  | "selected_education"
+  | "selected_experiences"
+  | "skills"
+  | "strong_skills";
+
+export type ApiSelectedExperienceTemplateField =
+  | "achievements"
+  | "company"
+  | "description"
+  | "end_date"
+  | "period"
+  | "skills"
+  | "start_date"
+  | "title";
+
+export type ApiSelectedEducationTemplateField =
+  | "achievements"
+  | "degree"
+  | "end_date"
+  | "field"
+  | "institution"
+  | "period"
+  | "start_date";
+
+export interface ApiDocumentTemplateVariableAliases {
+  fields: Partial<
+    Record<Exclude<ApiDocumentTemplateField, "selected_education" | "selected_experiences">, string>
+  >;
+  selectedEducation?: {
+    fields: Partial<Record<ApiSelectedEducationTemplateField, string>>;
+    items?: Array<{
+      fields: Partial<Record<ApiSelectedEducationTemplateField, string>>;
+    }>;
+  };
+  selectedExperiences?: {
+    fields: Partial<Record<ApiSelectedExperienceTemplateField, string>>;
+    items?: Array<{
+      fields: Partial<Record<ApiSelectedExperienceTemplateField, string>>;
+    }>;
+  };
+}
+
+export interface ApiDocumentTemplate {
+  contentType: string;
+  createdAt: string;
+  fieldMappings: Record<string, ApiDocumentTemplateField>;
+  fileId: string;
+  fileName: string;
+  format: "docx";
+  id: string;
+  isDefault: boolean;
+  kind: "cv";
+  placeholders: string[];
+  profileId: string;
+  size: number;
+  updatedAt: string;
+  variableAliases: ApiDocumentTemplateVariableAliases;
+}
+
 export interface ApiJobApplication {
+  companyLogoUrl?: string;
   createdAt: string;
   documents?: ApiGeneratedDocument[];
   failureReason?: string;
@@ -102,6 +177,11 @@ export interface ApiScrapedCompany {
 export interface ApiMatchAnalysis {
   coverLetterGuidance?: string[];
   customizedSummary: string;
+  experienceEnhancements?: {
+    enhancedAchievements?: string[];
+    enhancedDescription?: string;
+    experienceIndex: number;
+  }[];
   interviewTips: string[];
   matchScore: number;
   missingSkills: string[];
@@ -170,6 +250,22 @@ export interface ApiProfile {
   summary?: string;
   updatedAt: string;
 }
+
+export type ApiUpdateProfilePayload = Partial<
+  Pick<
+    ApiProfile,
+    | "certifications"
+    | "education"
+    | "email"
+    | "experience"
+    | "fullName"
+    | "headline"
+    | "location"
+    | "projects"
+    | "skills"
+    | "summary"
+  >
+>;
 
 export type ApiLinkedInSessionStatus = "connected" | "expired" | "login_in_progress" | "missing";
 

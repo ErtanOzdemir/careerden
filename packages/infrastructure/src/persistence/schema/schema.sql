@@ -32,6 +32,7 @@ create table job_applications (
   last_response_at timestamptz,
   metadata jsonb not null default '{}',
   scrape_bundle jsonb,
+  company_logo_file_id text,
   match_analysis jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -78,9 +79,27 @@ create table generated_documents (
   id uuid primary key,
   job_application_id uuid not null references job_applications(id),
   kind text not null,
+  format text not null default 'pdf',
   file_id text not null,
   file_name text not null,
   content_type text not null,
   created_at timestamptz not null default now(),
-  unique (job_application_id, kind)
+  unique (job_application_id, kind, format)
+);
+
+create table document_templates (
+  id uuid primary key,
+  profile_id uuid not null references user_profiles(id),
+  kind text not null,
+  format text not null,
+  file_id text not null,
+  file_name text not null,
+  content_type text not null,
+  size integer not null,
+  placeholders jsonb not null default '[]',
+  field_mappings jsonb not null default '{}',
+  variable_aliases jsonb not null default '{"fields":{}}',
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );

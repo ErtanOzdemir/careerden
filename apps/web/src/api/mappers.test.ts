@@ -26,11 +26,19 @@ describe("API mappers", () => {
     const mapped = mapApiJobApplicationToUi(application);
 
     expect(mapped.company).toBe("Acme");
+    expect(mapped.logo).toBe("http://localhost:9000/signed-logo");
     expect(mapped.role).toBe("Frontend Engineer");
     expect(mapped.domain).toBe("linkedin.com");
     expect(mapped.status).toBe("Interviewing");
     expect(mapped.priority).toBe("High");
-    expect(mapped.contacts).toEqual([{ initials: "SH", name: "Sarah Hughes", role: "Recruiter" }]);
+    expect(mapped.contacts).toEqual([
+      {
+        email: "sarah.hughes@example.com",
+        initials: "SH",
+        name: "Sarah Hughes",
+        role: "Recruiter",
+      },
+    ]);
     expect(mapped.timeline?.map((item) => item.title)).toEqual(["Technical screen"]);
     expect(mapped.processingStatusLabel).toBe("Completed");
     expect(mapped.processingLog?.map((item) => item.title)).toEqual(["Scraping started"]);
@@ -92,6 +100,55 @@ describe("API mappers", () => {
     expect(mapped.experiences[0]?.period).toBe("2024 - Present");
     expect(mapped.skills[0]?.skills).toEqual(["Figma"]);
   });
+
+  it("maps every profile experience description and achievement into AI comparisons", () => {
+    const application = createApplicationDetail();
+    const profile = createProfile();
+    application.matchAnalysis = {
+      ...application.matchAnalysis,
+      recommendedAchievements: [
+        "Enhanced role description.",
+        "Enhanced first achievement.",
+        "Enhanced second achievement.",
+      ],
+    };
+
+    const mapped = mapApiJobApplicationToUi(application, profile);
+
+    expect(mapped.aiMatch?.experienceOptimizations).toHaveLength(2);
+    expect(mapped.aiMatch?.experienceOptimizations?.[0]).toEqual({
+      title: "Frontend Engineer",
+      company: "Acme",
+      items: [
+        {
+          actual: "Built product experiences for SaaS teams.",
+          enhanced: "Enhanced role description.",
+          kind: "description",
+        },
+        {
+          actual: "Built product UI.",
+          enhanced: "Enhanced first achievement.",
+          kind: "achievement",
+        },
+        {
+          actual: "Improved accessibility.",
+          enhanced: "Enhanced second achievement.",
+          kind: "achievement",
+        },
+      ],
+    });
+    expect(mapped.aiMatch?.experienceOptimizations?.[1]).toEqual({
+      title: "UI Engineer",
+      company: "Beta",
+      items: [
+        {
+          actual: "Delivered dashboards.",
+          enhanced: undefined,
+          kind: "achievement",
+        },
+      ],
+    });
+  });
 });
 
 function createApplicationDetail(): ApiJobApplicationDetail {
@@ -101,6 +158,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
         createdAt: "2026-06-01T00:00:00.000Z",
         id: "contact-1",
         jobApplicationId: "job-1",
+        email: "sarah.hughes@example.com",
         name: "Sarah Hughes",
         role: "Recruiter",
         updatedAt: "2026-06-01T00:00:00.000Z",
@@ -128,6 +186,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
         type: "processing",
       },
     ],
+    companyLogoUrl: "http://localhost:9000/signed-logo",
     id: "job-1",
     interviews: [
       {
@@ -172,5 +231,37 @@ function createApplicationDetail(): ApiJobApplicationDetail {
       tags: ["Remote"],
     },
     updatedAt: "2026-06-02T00:00:00.000Z",
+  };
+}
+
+function createProfile(): ApiProfile {
+  return {
+    certifications: [],
+    createdAt: "2026-06-01T00:00:00.000Z",
+    education: [],
+    email: "person@example.com",
+    experience: [
+      {
+        achievements: ["Built product UI.", "Improved accessibility."],
+        company: "Acme",
+        description: "Built product experiences for SaaS teams.",
+        startDate: "2024",
+        title: "Frontend Engineer",
+      },
+      {
+        achievements: ["Delivered dashboards."],
+        company: "Beta",
+        startDate: "2022",
+        title: "UI Engineer",
+      },
+    ],
+    fullName: "Ada Lovelace",
+    headline: "Frontend Engineer",
+    id: "profile-1",
+    location: "Remote",
+    projects: [],
+    skills: ["React"],
+    summary: "Builds product UI.",
+    updatedAt: "2026-06-01T00:00:00.000Z",
   };
 }

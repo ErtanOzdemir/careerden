@@ -71,6 +71,7 @@ export function mapUiPriorityToApi(priority: Priority): ApiApplicationPriority {
 
 export function mapApiJobApplicationToUi(
   application: ApiJobApplication | ApiJobApplicationDetail,
+  profile?: ApiProfile,
 ): JobApplication {
   const detail = isJobApplicationDetail(application) ? application : undefined;
   const scrapeJob = detail?.scrapeBundle?.job;
@@ -81,6 +82,7 @@ export function mapApiJobApplicationToUi(
   return {
     id: application.id,
     company,
+    logo: application.companyLogoUrl,
     domain: getDomain(application.tracking.jobUrl ?? application.sourceUrl),
     role,
     location: scrapeJob?.location ?? application.tracking.roleType ?? "Location not set",
@@ -99,11 +101,19 @@ export function mapApiJobApplicationToUi(
     metadata: application.tracking.metadata,
     interviewNotes: stringFromMetadata(application.tracking.metadata, "interviewNotes"),
     contacts: detail?.contacts.map((contact) => ({
+      email: contact.email,
       initials: getInitials(contact.name),
       name: contact.name,
       role: contact.role ?? "Contact",
     })),
-    aiMatch: detail?.matchAnalysis ? mapMatchAnalysis(detail.matchAnalysis) : undefined,
+    generatedDocuments: application.documents?.map((document) => ({
+      id: document.id,
+      kind: document.kind,
+      format: document.format,
+      name: document.fileName,
+      createdAt: formatDate(document.createdAt),
+    })),
+    aiMatch: detail?.matchAnalysis ? mapMatchAnalysis(detail.matchAnalysis, profile) : undefined,
   };
 }
 
@@ -270,7 +280,17 @@ function mapUpcomingInterviews(details: ApiJobApplicationDetail[]): UpcomingInte
     }));
 }
 
-function mapMatchAnalysis(match: ApiMatchAnalysis): NonNullable<JobApplication["aiMatch"]> {
+function mapMatchAnalysis(
+  match: ApiMatchAnalysis,
+  profile?: ApiProfile,
+): NonNullable<JobApplication["aiMatch"]> {
+  const recommendationQueue = [...match.recommendedAchievements];
+  const profileAchievements = profile?.experience.flatMap((experience) => experience.achievements);
+  const originalAchievements = profileAchievements?.filter(Boolean) ?? [];
+  const currentSummary = profile?.summary ?? profile?.headline ?? "Current profile summary";
+  const yourSkills =
+    profile?.skills && profile.skills.length > 0 ? profile.skills : match.strongSkills;
+
   return {
     score: match.matchScore,
     summary: match.interviewTips[0] ?? "AI analysis is available for this application.",
@@ -279,13 +299,40 @@ function mapMatchAnalysis(match: ApiMatchAnalysis): NonNullable<JobApplication["
       ...match.missingSkills.map((skill) => ({ keyword: skill, match: false })),
     ],
     recommendation: match.matchScore >= 70 ? "Apply to CV" : "Review before applying",
-    currentSummary: "Current profile summary",
+    currentSummary,
     enhancedSummary: match.customizedSummary,
-    bulletOptimizations: match.recommendedAchievements.map((achievement) => ({
-      original: "Existing profile achievement",
+    bulletOptimizations: match.recommendedAchievements.map((achievement, index) => ({
+      original: originalAchievements[index] ?? "No matching profile achievement",
       enhanced: achievement,
     })),
-    yourSkills: match.strongSkills,
+    experienceOptimizations: profile?.experience.map((experience, index) => {
+      const enhancement = match.experienceEnhancements?.find(
+        (item) => item.experienceIndex === index,
+      );
+
+      return {
+        title: experience.title,
+        company: experience.company,
+        items: [
+          ...(experience.description
+            ? [
+                {
+                  actual: experience.description,
+                  enhanced: enhancement?.enhancedDescription ?? recommendationQueue.shift(),
+                  kind: "description" as const,
+                },
+              ]
+            : []),
+          ...experience.achievements.map((achievement, achievementIndex) => ({
+            actual: achievement,
+            enhanced:
+              enhancement?.enhancedAchievements?.[achievementIndex] ?? recommendationQueue.shift(),
+            kind: "achievement" as const,
+          })),
+        ],
+      };
+    }),
+    yourSkills,
     suggestedSkills: match.missingSkills,
   };
 }

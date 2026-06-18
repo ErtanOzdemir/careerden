@@ -45,6 +45,8 @@ export class RunMatchAnalysisUseCase {
           customizedSummary: "2-3 sentences for the CV summary",
           interviewTips: "Practical tips for this interview",
           coverLetterGuidance: "Optional guidance for the cover letter",
+          experienceEnhancements:
+            "Optional array keyed by zero-based profile experience index. Include enhancedDescription and enhancedAchievements only when grounded in the original profile experience.",
         },
       }),
       outputSchema: aiMatchResultSchema,

@@ -1,11 +1,13 @@
 import type {
+  FileStorage,
   JobApplicationRepository,
   JobSiteScraper,
+  RemoteImageFetcher,
+  ScrapedCompany,
   ScrapeBundle,
   UserProfileRepository,
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
-import type { GenerateDocumentsUseCase } from "../documents/generate-documents.js";
 import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.js";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.js";
 
@@ -21,7 +23,8 @@ export class ProcessJobApplicationUseCase {
     },
     private readonly requirementExtraction: ExtractJobRequirementsUseCase,
     private readonly matching: RunMatchAnalysisUseCase,
-    private readonly documentGeneration: GenerateDocumentsUseCase,
+    private readonly storage?: FileStorage,
+    private readonly remoteImages?: RemoteImageFetcher,
   ) {}
 
   async execute(jobApplicationId: string): Promise<void> {
@@ -54,10 +57,11 @@ export class ProcessJobApplicationUseCase {
         jobApplicationId,
         job: scrapedJob,
       });
-      const companyLinkedIn = await this.scrapers.companyLinkedIn.scrapeCompany({
+      const scrapedCompanyLinkedIn = await this.scrapers.companyLinkedIn.scrapeCompany({
         companyName: job.companyName,
         linkedInUrl: job.companyLinkedInUrl,
       });
+      const companyLinkedIn = await this.storeCompanyLogo(jobApplicationId, scrapedCompanyLinkedIn);
       const companyWebsite = companyLinkedIn.websiteUrl
         ? await this.scrapers.companyWebsite.scrapeCompany({
             companyName: job.companyName,
@@ -104,24 +108,12 @@ export class ProcessJobApplicationUseCase {
         title: "AI analysis completed",
         metadata: { matchScore: analysis.matchScore },
       });
-      await this.transition(jobApplicationId, "analyzing", "generating_documents");
+      await this.transition(jobApplicationId, "analyzing", "review_ready");
       await this.jobApplications.addEvent({
         jobApplicationId,
         type: "processing",
-        title: "Document generation started",
-      });
-
-      await this.documentGeneration.execute({
-        jobApplicationId,
-        profile,
-        analysis,
-      });
-
-      await this.transition(jobApplicationId, "generating_documents", "completed");
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Document generation completed",
+        title: "Ready for AI match review",
+        metadata: { matchScore: analysis.matchScore },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown processing error";
@@ -136,6 +128,33 @@ export class ProcessJobApplicationUseCase {
     }
   }
 
+  private async storeCompanyLogo(
+    jobApplicationId: string,
+    company: ScrapedCompany,
+  ): Promise<ScrapedCompany> {
+    if (!company.logoUrl || !this.storage || !this.remoteImages) {
+      return company;
+    }
+
+    try {
+      const image = await this.remoteImages.fetch(company.logoUrl);
+      const stored = await this.storage.put({
+        fileName: `company-logo.${extensionForContentType(image.contentType)}`,
+        contentType: image.contentType,
+        body: image.body,
+        metadata: {
+          jobApplicationId,
+          kind: "company_logo",
+          companyName: company.name,
+        },
+      });
+
+      return { ...company, logoFileId: stored.id };
+    } catch {
+      return company;
+    }
+  }
+
   private async transition(
     jobApplicationId: string,
     from: Parameters<typeof canTransitionJobApplicationStatus>[0],
@@ -146,5 +165,18 @@ export class ProcessJobApplicationUseCase {
     }
 
     await this.jobApplications.updateStatus(jobApplicationId, to);
+  }
+}
+
+function extensionForContentType(contentType: string): string {
+  switch (contentType) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    default:
+      return "png";
   }
 }

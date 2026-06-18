@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ApplicationStatus, Priority } from "../types";
 import StatusBadge from "../components/StatusBadge";
+import CompanyLogo from "../components/CompanyLogo";
 import Pagination from "../components/Pagination";
 import { requireDefaultProfileId } from "../api/config";
 import { jobApplicationsApi } from "../api/jobApplications";
@@ -54,7 +55,7 @@ export default function ApplicationsLog() {
         });
 
         if (isMounted) {
-          setApplications(items.map(mapApiJobApplicationToUi));
+          setApplications(items.map((item) => mapApiJobApplicationToUi(item)));
         }
       } catch (loadError) {
         if (isMounted) {
@@ -239,9 +240,11 @@ export default function ApplicationsLog() {
                   >
                     <td className="px-6 py-4">
                       <Link to={`/applications/${app.id}`} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center font-bold text-primary border border-outline-variant overflow-hidden text-sm">
-                          {app.company.charAt(0)}
-                        </div>
+                        <CompanyLogo
+                          className="h-10 w-10 shrink-0 text-sm"
+                          company={app.company}
+                          logo={app.logo}
+                        />
                         <div>
                           <div className="text-body-md font-bold">{app.company}</div>
                           <div className="text-label-sm text-secondary">{app.domain}</div>

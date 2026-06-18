@@ -73,7 +73,7 @@ describe("InMemoryJobApplicationRepository", () => {
     ]);
   });
 
-  it("overwrites generated documents of the same kind per job application", async () => {
+  it("overwrites generated documents of the same kind and format per job application", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({
       profileId: "profile-1",
@@ -84,6 +84,7 @@ describe("InMemoryJobApplicationRepository", () => {
     const first = await repository.attachGeneratedDocument({
       jobApplicationId: job.id,
       kind: "cv",
+      format: "pdf",
       fileId: "files/first-cv.pdf",
       fileName: "cv.pdf",
       contentType: "application/pdf",
@@ -91,13 +92,22 @@ describe("InMemoryJobApplicationRepository", () => {
     const second = await repository.attachGeneratedDocument({
       jobApplicationId: job.id,
       kind: "cv",
+      format: "pdf",
       fileId: "files/regenerated-cv.pdf",
       fileName: "cv.pdf",
       contentType: "application/pdf",
     });
+    const docx = await repository.attachGeneratedDocument({
+      jobApplicationId: job.id,
+      kind: "cv",
+      format: "docx",
+      fileId: "files/generated-cv.docx",
+      fileName: "cv.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
 
     expect(second.id).toBe(first.id);
-    expect(await repository.listGeneratedDocuments(job.id)).toEqual([second]);
+    expect(await repository.listGeneratedDocuments(job.id)).toEqual([second, docx]);
     expect(second.fileId).toBe("files/regenerated-cv.pdf");
   });
 });

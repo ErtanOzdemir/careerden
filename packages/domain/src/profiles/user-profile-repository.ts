@@ -1,6 +1,34 @@
-import type { CreateUserProfileInput, UserProfile } from "./user-profile.js";
+import type {
+  CreateUserProfileInput,
+  UpdateUserProfileInput,
+  UserProfile,
+} from "./user-profile.js";
+import type {
+  CreateDocumentTemplateInput,
+  DocumentTemplate,
+  DocumentTemplateField,
+  DocumentTemplateKind,
+  DocumentTemplateVariableAliases,
+} from "../documents/document-template.js";
 
 export interface UserProfileRepository {
   create(input: CreateUserProfileInput): Promise<UserProfile>;
   findById(id: string): Promise<UserProfile | null>;
+  update(id: string, input: UpdateUserProfileInput): Promise<UserProfile | null>;
+  createDocumentTemplate(input: CreateDocumentTemplateInput): Promise<DocumentTemplate>;
+  findDocumentTemplateById(id: string): Promise<DocumentTemplate | null>;
+  findDefaultDocumentTemplate(
+    profileId: string,
+    kind: DocumentTemplateKind,
+  ): Promise<DocumentTemplate | null>;
+  listDocumentTemplates(profileId: string): Promise<DocumentTemplate[]>;
+  setDefaultDocumentTemplate(profileId: string, id: string): Promise<DocumentTemplate | null>;
+  updateDocumentTemplateMappings(
+    id: string,
+    fieldMappings: Record<string, DocumentTemplateField>,
+  ): Promise<DocumentTemplate | null>;
+  updateDocumentTemplateVariableAliases(
+    id: string,
+    variableAliases: DocumentTemplateVariableAliases,
+  ): Promise<DocumentTemplate | null>;
 }

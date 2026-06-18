@@ -13,7 +13,12 @@ export interface StoredFile {
   url?: string;
 }
 
+export interface StoredFileContent extends StoredFile {
+  body: Buffer;
+}
+
 export interface FileStorage {
   put(file: StoredFileInput): Promise<StoredFile>;
+  get(fileId: string): Promise<StoredFileContent>;
   getSignedUrl(fileId: string): Promise<string>;
 }

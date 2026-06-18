@@ -9,7 +9,7 @@ import {
   type S3ClientConfig,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { FileStorage, StoredFile, StoredFileInput } from "@link2cv/domain";
+import type { FileStorage, StoredFile, StoredFileContent, StoredFileInput } from "@link2cv/domain";
 
 export interface RustFsFileStorageOptions {
   endpoint: string;
@@ -74,6 +74,25 @@ export class RustFsFileStorage implements FileStorage {
       }),
       { expiresIn: this.signedUrlExpiresInSeconds },
     );
+  }
+
+  async get(fileId: string): Promise<StoredFileContent> {
+    const response = await this.client.send(
+      new GetObjectCommand({
+        Bucket: this.options.bucket,
+        Key: fileId,
+      }),
+    );
+
+    const body = Buffer.from(await response.Body!.transformToByteArray());
+
+    return {
+      id: fileId,
+      fileName: fileId.split("/").at(-1) ?? fileId,
+      contentType: response.ContentType ?? "application/octet-stream",
+      size: body.byteLength,
+      body,
+    };
   }
 
   private async ensureBucket(): Promise<void> {

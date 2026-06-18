@@ -40,4 +40,7 @@ export const createProfileSchema = z.object({
   projects: z.array(profileProjectSchema).default([]),
 });
 
+export const updateProfileSchema = createProfileSchema.partial();
+
 export type CreateProfileDto = z.infer<typeof createProfileSchema>;
+export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;

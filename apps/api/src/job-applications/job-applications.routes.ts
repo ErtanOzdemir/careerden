@@ -1,6 +1,9 @@
 import { Router } from "express";
 import type { Router as ExpressRouter } from "express";
-import type { SubmitJobApplicationUseCase } from "@link2cv/application";
+import type {
+  GenerateJobApplicationDocumentsUseCase,
+  SubmitJobApplicationUseCase,
+} from "@link2cv/application";
 import type {
   FileStorage,
   GeneratedDocument,
@@ -27,6 +30,7 @@ import { validateBody } from "../middleware/validate-body.js";
 
 export type JobApplicationWithDocuments = JobApplication & {
   documents: GeneratedDocument[];
+  companyLogoUrl?: string;
 };
 
 export type JobApplicationDetail = JobApplicationWithDocuments & {
@@ -39,6 +43,7 @@ export type JobApplicationDetail = JobApplicationWithDocuments & {
 
 export function createJobApplicationRouter(dependencies: {
   submitJobApplication: SubmitJobApplicationUseCase;
+  generateJobApplicationDocuments: GenerateJobApplicationDocumentsUseCase;
   jobApplications: JobApplicationRepository;
   storage: FileStorage;
 }): ExpressRouter {
@@ -66,6 +71,7 @@ export function createJobApplicationRouter(dependencies: {
 
       const jobApplicationsWithDocuments = await listJobApplicationsWithDocuments(
         dependencies.jobApplications,
+        dependencies.storage,
         result.data.profileId,
         result.data,
       );
@@ -106,6 +112,7 @@ export function createJobApplicationRouter(dependencies: {
       response.json(
         await getJobApplicationDetail({
           jobApplications: dependencies.jobApplications,
+          storage: dependencies.storage,
           jobApplication,
         }),
       );
@@ -350,6 +357,36 @@ export function createJobApplicationRouter(dependencies: {
     }
   });
 
+  router.post("/:id/documents/generate", async (request, response, next) => {
+    try {
+      const jobApplication = await dependencies.jobApplications.findById(request.params.id);
+
+      if (!jobApplication) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      await dependencies.generateJobApplicationDocuments.execute(request.params.id);
+
+      const updated = await dependencies.jobApplications.findById(request.params.id);
+
+      if (!updated) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      response.status(201).json(
+        await getJobApplicationDetail({
+          jobApplications: dependencies.jobApplications,
+          storage: dependencies.storage,
+          jobApplication: updated,
+        }),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get("/:id/documents/:documentId/download", async (request, response, next) => {
     try {
       const url = await getGeneratedDocumentDownloadUrl({
@@ -375,6 +412,7 @@ export function createJobApplicationRouter(dependencies: {
 
 export async function getJobApplicationDetail(input: {
   jobApplications: JobApplicationRepository;
+  storage: FileStorage;
   jobApplication: JobApplication;
 }): Promise<JobApplicationDetail> {
   const documents = await input.jobApplications.listGeneratedDocuments(input.jobApplication.id);
@@ -383,6 +421,11 @@ export async function getJobApplicationDetail(input: {
   const interviews = await input.jobApplications.listInterviews(input.jobApplication.id);
   const scrapeBundle = await input.jobApplications.getScrapeBundle(input.jobApplication.id);
   const matchAnalysis = await input.jobApplications.getMatchAnalysis(input.jobApplication.id);
+  const companyLogoUrl = await getCompanyLogoUrl(
+    input.jobApplications,
+    input.storage,
+    input.jobApplication.id,
+  );
 
   return {
     ...input.jobApplication,
@@ -390,24 +433,73 @@ export async function getJobApplicationDetail(input: {
     events,
     contacts,
     interviews,
-    scrapeBundle,
+    scrapeBundle: toPublicScrapeBundle(scrapeBundle),
     matchAnalysis,
+    ...(companyLogoUrl ? { companyLogoUrl } : {}),
   };
 }
 
 export async function listJobApplicationsWithDocuments(
   jobApplications: JobApplicationRepository,
+  storage: FileStorage,
   profileId: string,
   filter: Parameters<JobApplicationRepository["listByProfileId"]>[1] = {},
 ): Promise<JobApplicationWithDocuments[]> {
   const jobs = await jobApplications.listByProfileId(profileId, filter);
 
   return Promise.all(
-    jobs.map(async (jobApplication) => ({
-      ...jobApplication,
-      documents: await jobApplications.listGeneratedDocuments(jobApplication.id),
-    })),
+    jobs.map(async (jobApplication) => {
+      const [documents, companyLogoUrl] = await Promise.all([
+        jobApplications.listGeneratedDocuments(jobApplication.id),
+        getCompanyLogoUrl(jobApplications, storage, jobApplication.id),
+      ]);
+
+      return {
+        ...jobApplication,
+        documents,
+        ...(companyLogoUrl ? { companyLogoUrl } : {}),
+      };
+    }),
   );
+}
+
+function toPublicScrapeBundle(scrape: ScrapeBundle | null): ScrapeBundle | null {
+  if (!scrape) {
+    return null;
+  }
+
+  return {
+    ...scrape,
+    companyLinkedIn: withoutInternalLogoFields(scrape.companyLinkedIn),
+    companyWebsite: withoutInternalLogoFields(scrape.companyWebsite),
+    careerPage: withoutInternalLogoFields(scrape.careerPage),
+  };
+}
+
+function withoutInternalLogoFields(
+  company: ScrapeBundle["companyLinkedIn"],
+): ScrapeBundle["companyLinkedIn"] {
+  if (!company) {
+    return undefined;
+  }
+
+  const publicCompany = { ...company };
+  delete publicCompany.logoFileId;
+  delete publicCompany.logoUrl;
+  return publicCompany;
+}
+
+async function getCompanyLogoUrl(
+  jobApplications: JobApplicationRepository,
+  storage: FileStorage,
+  jobApplicationId: string,
+): Promise<string | undefined> {
+  try {
+    const fileId = await jobApplications.getCompanyLogoFileId(jobApplicationId);
+    return fileId ? await storage.getSignedUrl(fileId) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function calculateJobApplicationAnalytics(jobs: JobApplication[]) {

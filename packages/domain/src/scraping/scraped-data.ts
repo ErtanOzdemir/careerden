@@ -20,6 +20,8 @@ export interface ScrapedCompany {
   websiteUrl?: string;
   careerPageUrl?: string;
   description?: string;
+  logoUrl?: string;
+  logoFileId?: string;
   raw: unknown;
 }
 

@@ -3,7 +3,6 @@ import type {
   ApiApplicationPriority,
   ApiApplicationStatus,
   ApiJobApplicationContact,
-  ApiGeneratedDocument,
   ApiJobApplicationInterview,
   ApiJobApplication,
   ApiJobApplicationAnalytics,
@@ -81,6 +80,12 @@ export const jobApplicationsApi = {
     });
   },
 
+  generateDocuments(id: string): Promise<ApiJobApplicationDetail> {
+    return requestJson<ApiJobApplicationDetail>(`/job-applications/${id}/documents/generate`, {
+      method: "POST",
+    });
+  },
+
   createContact(
     jobApplicationId: string,
     input: CreateJobApplicationContactInput,
@@ -104,7 +109,7 @@ export const jobApplicationsApi = {
     );
   },
 
-  async getDocumentDownloadUrl(jobApplicationId: string, document: ApiGeneratedDocument) {
+  async getDocumentDownloadUrl(jobApplicationId: string, document: { id: string }) {
     return requestJson<{ url: string }>(
       `/job-applications/${jobApplicationId}/documents/${document.id}/download`,
     );

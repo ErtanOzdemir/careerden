@@ -43,6 +43,20 @@ export interface BulletOptimization {
   enhanced: string;
 }
 
+export interface ExperienceOptimizationItem {
+  actual: string;
+  enhanced?: string;
+  kind: "achievement" | "description";
+}
+
+export interface GeneratedApplicationDocument {
+  createdAt: string;
+  format: "docx" | "pdf";
+  id: string;
+  kind: "cover_letter" | "cv";
+  name: string;
+}
+
 export interface JobApplication {
   id: string;
   company: string;
@@ -65,6 +79,7 @@ export interface JobApplication {
   metadata?: Record<string, unknown>;
   interviewNotes?: string;
   contacts?: Contact[];
+  generatedDocuments?: GeneratedApplicationDocument[];
   aiMatch?: {
     score: number;
     summary: string;
@@ -76,8 +91,7 @@ export interface JobApplication {
     experienceOptimizations?: {
       title: string;
       company: string;
-      originalAchievements: string[];
-      enhancedAchievements: string[];
+      items: ExperienceOptimizationItem[];
     }[];
     yourSkills: string[];
     suggestedSkills: string[];

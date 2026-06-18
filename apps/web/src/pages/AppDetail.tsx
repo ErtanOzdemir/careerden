@@ -5,7 +5,9 @@ import Timeline from "../components/Timeline";
 import type { TimelineInterviewInput } from "../components/Timeline";
 import ProcessingLog from "../components/ProcessingLog";
 import AiMatchCard from "../components/AiMatchCard";
+import CompanyLogo from "../components/CompanyLogo";
 import { jobApplicationsApi } from "../api/jobApplications";
+import { profilesApi } from "../api/profiles";
 import { mapApiJobApplicationToUi, mapUiStatusToApi } from "../api/mappers";
 import type { ApplicationStatus, JobApplication } from "../types";
 
@@ -20,6 +22,8 @@ export default function AppDetail() {
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [isAddingInterview, setIsAddingInterview] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
   const [interviewNotes, setInterviewNotes] = useState("");
@@ -38,9 +42,10 @@ export default function AppDetail() {
         setIsLoading(true);
         setError(null);
         const detail = await jobApplicationsApi.get(id);
+        const profile = await profilesApi.get(detail.profileId);
 
         if (isMounted) {
-          const mapped = mapApiJobApplicationToUi(detail);
+          const mapped = mapApiJobApplicationToUi(detail, profile);
           setApp(mapped);
           setInterviewNotes(mapped.interviewNotes ?? "");
         }
@@ -81,10 +86,57 @@ export default function AppDetail() {
 
   async function refreshApplication(jobApplicationId: string) {
     const detail = await jobApplicationsApi.get(jobApplicationId);
-    const mapped = mapApiJobApplicationToUi(detail);
+    const profile = await profilesApi.get(detail.profileId);
+    const mapped = mapApiJobApplicationToUi(detail, profile);
 
     setApp(mapped);
     setInterviewNotes(mapped.interviewNotes ?? "");
+  }
+
+  async function handleGenerateDocuments() {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setIsGeneratingDocuments(true);
+      setError(null);
+      const detail = await jobApplicationsApi.generateDocuments(id);
+      const profile = await profilesApi.get(detail.profileId);
+      const mapped = mapApiJobApplicationToUi(detail, profile);
+
+      setApp(mapped);
+      setInterviewNotes(mapped.interviewNotes ?? "");
+    } catch (generateError) {
+      setError(generateError instanceof Error ? generateError.message : "Failed to create CV.");
+    } finally {
+      setIsGeneratingDocuments(false);
+    }
+  }
+
+  async function handleDownloadDocument(documentId: string) {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setDownloadingDocumentId(documentId);
+      setError(null);
+
+      const document = app?.generatedDocuments?.find((item) => item.id === documentId);
+
+      if (!document) {
+        throw new Error("Document not found.");
+      }
+
+      const { url } = await jobApplicationsApi.getDocumentDownloadUrl(id, { id: document.id });
+
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : "Failed to download file.");
+    } finally {
+      setDownloadingDocumentId(null);
+    }
   }
 
   async function handleAddInterview(input: TimelineInterviewInput) {
@@ -188,12 +240,18 @@ export default function AppDetail() {
       </nav>
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-2xl">
-        <div>
-          <h2 className="font-display font-headline-lg text-on-surface">{app.role}</h2>
-          <p className="font-body-lg text-secondary flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px]">corporate_fare</span>
-            {app.company}, Inc. &bull; {app.location}
-          </p>
+        <div className="flex min-w-0 items-center gap-md">
+          <CompanyLogo
+            className="h-14 w-14 shrink-0 text-lg"
+            company={app.company}
+            logo={app.logo}
+          />
+          <div className="min-w-0">
+            <h2 className="font-display font-headline-lg text-on-surface">{app.role}</h2>
+            <p className="font-body-lg text-secondary">
+              {app.company} &bull; {app.location}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-sm">
           <div className="bg-surface-container-high px-4 py-2 rounded-lg flex items-center gap-3 border border-outline-variant">
@@ -347,13 +405,22 @@ export default function AppDetail() {
                 )}
                 <div className="space-y-md flex-1">
                   {app.contacts.map((contact, i) => (
-                    <div key={i} className="flex items-center gap-sm">
+                    <div key={i} className="flex items-start gap-sm">
                       <div className="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-bold">
                         {contact.initials}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-body-md font-bold">{contact.name}</div>
                         <div className="font-label-md text-secondary">{contact.role}</div>
+                        {contact.email && (
+                          <a
+                            className="mt-1 flex min-w-0 items-center gap-1 text-label-sm text-primary hover:underline"
+                            href={`mailto:${contact.email}`}
+                          >
+                            <span className="material-symbols-outlined text-[14px]">mail</span>
+                            <span className="truncate">{contact.email}</span>
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -414,22 +481,67 @@ export default function AppDetail() {
 
         <div className="lg:col-span-5">
           <div className="sticky top-24 space-y-lg">
-            {app.aiMatch && <AiMatchCard aiMatch={app.aiMatch} />}
+            {app.aiMatch && (
+              <AiMatchCard
+                aiMatch={app.aiMatch}
+                canCreateCv={app.processingStatus === "review_ready"}
+                hasGeneratedDocuments={(app.generatedDocuments?.length ?? 0) > 0}
+                isCreatingCv={isGeneratingDocuments}
+                onCreateCv={handleGenerateDocuments}
+              />
+            )}
 
-            <div className="bg-surface-container-high p-lg rounded-xl border border-outline-variant flex items-center justify-between">
-              <div className="flex items-center gap-md">
-                <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center text-primary border border-outline-variant">
-                  <span className="material-symbols-outlined">attachment</span>
-                </div>
-                <div>
-                  <div className="font-body-md font-bold">Original Resume.pdf</div>
-                  <div className="font-label-md text-secondary">Uploaded Sep 15, 2023</div>
+            <section className="bg-surface-container-high p-lg rounded-xl border border-outline-variant">
+              <div className="flex items-center justify-between mb-md">
+                <div className="flex items-center gap-md">
+                  <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center text-primary border border-outline-variant">
+                    <span className="material-symbols-outlined">attachment</span>
+                  </div>
+                  <div>
+                    <div className="font-body-md font-bold">Generated documents</div>
+                    <div className="font-label-md text-secondary">
+                      {app.generatedDocuments?.length
+                        ? `${app.generatedDocuments.length} ready for download`
+                        : "No generated files yet"}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <button className="text-secondary hover:text-primary transition-colors cursor-pointer">
-                <span className="material-symbols-outlined">more_vert</span>
-              </button>
-            </div>
+
+              {app.generatedDocuments && app.generatedDocuments.length > 0 ? (
+                <div className="space-y-2">
+                  {app.generatedDocuments.map((document) => (
+                    <div
+                      key={document.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-outline-variant bg-surface px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-body-md font-bold truncate">{document.name}</div>
+                        <div className="font-label-md text-secondary">
+                          {document.kind === "cv" ? "CV" : "Cover letter"} •{" "}
+                          {document.format.toUpperCase()} • {document.createdAt}
+                        </div>
+                      </div>
+                      <button
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary text-on-primary px-3 py-2 text-label-md font-bold cursor-pointer disabled:opacity-60"
+                        disabled={downloadingDocumentId === document.id}
+                        onClick={() => void handleDownloadDocument(document.id)}
+                        type="button"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          {downloadingDocumentId === document.id ? "progress_activity" : "download"}
+                        </span>
+                        {downloadingDocumentId === document.id ? "Opening..." : "Download"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-outline-variant bg-surface px-4 py-6 text-body-md text-secondary">
+                  Create the CV from the AI Match wizard to generate downloadable files.
+                </div>
+              )}
+            </section>
           </div>
         </div>
       </div>

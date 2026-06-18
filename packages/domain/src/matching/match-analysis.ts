@@ -14,4 +14,11 @@ export interface MatchAnalysisResult {
   customizedSummary: string;
   interviewTips: string[];
   coverLetterGuidance?: string[];
+  experienceEnhancements?: ExperienceEnhancement[];
+}
+
+export interface ExperienceEnhancement {
+  experienceIndex: number;
+  enhancedDescription?: string;
+  enhancedAchievements?: string[];
 }

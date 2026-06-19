@@ -527,20 +527,6 @@ export default function ProfileManager() {
     }
   }
 
-  function handleQuickAdd() {
-    if (activeTab === "skills") {
-      startEditSkills();
-      return;
-    }
-
-    if (activeTab === "education") {
-      startNewEducation();
-      return;
-    }
-
-    startNewExperience();
-  }
-
   if (isLoading) {
     return (
       <div className="animate-fade-in max-w-max-width mx-auto py-2xl text-center text-secondary">
@@ -567,25 +553,12 @@ export default function ProfileManager() {
 
   return (
     <div className="animate-fade-in max-w-max-width mx-auto py-xl">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-lg mb-xl">
+      <div className="mb-xl">
         <div>
           <h2 className="font-display text-display text-on-surface">Profile Manager</h2>
           <p className="font-body-lg text-on-surface-variant mt-sm">
             Curate your professional presence and assets.
           </p>
-        </div>
-        <div className="flex gap-md">
-          <button className="flex items-center gap-2 px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[20px]">share</span>
-            <span className="font-label-md">Public Link</span>
-          </button>
-          <button
-            onClick={handleQuickAdd}
-            className="flex items-center gap-2 px-lg py-sm bg-primary text-on-primary rounded-lg hover:shadow-lg transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[20px]">add_circle</span>
-            <span className="font-label-md">Quick Add</span>
-          </button>
         </div>
       </div>
 

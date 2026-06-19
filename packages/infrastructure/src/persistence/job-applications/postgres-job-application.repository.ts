@@ -62,6 +62,16 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
     return row ? toJobApplication(row) : null;
   }
 
+  async deleteById(id: string): Promise<void> {
+    await this.db.transaction(async (transaction) => {
+      await transaction("generated_documents").where({ job_application_id: id }).delete();
+      await transaction("job_application_interviews").where({ job_application_id: id }).delete();
+      await transaction("job_application_contacts").where({ job_application_id: id }).delete();
+      await transaction("job_application_events").where({ job_application_id: id }).delete();
+      await transaction("job_applications").where({ id }).delete();
+    });
+  }
+
   async listByProfileId(
     profileId: string,
     filter: ListJobApplicationsFilter = {},
@@ -79,6 +89,29 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
     const rows = await this.db("job_applications").where({ status }).orderBy("created_at", "asc");
 
     return rows.map(toJobApplication);
+  }
+
+  async resetProcessing(id: string): Promise<JobApplication> {
+    return this.db.transaction(async (transaction) => {
+      await transaction("generated_documents").where({ job_application_id: id }).delete();
+      const [row] = await transaction("job_applications")
+        .where({ id })
+        .update({
+          status: "queued",
+          failure_reason: null,
+          scrape_bundle: null,
+          company_logo_file_id: null,
+          match_analysis: null,
+          updated_at: transaction.fn.now(),
+        })
+        .returning("*");
+
+      if (!row) {
+        throw new Error(`Job application ${id} was not found`);
+      }
+
+      return toJobApplication(row);
+    });
   }
 
   async updateStatus(

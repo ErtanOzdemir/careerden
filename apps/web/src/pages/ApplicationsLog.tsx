@@ -144,6 +144,76 @@ export default function ApplicationsLog() {
     }
   }
 
+  async function handleDelete(application: JobApplication) {
+    const confirmed = window.confirm(
+      `Delete ${application.company} — ${application.role}? This also removes its timeline, contacts, interviews, and generated documents.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setActiveAction({ applicationId: application.id, action: "delete" });
+      setActionMessage(null);
+      setActionError(null);
+
+      await jobApplicationsApi.delete(application.id);
+      setApplications((current) => current.filter((item) => item.id !== application.id));
+      setActionMessage(`${application.company} was deleted.`);
+    } catch (deleteError) {
+      setActionError(
+        deleteError instanceof Error ? deleteError.message : "Failed to delete application.",
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  async function handleRetry(application: JobApplication) {
+    try {
+      setActiveAction({ applicationId: application.id, action: "retry" });
+      setActionMessage(null);
+      setActionError(null);
+
+      const retried = await jobApplicationsApi.retry(application.id);
+      const updated = mapApiJobApplicationToUi(retried);
+
+      setApplications((current) =>
+        current.map((item) => (item.id === application.id ? updated : item)),
+      );
+      setActionMessage(`${application.company} was queued to run again from the beginning.`);
+      void monitorProcessing(application.id);
+    } catch (retryError) {
+      setActionError(
+        retryError instanceof Error ? retryError.message : "Failed to retry application.",
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  async function monitorProcessing(applicationId: string) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+
+      try {
+        const detail = await jobApplicationsApi.get(applicationId);
+        const updated = mapApiJobApplicationToUi(detail);
+
+        setApplications((current) =>
+          current.map((item) => (item.id === applicationId ? updated : item)),
+        );
+
+        if (["completed", "failed", "review_ready"].includes(updated.processingStatus ?? "")) {
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
+  }
+
   return (
     <div className="animate-fade-in">
       <section className="mt-lg mb-2xl">
@@ -335,7 +405,11 @@ export default function ApplicationsLog() {
                   applications.map((app) => (
                     <tr
                       key={app.id}
-                      className="hover:bg-surface-container-low transition-colors group"
+                      className={`transition-colors group ${
+                        app.processingStatus === "failed"
+                          ? "bg-error-container/40 hover:bg-error-container/60"
+                          : "hover:bg-surface-container-low"
+                      }`}
                     >
                       <td className="px-6 py-4">
                         <Link to={`/applications/${app.id}`} className="flex items-center gap-3">
@@ -364,18 +438,29 @@ export default function ApplicationsLog() {
                         <StatusBadge status={app.status} />
                       </td>
                       <td className="px-6 py-4">
-                        <MatchScore score={app.matchScore} />
+                        <ApplicationMatch application={app} />
                       </td>
                       <td className="px-6 py-4">
                         <ApplicationTags tags={app.tags} />
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <ApplicationActions
-                          activeAction={activeAction}
-                          application={app}
-                          onGenerateDocuments={handleGenerateDocuments}
-                          onStatusChange={handleStatusChange}
-                        />
+                        <div className="flex items-center justify-end gap-1">
+                          {app.processingStatus === "failed" && (
+                            <RetryButton
+                              activeAction={activeAction}
+                              application={app}
+                              onRetry={handleRetry}
+                            />
+                          )}
+                          <ApplicationActions
+                            activeAction={activeAction}
+                            application={app}
+                            onDelete={handleDelete}
+                            onGenerateDocuments={handleGenerateDocuments}
+                            onRetry={handleRetry}
+                            onStatusChange={handleStatusChange}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -401,7 +486,11 @@ export default function ApplicationsLog() {
               applications.map((app) => (
                 <article
                   key={app.id}
-                  className="flex min-h-72 flex-col rounded-xl border border-outline-variant bg-white p-lg shadow-sm transition-shadow hover:shadow-md"
+                  className={`flex min-h-72 flex-col rounded-xl border p-lg shadow-sm transition-shadow hover:shadow-md ${
+                    app.processingStatus === "failed"
+                      ? "border-error/30 bg-error-container/40"
+                      : "border-outline-variant bg-white"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-md">
                     <Link
@@ -421,11 +510,13 @@ export default function ApplicationsLog() {
                       </div>
                     </Link>
                     <div className="flex shrink-0 items-center gap-1">
-                      <MatchScore score={app.matchScore} />
+                      <ApplicationMatch application={app} />
                       <ApplicationActions
                         activeAction={activeAction}
                         application={app}
+                        onDelete={handleDelete}
                         onGenerateDocuments={handleGenerateDocuments}
+                        onRetry={handleRetry}
                         onStatusChange={handleStatusChange}
                       />
                     </div>
@@ -451,6 +542,16 @@ export default function ApplicationsLog() {
                     <ApplicationTags tags={app.tags} />
                   </div>
 
+                  {app.processingStatus === "failed" && (
+                    <div className="mt-md flex justify-end">
+                      <RetryButton
+                        activeAction={activeAction}
+                        application={app}
+                        onRetry={handleRetry}
+                      />
+                    </div>
+                  )}
+
                   <Link
                     className="mt-auto flex items-center justify-end gap-1 pt-lg text-label-md font-bold text-primary hover:underline"
                     to={`/applications/${app.id}`}
@@ -470,10 +571,49 @@ export default function ApplicationsLog() {
   );
 }
 
+function RetryButton(props: {
+  activeAction: ApplicationActionState | null;
+  application: JobApplication;
+  onRetry: (application: JobApplication) => Promise<void>;
+}) {
+  const isRetrying =
+    props.activeAction?.applicationId === props.application.id &&
+    props.activeAction.action === "retry";
+
+  return (
+    <button
+      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-label-md font-bold text-on-primary shadow-sm transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+      disabled={isRetrying}
+      onClick={() => void props.onRetry(props.application)}
+      title="Rerun processing from the beginning"
+      type="button"
+    >
+      <span className="material-symbols-outlined text-[18px]">
+        {isRetrying ? "progress_activity" : "restart_alt"}
+      </span>
+      {isRetrying ? "Retrying..." : "Retry"}
+    </button>
+  );
+}
+
+function ApplicationMatch({ application }: { application: JobApplication }) {
+  if (
+    !["review_ready", "generating_documents", "completed"].includes(
+      application.processingStatus ?? "",
+    )
+  ) {
+    return null;
+  }
+
+  return <MatchScore score={application.matchScore} />;
+}
+
 function ApplicationActions(props: {
   activeAction: ApplicationActionState | null;
   application: JobApplication;
+  onDelete: (application: JobApplication) => Promise<void>;
   onGenerateDocuments: (application: JobApplication) => Promise<void>;
+  onRetry: (application: JobApplication) => Promise<void>;
   onStatusChange: (application: JobApplication, status: ApplicationStatus) => Promise<void>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -495,7 +635,7 @@ function ApplicationActions(props: {
       }
 
       const menuWidth = 256;
-      const menuHeight = 330;
+      const menuHeight = menuRef.current?.offsetHeight ?? 440;
       const viewportPadding = 8;
       const left = Math.min(
         Math.max(viewportPadding, rect.right - menuWidth),
@@ -641,6 +781,34 @@ function ApplicationActions(props: {
                 </button>
               </>
             )}
+
+            {props.application.processingStatus === "failed" && (
+              <>
+                <div className="my-1 border-t border-outline-variant" />
+                <button
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-body-md font-medium text-primary hover:bg-primary-fixed disabled:cursor-wait disabled:opacity-60"
+                  disabled={isApplicationBusy}
+                  onClick={() => runAction(() => props.onRetry(props.application))}
+                  role="menuitem"
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[20px]">restart_alt</span>
+                  Retry processing
+                </button>
+              </>
+            )}
+
+            <div className="my-1 border-t border-outline-variant" />
+            <button
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-body-md font-medium text-error hover:bg-error-container disabled:cursor-wait disabled:opacity-60"
+              disabled={isApplicationBusy}
+              onClick={() => runAction(() => props.onDelete(props.application))}
+              role="menuitem"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[20px]">delete</span>
+              Delete application
+            </button>
           </div>,
           document.body,
         )}
@@ -663,7 +831,7 @@ function statusIcon(status: ApplicationStatus) {
 
 function MatchScore({ score }: { score?: number }) {
   if (score === undefined) {
-    return <span className="text-label-sm text-outline">Not analyzed</span>;
+    return null;
   }
 
   const colorClass =

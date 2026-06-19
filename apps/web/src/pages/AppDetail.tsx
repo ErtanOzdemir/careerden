@@ -23,6 +23,7 @@ export default function AppDetail() {
   const [isAddingInterview, setIsAddingInterview] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [downloadingDocumentId, setDownloadingDocumentId] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
@@ -111,6 +112,49 @@ export default function AppDetail() {
       setError(generateError instanceof Error ? generateError.message : "Failed to create CV.");
     } finally {
       setIsGeneratingDocuments(false);
+    }
+  }
+
+  async function handleRetryProcessing() {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setIsRetrying(true);
+      setError(null);
+      await jobApplicationsApi.retry(id);
+      await refreshApplication(id);
+      void monitorProcessing(id);
+    } catch (retryError) {
+      setError(
+        retryError instanceof Error
+          ? retryError.message
+          : "Failed to retry application processing.",
+      );
+    } finally {
+      setIsRetrying(false);
+    }
+  }
+
+  async function monitorProcessing(jobApplicationId: string) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+
+      try {
+        const detail = await jobApplicationsApi.get(jobApplicationId);
+        const profile = await profilesApi.get(detail.profileId);
+        const mapped = mapApiJobApplicationToUi(detail, profile);
+
+        setApp(mapped);
+        setInterviewNotes(mapped.interviewNotes ?? "");
+
+        if (["completed", "failed", "review_ready"].includes(mapped.processingStatus ?? "")) {
+          return;
+        }
+      } catch {
+        return;
+      }
     }
   }
 
@@ -309,9 +353,12 @@ export default function AppDetail() {
                 </h3>
               </div>
               <ProcessingLog
+                canRetry={app.processingStatus === "failed"}
                 currentStatus={app.processingStatusLabel}
                 failureReason={app.processingFailureReason}
+                isRetrying={isRetrying}
                 items={app.processingLog}
+                onRetry={() => void handleRetryProcessing()}
               />
             </section>
           )}

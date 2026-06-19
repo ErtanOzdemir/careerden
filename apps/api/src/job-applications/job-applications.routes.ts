@@ -1,7 +1,9 @@
 import { Router } from "express";
 import type { Router as ExpressRouter } from "express";
 import type {
+  DeleteJobApplicationUseCase,
   GenerateJobApplicationDocumentsUseCase,
+  RetryJobApplicationUseCase,
   SubmitJobApplicationUseCase,
 } from "@link2cv/application";
 import type {
@@ -44,7 +46,9 @@ export type JobApplicationDetail = JobApplicationWithDocuments & {
 
 export function createJobApplicationRouter(dependencies: {
   submitJobApplication: SubmitJobApplicationUseCase;
+  deleteJobApplication: DeleteJobApplicationUseCase;
   generateJobApplicationDocuments: GenerateJobApplicationDocumentsUseCase;
+  retryJobApplication: RetryJobApplicationUseCase;
   jobApplications: JobApplicationRepository;
   storage: FileStorage;
 }): ExpressRouter {
@@ -155,6 +159,36 @@ export function createJobApplicationRouter(dependencies: {
       }
     },
   );
+
+  router.delete("/:id", async (request, response, next) => {
+    try {
+      const deleted = await dependencies.deleteJobApplication.execute(request.params.id);
+
+      if (!deleted) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      response.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/retry", async (request, response, next) => {
+    try {
+      const retried = await dependencies.retryJobApplication.execute(request.params.id);
+
+      if (!retried) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      response.status(202).json(retried);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.post(
     "/:id/events",

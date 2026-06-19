@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
@@ -93,6 +94,15 @@ export class RustFsFileStorage implements FileStorage {
       size: body.byteLength,
       body,
     };
+  }
+
+  async delete(fileId: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.options.bucket,
+        Key: fileId,
+      }),
+    );
   }
 
   private async ensureBucket(): Promise<void> {

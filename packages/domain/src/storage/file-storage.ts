@@ -21,4 +21,5 @@ export interface FileStorage {
   put(file: StoredFileInput): Promise<StoredFile>;
   get(fileId: string): Promise<StoredFileContent>;
   getSignedUrl(fileId: string): Promise<string>;
+  delete(fileId: string): Promise<void>;
 }

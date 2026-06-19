@@ -80,6 +80,18 @@ export const jobApplicationsApi = {
     });
   },
 
+  delete(id: string): Promise<void> {
+    return requestJson<void>(`/job-applications/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  retry(id: string): Promise<ApiJobApplication> {
+    return requestJson<ApiJobApplication>(`/job-applications/${id}/retry`, {
+      method: "POST",
+    });
+  },
+
   generateDocuments(id: string): Promise<ApiJobApplicationDetail> {
     return requestJson<ApiJobApplicationDetail>(`/job-applications/${id}/documents/generate`, {
       method: "POST",

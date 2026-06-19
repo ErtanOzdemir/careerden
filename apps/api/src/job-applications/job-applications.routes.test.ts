@@ -183,9 +183,11 @@ function createJobApplicationRepository(
 ): JobApplicationRepository {
   return {
     create: vi.fn(),
+    deleteById: vi.fn(),
     findById: vi.fn(),
     listByProfileId: vi.fn(async () => []),
     listByStatus: vi.fn(async () => []),
+    resetProcessing: vi.fn(),
     updateStatus: vi.fn(),
     updateTracking: vi.fn(),
     saveScrapeBundle: vi.fn(),
@@ -216,6 +218,7 @@ function createFileStorage(overrides: Partial<FileStorage> = {}): FileStorage {
     put: vi.fn(),
     get: vi.fn(),
     getSignedUrl: vi.fn(),
+    delete: vi.fn(),
     ...overrides,
   } as FileStorage;
 }

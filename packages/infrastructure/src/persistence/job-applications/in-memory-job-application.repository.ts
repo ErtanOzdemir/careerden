@@ -67,6 +67,16 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     return this.jobApplications.get(id) ?? null;
   }
 
+  async deleteById(id: string): Promise<void> {
+    this.jobApplications.delete(id);
+    this.scrapeBundles.delete(id);
+    this.matchAnalyses.delete(id);
+    this.documents.delete(id);
+    this.events.delete(id);
+    this.contacts.delete(id);
+    this.interviews.delete(id);
+  }
+
   async listByProfileId(
     profileId: string,
     filter: ListJobApplicationsFilter = {},
@@ -79,6 +89,27 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
 
   async listByStatus(status: JobApplicationStatus): Promise<JobApplication[]> {
     return [...this.jobApplications.values()].filter((job) => job.status === status);
+  }
+
+  async resetProcessing(id: string): Promise<JobApplication> {
+    const existing = this.jobApplications.get(id);
+
+    if (!existing) {
+      throw new Error(`Job application ${id} was not found`);
+    }
+
+    const updated: JobApplication = {
+      ...existing,
+      status: "queued",
+      failureReason: undefined,
+      updatedAt: new Date(),
+    };
+
+    this.jobApplications.set(id, updated);
+    this.scrapeBundles.delete(id);
+    this.matchAnalyses.delete(id);
+    this.documents.delete(id);
+    return updated;
   }
 
   async updateStatus(

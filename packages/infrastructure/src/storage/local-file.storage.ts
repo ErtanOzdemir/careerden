@@ -1,5 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { FileStorage, StoredFile, StoredFileContent, StoredFileInput } from "@link2cv/domain";
 
@@ -49,12 +49,22 @@ export class LocalFileStorage implements FileStorage {
     return `file://${path}`;
   }
 
+  async delete(fileId: string): Promise<void> {
+    const rootDir = resolve(this.rootDir);
+    const path = this.resolveStoredPath(rootDir, fileId);
+
+    await rm(path, { force: true });
+  }
+
   private resolveStoredPath(rootDir: string, fileId: string): string {
-    if (fileId.includes("/")) {
-      return join(rootDir, fileId);
+    const path = fileId.includes("/") ? join(rootDir, fileId) : join(rootDir, `${fileId}.pdf`);
+    const relativePath = relative(rootDir, path);
+
+    if (relativePath.startsWith("..") || isAbsolute(relativePath)) {
+      throw new Error("Invalid file ID");
     }
 
-    return join(rootDir, `${fileId}.pdf`);
+    return path;
   }
 }
 

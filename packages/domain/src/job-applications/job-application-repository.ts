@@ -54,9 +54,11 @@ export interface ListJobApplicationsFilter {
 
 export interface JobApplicationRepository {
   create(input: CreateJobApplicationInput): Promise<JobApplication>;
+  deleteById(id: string): Promise<void>;
   findById(id: string): Promise<JobApplication | null>;
   listByProfileId(profileId: string, filter?: ListJobApplicationsFilter): Promise<JobApplication[]>;
   listByStatus(status: JobApplicationStatus): Promise<JobApplication[]>;
+  resetProcessing(id: string): Promise<JobApplication>;
   updateStatus(id: string, status: JobApplicationStatus, failureReason?: string): Promise<void>;
   updateTracking(id: string, input: UpdateJobApplicationTrackingInput): Promise<JobApplication>;
   saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void>;

@@ -3,8 +3,10 @@ import express from "express";
 import type { Express } from "express";
 import {
   CreateProfileUseCase,
+  DeleteJobApplicationUseCase,
   GenerateDocumentsUseCase,
   GenerateJobApplicationDocumentsUseCase,
+  RetryJobApplicationUseCase,
   SubmitJobApplicationUseCase,
   UpdateProfileUseCase,
 } from "@link2cv/application";
@@ -64,6 +66,8 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
           docxTemplates,
         ),
       ),
+      deleteJobApplication: new DeleteJobApplicationUseCase(jobApplications, storage),
+      retryJobApplication: new RetryJobApplicationUseCase(jobApplications, queue, storage),
       jobApplications,
       storage,
     }),

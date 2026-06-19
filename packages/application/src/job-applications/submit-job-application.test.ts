@@ -20,6 +20,7 @@ describe("SubmitJobApplicationUseCase", () => {
       async enqueue() {
         throw new Error("REDIS_URL is required");
       },
+      async restart() {},
     };
 
     await expect(
@@ -48,6 +49,7 @@ describe("SubmitJobApplicationUseCase", () => {
       async enqueue() {
         throw new Error("Manual applications should not be queued");
       },
+      async restart() {},
     };
 
     const jobApplication = await new SubmitJobApplicationUseCase(

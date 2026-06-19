@@ -2,6 +2,67 @@ import { describe, expect, it } from "vitest";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {
+  it("resets processing artifacts while preserving tracking data", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/123",
+      companyName: "Stripe",
+      roleTitle: "Senior Product Designer",
+    });
+    await repository.updateStatus(job.id, "failed", "Scraping failed");
+    await repository.attachGeneratedDocument({
+      jobApplicationId: job.id,
+      kind: "cv",
+      format: "pdf",
+      fileId: "files/cv.pdf",
+      fileName: "cv.pdf",
+      contentType: "application/pdf",
+    });
+
+    const reset = await repository.resetProcessing(job.id);
+
+    expect(reset.status).toBe("queued");
+    expect(reset.failureReason).toBeUndefined();
+    expect(reset.tracking.companyName).toBe("Stripe");
+    expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
+  });
+
+  it("deletes a job application and all related records", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      companyName: "Stripe",
+      roleTitle: "Senior Product Designer",
+    });
+
+    await repository.createContact({
+      jobApplicationId: job.id,
+      name: "Sarah Hughes",
+    });
+    await repository.createInterview({
+      jobApplicationId: job.id,
+      title: "Recruiter Call",
+      scheduledAt: new Date("2026-06-20T12:00:00.000Z"),
+    });
+    await repository.attachGeneratedDocument({
+      jobApplicationId: job.id,
+      kind: "cv",
+      format: "pdf",
+      fileId: "files/cv.pdf",
+      fileName: "cv.pdf",
+      contentType: "application/pdf",
+    });
+
+    await repository.deleteById(job.id);
+
+    expect(await repository.findById(job.id)).toBeNull();
+    expect(await repository.listEvents(job.id)).toEqual([]);
+    expect(await repository.listContacts(job.id)).toEqual([]);
+    expect(await repository.listInterviews(job.id)).toEqual([]);
+    expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
+  });
+
   it("manages contacts for a job application", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({

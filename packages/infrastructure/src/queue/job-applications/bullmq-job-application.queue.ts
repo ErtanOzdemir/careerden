@@ -19,4 +19,14 @@ export class BullMqJobApplicationQueue implements JobApplicationQueue {
       removeOnFail: 500,
     });
   }
+
+  async restart(payload: JobApplicationQueuePayload): Promise<void> {
+    const existing = await this.queue.getJob(payload.jobApplicationId);
+
+    if (existing) {
+      await existing.remove();
+    }
+
+    await this.enqueue(payload);
+  }
 }

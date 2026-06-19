@@ -4,4 +4,5 @@ export interface JobApplicationQueuePayload {
 
 export interface JobApplicationQueue {
   enqueue(payload: JobApplicationQueuePayload): Promise<void>;
+  restart(payload: JobApplicationQueuePayload): Promise<void>;
 }

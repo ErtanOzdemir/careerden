@@ -6,4 +6,8 @@ export class UnavailableJobApplicationQueue implements JobApplicationQueue {
   async enqueue(_payload: JobApplicationQueuePayload): Promise<void> {
     throw new Error(this.reason);
   }
+
+  async restart(_payload: JobApplicationQueuePayload): Promise<void> {
+    throw new Error(this.reason);
+  }
 }

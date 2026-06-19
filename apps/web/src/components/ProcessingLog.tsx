@@ -1,12 +1,22 @@
 import type { ProcessingLogItem } from "../types";
 
 interface ProcessingLogProps {
+  canRetry?: boolean;
   currentStatus?: string;
   failureReason?: string;
+  isRetrying?: boolean;
   items: ProcessingLogItem[];
+  onRetry?: () => void;
 }
 
-export default function ProcessingLog({ currentStatus, failureReason, items }: ProcessingLogProps) {
+export default function ProcessingLog({
+  canRetry,
+  currentStatus,
+  failureReason,
+  isRetrying,
+  items,
+  onRetry,
+}: ProcessingLogProps) {
   return (
     <div className="space-y-md">
       {currentStatus && (
@@ -15,7 +25,21 @@ export default function ProcessingLog({ currentStatus, failureReason, items }: P
             <div className="font-label-md uppercase text-secondary">Current state</div>
             <div className="font-body-md font-bold text-on-surface">{currentStatus}</div>
           </div>
-          <span className="material-symbols-outlined text-primary">sync</span>
+          {canRetry && onRetry ? (
+            <button
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-label-md font-bold text-on-primary shadow-sm hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+              disabled={isRetrying}
+              onClick={onRetry}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {isRetrying ? "progress_activity" : "restart_alt"}
+              </span>
+              {isRetrying ? "Retrying..." : "Retry"}
+            </button>
+          ) : (
+            <span className="material-symbols-outlined text-primary">sync</span>
+          )}
         </div>
       )}
 

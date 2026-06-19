@@ -139,5 +139,6 @@ function createStorage(): FileStorage {
       body: Buffer.from("template"),
     })),
     getSignedUrl: vi.fn(),
+    delete: vi.fn(),
   };
 }

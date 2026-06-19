@@ -1,5 +1,6 @@
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
@@ -119,6 +120,24 @@ describe("RustFsFileStorage", () => {
     });
     expect(mockedGetSignedUrl.mock.calls[0]?.[2]).toMatchObject({
       expiresIn: 900,
+    });
+  });
+
+  it("deletes an existing object", async () => {
+    const sent: unknown[] = [];
+    mockS3Send(async (command) => {
+      sent.push(command);
+      return {};
+    });
+
+    const storage = createStorage();
+    await storage.delete("document-id/cv.pdf");
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toBeInstanceOf(DeleteObjectCommand);
+    expect(commandInput(sent[0])).toMatchObject({
+      Bucket: "link2cv-files",
+      Key: "document-id/cv.pdf",
     });
   });
 });

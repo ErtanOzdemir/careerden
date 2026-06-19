@@ -10,8 +10,10 @@ export const documentTemplateFieldSchema = z.enum([
   "headline",
   "job_description",
   "job_location",
+  "links",
   "location",
   "missing_skills",
+  "profession",
   "recommended_achievements",
   "role_title",
   "selected_education",
@@ -52,6 +54,13 @@ const selectedEducationFieldSchema = z.enum([
 
 export const documentTemplateVariableAliasesSchema = z.object({
   fields: z.record(documentTemplateFieldSchema, templateVariableNameSchema.optional()).default({}),
+  linkItems: z
+    .array(
+      z.object({
+        variableName: templateVariableNameSchema.optional(),
+      }),
+    )
+    .optional(),
   selectedEducation: z
     .object({
       fields: z

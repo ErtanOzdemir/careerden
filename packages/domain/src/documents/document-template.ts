@@ -11,7 +11,9 @@ export type DocumentTemplateField =
   | "headline"
   | "job_description"
   | "job_location"
+  | "links"
   | "missing_skills"
+  | "profession"
   | "recommended_achievements"
   | "role_title"
   | "selected_education"
@@ -43,6 +45,9 @@ export interface DocumentTemplateVariableAliases {
   fields: Partial<
     Record<Exclude<DocumentTemplateField, "selected_education" | "selected_experiences">, string>
   >;
+  linkItems?: Array<{
+    variableName?: string;
+  }>;
   selectedEducation?: {
     fields: Partial<Record<SelectedEducationTemplateField, string>>;
     items?: Array<{

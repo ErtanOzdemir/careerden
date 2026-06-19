@@ -24,8 +24,10 @@ export class PostgresUserProfileRepository implements UserProfileRepository {
         id,
         full_name: input.fullName,
         email: input.email,
+        profession: input.profession ?? null,
         headline: input.headline ?? null,
         location: input.location ?? null,
+        links: JSON.stringify(input.links ?? []),
         summary: input.summary ?? null,
         skills: JSON.stringify(input.skills),
         experience: JSON.stringify(input.experience),
@@ -50,8 +52,10 @@ export class PostgresUserProfileRepository implements UserProfileRepository {
 
     if (input.fullName !== undefined) patch.full_name = input.fullName;
     if (input.email !== undefined) patch.email = input.email;
+    if (input.profession !== undefined) patch.profession = input.profession ?? null;
     if (input.headline !== undefined) patch.headline = input.headline ?? null;
     if (input.location !== undefined) patch.location = input.location ?? null;
+    if (input.links !== undefined) patch.links = JSON.stringify(input.links);
     if (input.summary !== undefined) patch.summary = input.summary ?? null;
     if (input.skills !== undefined) patch.skills = JSON.stringify(input.skills);
     if (input.experience !== undefined) patch.experience = JSON.stringify(input.experience);
@@ -178,8 +182,10 @@ function toUserProfile(row: Record<string, unknown>): UserProfile {
     id: String(row.id),
     fullName: String(row.full_name),
     email: String(row.email),
+    profession: nullableString(row.profession),
     headline: nullableString(row.headline),
     location: nullableString(row.location),
+    links: stringArray(row.links),
     summary: nullableString(row.summary),
     skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
     experience: Array.isArray(row.experience) ? (row.experience as ProfileExperience[]) : [],
@@ -232,9 +238,13 @@ function toDocumentTemplateVariableAliases(value: unknown): DocumentTemplateVari
     !Array.isArray(parsed.selectedExperiences)
       ? (parsed.selectedExperiences as DocumentTemplateVariableAliases["selectedExperiences"])
       : undefined;
+  const linkItems = Array.isArray(parsed.linkItems)
+    ? (parsed.linkItems as DocumentTemplateVariableAliases["linkItems"])
+    : undefined;
 
   return {
     fields,
+    ...(linkItems ? { linkItems } : {}),
     ...(selectedEducation ? { selectedEducation } : {}),
     ...(selectedExperiences ? { selectedExperiences } : {}),
   };

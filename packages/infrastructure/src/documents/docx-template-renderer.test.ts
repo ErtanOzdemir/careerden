@@ -10,6 +10,7 @@ describe("buildDocxAliasData", () => {
       placeholders: [],
       variableAliases: {
         fields: { full_name: "candidate_name" },
+        linkItems: [{ variableName: "linkedin_url" }, { variableName: "portfolio_url" }],
         selectedEducation: {
           fields: {},
           items: [{ fields: { institution: "school_name", period: "school_dates" } }],
@@ -26,6 +27,7 @@ describe("buildDocxAliasData", () => {
 
     const aliases = buildDocxAliasData(template, {
       full_name: "Ada Lovelace",
+      links: ["https://linkedin.com/in/ada", "https://ada.example.com"],
       selected_education: [
         {
           achievements: ["Honours"],
@@ -65,6 +67,8 @@ describe("buildDocxAliasData", () => {
       candidate_name: "Ada Lovelace",
       first_company: "Link2CV",
       first_role: "Engineer",
+      linkedin_url: "https://linkedin.com/in/ada",
+      portfolio_url: "https://ada.example.com",
       second_company: "Acme",
       second_role: "Lead",
       school_dates: "2000 - 2004",

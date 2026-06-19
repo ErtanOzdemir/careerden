@@ -29,8 +29,10 @@ export interface UserProfile {
   id: string;
   fullName: string;
   email: string;
+  profession?: string;
   headline?: string;
   location?: string;
+  links: string[];
   summary?: string;
   skills: string[];
   experience: ProfileExperience[];
@@ -43,8 +45,8 @@ export interface UserProfile {
 
 export type CreateUserProfileInput = Omit<
   UserProfile,
-  "id" | "createdAt" | "updatedAt" | "education" | "certifications" | "projects"
+  "id" | "createdAt" | "updatedAt" | "education" | "certifications" | "projects" | "links"
 > &
-  Partial<Pick<UserProfile, "education" | "certifications" | "projects">>;
+  Partial<Pick<UserProfile, "education" | "certifications" | "projects" | "links">>;
 
 export type UpdateUserProfileInput = Partial<CreateUserProfileInput>;

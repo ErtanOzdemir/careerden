@@ -30,8 +30,10 @@ export const profileProjectSchema = z.object({
 export const createProfileSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
+  profession: z.string().optional(),
   headline: z.string().optional(),
   location: z.string().optional(),
+  links: z.array(z.string().url()).default([]),
   summary: z.string().optional(),
   skills: z.array(z.string().min(1)).default([]),
   experience: z.array(profileExperienceSchema).default([]),

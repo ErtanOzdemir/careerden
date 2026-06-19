@@ -74,6 +74,7 @@ export function buildDocxAliasData(
     }
   }
 
+  addLinkAliases(aliases, data.links, template.variableAliases.linkItems);
   addSelectedExperienceAliases(
     aliases,
     data.selected_experiences,
@@ -86,6 +87,22 @@ export function buildDocxAliasData(
   );
 
   return aliases;
+}
+
+function addLinkAliases(
+  aliases: Record<string, unknown>,
+  value: unknown,
+  configured: Array<{ variableName?: string }> | undefined,
+) {
+  if (!Array.isArray(value) || !configured) {
+    return;
+  }
+
+  configured.forEach((item, index) => {
+    if (item.variableName) {
+      aliases[item.variableName] = toDocxValue(value[index]);
+    }
+  });
 }
 
 function addSelectedExperienceAliases(

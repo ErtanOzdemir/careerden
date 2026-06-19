@@ -37,8 +37,10 @@ export type ApiDocumentTemplateField =
   | "headline"
   | "job_description"
   | "job_location"
+  | "links"
   | "location"
   | "missing_skills"
+  | "profession"
   | "recommended_achievements"
   | "role_title"
   | "selected_education"
@@ -69,6 +71,9 @@ export interface ApiDocumentTemplateVariableAliases {
   fields: Partial<
     Record<Exclude<ApiDocumentTemplateField, "selected_education" | "selected_experiences">, string>
   >;
+  linkItems?: Array<{
+    variableName?: string;
+  }>;
   selectedEducation?: {
     fields: Partial<Record<ApiSelectedEducationTemplateField, string>>;
     items?: Array<{
@@ -245,7 +250,9 @@ export interface ApiProfile {
   fullName: string;
   headline?: string;
   id: string;
+  links: string[];
   location?: string;
+  profession?: string;
   projects: ApiProfileProject[];
   skills: string[];
   summary?: string;
@@ -261,7 +268,9 @@ export type ApiUpdateProfilePayload = Partial<
     | "experience"
     | "fullName"
     | "headline"
+    | "links"
     | "location"
+    | "profession"
     | "projects"
     | "skills"
     | "summary"

@@ -44,6 +44,14 @@ interface EducationDraft {
   startDate: string;
 }
 
+interface ProfileDetailsDraft {
+  email: string;
+  fullName: string;
+  links: string[];
+  location: string;
+  profession: string;
+}
+
 const tabs: { key: Tab; label: string }[] = [
   { key: "experiences", label: "EXPERIENCES" },
   { key: "skills", label: "SKILLS" },
@@ -76,6 +84,14 @@ const emptyEducationDraft: EducationDraft = {
   startDate: "",
 };
 
+const emptyProfileDetailsDraft: ProfileDetailsDraft = {
+  email: "",
+  fullName: "",
+  links: [],
+  location: "",
+  profession: "",
+};
+
 export default function ProfileManager() {
   const [activeTab, setActiveTab] = useState<Tab>("experiences");
   const [profile, setProfile] = useState<ApiProfile | null>(null);
@@ -87,6 +103,9 @@ export default function ProfileManager() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
   const [isSavingTemplateVariables, setIsSavingTemplateVariables] = useState(false);
+  const [isEditingProfileDetails, setIsEditingProfileDetails] = useState(false);
+  const [profileDetailsDraft, setProfileDetailsDraft] =
+    useState<ProfileDetailsDraft>(emptyProfileDetailsDraft);
   const [editingExperienceIndex, setEditingExperienceIndex] = useState<EditingIndex>(null);
   const [experienceDraft, setExperienceDraft] = useState<ExperienceDraft>(emptyExperienceDraft);
   const [isEditingSkills, setIsEditingSkills] = useState(false);
@@ -273,6 +292,25 @@ export default function ProfileManager() {
     });
   }
 
+  function handleLinkVariableChange(itemIndex: number, variableName: string) {
+    updateDefaultTemplateAliases((aliases) => {
+      const linkItems = [...(aliases.linkItems ?? [])];
+      linkItems[itemIndex] = variableName.trim() ? { variableName } : {};
+
+      return {
+        ...aliases,
+        linkItems,
+      };
+    });
+  }
+
+  function handleLinkVariableRemove(itemIndex: number) {
+    updateDefaultTemplateAliases((aliases) => ({
+      ...aliases,
+      linkItems: (aliases.linkItems ?? []).filter((_, index) => index !== itemIndex),
+    }));
+  }
+
   async function handleSaveTemplateVariables() {
     const activeTemplate = getDefaultTemplate();
 
@@ -363,6 +401,45 @@ export default function ProfileManager() {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  function startEditProfileDetails() {
+    if (!profile) return;
+
+    setProfileDetailsDraft({
+      email: profile.email,
+      fullName: profile.fullName,
+      links: [...(profile.links ?? [])],
+      location: profile.location ?? "",
+      profession: profile.profession ?? "",
+    });
+    setIsEditingProfileDetails(true);
+    setSaveError(null);
+    setSaveMessage(null);
+  }
+
+  function cancelProfileDetailsEdit() {
+    setIsEditingProfileDetails(false);
+    setProfileDetailsDraft(emptyProfileDetailsDraft);
+  }
+
+  async function submitProfileDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const updatedProfile = await saveProfile(
+      {
+        email: profileDetailsDraft.email.trim(),
+        fullName: profileDetailsDraft.fullName.trim(),
+        links: profileDetailsDraft.links.map((link) => link.trim()).filter(Boolean),
+        location: optionalString(profileDetailsDraft.location),
+        profession: optionalString(profileDetailsDraft.profession),
+      },
+      "Profile details saved.",
+    );
+
+    if (updatedProfile) {
+      cancelProfileDetailsEdit();
     }
   }
 
@@ -562,7 +639,7 @@ export default function ProfileManager() {
         </div>
       </div>
 
-      <section className="bg-white/70 backdrop-blur border border-outline-variant rounded-2xl p-lg mb-xl flex flex-col md:flex-row gap-lg items-center md:items-start shadow-sm">
+      <section className="bg-white/70 backdrop-blur border border-outline-variant rounded-2xl p-lg mb-lg flex flex-col md:flex-row gap-lg items-center md:items-start shadow-sm">
         <div className="relative group">
           <div className="w-32 h-32 rounded-2xl overflow-hidden bg-surface-container-highest border-4 border-white shadow-md">
             <div className="w-full h-full bg-primary-container flex items-center justify-center text-4xl font-bold text-on-primary">
@@ -575,9 +652,11 @@ export default function ProfileManager() {
             <h3 className="font-headline-lg text-headline-lg text-on-surface">
               {uiProfile.fullName}
             </h3>
-            <span className="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-xs font-bold uppercase tracking-wider">
-              {uiProfile.title}
-            </span>
+            {uiProfile.title && (
+              <span className="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-xs font-bold uppercase tracking-wider">
+                {uiProfile.title}
+              </span>
+            )}
           </div>
           <p className="font-body-md text-on-surface-variant max-w-[42rem]">{uiProfile.headline}</p>
           <div className="flex flex-wrap justify-center md:justify-start gap-lg mt-md">
@@ -595,7 +674,31 @@ export default function ProfileManager() {
             </div>
           </div>
         </div>
+        <button
+          className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-white px-md py-2 text-label-md font-bold text-on-surface-variant hover:bg-surface-container-low"
+          onClick={startEditProfileDetails}
+          type="button"
+        >
+          <span className="material-symbols-outlined text-[18px]">edit</span>
+          Edit Details
+        </button>
       </section>
+
+      {isEditingProfileDetails && (
+        <ProfileDetailsForm
+          draft={profileDetailsDraft}
+          isSaving={isSaving}
+          onCancel={cancelProfileDetailsEdit}
+          onChange={setProfileDetailsDraft}
+          onLinkTemplateVariableRemove={handleLinkVariableRemove}
+          onLinkTemplateVariableChange={handleLinkVariableChange}
+          onSubmit={submitProfileDetails}
+          onTemplateVariableChange={handleSimpleVariableChange}
+          linkTemplateVariables={variableAliases.linkItems ?? []}
+          templateVariables={variableAliases.fields}
+          templateVariablesDisabled={!activeTemplate}
+        />
+      )}
 
       {(saveError || saveMessage) && (
         <div
@@ -1391,6 +1494,161 @@ function toApiEducation(draft: EducationDraft): ApiProfileEducation {
   };
 }
 
+function ProfileDetailsForm(props: {
+  draft: ProfileDetailsDraft;
+  isSaving: boolean;
+  linkTemplateVariables: Array<{ variableName?: string }>;
+  onCancel: () => void;
+  onChange: (draft: ProfileDetailsDraft) => void;
+  onLinkTemplateVariableChange: (index: number, variableName: string) => void;
+  onLinkTemplateVariableRemove: (index: number) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onTemplateVariableChange: (field: SimpleTemplateField, variableName: string) => void;
+  templateVariables: Partial<Record<SimpleTemplateField, string>>;
+  templateVariablesDisabled: boolean;
+}) {
+  const {
+    draft,
+    isSaving,
+    linkTemplateVariables,
+    onCancel,
+    onChange,
+    onLinkTemplateVariableChange,
+    onLinkTemplateVariableRemove,
+    onSubmit,
+    onTemplateVariableChange,
+    templateVariables,
+    templateVariablesDisabled,
+  } = props;
+
+  const variableControl = (field: SimpleTemplateField) => (
+    <TemplateVariableControl
+      disabled={templateVariablesDisabled}
+      onChange={(value) => onTemplateVariableChange(field, value)}
+      value={templateVariables[field] ?? ""}
+    />
+  );
+
+  return (
+    <form
+      className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg mb-xl space-y-md"
+      onSubmit={(event) => void onSubmit(event)}
+    >
+      <div>
+        <h4 className="font-headline-md text-on-surface">Profile Details</h4>
+        <p className="mt-1 text-sm text-on-surface-variant">
+          Each link can use its own variable name in the active CV template.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+        <label className="block">
+          <FieldLabel label="Name" variableControl={variableControl("full_name")} />
+          <input
+            className="mt-sm w-full rounded-lg border border-outline-variant bg-white px-md py-sm text-on-surface"
+            onChange={(event) => onChange({ ...draft, fullName: event.target.value })}
+            required
+            value={draft.fullName}
+          />
+        </label>
+        <label className="block">
+          <FieldLabel label="Profession" variableControl={variableControl("profession")} />
+          <input
+            className="mt-sm w-full rounded-lg border border-outline-variant bg-white px-md py-sm text-on-surface"
+            onChange={(event) => onChange({ ...draft, profession: event.target.value })}
+            value={draft.profession}
+          />
+        </label>
+        <label className="block">
+          <FieldLabel label="Email" variableControl={variableControl("email")} />
+          <input
+            className="mt-sm w-full rounded-lg border border-outline-variant bg-white px-md py-sm text-on-surface"
+            onChange={(event) => onChange({ ...draft, email: event.target.value })}
+            required
+            type="email"
+            value={draft.email}
+          />
+        </label>
+        <label className="block">
+          <FieldLabel label="Location" variableControl={variableControl("location")} />
+          <input
+            className="mt-sm w-full rounded-lg border border-outline-variant bg-white px-md py-sm text-on-surface"
+            onChange={(event) => onChange({ ...draft, location: event.target.value })}
+            value={draft.location}
+          />
+        </label>
+        <div className="md:col-span-2 space-y-sm">
+          <div className="flex items-center justify-between gap-md">
+            <span className="font-label-md text-on-surface">Links</span>
+            <button
+              className="inline-flex items-center gap-1 text-primary font-label-md hover:underline"
+              onClick={() => onChange({ ...draft, links: [...draft.links, ""] })}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              Add Link
+            </button>
+          </div>
+          {draft.links.map((link, index) => (
+            <div className="flex items-center gap-sm" key={index}>
+              <input
+                className="min-w-0 flex-1 rounded-lg border border-outline-variant bg-white px-md py-sm text-on-surface"
+                onChange={(event) => {
+                  const links = [...draft.links];
+                  links[index] = event.target.value;
+                  onChange({ ...draft, links });
+                }}
+                placeholder="https://example.com"
+                type="url"
+                value={link}
+              />
+              <TemplateVariableControl
+                disabled={templateVariablesDisabled}
+                onChange={(value) => onLinkTemplateVariableChange(index, value)}
+                value={linkTemplateVariables[index]?.variableName ?? ""}
+              />
+              <button
+                aria-label={`Remove link ${index + 1}`}
+                className="p-2 text-error hover:bg-error-container rounded-lg"
+                onClick={() => {
+                  onChange({
+                    ...draft,
+                    links: draft.links.filter((_, itemIndex) => itemIndex !== index),
+                  });
+                  onLinkTemplateVariableRemove(index);
+                }}
+                type="button"
+              >
+                <span className="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          ))}
+          {draft.links.length === 0 && (
+            <div className="rounded-lg border border-dashed border-outline-variant px-md py-sm text-sm text-outline">
+              No links added.
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-wrap justify-end gap-sm">
+        <button
+          className="px-lg py-sm border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-container transition-all"
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="px-lg py-sm bg-primary text-on-primary rounded-lg hover:shadow-md transition-all disabled:opacity-60"
+          disabled={isSaving}
+          type="submit"
+        >
+          {isSaving ? "Saving..." : "Save Details"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function FieldLabel(props: { label: string; variableControl?: ReactNode }) {
   return (
     <span className="flex items-center gap-2 font-label-md text-on-surface">
@@ -1540,6 +1798,7 @@ function normalizeVariableAliases(
 ): ApiDocumentTemplateVariableAliases {
   return {
     fields: aliases?.fields ?? {},
+    linkItems: aliases?.linkItems ?? [],
     selectedEducation: aliases?.selectedEducation
       ? {
           fields: aliases.selectedEducation.fields ?? {},

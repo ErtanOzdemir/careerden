@@ -127,7 +127,8 @@ export function mapApiProfileToUi(profile: ApiProfile): Profile {
     summary: profile.summary ?? "",
     location: profile.location ?? "Location not set",
     email: profile.email,
-    portfolio: profile.projects.find((project) => project.url)?.url ?? "Portfolio not set",
+    portfolio:
+      profile.links?.[0] ?? profile.projects.find((project) => project.url)?.url ?? "Links not set",
     experiences: profile.experience.map((experience, index) => ({
       id: `${profile.id}-experience-${index}`,
       title: experience.title,
@@ -426,11 +427,7 @@ function getInitials(name: string): string {
 }
 
 function getProfileTitle(profile: ApiProfile): string {
-  if (!profile.headline) {
-    return "Profile";
-  }
-
-  return profile.headline.split(/[|,]/)[0]?.trim() || "Profile";
+  return profile.profession?.trim() ?? "";
 }
 
 function formatPeriod(startDate?: string, endDate?: string): string {

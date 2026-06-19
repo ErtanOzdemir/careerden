@@ -1,4 +1,8 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { requireDefaultProfileId } from "../api/config";
+import { profileUpdatedEvent, profilesApi } from "../api/profiles";
+import type { ApiProfile } from "../api/types";
 
 const links = [
   { to: "/", icon: "dashboard", label: "Dashboard" },
@@ -7,6 +11,39 @@ const links = [
 ];
 
 export default function Sidebar() {
+  const [profile, setProfile] = useState<ApiProfile | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    profilesApi
+      .get(requireDefaultProfileId())
+      .then((loadedProfile) => {
+        if (isMounted) {
+          setProfile(loadedProfile);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setProfile(null);
+        }
+      });
+
+    function handleProfileUpdated(event: Event) {
+      setProfile((event as CustomEvent<ApiProfile>).detail);
+    }
+
+    window.addEventListener(profileUpdatedEvent, handleProfileUpdated);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener(profileUpdatedEvent, handleProfileUpdated);
+    };
+  }, []);
+
+  const fullName = profile?.fullName.trim() || "Profile";
+  const subtitle = profile?.profession?.trim() || profile?.email || "";
+
   return (
     <aside className="hidden lg:flex flex-col h-screen p-md bg-surface border-r border-outline-variant shadow-sm fixed left-0 top-0 w-64 z-50">
       <div className="mb-xl px-sm">
@@ -37,14 +74,27 @@ export default function Sidebar() {
       <div className="mt-auto pt-lg border-t border-outline-variant">
         <div className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold border border-outline-variant">
-            AC
+            {getInitials(fullName)}
           </div>
           <div className="overflow-hidden">
-            <p className="text-label-md font-bold truncate">Alex Chen</p>
-            <p className="text-label-sm text-secondary truncate text-[10px]">Premium Account</p>
+            <p className="text-label-md font-bold truncate">{fullName}</p>
+            {subtitle && (
+              <p className="text-label-sm text-secondary truncate text-[10px]">{subtitle}</p>
+            )}
           </div>
         </div>
       </div>
     </aside>
+  );
+}
+
+function getInitials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "P"
   );
 }

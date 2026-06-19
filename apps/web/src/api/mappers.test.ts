@@ -87,6 +87,7 @@ describe("API mappers", () => {
       fullName: "Ada Lovelace",
       headline: "Product Designer | Design Systems",
       id: "profile-1",
+      links: [],
       location: "Remote",
       projects: [{ achievements: [], name: "Portfolio", skills: [], url: "https://example.com" }],
       skills: ["Figma"],
@@ -96,7 +97,7 @@ describe("API mappers", () => {
 
     const mapped = mapApiProfileToUi(profile);
 
-    expect(mapped.title).toBe("Product Designer");
+    expect(mapped.title).toBe("");
     expect(mapped.portfolio).toBe("https://example.com");
     expect(mapped.experiences[0]?.period).toBe("2024 - Present");
     expect(mapped.skills[0]?.skills).toEqual(["Figma"]);

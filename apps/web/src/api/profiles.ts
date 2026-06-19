@@ -7,6 +7,8 @@ import type {
   ApiUpdateProfilePayload,
 } from "./types";
 
+export const profileUpdatedEvent = "link2cv:profile-updated";
+
 export const profilesApi = {
   get(id: string): Promise<ApiProfile> {
     return requestJson<ApiProfile>(`/profiles/${id}`);
@@ -52,11 +54,14 @@ export const profilesApi = {
       },
     );
   },
-  update(id: string, payload: ApiUpdateProfilePayload): Promise<ApiProfile> {
-    return requestJson<ApiProfile>(`/profiles/${id}`, {
+  async update(id: string, payload: ApiUpdateProfilePayload): Promise<ApiProfile> {
+    const profile = await requestJson<ApiProfile>(`/profiles/${id}`, {
       body: payload,
       method: "PATCH",
     });
+
+    window.dispatchEvent(new CustomEvent<ApiProfile>(profileUpdatedEvent, { detail: profile }));
+    return profile;
   },
 };
 

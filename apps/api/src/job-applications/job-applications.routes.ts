@@ -13,6 +13,7 @@ import type {
   JobApplicationContact,
   JobApplicationEvent,
   JobApplicationInterview,
+  JobApplicationChangeSubscriber,
   JobApplicationRepository,
   MatchAnalysisResult,
   ScrapeBundle,
@@ -50,9 +51,51 @@ export function createJobApplicationRouter(dependencies: {
   generateJobApplicationDocuments: GenerateJobApplicationDocumentsUseCase;
   retryJobApplication: RetryJobApplicationUseCase;
   jobApplications: JobApplicationRepository;
+  jobApplicationChanges: JobApplicationChangeSubscriber;
   storage: FileStorage;
 }): ExpressRouter {
   const router = Router();
+
+  router.get("/stream", async (request, response, next) => {
+    const profileId =
+      typeof request.query.profileId === "string" ? request.query.profileId.trim() : "";
+
+    if (!profileId) {
+      response.status(400).json({ error: "profileId is required" });
+      return;
+    }
+
+    try {
+      response.status(200);
+      response.set({
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "Content-Type": "text/event-stream",
+        "X-Accel-Buffering": "no",
+      });
+      response.flushHeaders();
+      response.write(": connected\n\n");
+
+      const unsubscribe = await dependencies.jobApplicationChanges.subscribe(
+        profileId,
+        (change) => {
+          response.write(`event: ${change.type}\n`);
+          response.write(`data: ${JSON.stringify(change)}\n\n`);
+        },
+      );
+      const heartbeat = setInterval(() => {
+        response.write(": heartbeat\n\n");
+      }, 20_000);
+
+      request.on("close", () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+        response.end();
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.post("/", validateBody(createJobApplicationSchema), async (request, response, next) => {
     try {

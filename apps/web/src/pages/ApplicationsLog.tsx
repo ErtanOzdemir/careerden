@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import type { ApplicationStatus, JobApplication } from "../types";
@@ -7,6 +7,7 @@ import CompanyLogo from "../components/CompanyLogo";
 import Pagination from "../components/Pagination";
 import { requireDefaultProfileId } from "../api/config";
 import { jobApplicationsApi } from "../api/jobApplications";
+import { useJobApplicationChanges, type JobApplicationChange } from "../api/jobApplicationChanges";
 import { mapApiJobApplicationToUi, mapUiStatusToApi } from "../api/mappers";
 
 const statuses: (ApplicationStatus | "All")[] = [
@@ -25,6 +26,7 @@ interface ApplicationActionState {
 }
 
 export default function ApplicationsLog() {
+  const profileId = requireDefaultProfileId();
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [sourceUrl, setSourceUrl] = useState("");
   const [applications, setApplications] = useState<ReturnType<typeof mapApiJobApplicationToUi>[]>(
@@ -38,15 +40,14 @@ export default function ApplicationsLog() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadApplications() {
+  const loadApplications = useCallback(
+    async (showLoading = false) => {
       try {
-        setIsLoading(true);
+        if (showLoading) {
+          setIsLoading(true);
+        }
         setError(null);
 
-        const profileId = requireDefaultProfileId();
         const items = await jobApplicationsApi.list({
           profileId,
           applicationStatus:
@@ -55,26 +56,57 @@ export default function ApplicationsLog() {
               : mapUiStatusToApi(statusFilter as ApplicationStatus),
         });
 
-        if (isMounted) {
-          setApplications(items.map((item) => mapApiJobApplicationToUi(item)));
-        }
+        setApplications(items.map((item) => mapApiJobApplicationToUi(item)));
       } catch (loadError) {
-        if (isMounted) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load applications.");
-        }
+        setError(loadError instanceof Error ? loadError.message : "Failed to load applications.");
       } finally {
-        if (isMounted) {
+        if (showLoading) {
           setIsLoading(false);
         }
       }
-    }
+    },
+    [profileId, statusFilter],
+  );
 
-    void loadApplications();
+  useEffect(() => {
+    void loadApplications(true);
+  }, [loadApplications]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [statusFilter]);
+  const handleRealtimeChange = useCallback(
+    async (change: JobApplicationChange) => {
+      if (change.type === "application.deleted") {
+        setApplications((current) => current.filter((item) => item.id !== change.applicationId));
+        return;
+      }
+
+      try {
+        const detail = await jobApplicationsApi.get(change.applicationId);
+        const updated = mapApiJobApplicationToUi(detail);
+        const matchesFilter =
+          statusFilter === "All" || updated.status === (statusFilter as ApplicationStatus);
+
+        setApplications((current) => {
+          const withoutUpdated = current.filter((item) => item.id !== updated.id);
+
+          if (!matchesFilter) {
+            return withoutUpdated;
+          }
+
+          return [...withoutUpdated, updated].sort((left, right) =>
+            (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""),
+          );
+        });
+      } catch {
+        // Reconnect reconciliation or a later event will restore authoritative state.
+      }
+    },
+    [statusFilter],
+  );
+
+  useJobApplicationChanges(profileId, {
+    onChange: handleRealtimeChange,
+    onOpen: () => loadApplications(false),
+  });
 
   async function handleQuickAdd() {
     try {
@@ -82,7 +114,7 @@ export default function ApplicationsLog() {
       setError(null);
 
       const created = await jobApplicationsApi.create({
-        profileId: requireDefaultProfileId(),
+        profileId,
         sourceUrl: sourceUrl.trim() || undefined,
       });
 
@@ -183,34 +215,12 @@ export default function ApplicationsLog() {
         current.map((item) => (item.id === application.id ? updated : item)),
       );
       setActionMessage(`${application.company} was queued to run again from the beginning.`);
-      void monitorProcessing(application.id);
     } catch (retryError) {
       setActionError(
         retryError instanceof Error ? retryError.message : "Failed to retry application.",
       );
     } finally {
       setActiveAction(null);
-    }
-  }
-
-  async function monitorProcessing(applicationId: string) {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      await new Promise((resolve) => window.setTimeout(resolve, 1500));
-
-      try {
-        const detail = await jobApplicationsApi.get(applicationId);
-        const updated = mapApiJobApplicationToUi(detail);
-
-        setApplications((current) =>
-          current.map((item) => (item.id === applicationId ? updated : item)),
-        );
-
-        if (["completed", "failed", "review_ready"].includes(updated.processingStatus ?? "")) {
-          return;
-        }
-      } catch {
-        return;
-      }
     }
   }
 
@@ -405,10 +415,17 @@ export default function ApplicationsLog() {
                   applications.map((app) => (
                     <tr
                       key={app.id}
-                      className={`transition-colors group ${
+                      title={
+                        isBackgroundProcessing(app)
+                          ? `Background processing: ${app.processingStatusLabel}`
+                          : undefined
+                      }
+                      className={`group transition-colors ${
                         app.processingStatus === "failed"
                           ? "bg-error-container/40 hover:bg-error-container/60"
-                          : "hover:bg-surface-container-low"
+                          : isBackgroundProcessing(app)
+                            ? "application-processing-row"
+                            : "hover:bg-surface-container-low"
                       }`}
                     >
                       <td className="px-6 py-4">
@@ -436,6 +453,11 @@ export default function ApplicationsLog() {
                       </td>
                       <td className="px-6 py-4">
                         <StatusBadge status={app.status} />
+                        {isBackgroundProcessing(app) && (
+                          <span className="sr-only">
+                            Background processing: {app.processingStatusLabel}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <ApplicationMatch application={app} />
@@ -531,7 +553,10 @@ export default function ApplicationsLog() {
                   </Link>
 
                   <div className="mt-md flex flex-wrap items-center justify-between gap-sm">
-                    <StatusBadge status={app.status} />
+                    <div className="flex flex-col items-start gap-1.5">
+                      <StatusBadge status={app.status} />
+                      <ProcessingStatus application={app} />
+                    </div>
                     <div className="text-right">
                       <div className="text-label-md text-on-surface">{app.dateApplied}</div>
                       <div className="text-label-sm text-secondary">{app.dateLabel}</div>
@@ -606,6 +631,40 @@ function ApplicationMatch({ application }: { application: JobApplication }) {
   }
 
   return <MatchScore score={application.matchScore} />;
+}
+
+function isBackgroundProcessing(application: JobApplication): boolean {
+  return ["queued", "scraping", "analyzing", "generating_documents"].includes(
+    application.processingStatus ?? "",
+  );
+}
+
+function ProcessingStatus({ application }: { application: JobApplication }) {
+  if (!application.processingStatusLabel) {
+    return null;
+  }
+
+  const isFailed = application.processingStatus === "failed";
+  const isActive = isBackgroundProcessing(application);
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-label-sm font-bold ${
+        isFailed
+          ? "bg-error-container text-on-error-container"
+          : isActive
+            ? "bg-secondary-container text-primary"
+            : "bg-surface-container-high text-secondary"
+      }`}
+    >
+      {isActive && (
+        <span className="material-symbols-outlined animate-spin text-[13px]">
+          progress_activity
+        </span>
+      )}
+      {application.processingStatusLabel}
+    </span>
+  );
 }
 
 function ApplicationActions(props: {

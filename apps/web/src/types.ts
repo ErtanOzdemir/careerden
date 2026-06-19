@@ -59,6 +59,8 @@ export interface GeneratedApplicationDocument {
 
 export interface JobApplication {
   id: string;
+  profileId?: string;
+  updatedAt?: string;
   company: string;
   domain: string;
   logo?: string;

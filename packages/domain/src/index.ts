@@ -1,6 +1,7 @@
 export * from "./profiles/user-profile.js";
 export * from "./profiles/user-profile-repository.js";
 export * from "./job-applications/job-application.js";
+export * from "./job-applications/job-application-change.js";
 export * from "./job-applications/job-application-repository.js";
 export * from "./job-applications/job-queue.js";
 export * from "./job-applications/workflow-status.js";

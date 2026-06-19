@@ -9,6 +9,7 @@ import CompanyLogo from "../components/CompanyLogo";
 import { jobApplicationsApi } from "../api/jobApplications";
 import { profilesApi } from "../api/profiles";
 import { mapApiJobApplicationToUi, mapUiStatusToApi } from "../api/mappers";
+import { useJobApplicationChanges, type JobApplicationChange } from "../api/jobApplicationChanges";
 import type { ApplicationStatus, JobApplication } from "../types";
 
 const statusOptions: ApplicationStatus[] = ["Applied", "Interviewing", "Offer", "Rejected"];
@@ -68,6 +69,31 @@ export default function AppDetail() {
     };
   }, [id]);
 
+  useJobApplicationChanges(app?.profileId, {
+    onChange: async (change: JobApplicationChange) => {
+      if (!id || change.applicationId !== id) {
+        return;
+      }
+
+      if (change.type === "application.deleted") {
+        setApp(null);
+        setError("Application was deleted.");
+        return;
+      }
+
+      try {
+        await refreshApplication(id);
+      } catch {
+        // Reconnect reconciliation or a later event will restore authoritative state.
+      }
+    },
+    onOpen: async () => {
+      if (id && app) {
+        await refreshApplication(id);
+      }
+    },
+  });
+
   async function handleStatusChange(status: ApplicationStatus) {
     if (!id) {
       return;
@@ -125,7 +151,6 @@ export default function AppDetail() {
       setError(null);
       await jobApplicationsApi.retry(id);
       await refreshApplication(id);
-      void monitorProcessing(id);
     } catch (retryError) {
       setError(
         retryError instanceof Error
@@ -134,27 +159,6 @@ export default function AppDetail() {
       );
     } finally {
       setIsRetrying(false);
-    }
-  }
-
-  async function monitorProcessing(jobApplicationId: string) {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      await new Promise((resolve) => window.setTimeout(resolve, 1500));
-
-      try {
-        const detail = await jobApplicationsApi.get(jobApplicationId);
-        const profile = await profilesApi.get(detail.profileId);
-        const mapped = mapApiJobApplicationToUi(detail, profile);
-
-        setApp(mapped);
-        setInterviewNotes(mapped.interviewNotes ?? "");
-
-        if (["completed", "failed", "review_ready"].includes(mapped.processingStatus ?? "")) {
-          return;
-        }
-      } catch {
-        return;
-      }
     }
   }
 

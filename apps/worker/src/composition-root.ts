@@ -10,8 +10,10 @@ import {
   LinkedInJobScraper,
   LinkedInSessionManager,
   AiProviderFactory,
+  PublishingJobApplicationRepository,
   PostgresJobApplicationRepository,
   PostgresUserProfileRepository,
+  RedisJobApplicationChangePublisher,
 } from "@link2cv/infrastructure";
 import {
   ExtractJobRequirementsUseCase,
@@ -35,7 +37,10 @@ export function createWorkerDependencies(env: AppEnv): WorkerDependencies {
   };
 
   const db = createDb(env.DATABASE_URL);
-  const jobApplications = new PostgresJobApplicationRepository(db);
+  const jobApplications = new PublishingJobApplicationRepository(
+    new PostgresJobApplicationRepository(db),
+    new RedisJobApplicationChangePublisher(env.REDIS_URL!),
+  );
   const profiles = new PostgresUserProfileRepository(db);
   const storage = createFileStorage({
     endpoint: env.RUSTFS_ENDPOINT,

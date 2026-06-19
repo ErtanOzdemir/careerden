@@ -122,6 +122,7 @@ Copy `.env.example` to `.env` and configure:
 | -------- | ------------------------------------------------------ | ------------------------------------------- |
 | `POST`   | `/job-applications/`                                   | Submit a job application                    |
 | `GET`    | `/job-applications/`                                   | List applications (query: `?profileId=...`) |
+| `GET`    | `/job-applications/stream`                             | Stream profile-scoped realtime changes      |
 | `GET`    | `/job-applications/:id`                                | Get application by ID                       |
 | `DELETE` | `/job-applications/:id`                                | Delete an application and related data      |
 | `POST`   | `/job-applications/:id/retry`                          | Retry failed processing from the beginning  |

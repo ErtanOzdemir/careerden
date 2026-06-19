@@ -28,6 +28,7 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
     documents,
     docxTemplates,
     linkedInSessionManager,
+    jobApplicationChanges,
   } = createApiDependencies(options);
 
   const app = express();
@@ -69,6 +70,7 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
       deleteJobApplication: new DeleteJobApplicationUseCase(jobApplications, storage),
       retryJobApplication: new RetryJobApplicationUseCase(jobApplications, queue, storage),
       jobApplications,
+      jobApplicationChanges,
       storage,
     }),
   );

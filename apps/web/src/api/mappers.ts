@@ -81,6 +81,8 @@ export function mapApiJobApplicationToUi(
 
   return {
     id: application.id,
+    profileId: application.profileId,
+    updatedAt: application.updatedAt,
     company,
     logo: application.companyLogoUrl,
     domain: getDomain(application.tracking.jobUrl ?? application.sourceUrl),

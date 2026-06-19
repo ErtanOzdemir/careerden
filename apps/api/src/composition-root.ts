@@ -3,6 +3,7 @@ import type {
   DocxTemplateRenderer,
   FileStorage,
   JobApplicationQueue,
+  JobApplicationChangeSubscriber,
   JobApplicationRepository,
   TemplateRenderer,
   UserProfileRepository,
@@ -14,12 +15,16 @@ import {
   DocxtemplaterTemplateRenderer,
   HtmlTemplateRenderer,
   InMemoryJobApplicationQueue,
+  InMemoryJobApplicationChangeBus,
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
   LinkedInSessionManager,
   PlaywrightPdfRenderer,
+  PublishingJobApplicationRepository,
   PostgresJobApplicationRepository,
   PostgresUserProfileRepository,
+  RedisJobApplicationChangePublisher,
+  RedisJobApplicationChangeSubscriber,
   UnavailableJobApplicationQueue,
 } from "@link2cv/infrastructure";
 
@@ -45,6 +50,7 @@ export interface ApiDependencies {
   documents: DocumentRenderer;
   docxTemplates: DocxTemplateRenderer;
   linkedInSessionManager: LinkedInSessionManager;
+  jobApplicationChanges: JobApplicationChangeSubscriber;
 }
 
 export function createApiDependencies(options: ApiAppOptions): ApiDependencies {
@@ -52,9 +58,20 @@ export function createApiDependencies(options: ApiAppOptions): ApiDependencies {
 
   const profiles = db ? new PostgresUserProfileRepository(db) : new InMemoryUserProfileRepository();
 
-  const jobApplications = db
+  const baseJobApplications = db
     ? new PostgresJobApplicationRepository(db)
     : new InMemoryJobApplicationRepository();
+  const inMemoryChanges = options.redisUrl ? undefined : new InMemoryJobApplicationChangeBus();
+  const changePublisher = options.redisUrl
+    ? new RedisJobApplicationChangePublisher(options.redisUrl)
+    : inMemoryChanges!;
+  const jobApplicationChanges = options.redisUrl
+    ? new RedisJobApplicationChangeSubscriber(options.redisUrl)
+    : inMemoryChanges!;
+  const jobApplications = new PublishingJobApplicationRepository(
+    baseJobApplications,
+    changePublisher,
+  );
 
   const queue = createQueue({
     redisUrl: options.redisUrl,
@@ -87,6 +104,7 @@ export function createApiDependencies(options: ApiAppOptions): ApiDependencies {
     documents,
     docxTemplates,
     linkedInSessionManager,
+    jobApplicationChanges,
   };
 }
 

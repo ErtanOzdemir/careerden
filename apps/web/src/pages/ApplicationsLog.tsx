@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import type { ApplicationStatus } from "../types";
+import type { ApplicationStatus, JobApplication } from "../types";
 import StatusBadge from "../components/StatusBadge";
 import CompanyLogo from "../components/CompanyLogo";
 import Pagination from "../components/Pagination";
@@ -18,6 +19,11 @@ const statuses: (ApplicationStatus | "All")[] = [
 
 type ViewMode = "grid" | "list";
 
+interface ApplicationActionState {
+  applicationId: string;
+  action: string;
+}
+
 export default function ApplicationsLog() {
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [sourceUrl, setSourceUrl] = useState("");
@@ -28,6 +34,9 @@ export default function ApplicationsLog() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [activeAction, setActiveAction] = useState<ApplicationActionState | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -83,6 +92,55 @@ export default function ApplicationsLog() {
       setError(saveError instanceof Error ? saveError.message : "Failed to create application.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleStatusChange(application: JobApplication, status: ApplicationStatus) {
+    try {
+      setActiveAction({ applicationId: application.id, action: `status-${status}` });
+      setActionMessage(null);
+      setActionError(null);
+
+      await jobApplicationsApi.update(application.id, {
+        applicationStatus: mapUiStatusToApi(status),
+      });
+
+      setApplications((current) => {
+        if (statusFilter !== "All" && statusFilter !== status) {
+          return current.filter((item) => item.id !== application.id);
+        }
+
+        return current.map((item) => (item.id === application.id ? { ...item, status } : item));
+      });
+      setActionMessage(`${application.company} moved to ${status}.`);
+    } catch (updateError) {
+      setActionError(
+        updateError instanceof Error ? updateError.message : "Failed to update status.",
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  async function handleGenerateDocuments(application: JobApplication) {
+    try {
+      setActiveAction({ applicationId: application.id, action: "generate-documents" });
+      setActionMessage(null);
+      setActionError(null);
+
+      const detail = await jobApplicationsApi.generateDocuments(application.id);
+      const updated = mapApiJobApplicationToUi(detail);
+
+      setApplications((current) =>
+        current.map((item) => (item.id === application.id ? updated : item)),
+      );
+      setActionMessage(`Documents generated for ${application.company}.`);
+    } catch (generateError) {
+      setActionError(
+        generateError instanceof Error ? generateError.message : "Failed to generate documents.",
+      );
+    } finally {
+      setActiveAction(null);
     }
   }
 
@@ -193,6 +251,46 @@ export default function ApplicationsLog() {
         </div>
       </section>
 
+      {actionMessage && (
+        <div
+          className="mb-lg flex items-center justify-between gap-3 rounded-xl border border-success-outline bg-success-container px-md py-sm text-body-md text-on-success-container"
+          role="status"
+        >
+          <span className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px]">check_circle</span>
+            {actionMessage}
+          </span>
+          <button
+            aria-label="Dismiss message"
+            className="material-symbols-outlined rounded-full p-1 text-[18px] hover:bg-white/50"
+            onClick={() => setActionMessage(null)}
+            type="button"
+          >
+            close
+          </button>
+        </div>
+      )}
+
+      {actionError && (
+        <div
+          className="mb-lg flex items-center justify-between gap-3 rounded-xl border border-error/40 bg-error-container px-md py-sm text-body-md text-on-error-container"
+          role="alert"
+        >
+          <span className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            {actionError}
+          </span>
+          <button
+            aria-label="Dismiss error"
+            className="material-symbols-outlined rounded-full p-1 text-[18px] hover:bg-white/50"
+            onClick={() => setActionError(null)}
+            type="button"
+          >
+            close
+          </button>
+        </div>
+      )}
+
       {viewMode === "list" ? (
         <section className="bg-white border border-outline-variant rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar">
@@ -272,13 +370,12 @@ export default function ApplicationsLog() {
                         <ApplicationTags tags={app.tags} />
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          className="material-symbols-outlined p-2 text-secondary hover:text-primary hover:bg-primary-fixed rounded-full transition-all cursor-pointer"
-                          title="Application actions"
-                          type="button"
-                        >
-                          more_vert
-                        </button>
+                        <ApplicationActions
+                          activeAction={activeAction}
+                          application={app}
+                          onGenerateDocuments={handleGenerateDocuments}
+                          onStatusChange={handleStatusChange}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -323,7 +420,15 @@ export default function ApplicationsLog() {
                         <p className="truncate text-label-sm text-secondary">{app.domain}</p>
                       </div>
                     </Link>
-                    <MatchScore score={app.matchScore} />
+                    <div className="flex shrink-0 items-center gap-1">
+                      <MatchScore score={app.matchScore} />
+                      <ApplicationActions
+                        activeAction={activeAction}
+                        application={app}
+                        onGenerateDocuments={handleGenerateDocuments}
+                        onStatusChange={handleStatusChange}
+                      />
+                    </div>
                   </div>
 
                   <Link className="mt-lg block" to={`/applications/${app.id}`}>
@@ -363,6 +468,197 @@ export default function ApplicationsLog() {
       )}
     </div>
   );
+}
+
+function ApplicationActions(props: {
+  activeAction: ApplicationActionState | null;
+  application: JobApplication;
+  onGenerateDocuments: (application: JobApplication) => Promise<void>;
+  onStatusChange: (application: JobApplication, status: ApplicationStatus) => Promise<void>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isApplicationBusy = props.activeAction?.applicationId === props.application.id;
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function updatePosition() {
+      const rect = buttonRef.current?.getBoundingClientRect();
+
+      if (!rect) {
+        return;
+      }
+
+      const menuWidth = 256;
+      const menuHeight = 330;
+      const viewportPadding = 8;
+      const left = Math.min(
+        Math.max(viewportPadding, rect.right - menuWidth),
+        window.innerWidth - menuWidth - viewportPadding,
+      );
+      const fitsBelow = rect.bottom + menuHeight + viewportPadding <= window.innerHeight;
+
+      setPosition({
+        left,
+        top: fitsBelow ? rect.bottom + 6 : Math.max(viewportPadding, rect.top - menuHeight - 6),
+      });
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+
+      setIsOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        buttonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  function runAction(action: () => Promise<void>) {
+    setIsOpen(false);
+    void action();
+  }
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label={`Actions for ${props.application.company}`}
+        className="material-symbols-outlined rounded-full p-2 text-secondary transition-all hover:bg-primary-fixed hover:text-primary disabled:cursor-wait disabled:opacity-60"
+        disabled={isApplicationBusy}
+        onClick={() => setIsOpen((current) => !current)}
+        title="Application actions"
+        type="button"
+      >
+        {isApplicationBusy ? "progress_activity" : "more_vert"}
+      </button>
+
+      {isOpen &&
+        createPortal(
+          <div
+            ref={menuRef}
+            aria-label={`Actions for ${props.application.company}`}
+            className="fixed z-[60] isolate w-64 overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest py-2 text-left opacity-100 shadow-2xl"
+            role="menu"
+            style={{ ...position, backgroundColor: "#ffffff" }}
+          >
+            <Link
+              className="flex items-center gap-3 px-4 py-2.5 text-body-md font-medium text-on-surface hover:bg-surface-container-low"
+              onClick={() => setIsOpen(false)}
+              role="menuitem"
+              to={`/applications/${props.application.id}`}
+            >
+              <span className="material-symbols-outlined text-[20px] text-primary">visibility</span>
+              View application
+            </Link>
+
+            <div className="my-1 border-t border-outline-variant" />
+            <div className="px-4 pb-1 pt-2 text-label-sm font-bold uppercase tracking-wider text-outline">
+              Change status
+            </div>
+            {statuses
+              .filter((status): status is ApplicationStatus => status !== "All")
+              .map((status) => {
+                const isCurrent = props.application.status === status;
+                const isUpdating =
+                  props.activeAction?.applicationId === props.application.id &&
+                  props.activeAction.action === `status-${status}`;
+
+                return (
+                  <button
+                    key={status}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-body-md text-on-surface hover:bg-surface-container-low disabled:cursor-default disabled:opacity-60"
+                    disabled={isCurrent || isApplicationBusy}
+                    onClick={() => runAction(() => props.onStatusChange(props.application, status))}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-[18px] text-secondary">
+                        {statusIcon(status)}
+                      </span>
+                      {status}
+                    </span>
+                    {(isCurrent || isUpdating) && (
+                      <span className="material-symbols-outlined text-[18px] text-primary">
+                        {isUpdating ? "progress_activity" : "check"}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+            {props.application.processingStatus === "review_ready" && (
+              <>
+                <div className="my-1 border-t border-outline-variant" />
+                <button
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-body-md font-medium text-primary hover:bg-primary-fixed disabled:cursor-wait disabled:opacity-60"
+                  disabled={isApplicationBusy}
+                  onClick={() => runAction(() => props.onGenerateDocuments(props.application))}
+                  role="menuitem"
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[20px]">description</span>
+                  Generate documents
+                </button>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+function statusIcon(status: ApplicationStatus) {
+  switch (status) {
+    case "Applied":
+      return "send";
+    case "Interviewing":
+      return "record_voice_over";
+    case "Offer":
+      return "celebration";
+    case "Rejected":
+      return "cancel";
+  }
 }
 
 function MatchScore({ score }: { score?: number }) {

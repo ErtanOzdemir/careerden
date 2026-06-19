@@ -48,6 +48,13 @@
   --color-on-error: #ffffff;
   --color-error-container: #ffdad6;
   --color-on-error-container: #93000a;
+  --color-error-fixed: #ffb4ab;
+  --color-success: #176b3a;
+  --color-on-success: #ffffff;
+  --color-success-container: #d6f5df;
+  --color-on-success-container: #075225;
+  --color-success-fixed: #86efac;
+  --color-success-outline: #4f8f65;
   --color-surface-variant: #dae2fd;
 
   --font-display: Inter, ui-sans-serif, system-ui, sans-serif;

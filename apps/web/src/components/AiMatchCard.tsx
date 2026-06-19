@@ -82,8 +82,8 @@ export default function AiMatchCard({
                   key={kw.keyword}
                   className={`px-2 py-1 rounded text-label-sm border ${
                     kw.match
-                      ? "bg-green-500/20 text-green-300 border-green-500/30"
-                      : "bg-red-500/20 text-red-300 border-red-500/30"
+                      ? "border-success-fixed/50 bg-success/30 text-success-fixed"
+                      : "border-error-fixed/50 bg-error/30 text-error-fixed"
                   }`}
                 >
                   {kw.keyword}
@@ -262,6 +262,9 @@ function ScoreRing({
 }
 
 function MatchStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]> }) {
+  const matchedKeywords = aiMatch.keywords.filter((keyword) => keyword.match);
+  const missingKeywords = aiMatch.keywords.filter((keyword) => !keyword.match);
+
   return (
     <div className="space-y-lg">
       <div className="grid md:grid-cols-3 gap-md">
@@ -271,24 +274,77 @@ function MatchStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]
       </div>
       <section className="space-y-md">
         <h4 className="text-label-md font-bold uppercase text-secondary">Keyword Analysis</h4>
+        <div className="grid grid-cols-1 gap-md md:grid-cols-2">
+          <KeywordGroup
+            emptyMessage="No matched keywords"
+            icon="check_circle"
+            keywords={matchedKeywords.map((keyword) => keyword.keyword)}
+            label="Matched Keywords"
+            tone="matched"
+          />
+          <KeywordGroup
+            emptyMessage="No missing keywords"
+            icon="cancel"
+            keywords={missingKeywords.map((keyword) => keyword.keyword)}
+            label="Missing Keywords"
+            tone="missing"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function KeywordGroup(props: {
+  emptyMessage: string;
+  icon: string;
+  keywords: string[];
+  label: string;
+  tone: "matched" | "missing";
+}) {
+  const isMatched = props.tone === "matched";
+
+  return (
+    <div
+      className={`min-h-36 rounded-lg border p-md ${
+        isMatched
+          ? "border-success-outline bg-success-container"
+          : "border-error/50 bg-error-container"
+      }`}
+    >
+      <div
+        className={`mb-md flex items-center justify-between gap-sm ${
+          isMatched ? "text-on-success-container" : "text-on-error-container"
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="material-symbols-outlined text-[18px]">{props.icon}</span>
+          <h5 className="text-label-md font-bold">{props.label}</h5>
+        </div>
+        <span className="text-label-md font-bold">{props.keywords.length}</span>
+      </div>
+
+      {props.keywords.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {aiMatch.keywords.map((kw) => (
+          {props.keywords.map((keyword) => (
             <span
-              key={kw.keyword}
-              className={`px-3 py-1 rounded-lg text-label-md border flex items-center gap-1 ${
-                kw.match
-                  ? "bg-green-500/10 text-green-700 border-green-500/30"
-                  : "bg-red-500/10 text-red-700 border-red-500/30"
+              key={keyword}
+              className={`flex items-center gap-1 rounded-lg border bg-white/70 px-3 py-1 text-label-md ${
+                isMatched
+                  ? "border-success-outline text-on-success-container"
+                  : "border-error/50 text-on-error-container"
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">
-                {kw.match ? "check" : "close"}
+                {isMatched ? "check" : "close"}
               </span>
-              {kw.keyword}
+              {keyword}
             </span>
           ))}
         </div>
-      </section>
+      ) : (
+        <p className="text-body-md text-on-surface-variant">{props.emptyMessage}</p>
+      )}
     </div>
   );
 }

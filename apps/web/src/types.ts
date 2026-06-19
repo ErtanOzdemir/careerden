@@ -80,6 +80,7 @@ export interface JobApplication {
   interviewNotes?: string;
   contacts?: Contact[];
   generatedDocuments?: GeneratedApplicationDocument[];
+  matchScore?: number;
   aiMatch?: {
     score: number;
     summary: string;

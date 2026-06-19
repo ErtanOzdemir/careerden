@@ -31,6 +31,7 @@ import { validateBody } from "../middleware/validate-body.js";
 export type JobApplicationWithDocuments = JobApplication & {
   documents: GeneratedDocument[];
   companyLogoUrl?: string;
+  matchScore?: number;
 };
 
 export type JobApplicationDetail = JobApplicationWithDocuments & {
@@ -449,15 +450,17 @@ export async function listJobApplicationsWithDocuments(
 
   return Promise.all(
     jobs.map(async (jobApplication) => {
-      const [documents, companyLogoUrl] = await Promise.all([
+      const [documents, companyLogoUrl, matchAnalysis] = await Promise.all([
         jobApplications.listGeneratedDocuments(jobApplication.id),
         getCompanyLogoUrl(jobApplications, storage, jobApplication.id),
+        jobApplications.getMatchAnalysis(jobApplication.id),
       ]);
 
       return {
         ...jobApplication,
         documents,
         ...(companyLogoUrl ? { companyLogoUrl } : {}),
+        ...(matchAnalysis ? { matchScore: matchAnalysis.matchScore } : {}),
       };
     }),
   );

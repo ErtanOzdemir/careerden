@@ -98,6 +98,7 @@ export function mapApiJobApplicationToUi(
     processingStatusLabel: formatProcessingStatus(application.status),
     processingFailureReason: application.failureReason,
     processingLog: detail ? mapProcessingLog(detail.events) : undefined,
+    matchScore: application.matchScore ?? detail?.matchAnalysis?.matchScore,
     metadata: application.tracking.metadata,
     interviewNotes: stringFromMetadata(application.tracking.metadata, "interviewNotes"),
     contacts: detail?.contacts.map((contact) => ({

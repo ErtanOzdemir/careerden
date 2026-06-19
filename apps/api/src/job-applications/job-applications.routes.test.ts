@@ -28,6 +28,14 @@ describe("job applications route behavior", () => {
     const jobApplications = createJobApplicationRepository({
       listByProfileId: vi.fn(async () => [job]),
       getCompanyLogoFileId: vi.fn(async () => "logos/acme.png"),
+      getMatchAnalysis: vi.fn(async () => ({
+        matchScore: 82,
+        missingSkills: [],
+        strongSkills: [],
+        recommendedAchievements: [],
+        customizedSummary: "",
+        interviewTips: [],
+      })),
       listGeneratedDocuments: vi.fn(async (jobApplicationId: string) =>
         jobApplicationId === job.id ? [document] : [],
       ),
@@ -46,6 +54,7 @@ describe("job applications route behavior", () => {
         ...job,
         companyLogoUrl: "http://localhost:9000/signed-logo",
         documents: [document],
+        matchScore: 82,
       },
     ]);
   });

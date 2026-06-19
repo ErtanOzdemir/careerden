@@ -106,6 +106,7 @@ export interface ApiJobApplication {
   documents?: ApiGeneratedDocument[];
   failureReason?: string;
   id: string;
+  matchScore?: number;
   profileId: string;
   sourceUrl?: string;
   status: string;

@@ -27,6 +27,7 @@ describe("API mappers", () => {
 
     expect(mapped.company).toBe("Acme");
     expect(mapped.logo).toBe("http://localhost:9000/signed-logo");
+    expect(mapped.matchScore).toBe(82);
     expect(mapped.role).toBe("Frontend Engineer");
     expect(mapped.domain).toBe("linkedin.com");
     expect(mapped.status).toBe("Interviewing");

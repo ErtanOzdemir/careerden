@@ -7,6 +7,7 @@ import type {
   ApiJobApplication,
   ApiJobApplicationAnalytics,
   ApiJobApplicationDetail,
+  ApiDocumentContent,
 } from "./types";
 
 export interface ListJobApplicationsParams {
@@ -96,6 +97,19 @@ export const jobApplicationsApi = {
     return requestJson<ApiJobApplicationDetail>(`/job-applications/${id}/documents/generate`, {
       method: "POST",
     });
+  },
+
+  updateDocumentContent(
+    id: string,
+    documentContent: ApiDocumentContent,
+  ): Promise<{ documentContent: ApiDocumentContent }> {
+    return requestJson<{ documentContent: ApiDocumentContent }>(
+      `/job-applications/${id}/document-content`,
+      {
+        method: "PUT",
+        body: { documentContent },
+      },
+    );
   },
 
   createContact(

@@ -117,6 +117,36 @@ export function mapApiJobApplicationToUi(
       createdAt: formatDate(document.createdAt),
     })),
     aiMatch: detail?.matchAnalysis ? mapMatchAnalysis(detail.matchAnalysis, profile) : undefined,
+    documentContent:
+      detail?.documentContent ??
+      (detail?.matchAnalysis ? mapInitialDocumentContent(detail.matchAnalysis) : undefined),
+  };
+}
+
+function mapInitialDocumentContent(match: ApiMatchAnalysis) {
+  return {
+    customizedSummary: richDocumentFromText(match.customizedSummary),
+    experienceEnhancements: (match.experienceEnhancements ?? []).map((enhancement) => ({
+      experienceIndex: enhancement.experienceIndex,
+      ...(enhancement.enhancedDescription
+        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
+        : {}),
+      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+    })),
+  };
+}
+
+function richDocumentFromText(text: string) {
+  return {
+    version: 1 as const,
+    blocks: text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => ({
+        type: "paragraph" as const,
+        children: [{ type: "text" as const, text: line }],
+      })),
   };
 }
 

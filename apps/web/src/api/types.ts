@@ -195,11 +195,59 @@ export interface ApiMatchAnalysis {
   strongSkills: string[];
 }
 
+export type RichTextMark =
+  | { type: "bold" }
+  | { type: "italic" }
+  | { type: "underline" }
+  | { type: "link"; href: string };
+
+export interface RichTextNode {
+  type: "text";
+  text: string;
+  marks?: RichTextMark[];
+}
+
+export type RichBlock =
+  | {
+      type: "paragraph";
+      alignment?: "left" | "center" | "right" | "justify";
+      children: RichTextNode[];
+    }
+  | {
+      type: "heading";
+      level: 1 | 2 | 3;
+      alignment?: "left" | "center" | "right" | "justify";
+      children: RichTextNode[];
+    }
+  | {
+      type: "bulletList" | "orderedList";
+      items: Array<{ blocks: RichBlock[] }>;
+    }
+  | {
+      type: "table";
+      rows: Array<{ cells: Array<{ blocks: RichBlock[] }> }>;
+    };
+
+export interface RichDocument {
+  version: 1;
+  blocks: RichBlock[];
+}
+
+export interface ApiDocumentContent {
+  customizedSummary: RichDocument;
+  experienceEnhancements: Array<{
+    experienceIndex: number;
+    description?: RichDocument;
+    achievements: RichDocument[];
+  }>;
+}
+
 export interface ApiJobApplicationDetail extends ApiJobApplication {
   contacts: ApiJobApplicationContact[];
   events: ApiJobApplicationEvent[];
   interviews: ApiJobApplicationInterview[];
   matchAnalysis: ApiMatchAnalysis | null;
+  documentContent: ApiDocumentContent | null;
   scrapeBundle: ApiScrapeBundle | null;
 }
 

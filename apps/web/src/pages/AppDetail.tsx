@@ -24,6 +24,7 @@ export default function AppDetail() {
   const [isAddingInterview, setIsAddingInterview] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
+  const [isSavingDocumentContent, setIsSavingDocumentContent] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [downloadingDocumentId, setDownloadingDocumentId] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
@@ -138,6 +139,26 @@ export default function AppDetail() {
       setError(generateError instanceof Error ? generateError.message : "Failed to create CV.");
     } finally {
       setIsGeneratingDocuments(false);
+    }
+  }
+
+  async function handleSaveDocumentContent(
+    documentContent: NonNullable<JobApplication["documentContent"]>,
+  ) {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setIsSavingDocumentContent(true);
+      setError(null);
+      await jobApplicationsApi.updateDocumentContent(id, documentContent);
+      setApp((current) => (current ? { ...current, documentContent } : current));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save document content.");
+      throw saveError;
+    } finally {
+      setIsSavingDocumentContent(false);
     }
   }
 
@@ -532,13 +553,18 @@ export default function AppDetail() {
 
         <div className="lg:col-span-5">
           <div className="sticky top-24 space-y-lg">
-            {app.aiMatch && (
+            {app.aiMatch && app.documentContent && (
               <AiMatchCard
                 aiMatch={app.aiMatch}
-                canCreateCv={app.processingStatus === "review_ready"}
+                canCreateCv={
+                  app.processingStatus === "review_ready" || app.processingStatus === "completed"
+                }
+                documentContent={app.documentContent}
                 hasGeneratedDocuments={(app.generatedDocuments?.length ?? 0) > 0}
                 isCreatingCv={isGeneratingDocuments}
+                isSavingContent={isSavingDocumentContent}
                 onCreateCv={handleGenerateDocuments}
+                onSaveContent={handleSaveDocumentContent}
               />
             )}
 

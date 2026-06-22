@@ -6,6 +6,7 @@ import type {
   ScrapeBundle,
   UserProfile,
 } from "@link2cv/domain";
+import { documentContentFromMatchAnalysis } from "@link2cv/domain";
 
 export class RunMatchAnalysisUseCase {
   constructor(
@@ -53,6 +54,10 @@ export class RunMatchAnalysisUseCase {
     });
 
     await this.jobApplications.saveMatchAnalysis(input.jobApplicationId, result);
+    await this.jobApplications.saveDocumentContent(
+      input.jobApplicationId,
+      documentContentFromMatchAnalysis(result),
+    );
 
     return result;
   }

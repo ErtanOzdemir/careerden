@@ -32,6 +32,8 @@ export class GenerateJobApplicationDocumentsUseCase {
       throw new Error(`Job application ${jobApplicationId} does not have AI analysis to approve`);
     }
 
+    const documentContent = await this.jobApplications.getDocumentContent(jobApplicationId);
+
     if (!canTransitionJobApplicationStatus(jobApplication.status, "generating_documents")) {
       throw new Error(
         `Invalid job application status transition: ${jobApplication.status} -> generating_documents`,
@@ -51,6 +53,7 @@ export class GenerateJobApplicationDocumentsUseCase {
         jobApplication,
         profile,
         analysis,
+        ...(documentContent ? { documentContent } : {}),
       });
 
       await this.jobApplications.updateStatus(jobApplicationId, "completed");

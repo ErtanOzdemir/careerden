@@ -1,7 +1,29 @@
 import { describe, expect, it } from "vitest";
+import { richDocumentFromText } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {
+  it("stores the latest editable document content", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    });
+    const first = {
+      customizedSummary: richDocumentFromText("AI summary"),
+      experienceEnhancements: [],
+    };
+    const edited = {
+      customizedSummary: richDocumentFromText("User-edited summary"),
+      experienceEnhancements: [],
+    };
+
+    await repository.saveDocumentContent(job.id, first);
+    await repository.saveDocumentContent(job.id, edited);
+
+    expect(await repository.getDocumentContent(job.id)).toEqual(edited);
+  });
+
   it("resets processing artifacts while preserving tracking data", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({

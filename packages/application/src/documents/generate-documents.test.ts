@@ -5,6 +5,7 @@ import type {
   StoredFileInput,
   TemplateRenderer,
 } from "@link2cv/domain";
+import { richDocumentFromText } from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
@@ -85,6 +86,18 @@ describe("GenerateDocumentsUseCase", () => {
           },
         ],
       },
+      documentContent: {
+        customizedSummary: richDocumentFromText("User-edited summary."),
+        experienceEnhancements: [
+          {
+            experienceIndex: 0,
+            description: richDocumentFromText(
+              "User-edited TypeScript automation for backend systems.",
+            ),
+            achievements: [richDocumentFromText("User-edited backend reliability achievement.")],
+          },
+        ],
+      },
     });
 
     expect(capturedDocxData[0]?.selected_experiences).toEqual([
@@ -94,8 +107,8 @@ describe("GenerateDocumentsUseCase", () => {
         start_date: "2022",
         end_date: "Present",
         period: "2022 - Present",
-        description: "Built TypeScript automation for backend systems.",
-        achievements: ["Improved backend reliability with TypeScript."],
+        description: richDocumentFromText("User-edited TypeScript automation for backend systems."),
+        achievements: [richDocumentFromText("User-edited backend reliability achievement.")],
         skills: [],
       },
     ]);

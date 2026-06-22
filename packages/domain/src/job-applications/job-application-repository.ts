@@ -3,6 +3,7 @@ import type {
   GeneratedDocumentFormat,
   GeneratedDocumentKind,
 } from "../documents/generated-document.js";
+import type { DocumentContent } from "../documents/rich-document.js";
 import type { MatchAnalysisResult } from "../matching/match-analysis.js";
 import type { ScrapeBundle } from "../scraping/scraped-data.js";
 import type {
@@ -66,6 +67,8 @@ export interface JobApplicationRepository {
   getCompanyLogoFileId(id: string): Promise<string | null>;
   saveMatchAnalysis(id: string, result: MatchAnalysisResult): Promise<void>;
   getMatchAnalysis(id: string): Promise<MatchAnalysisResult | null>;
+  saveDocumentContent(id: string, content: DocumentContent): Promise<void>;
+  getDocumentContent(id: string): Promise<DocumentContent | null>;
   addEvent(input: CreateJobApplicationEventInput): Promise<JobApplicationEvent>;
   listEvents(jobApplicationId: string): Promise<JobApplicationEvent[]>;
   createContact(input: CreateJobApplicationContactInput): Promise<JobApplicationContact>;

@@ -4,6 +4,7 @@ import type {
   CreateJobApplicationEventInput,
   CreateJobApplicationInput,
   CreateJobApplicationInterviewInput,
+  DocumentContent,
   JobApplicationChangePublisher,
   JobApplicationRepository,
   JobApplicationStatus,
@@ -90,6 +91,15 @@ export class PublishingJobApplicationRepository implements JobApplicationReposit
 
   getMatchAnalysis(id: string) {
     return this.repository.getMatchAnalysis(id);
+  }
+
+  async saveDocumentContent(id: string, content: DocumentContent) {
+    await this.repository.saveDocumentContent(id, content);
+    await this.publishForApplication(id);
+  }
+
+  getDocumentContent(id: string) {
+    return this.repository.getDocumentContent(id);
   }
 
   async addEvent(input: CreateJobApplicationEventInput) {

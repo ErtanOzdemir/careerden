@@ -5,9 +5,11 @@ import type {
   GenerateJobApplicationDocumentsUseCase,
   RetryJobApplicationUseCase,
   SubmitJobApplicationUseCase,
+  UpdateDocumentContentUseCase,
 } from "@link2cv/application";
 import type {
   FileStorage,
+  DocumentContent,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
@@ -28,6 +30,7 @@ import {
   updateJobApplicationContactSchema,
   updateJobApplicationInterviewSchema,
   updateJobApplicationSchema,
+  updateDocumentContentSchema,
 } from "@link2cv/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 
@@ -43,6 +46,7 @@ export type JobApplicationDetail = JobApplicationWithDocuments & {
   interviews: JobApplicationInterview[];
   scrapeBundle: ScrapeBundle | null;
   matchAnalysis: MatchAnalysisResult | null;
+  documentContent: DocumentContent | null;
 };
 
 export function createJobApplicationRouter(dependencies: {
@@ -50,6 +54,7 @@ export function createJobApplicationRouter(dependencies: {
   deleteJobApplication: DeleteJobApplicationUseCase;
   generateJobApplicationDocuments: GenerateJobApplicationDocumentsUseCase;
   retryJobApplication: RetryJobApplicationUseCase;
+  updateDocumentContent: UpdateDocumentContentUseCase;
   jobApplications: JobApplicationRepository;
   jobApplicationChanges: JobApplicationChangeSubscriber;
   storage: FileStorage;
@@ -435,6 +440,28 @@ export function createJobApplicationRouter(dependencies: {
     }
   });
 
+  router.put(
+    "/:id/document-content",
+    validateBody(updateDocumentContentSchema),
+    async (request, response, next) => {
+      try {
+        const documentContent = await dependencies.updateDocumentContent.execute(
+          request.params.id,
+          request.body.documentContent,
+        );
+
+        if (!documentContent) {
+          response.status(404).json({ error: "Job application not found" });
+          return;
+        }
+
+        response.json({ documentContent });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
   router.post("/:id/documents/generate", async (request, response, next) => {
     try {
       const jobApplication = await dependencies.jobApplications.findById(request.params.id);
@@ -499,6 +526,7 @@ export async function getJobApplicationDetail(input: {
   const interviews = await input.jobApplications.listInterviews(input.jobApplication.id);
   const scrapeBundle = await input.jobApplications.getScrapeBundle(input.jobApplication.id);
   const matchAnalysis = await input.jobApplications.getMatchAnalysis(input.jobApplication.id);
+  const documentContent = await input.jobApplications.getDocumentContent(input.jobApplication.id);
   const companyLogoUrl = await getCompanyLogoUrl(
     input.jobApplications,
     input.storage,
@@ -513,6 +541,7 @@ export async function getJobApplicationDetail(input: {
     interviews,
     scrapeBundle: toPublicScrapeBundle(scrapeBundle),
     matchAnalysis,
+    documentContent,
     ...(companyLogoUrl ? { companyLogoUrl } : {}),
   };
 }

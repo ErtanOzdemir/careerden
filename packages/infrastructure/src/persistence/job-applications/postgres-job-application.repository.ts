@@ -4,6 +4,7 @@ import type {
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
   CreateJobApplicationInterviewInput,
+  DocumentContent,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
@@ -102,6 +103,7 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
           scrape_bundle: null,
           company_logo_file_id: null,
           match_analysis: null,
+          document_content: null,
           updated_at: transaction.fn.now(),
         })
         .returning("*");
@@ -199,6 +201,24 @@ export class PostgresJobApplicationRepository implements JobApplicationRepositor
   async getMatchAnalysis(id: string): Promise<MatchAnalysisResult | null> {
     const row = await this.db("job_applications").select("match_analysis").where({ id }).first();
     return (row?.match_analysis as MatchAnalysisResult | undefined) ?? null;
+  }
+
+  async saveDocumentContent(id: string, content: DocumentContent): Promise<void> {
+    const updated = await this.db("job_applications")
+      .where({ id })
+      .update({
+        document_content: JSON.stringify(content),
+        updated_at: this.db.fn.now(),
+      });
+
+    if (updated === 0) {
+      throw new Error(`Job application ${id} was not found`);
+    }
+  }
+
+  async getDocumentContent(id: string): Promise<DocumentContent | null> {
+    const row = await this.db("job_applications").where({ id }).select("document_content").first();
+    return row?.document_content ? (row.document_content as DocumentContent) : null;
   }
 
   async addEvent(input: CreateJobApplicationEventInput): Promise<JobApplicationEvent> {

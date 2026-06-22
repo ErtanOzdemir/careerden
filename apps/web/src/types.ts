@@ -1,3 +1,5 @@
+import type { ApiDocumentContent } from "./api/types";
+
 export type ApplicationStatus = "Applied" | "Interviewing" | "Offer" | "Rejected";
 
 export type Priority = "High" | "Mid" | "Low";
@@ -83,6 +85,7 @@ export interface JobApplication {
   contacts?: Contact[];
   generatedDocuments?: GeneratedApplicationDocument[];
   matchScore?: number;
+  documentContent?: ApiDocumentContent;
   aiMatch?: {
     score: number;
     summary: string;

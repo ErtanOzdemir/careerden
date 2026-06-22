@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type {
+  DocumentContent,
   FileStorage,
   GeneratedDocument,
   JobApplication,
@@ -138,6 +139,21 @@ describe("job applications route behavior", () => {
     const interview = createInterview({ jobApplicationId: job.id });
     const event = createEvent({ jobApplicationId: job.id, title: "Interview scheduled" });
     const jobApplications = createJobApplicationRepository({
+      getDocumentContent: vi.fn(
+        async () =>
+          ({
+            customizedSummary: {
+              version: 1,
+              blocks: [
+                {
+                  type: "paragraph",
+                  children: [{ type: "text", text: "Editable summary" }],
+                },
+              ],
+            },
+            experienceEnhancements: [],
+          }) satisfies DocumentContent,
+      ),
       listContacts: vi.fn(async () => [contact]),
       listInterviews: vi.fn(async () => [interview]),
       listEvents: vi.fn(async () => [event]),
@@ -175,6 +191,7 @@ describe("job applications route behavior", () => {
     expect(detail.events).toEqual([event]);
     expect(detail.companyLogoUrl).toBe("http://localhost:9000/signed-logo");
     expect(detail.scrapeBundle?.companyLinkedIn).toEqual({ name: "Acme", raw: {} });
+    expect(detail.documentContent?.customizedSummary.blocks).toHaveLength(1);
   });
 });
 
@@ -195,6 +212,8 @@ function createJobApplicationRepository(
     getCompanyLogoFileId: vi.fn(async () => null),
     saveMatchAnalysis: vi.fn(),
     getMatchAnalysis: vi.fn(),
+    saveDocumentContent: vi.fn(),
+    getDocumentContent: vi.fn(async () => null),
     addEvent: vi.fn(),
     listEvents: vi.fn(async () => []),
     createContact: vi.fn(),

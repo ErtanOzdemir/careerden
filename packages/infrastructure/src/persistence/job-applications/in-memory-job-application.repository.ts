@@ -3,6 +3,7 @@ import type {
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
   CreateJobApplicationInterviewInput,
+  DocumentContent,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
@@ -24,6 +25,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   private readonly jobApplications = new Map<string, JobApplication>();
   private readonly scrapeBundles = new Map<string, ScrapeBundle>();
   private readonly matchAnalyses = new Map<string, MatchAnalysisResult>();
+  private readonly documentContents = new Map<string, DocumentContent>();
   private readonly documents = new Map<string, GeneratedDocument[]>();
   private readonly events = new Map<string, JobApplicationEvent[]>();
   private readonly contacts = new Map<string, JobApplicationContact[]>();
@@ -71,6 +73,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     this.jobApplications.delete(id);
     this.scrapeBundles.delete(id);
     this.matchAnalyses.delete(id);
+    this.documentContents.delete(id);
     this.documents.delete(id);
     this.events.delete(id);
     this.contacts.delete(id);
@@ -108,6 +111,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     this.jobApplications.set(id, updated);
     this.scrapeBundles.delete(id);
     this.matchAnalyses.delete(id);
+    this.documentContents.delete(id);
     this.documents.delete(id);
     return updated;
   }
@@ -189,6 +193,15 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
 
   async getMatchAnalysis(id: string): Promise<MatchAnalysisResult | null> {
     return this.matchAnalyses.get(id) ?? null;
+  }
+
+  async saveDocumentContent(id: string, content: DocumentContent): Promise<void> {
+    this.documentContents.set(id, structuredClone(content));
+  }
+
+  async getDocumentContent(id: string): Promise<DocumentContent | null> {
+    const content = this.documentContents.get(id);
+    return content ? structuredClone(content) : null;
   }
 
   async addEvent(input: CreateJobApplicationEventInput): Promise<JobApplicationEvent> {

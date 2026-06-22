@@ -16,7 +16,7 @@ const allowedTransitions: Record<JobApplicationStatus, JobApplicationStatus[]> =
   analyzing: ["review_ready", "failed"],
   review_ready: ["generating_documents", "failed"],
   generating_documents: ["completed", "failed"],
-  completed: [],
+  completed: ["generating_documents"],
   failed: [],
 };
 

@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import type { ApiDocumentContent, RichDocument } from "../api/types";
 import type { JobApplication } from "../types";
+import RichTextEditor, { RichTextViewer } from "./RichTextEditor";
 
 interface AiMatchCardProps {
   aiMatch: NonNullable<JobApplication["aiMatch"]>;
   canCreateCv: boolean;
   hasGeneratedDocuments: boolean;
   isCreatingCv: boolean;
+  isSavingContent: boolean;
+  documentContent: ApiDocumentContent;
+  onSaveContent: (content: ApiDocumentContent) => Promise<void>;
   onCreateCv: () => Promise<void> | void;
 }
 
@@ -23,16 +28,20 @@ export default function AiMatchCard({
   canCreateCv,
   hasGeneratedDocuments,
   isCreatingCv,
+  isSavingContent,
+  documentContent,
+  onSaveContent,
   onCreateCv,
 }: AiMatchCardProps) {
   const [isOpen, setIsOpen] = useState(canCreateCv && !hasGeneratedDocuments);
   const [activeStep, setActiveStep] = useState(0);
   const [isApproved, setIsApproved] = useState(false);
+  const [draftContent, setDraftContent] = useState(documentContent);
 
   const scoreRadius = 44;
   const circumference = 2 * Math.PI * scoreRadius;
   const offset = circumference - (aiMatch.score / 100) * circumference;
-  const createDisabled = !canCreateCv || !isApproved || isCreatingCv || hasGeneratedDocuments;
+  const createDisabled = !canCreateCv || !isApproved || isCreatingCv || isSavingContent;
 
   useEffect(() => {
     if (!isOpen) {
@@ -47,6 +56,10 @@ export default function AiMatchCard({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    setDraftContent(documentContent);
+  }, [documentContent]);
+
   async function handleCreateCv() {
     if (createDisabled) {
       return;
@@ -54,6 +67,12 @@ export default function AiMatchCard({
 
     await onCreateCv();
     setIsOpen(false);
+  }
+
+  async function handleSaveContent(content: ApiDocumentContent) {
+    await onSaveContent(content);
+    setDraftContent(content);
+    setIsApproved(false);
   }
 
   return (
@@ -100,7 +119,7 @@ export default function AiMatchCard({
           type="button"
         >
           <span className="material-symbols-outlined">rate_review</span>
-          {hasGeneratedDocuments ? "Review Created CV" : "Review Match"}
+          {hasGeneratedDocuments ? "Review and regenerate CV" : "Review Match"}
         </button>
       </section>
 
@@ -119,7 +138,9 @@ export default function AiMatchCard({
                     AI Match Intelligence
                   </h3>
                   <p className="text-body-sm text-secondary mt-1">
-                    {hasGeneratedDocuments ? "Documents created" : "Review AI changes"}
+                    {hasGeneratedDocuments
+                      ? "Review and regenerate documents"
+                      : "Review AI changes"}
                   </p>
                 </div>
                 <button
@@ -154,8 +175,24 @@ export default function AiMatchCard({
 
               <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-md sm:p-lg">
                 {activeStep === 0 && <MatchStep aiMatch={aiMatch} />}
-                {activeStep === 1 && <SummaryStep aiMatch={aiMatch} />}
-                {activeStep === 2 && <ExperienceStep aiMatch={aiMatch} />}
+                {activeStep === 1 && (
+                  <SummaryStep
+                    aiMatch={aiMatch}
+                    document={draftContent.customizedSummary}
+                    isSaving={isSavingContent}
+                    onSave={(customizedSummary) =>
+                      handleSaveContent({ ...draftContent, customizedSummary })
+                    }
+                  />
+                )}
+                {activeStep === 2 && (
+                  <ExperienceStep
+                    aiMatch={aiMatch}
+                    documentContent={draftContent}
+                    isSaving={isSavingContent}
+                    onSave={handleSaveContent}
+                  />
+                )}
                 {activeStep === 3 && <SkillsStep aiMatch={aiMatch} />}
                 {activeStep === 4 && (
                   <ApprovalStep
@@ -164,7 +201,6 @@ export default function AiMatchCard({
                     isApproved={isApproved}
                     isCreatingCv={isCreatingCv}
                     onApprovalChange={setIsApproved}
-                    onCreateCv={handleCreateCv}
                   />
                 )}
               </div>
@@ -203,7 +239,7 @@ export default function AiMatchCard({
                       {isCreatingCv
                         ? "Creating..."
                         : hasGeneratedDocuments
-                          ? "CV Created"
+                          ? "Regenerate CV"
                           : "Create CV"}
                     </button>
                   )}
@@ -349,20 +385,52 @@ function KeywordGroup(props: {
   );
 }
 
-function SummaryStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]> }) {
+function SummaryStep({
+  aiMatch,
+  document,
+  isSaving,
+  onSave,
+}: {
+  aiMatch: NonNullable<JobApplication["aiMatch"]>;
+  document: RichDocument;
+  isSaving: boolean;
+  onSave: (document: RichDocument) => Promise<void>;
+}) {
   return (
-    <CompareColumns
-      enhancedLabel="AI Enhanced Summary"
-      enhancedTitle="Tailored CV Summary"
-      enhancedValue={aiMatch.enhancedSummary}
-      originalLabel="Your Input"
-      originalTitle="Current Profile Summary"
-      originalValue={aiMatch.currentSummary}
-    />
+    <div className="grid md:grid-cols-2 gap-md">
+      <TextPanel
+        label="Your Input"
+        title="Current Profile Summary"
+        tone="neutral"
+        value={aiMatch.currentSummary}
+      />
+      <section className="rounded-lg border border-primary/40 bg-primary/10 p-md">
+        <span className="inline-flex px-2 py-1 rounded text-label-sm font-bold mb-sm bg-primary/20 text-primary">
+          AI Enhanced
+        </span>
+        <EditableRichDocumentField
+          ariaLabel="Tailored CV summary"
+          document={document}
+          isSaving={isSaving}
+          onSave={onSave}
+          title="Tailored CV Summary"
+        />
+      </section>
+    </div>
   );
 }
 
-function ExperienceStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]> }) {
+function ExperienceStep({
+  aiMatch,
+  documentContent,
+  isSaving,
+  onSave,
+}: {
+  aiMatch: NonNullable<JobApplication["aiMatch"]>;
+  documentContent: ApiDocumentContent;
+  isSaving: boolean;
+  onSave: (content: ApiDocumentContent) => Promise<void>;
+}) {
   const optimizations =
     aiMatch.experienceOptimizations && aiMatch.experienceOptimizations.length > 0
       ? aiMatch.experienceOptimizations
@@ -380,7 +448,7 @@ function ExperienceStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMa
 
   return (
     <div className="space-y-lg">
-      {optimizations.map((experience) => (
+      {optimizations.map((experience, experienceIndex) => (
         <section
           key={`${experience.company}-${experience.title}`}
           className="rounded-lg border border-outline-variant bg-surface-container-low p-md space-y-md"
@@ -391,14 +459,39 @@ function ExperienceStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMa
           </div>
           {experience.items.length > 0 ? (
             <div className="space-y-md">
-              {experience.items.map((item, index) => (
-                <ExperienceComparisonRow
-                  key={`${item.kind}-${item.actual}-${index}`}
-                  actual={item.actual}
-                  enhanced={item.enhanced}
-                  kind={item.kind}
-                />
-              ))}
+              {experience.items.map((item, index) => {
+                const enhancement = documentContent.experienceEnhancements.find(
+                  (candidate) => candidate.experienceIndex === experienceIndex,
+                );
+                const achievementIndex = experience.items
+                  .slice(0, index)
+                  .filter((candidate) => candidate.kind === "achievement").length;
+                const document =
+                  item.kind === "description"
+                    ? enhancement?.description
+                    : enhancement?.achievements[achievementIndex];
+
+                return (
+                  <ExperienceComparisonRow
+                    key={`${item.kind}-${item.actual}-${index}`}
+                    actual={item.actual}
+                    document={document}
+                    isSaving={isSaving}
+                    kind={item.kind}
+                    onSave={(updatedDocument) =>
+                      onSave(
+                        updateExperienceDocument(
+                          documentContent,
+                          experienceIndex,
+                          item.kind,
+                          achievementIndex,
+                          updatedDocument,
+                        ),
+                      )
+                    }
+                  />
+                );
+              })}
             </div>
           ) : (
             <p className="rounded-lg border border-dashed border-outline-variant bg-surface px-md py-sm text-body-md text-secondary">
@@ -426,14 +519,12 @@ function ApprovalStep({
   isApproved,
   isCreatingCv,
   onApprovalChange,
-  onCreateCv,
 }: {
   canCreateCv: boolean;
   hasGeneratedDocuments: boolean;
   isApproved: boolean;
   isCreatingCv: boolean;
   onApprovalChange: (value: boolean) => void;
-  onCreateCv: () => Promise<void>;
 }) {
   return (
     <div className="w-full max-w-3xl space-y-lg">
@@ -442,7 +533,7 @@ function ApprovalStep({
           <span className="material-symbols-outlined text-[20px] text-primary">
             {hasGeneratedDocuments ? "check_circle" : "verified"}
           </span>
-          <span>{hasGeneratedDocuments ? "CV already created" : "Approve AI changes"}</span>
+          <span>{hasGeneratedDocuments ? "Regenerate CV" : "Approve AI changes"}</span>
         </h4>
         {hasGeneratedDocuments ? (
           <div className="mt-3 flex min-h-20 w-full items-center gap-4 rounded-xl border border-primary/20 bg-primary/10 px-4 py-4">
@@ -452,7 +543,7 @@ function ApprovalStep({
                 Generated files ready
               </div>
               <div className="text-body-sm text-secondary">
-                Open the document list below to download the CV or cover letter.
+                Save any edits, approve them, then regenerate to replace the current files.
               </div>
             </div>
           </div>
@@ -465,58 +556,23 @@ function ApprovalStep({
         )}
       </div>
 
-      {!hasGeneratedDocuments && (
-        <label className="flex w-full items-start gap-3 rounded-lg border border-outline-variant p-md cursor-pointer">
-          <input
-            checked={isApproved}
-            className="mt-1 h-4 w-4 accent-primary"
-            disabled={!canCreateCv || isCreatingCv}
-            onChange={(event) => onApprovalChange(event.target.checked)}
-            type="checkbox"
-          />
-          <span>
-            <span className="block font-bold">I approve these AI-enhanced CV changes.</span>
-            <span className="block text-body-sm text-secondary mt-1">
-              Create the CV and cover letter from this reviewed match analysis.
-            </span>
+      <label className="flex w-full items-start gap-3 rounded-lg border border-outline-variant p-md cursor-pointer">
+        <input
+          checked={isApproved}
+          className="mt-1 h-4 w-4 accent-primary"
+          disabled={!canCreateCv || isCreatingCv}
+          onChange={(event) => onApprovalChange(event.target.checked)}
+          type="checkbox"
+        />
+        <span>
+          <span className="block font-bold">I approve these CV changes.</span>
+          <span className="block text-body-sm text-secondary mt-1">
+            {hasGeneratedDocuments
+              ? "Replace the generated CV and cover letter with the saved content."
+              : "Create the CV and cover letter from this saved content."}
           </span>
-        </label>
-      )}
-
-      <button
-        className="w-full sm:w-auto px-5 py-3 rounded-lg bg-primary text-on-primary font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-        disabled={!canCreateCv || !isApproved || isCreatingCv || hasGeneratedDocuments}
-        onClick={() => void onCreateCv()}
-        type="button"
-      >
-        <span className="material-symbols-outlined">
-          {hasGeneratedDocuments ? "check_circle" : "description"}
         </span>
-        {isCreatingCv ? "Creating..." : hasGeneratedDocuments ? "CV Created" : "Create CV"}
-      </button>
-    </div>
-  );
-}
-
-function CompareColumns({
-  enhancedLabel,
-  enhancedTitle,
-  enhancedValue,
-  originalLabel,
-  originalTitle,
-  originalValue,
-}: {
-  enhancedLabel: string;
-  enhancedTitle: string;
-  enhancedValue: string;
-  originalLabel: string;
-  originalTitle: string;
-  originalValue: string;
-}) {
-  return (
-    <div className="grid md:grid-cols-2 gap-md">
-      <TextPanel label={originalLabel} title={originalTitle} tone="neutral" value={originalValue} />
-      <TextPanel label={enhancedLabel} title={enhancedTitle} tone="primary" value={enhancedValue} />
+      </label>
     </div>
   );
 }
@@ -555,12 +611,16 @@ function TextPanel({
 
 function ExperienceComparisonRow({
   actual,
-  enhanced,
+  document,
+  isSaving,
   kind,
+  onSave,
 }: {
   actual: string;
-  enhanced?: string;
+  document?: RichDocument;
+  isSaving: boolean;
   kind: "achievement" | "description";
+  onSave: (document: RichDocument) => Promise<void>;
 }) {
   return (
     <section className="rounded-lg bg-surface p-md">
@@ -581,13 +641,139 @@ function ExperienceComparisonRow({
           <span className="text-label-sm font-bold uppercase text-primary">
             AI Enhanced Version
           </span>
-          <p className="text-body-md text-on-surface-variant">
-            {enhanced ?? "No AI-enhanced version available for this item."}
-          </p>
+          {document ? (
+            <EditableRichDocumentField
+              ariaLabel={`Enhanced ${kind}`}
+              document={document}
+              isSaving={isSaving}
+              onSave={onSave}
+            />
+          ) : (
+            <p className="text-body-md text-on-surface-variant">
+              No AI-enhanced version available for this item.
+            </p>
+          )}
         </div>
       </div>
     </section>
   );
+}
+
+function EditableRichDocumentField({
+  ariaLabel,
+  document,
+  isSaving,
+  onSave,
+  title,
+}: {
+  ariaLabel: string;
+  document: RichDocument;
+  isSaving: boolean;
+  onSave: (document: RichDocument) => Promise<void>;
+  title?: string;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(document);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraft(document);
+    }
+  }, [document, isEditing]);
+
+  function cancelEditing() {
+    setDraft(document);
+    setIsEditing(false);
+  }
+
+  async function saveEditing() {
+    try {
+      await onSave(draft);
+      setIsEditing(false);
+    } catch {
+      // The parent displays the API error and the local draft remains available.
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-sm flex items-center justify-between gap-sm">
+        {title ? <h4 className="text-body-lg font-bold">{title}</h4> : <span />}
+        {!isEditing && (
+          <button
+            className="inline-flex items-center gap-1 rounded-lg border border-primary px-3 py-1.5 text-label-md font-bold text-primary hover:bg-primary/10"
+            disabled={isSaving}
+            onClick={() => setIsEditing(true)}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">edit</span>
+            Edit
+          </button>
+        )}
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-sm">
+          <RichTextEditor ariaLabel={ariaLabel} onChange={setDraft} value={draft} />
+          <div className="flex justify-end gap-2">
+            <button
+              className="rounded-lg border border-outline-variant px-3 py-2 text-label-md font-bold text-secondary hover:bg-surface-container-high disabled:opacity-60"
+              disabled={isSaving}
+              onClick={cancelEditing}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-label-md font-bold text-on-primary disabled:opacity-60"
+              disabled={isSaving}
+              onClick={() => void saveEditing()}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">save</span>
+              {isSaving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <RichTextViewer ariaLabel={ariaLabel} value={document} />
+      )}
+    </div>
+  );
+}
+
+function updateExperienceDocument(
+  content: ApiDocumentContent,
+  experienceIndex: number,
+  kind: "achievement" | "description",
+  achievementIndex: number,
+  document: RichDocument,
+): ApiDocumentContent {
+  const existing = content.experienceEnhancements.find(
+    (enhancement) => enhancement.experienceIndex === experienceIndex,
+  ) ?? {
+    experienceIndex,
+    achievements: [],
+  };
+  const updated =
+    kind === "description"
+      ? { ...existing, description: document }
+      : {
+          ...existing,
+          achievements: existing.achievements.map((achievement, index) =>
+            index === achievementIndex ? document : achievement,
+          ),
+        };
+
+  return {
+    ...content,
+    experienceEnhancements: [
+      ...content.experienceEnhancements.filter(
+        (enhancement) => enhancement.experienceIndex !== experienceIndex,
+      ),
+      updated,
+    ].sort((left, right) => left.experienceIndex - right.experienceIndex),
+  };
 }
 
 function TagPanel({ label, skills, title }: { label: string; skills: string[]; title: string }) {

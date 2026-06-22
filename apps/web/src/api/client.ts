@@ -4,7 +4,7 @@ type QueryValue = boolean | number | string | null | undefined;
 
 interface RequestJsonOptions {
   body?: unknown;
-  method?: "DELETE" | "GET" | "PATCH" | "POST";
+  method?: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
   query?: Record<string, QueryValue>;
 }
 

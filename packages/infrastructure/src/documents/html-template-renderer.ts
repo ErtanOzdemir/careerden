@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { TemplateRenderer } from "@link2cv/domain";
+import { isRichDocument, renderRichDocumentToHtml } from "./rich-document-html.js";
 
 export class HtmlTemplateRenderer implements TemplateRenderer {
   constructor(private readonly templateDir = join(import.meta.dirname, "templates")) {}
@@ -20,7 +21,17 @@ function stringifyTemplateValue(value: unknown): string {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => `<li>${escapeHtml(stringifyPlainValue(item))}</li>`).join("");
+    return value
+      .map((item) =>
+        isRichDocument(item)
+          ? `<li>${renderRichDocumentToHtml(item)}</li>`
+          : `<li>${escapeHtml(stringifyPlainValue(item))}</li>`,
+      )
+      .join("");
+  }
+
+  if (isRichDocument(value)) {
+    return renderRichDocumentToHtml(value);
   }
 
   return escapeHtml(stringifyPlainValue(value));

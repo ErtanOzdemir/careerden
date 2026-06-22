@@ -9,6 +9,7 @@ import {
   RetryJobApplicationUseCase,
   SubmitJobApplicationUseCase,
   UpdateProfileUseCase,
+  UpdateDocumentContentUseCase,
 } from "@link2cv/application";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { createLinkedInSessionRouter } from "./scraping/linkedin-session.routes.js";
@@ -34,7 +35,7 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
   const app = express();
 
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: "300kb" }));
 
   app.get("/health", (_request, response) => {
     response.json({ status: "ok" });
@@ -69,6 +70,7 @@ export function createApiApp(options: ApiAppOptions = {}): Express {
       ),
       deleteJobApplication: new DeleteJobApplicationUseCase(jobApplications, storage),
       retryJobApplication: new RetryJobApplicationUseCase(jobApplications, queue, storage),
+      updateDocumentContent: new UpdateDocumentContentUseCase(jobApplications),
       jobApplications,
       jobApplicationChanges,
       storage,

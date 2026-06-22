@@ -132,6 +132,13 @@ describe("ProcessJobApplicationUseCase", () => {
     expect(eventsAfterApproval.map((event) => event.title)).toContain(
       "Document generation completed",
     );
+
+    await new GenerateJobApplicationDocumentsUseCase(jobApplications, profiles, documents).execute(
+      jobApplication.id,
+    );
+
+    expect((await jobApplications.findById(jobApplication.id))?.status).toBe("completed");
+    expect(await jobApplications.listGeneratedDocuments(jobApplication.id)).toHaveLength(2);
   });
 
   it("continues processing when the company logo cannot be downloaded", async () => {

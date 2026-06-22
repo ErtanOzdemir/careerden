@@ -36,6 +36,7 @@ create table job_applications (
   scrape_bundle jsonb,
   company_logo_file_id text,
   match_analysis jsonb,
+  document_content jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

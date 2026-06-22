@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import PizZip from "pizzip";
 import type { DocumentTemplate } from "@link2cv/domain";
+import type { RichDocument } from "@link2cv/domain";
 import { DocxtemplaterTemplateRenderer, buildDocxAliasData } from "./docx-template-renderer.js";
 
 describe("buildDocxAliasData", () => {
@@ -78,6 +79,80 @@ describe("buildDocxAliasData", () => {
 });
 
 describe("DocxtemplaterTemplateRenderer", () => {
+  it("renders a standalone rich placeholder as native Word content", async () => {
+    const renderer = new DocxtemplaterTemplateRenderer();
+    const template = createTemplate({
+      placeholders: ["summary"],
+      variableAliases: { fields: { customized_summary: "summary" } },
+    });
+    const richSummary: RichDocument = {
+      version: 1,
+      blocks: [
+        {
+          type: "heading",
+          level: 2,
+          alignment: "center",
+          children: [{ type: "text", text: "Profile", marks: [{ type: "bold" }] }],
+        },
+        {
+          type: "bulletList",
+          items: [
+            {
+              blocks: [
+                {
+                  type: "paragraph",
+                  children: [{ type: "text", text: "TypeScript", marks: [{ type: "italic" }] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const rendered = await renderer.render({
+      data: { customized_summary: richSummary },
+      template,
+      templateBody: createMinimalDocx("{{summary}}"),
+    });
+
+    const zip = new PizZip(rendered);
+    const documentXml = zip.file("word/document.xml")?.asText() ?? "";
+
+    expect(documentXml).toContain('<w:pStyle w:val="Heading2"/>');
+    expect(documentXml).toContain('<w:jc w:val="center"/>');
+    expect(documentXml).toContain("<w:b/>");
+    expect(documentXml).toContain("<w:i/>");
+    expect(documentXml).toContain("<w:numPr>");
+    expect(zip.file("word/numbering.xml")?.asText()).toContain("w:abstractNum");
+  });
+
+  it("rejects a rich placeholder embedded in surrounding text", async () => {
+    const renderer = new DocxtemplaterTemplateRenderer();
+    const template = createTemplate({
+      placeholders: ["summary"],
+      variableAliases: { fields: { customized_summary: "summary" } },
+    });
+
+    await expect(
+      renderer.render({
+        data: {
+          customized_summary: {
+            version: 1,
+            blocks: [
+              {
+                type: "paragraph",
+                children: [{ type: "text", text: "Summary" }],
+              },
+            ],
+          },
+        },
+        template,
+        templateBody: createMinimalDocx("Before {{summary}} after"),
+      }),
+    ).rejects.toThrow('Rich DOCX placeholder "summary" must occupy its own paragraph');
+  });
+
   it("renders mapped template variables and leaves unknown placeholders untouched", async () => {
     const renderer = new DocxtemplaterTemplateRenderer();
     const template: DocumentTemplate = {
@@ -120,6 +195,26 @@ describe("DocxtemplaterTemplateRenderer", () => {
     expect(documentXml).toContain("{{leave_me}}");
   });
 });
+
+function createTemplate(overrides: Partial<DocumentTemplate> = {}): DocumentTemplate {
+  return {
+    fieldMappings: {},
+    fileId: "templates/cv.docx",
+    fileName: "cv.docx",
+    format: "docx",
+    id: "template-1",
+    isDefault: true,
+    kind: "cv",
+    placeholders: [],
+    profileId: "profile-1",
+    size: 1,
+    variableAliases: { fields: {} },
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
 
 function createMinimalDocx(text: string): Buffer {
   const zip = new PizZip();

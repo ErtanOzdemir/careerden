@@ -1,5 +1,6 @@
 import type {
   DocumentRenderer,
+  DocumentContent,
   DocxTemplateRenderer,
   FileStorage,
   GeneratedDocument,
@@ -13,6 +14,7 @@ import type {
   UserProfile,
   UserProfileRepository,
 } from "@link2cv/domain";
+import { documentContentFromMatchAnalysis } from "@link2cv/domain";
 
 export class GenerateDocumentsUseCase {
   constructor(
@@ -29,9 +31,18 @@ export class GenerateDocumentsUseCase {
     jobApplication: JobApplication;
     profile: UserProfile;
     analysis: MatchAnalysisResult;
+    documentContent?: DocumentContent;
   }): Promise<GeneratedDocument[]> {
     const scrape = await this.jobApplications.getScrapeBundle(input.jobApplicationId);
-    const data = toTemplateData(input.profile, input.analysis, input.jobApplication, scrape);
+    const documentContent =
+      input.documentContent ?? documentContentFromMatchAnalysis(input.analysis);
+    const data = toTemplateData(
+      input.profile,
+      input.analysis,
+      documentContent,
+      input.jobApplication,
+      scrape,
+    );
     const generated: GeneratedDocument[] = [];
     const cvTemplate = await this.profiles.findDefaultDocumentTemplate(input.profile.id, "cv");
 
@@ -134,6 +145,7 @@ export class GenerateDocumentsUseCase {
 function toTemplateData(
   profile: UserProfile,
   analysis: MatchAnalysisResult,
+  documentContent: DocumentContent,
   jobApplication: JobApplication,
   scrape: ScrapeBundle | null,
 ): Record<string, unknown> {
@@ -155,12 +167,12 @@ function toTemplateData(
     education_list: profile.education,
     selected_education: toSelectedEducation(profile.education),
     experience_list: profile.experience,
-    selected_experiences: toSelectedExperiences(profile.experience, analysis),
+    selected_experiences: toSelectedExperiences(profile.experience, documentContent),
     match_score: analysis.matchScore,
     missing_skills: analysis.missingSkills,
     strong_skills: analysis.strongSkills,
     recommended_achievements: analysis.recommendedAchievements,
-    customized_summary: analysis.customizedSummary,
+    customized_summary: documentContent.customizedSummary,
     interview_tips: analysis.interviewTips,
     cover_letter_guidance: analysis.coverLetterGuidance ?? [],
   };
@@ -185,10 +197,10 @@ function toSelectedEducation(education: ProfileEducation[]): Record<string, unkn
 
 function toSelectedExperiences(
   experiences: ProfileExperience[],
-  analysis: MatchAnalysisResult,
+  documentContent: DocumentContent,
 ): Record<string, unknown>[] {
   return experiences.map((experience, index) => {
-    const enhancement = analysis.experienceEnhancements?.find(
+    const enhancement = documentContent.experienceEnhancements.find(
       (item) => item.experienceIndex === index,
     );
     const startDate = experience.startDate ?? "";
@@ -200,14 +212,20 @@ function toSelectedExperiences(
       start_date: startDate,
       end_date: endDate || "Present",
       period: formatPeriod(startDate, endDate),
-      description: enhancement?.enhancedDescription ?? experience.description ?? "",
+      description:
+        enhancement?.description ??
+        (experience.description ? documentContentFromText(experience.description) : ""),
       achievements:
-        enhancement?.enhancedAchievements && enhancement.enhancedAchievements.length > 0
-          ? enhancement.enhancedAchievements
-          : experience.achievements,
+        enhancement?.achievements && enhancement.achievements.length > 0
+          ? enhancement.achievements
+          : experience.achievements.map(documentContentFromText),
       skills: experience.skills ?? [],
     };
   });
+}
+
+function documentContentFromText(value: string) {
+  return documentContentFromMatchAnalysis({ customizedSummary: value }).customizedSummary;
 }
 
 function formatPeriod(startDate: string, endDate: string): string {

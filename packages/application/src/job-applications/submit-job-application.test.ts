@@ -18,7 +18,7 @@ describe("SubmitJobApplicationUseCase", () => {
     });
     const queue: JobApplicationQueue = {
       async enqueue() {
-        throw new Error("REDIS_URL is required");
+        throw new Error("Queue unavailable");
       },
       async restart() {},
     };
@@ -28,12 +28,12 @@ describe("SubmitJobApplicationUseCase", () => {
         profileId: profile.id,
         sourceUrl: "https://www.linkedin.com/jobs/view/123",
       }),
-    ).rejects.toThrow("REDIS_URL is required");
+    ).rejects.toThrow("Queue unavailable");
 
     const [jobApplication] = await jobApplications.listByProfileId(profile.id);
 
     expect(jobApplication?.status).toBe("failed");
-    expect(jobApplication?.failureReason).toBe("REDIS_URL is required");
+    expect(jobApplication?.failureReason).toBe("Queue unavailable");
   });
 
   it("creates manual tracker applications without enqueueing background work", async () => {

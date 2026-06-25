@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/documents/templates dist/persistence/migrations && cp src/documents/templates/*.html dist/documents/templates/ && cp src/persistence/migrations/*.cjs dist/persistence/migrations/",
+    "build": "rm -rf dist && tsc -p tsconfig.json && mkdir -p dist/documents/templates dist/persistence/migrations && cp src/documents/templates/*.html dist/documents/templates/ && cp src/persistence/migrations/*.cjs dist/persistence/migrations/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -20,16 +20,12 @@
     "@ai-sdk/deepseek": "^2.0.0",
     "@ai-sdk/google": "^2.0.0",
     "@ai-sdk/openai": "^2.0.0",
-    "@aws-sdk/client-s3": "^3.744.0",
-    "@aws-sdk/s3-request-presigner": "^3.744.0",
     "@link2cv/contracts": "workspace:*",
     "@link2cv/domain": "workspace:*",
     "ai": "^6.0.0",
-    "bullmq": "^5.34.2",
+    "better-sqlite3": "^11.7.0",
     "docxtemplater": "^3.68.7",
-    "ioredis": "^5.4.2",
     "knex": "^3.1.0",
-    "pg": "^8.13.1",
     "pizzip": "^3.2.0",
     "playwright": "^1.49.1",
     "zod": "^3.24.1"

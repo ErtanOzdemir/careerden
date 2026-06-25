@@ -59,4 +59,4 @@ When deploying Link2CV:
 - Use strong, unique values for `LINKEDIN_SESSION_SECRET`.
 - Keep dependencies updated regularly.
 - Use HTTPS in production.
-- Restrict database and Redis access to trusted networks.
+- Restrict database access to trusted networks.

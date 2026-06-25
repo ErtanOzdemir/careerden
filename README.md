@@ -10,7 +10,6 @@ Turn LinkedIn job postings into profile-aware CV and cover-letter PDFs. Link2CV 
 
 - **Node.js** 22+ (run `nvm use` to auto-select)
 - **pnpm** 9.15+
-- **Docker** (for PostgreSQL, Redis, and RustFS)
 
 ### Setup
 
@@ -22,20 +21,14 @@ cd link2cv
 # Install dependencies
 pnpm install
 
-# Start local services (PostgreSQL + Redis + RustFS)
-docker compose up -d
-
 # Copy environment variables
 cp .env.example .env
-
-# Apply database migrations
-pnpm db:migrate
 
 # Start development servers
 pnpm dev
 ```
 
-The API server runs at `http://localhost:3000` by default.
+The desktop app starts an embedded API server on an available local port. The web app reads that port from the desktop launch URL in desktop mode.
 
 ## Architecture
 
@@ -44,10 +37,10 @@ Link2CV is a TypeScript monorepo using clean architecture with clear separation 
 ```
 link2cv/
 ├── apps/
-│   ├── api/          Express HTTP API
-│   ├── worker/       BullMQ background worker
+│   ├── desktop/      Electron desktop app and embedded server
 │   └── web/          Frontend (vanilla TypeScript + Vite)
 ├── packages/
+│   ├── api/          Express HTTP routes, middleware, and request mapping
 │   ├── domain/       Entities, workflow state, provider interfaces
 │   ├── application/  Use cases and orchestration
 │   ├── infrastructure/  DB, scrapers, AI, PDF, queue, storage adapters
@@ -66,8 +59,8 @@ Backend source is organized by bounded context inside those packages. Common con
 | Package Manager | pnpm 9                                   |
 | Monorepo        | Turborepo 2                              |
 | HTTP Framework  | Express 4                                |
-| Database        | PostgreSQL 16                            |
-| Queue           | BullMQ 5 (Redis 7)                       |
+| Database        | SQLite via better-sqlite3 + Knex         |
+| Queue           | In-process job processing                |
 | AI              | Vercel AI SDK (OpenAI, Gemini, DeepSeek) |
 | Browser         | Playwright                               |
 | Validation      | Zod 3                                    |
@@ -88,24 +81,16 @@ LinkedIn URL → Scrape Job → AI Match Analysis → Generate Documents → PDF
 
 Copy `.env.example` to `.env` and configure:
 
-| Variable                       | Description                                         | Default                                             |
-| ------------------------------ | --------------------------------------------------- | --------------------------------------------------- |
-| `NODE_ENV`                     | Runtime environment                                 | `development`                                       |
-| `PORT`                         | API server port                                     | `3000`                                              |
-| `DATABASE_URL`                 | PostgreSQL connection string                        | `postgres://link2cv:link2cv@localhost:5432/link2cv` |
-| `REDIS_URL`                    | Redis connection string                             | `redis://localhost:6379`                            |
-| `AI_PROVIDER`                  | AI provider to use (`openai`, `gemini`, `deepseek`) | `openai`                                            |
-| `OPENAI_API_KEY`               | OpenAI API key                                      | —                                                   |
-| `GEMINI_API_KEY`               | Google Gemini API key                               | —                                                   |
-| `DEEPSEEK_API_KEY`             | DeepSeek API key                                    | —                                                   |
-| `RUSTFS_ENDPOINT`              | RustFS S3 endpoint                                  | `http://localhost:9000`                             |
-| `RUSTFS_ACCESS_KEY`            | RustFS access key                                   | `rustfsadmin`                                       |
-| `RUSTFS_SECRET_KEY`            | RustFS secret key                                   | `rustfsadmin`                                       |
-| `RUSTFS_BUCKET`                | RustFS bucket for generated documents               | `link2cv-files`                                     |
-| `RUSTFS_REGION`                | S3 region used by the RustFS client                 | `us-east-1`                                         |
-| `RUSTFS_PUBLIC_ENDPOINT`       | Optional endpoint used in generated signed URLs     | —                                                   |
-| `LINKEDIN_SESSION_STORAGE_DIR` | LinkedIn session storage                            | `./storage/linkedin-session`                        |
-| `LINKEDIN_SESSION_SECRET`      | Secret for LinkedIn session encryption              | —                                                   |
+| Variable                       | Description                                         | Default                      |
+| ------------------------------ | --------------------------------------------------- | ---------------------------- |
+| `NODE_ENV`                     | Runtime environment                                 | `development`                |
+| `PORT`                         | API server port                                     | `3000`                       |
+| `AI_PROVIDER`                  | AI provider to use (`openai`, `gemini`, `deepseek`) | `openai`                     |
+| `OPENAI_API_KEY`               | OpenAI API key                                      | —                            |
+| `GEMINI_API_KEY`               | Google Gemini API key                               | —                            |
+| `DEEPSEEK_API_KEY`             | DeepSeek API key                                    | —                            |
+| `LINKEDIN_SESSION_STORAGE_DIR` | LinkedIn session storage                            | `./storage/linkedin-session` |
+| `LINKEDIN_SESSION_SECRET`      | Secret for LinkedIn session encryption              | —                            |
 
 ## API Endpoints
 
@@ -158,17 +143,8 @@ pnpm test
 # Build all packages
 pnpm build
 
-# Apply PostgreSQL migrations
-pnpm db:migrate
-
-# Check migration status
-pnpm db:status
-
-# Roll back the latest migration batch
-pnpm db:rollback
-
 # Run a specific package's dev script
-pnpm --filter @link2cv/api dev
+pnpm --filter @link2cv/desktop dev
 ```
 
 ## Testing

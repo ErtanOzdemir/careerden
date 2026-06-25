@@ -24,7 +24,6 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 - Node.js 22+
 - pnpm 9.15+
-- Docker (for PostgreSQL and Redis)
 - Git
 
 ### Setup
@@ -44,20 +43,14 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
    pnpm install
    ```
 
-4. **Start local services**:
-
-   ```bash
-   docker compose up -d
-   ```
-
-5. **Set up environment**:
+4. **Set up environment**:
 
    ```bash
    cp .env.example .env
    # Edit .env with your API keys if needed
    ```
 
-6. **Start development**:
+5. **Start development**:
    ```bash
    pnpm dev
    ```
@@ -182,8 +175,7 @@ Context placement by layer:
 | Use cases               | `packages/application/src/<context>`               |
 | Zod/API contracts       | `packages/contracts/src/<context>`                 |
 | Infrastructure adapters | `packages/infrastructure/src/<adapter-or-context>` |
-| API routes              | `apps/api/src/<context>`                           |
-| Worker queue/processors | `apps/worker/src/<context>`                        |
+| API routes              | `packages/api/src/<context>`                       |
 | Frontend UI             | `apps/web/src`                                     |
 
 Current backend contexts are `profiles`, `job-applications`, `scraping`, `matching`, `documents`, `storage`, `persistence`, and `queue`.
@@ -225,15 +217,15 @@ pnpm vitest --filter @link2cv/contracts
 1. Define the interface in the relevant `packages/domain/src/<context>` folder.
 2. Implement the adapter in the relevant `packages/infrastructure/src/<context-or-adapter>` folder.
 3. Add configuration to `packages/config`.
-4. Register in the composition root (`apps/api` or `apps/worker`).
+4. Register in the composition root (`apps/desktop`).
 5. Add tests for the implementation.
 
 ### New API Endpoint
 
 1. Define the Zod schema in the relevant `packages/contracts/src/<context>` folder.
 2. Create the use case in the relevant `packages/application/src/<context>` folder.
-3. Add the route in the relevant `apps/api/src/<context>` folder.
-4. Register the route in `apps/api/src/app.ts`.
+3. Add the route in the relevant `packages/api/src/<context>` folder.
+4. Register the route in `packages/api/src/app.ts`.
 5. Add tests.
 
 ### New Document Template

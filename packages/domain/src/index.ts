@@ -11,6 +11,7 @@ export * from "./scraping/remote-image-fetcher.js";
 export * from "./scraping/scraped-data.js";
 export * from "./matching/ai-provider.js";
 export * from "./matching/match-analysis.js";
+export * from "./matching/premium-ai-service.js";
 export * from "./documents/document-renderer.js";
 export * from "./documents/document-template.js";
 export * from "./documents/docx-pdf-renderer.js";

@@ -6,18 +6,10 @@ import { z } from "zod";
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
-  DATABASE_URL: z.string().url().default("postgres://link2cv:link2cv@localhost:5432/link2cv"),
-  REDIS_URL: z.string().url().optional(),
   AI_PROVIDER: z.enum(["openai", "gemini", "deepseek"]).default("openai"),
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
-  RUSTFS_ENDPOINT: z.string().url().default("http://localhost:9000"),
-  RUSTFS_ACCESS_KEY: z.string().default("rustfsadmin"),
-  RUSTFS_SECRET_KEY: z.string().default("rustfsadmin"),
-  RUSTFS_BUCKET: z.string().min(1).default("link2cv-files"),
-  RUSTFS_REGION: z.string().min(1).default("us-east-1"),
-  RUSTFS_PUBLIC_ENDPOINT: z.string().url().optional(),
   LINKEDIN_SESSION_STORAGE_DIR: z.string().default("./storage/linkedin-session"),
   LINKEDIN_SESSION_SECRET: z.string().default("dev-only-linkedin-session-secret"),
 });

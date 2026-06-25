@@ -54,14 +54,14 @@ describe("RetryJobApplicationUseCase", () => {
     });
     await repository.updateStatus(job.id, "failed", "Scraping failed");
     const queue = createQueue();
-    vi.mocked(queue.restart).mockRejectedValue(new Error("Redis unavailable"));
+    vi.mocked(queue.restart).mockRejectedValue(new Error("Queue unavailable"));
     const useCase = new RetryJobApplicationUseCase(repository, queue, createStorage());
 
-    await expect(useCase.execute(job.id)).rejects.toThrow("Redis unavailable");
+    await expect(useCase.execute(job.id)).rejects.toThrow("Queue unavailable");
 
     const failed = await repository.findById(job.id);
     expect(failed?.status).toBe("failed");
-    expect(failed?.failureReason).toBe("Redis unavailable");
+    expect(failed?.failureReason).toBe("Queue unavailable");
   });
 });
 

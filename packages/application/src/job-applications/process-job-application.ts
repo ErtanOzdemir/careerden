@@ -21,8 +21,8 @@ export class ProcessJobApplicationUseCase {
       companyWebsite: JobSiteScraper;
       careerPage: JobSiteScraper;
     },
-    private readonly requirementExtraction: ExtractJobRequirementsUseCase,
-    private readonly matching: RunMatchAnalysisUseCase,
+    private readonly requirementExtraction?: ExtractJobRequirementsUseCase,
+    private readonly matching?: RunMatchAnalysisUseCase,
     private readonly storage?: FileStorage,
     private readonly remoteImages?: RemoteImageFetcher,
   ) {}
@@ -53,10 +53,12 @@ export class ProcessJobApplicationUseCase {
       });
 
       const scrapedJob = await this.scrapers.job.scrapeJob(jobApplication.sourceUrl);
-      const job = await this.requirementExtraction.execute({
-        jobApplicationId,
-        job: scrapedJob,
-      });
+      const job = this.requirementExtraction
+        ? await this.requirementExtraction.execute({
+            jobApplicationId,
+            job: scrapedJob,
+          })
+        : scrapedJob;
       const scrapedCompanyLinkedIn = await this.scrapers.companyLinkedIn.scrapeCompany({
         companyName: job.companyName,
         linkedInUrl: job.companyLinkedInUrl,
@@ -89,32 +91,43 @@ export class ProcessJobApplicationUseCase {
         title: "Scraping completed",
         metadata: { companyName: job.companyName, roleTitle: job.title },
       });
-      await this.transition(jobApplicationId, "scraping", "analyzing");
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "AI analysis started",
-      });
 
-      const analysis = await this.matching.execute({
-        jobApplicationId,
-        profile,
-        scrape,
-      });
+      if (this.matching) {
+        await this.transition(jobApplicationId, "scraping", "analyzing");
+        await this.jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "AI analysis started",
+        });
 
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "AI analysis completed",
-        metadata: { matchScore: analysis.matchScore },
-      });
-      await this.transition(jobApplicationId, "analyzing", "review_ready");
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Ready for AI match review",
-        metadata: { matchScore: analysis.matchScore },
-      });
+        const analysis = await this.matching.execute({
+          jobApplicationId,
+          profile,
+          scrape,
+        });
+
+        await this.jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "AI analysis completed",
+          metadata: { matchScore: analysis.matchScore },
+        });
+        await this.transition(jobApplicationId, "analyzing", "review_ready");
+        await this.jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "Ready for AI match review",
+          metadata: { matchScore: analysis.matchScore },
+        });
+      } else {
+        await this.transition(jobApplicationId, "scraping", "review_ready");
+        await this.jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "Scrape ready for review",
+          metadata: { companyName: job.companyName, roleTitle: job.title },
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown processing error";
       await this.jobApplications.updateStatus(jobApplicationId, "failed", message);

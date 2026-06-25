@@ -51,7 +51,7 @@ describe("PublishingJobApplicationRepository", () => {
     const baseRepository = new InMemoryJobApplicationRepository();
     const repository = new PublishingJobApplicationRepository(baseRepository, {
       publish: async () => {
-        throw new Error("Redis unavailable");
+        throw new Error("Realtime channel unavailable");
       },
     });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);

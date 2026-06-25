@@ -5,16 +5,14 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "turbo run build",
-    "db:migrate": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:latest",
-    "db:rollback": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:rollback",
-    "db:status": "pnpm --filter @link2cv/infrastructure exec knex --knexfile ../../knexfile.cjs migrate:status",
     "dev": "turbo run dev --parallel",
+    "dev:desktop": "turbo run build && pnpm --filter @link2cv/desktop run rebuild && pnpm --filter @link2cv/web dev & NODE_ENV=development VITE_DEV_SERVER_URL=http://localhost:5173 pnpm --filter @link2cv/desktop dev",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "pnpm rebuild better-sqlite3 && turbo run test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

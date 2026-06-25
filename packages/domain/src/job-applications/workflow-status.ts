@@ -12,7 +12,7 @@ export type JobApplicationStatus = (typeof jobApplicationStatuses)[number];
 
 const allowedTransitions: Record<JobApplicationStatus, JobApplicationStatus[]> = {
   queued: ["scraping", "failed"],
-  scraping: ["analyzing", "failed"],
+  scraping: ["analyzing", "review_ready", "failed"],
   analyzing: ["review_ready", "failed"],
   review_ready: ["generating_documents", "failed"],
   generating_documents: ["completed", "failed"],

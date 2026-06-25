@@ -5,6 +5,7 @@ export * from "./job-applications/generate-job-application-documents.js";
 export * from "./job-applications/delete-job-application.js";
 export * from "./job-applications/retry-job-application.js";
 export * from "./job-applications/update-document-content.js";
+export * from "./job-applications/generate-documents-with-ai.js";
 export * from "./matching/extract-job-requirements.js";
 export * from "./matching/run-match-analysis.js";
 export * from "./documents/generate-documents.js";

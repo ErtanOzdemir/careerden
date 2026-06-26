@@ -41,6 +41,7 @@ export type JobApplicationSortField =
 
 export interface ListJobApplicationsFilter {
   applicationStatus?: ApplicationStatus;
+  processingStatus?: JobApplicationStatus;
   company?: string;
   role?: string;
   roleType?: string;

@@ -169,6 +169,18 @@ export const updateJobApplicationInterviewSchema = z.object({
 
 export const listJobApplicationsQuerySchema = z.object({
   profileId: z.string().min(1),
+  processingStatus: z
+    .enum([
+      "queued",
+      "scraping",
+      "scraped",
+      "analyzing",
+      "review_ready",
+      "generating_documents",
+      "completed",
+      "failed",
+    ])
+    .optional(),
   applicationStatus: applicationStatusSchema.optional(),
   company: z.string().min(1).optional(),
   role: z.string().min(1).optional(),

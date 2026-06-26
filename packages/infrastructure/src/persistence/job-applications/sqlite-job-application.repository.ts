@@ -446,6 +446,7 @@ function nullableString(value: unknown): string | undefined {
 
 function applyFilters(query: Knex.QueryBuilder, filter: ListJobApplicationsFilter): void {
   if (filter.applicationStatus) query.where("application_status", filter.applicationStatus);
+  if (filter.processingStatus) query.where("status", filter.processingStatus);
   if (filter.priority) query.where("priority", filter.priority);
   if (filter.roleType) query.where("role_type", filter.roleType);
   if (filter.tag)

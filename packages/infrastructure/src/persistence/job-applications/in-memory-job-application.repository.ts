@@ -399,6 +399,10 @@ function matchesFilter(job: JobApplication, filter: ListJobApplicationsFilter): 
     return false;
   }
 
+  if (filter.processingStatus && job.status !== filter.processingStatus) {
+    return false;
+  }
+
   if (filter.priority && job.tracking.priority !== filter.priority) {
     return false;
   }

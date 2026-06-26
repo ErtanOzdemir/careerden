@@ -13,7 +13,6 @@ import type {
   ApiUpdateProfilePayload,
 } from "../api/types";
 import type { SkillCategory } from "../types";
-import { requireDefaultProfileId } from "../api/config";
 import { mapApiProfileToUi } from "../api/mappers";
 import { profilesApi } from "../api/profiles";
 
@@ -121,11 +120,8 @@ export default function ProfileManager() {
       try {
         setIsLoading(true);
         setError(null);
-        const profileId = requireDefaultProfileId();
-        const [apiProfile, templates] = await Promise.all([
-          profilesApi.get(profileId),
-          profilesApi.listDocumentTemplates(profileId),
-        ]);
+        const apiProfile = await profilesApi.me();
+        const templates = await profilesApi.listDocumentTemplates(apiProfile.id);
 
         if (isMounted) {
           setProfile(apiProfile);
@@ -191,7 +187,11 @@ export default function ProfileManager() {
     try {
       setIsUploadingTemplate(true);
       setSaveError(null);
-      const template = await profilesApi.uploadDocumentTemplate(requireDefaultProfileId(), file);
+      if (!profile) {
+        return;
+      }
+
+      const template = await profilesApi.uploadDocumentTemplate(profile.id, file);
       setDocumentTemplates((current) => [template, ...current]);
       setSaveMessage("CV template uploaded.");
     } catch (uploadError) {
@@ -356,9 +356,13 @@ export default function ProfileManager() {
         setSaveMessage(null);
       }
 
+      if (!profile) {
+        return;
+      }
+
       setSaveError(null);
       const updated = await profilesApi.updateDocumentTemplateVariableAliases(
-        requireDefaultProfileId(),
+        profile.id,
         templateId,
         variableAliases,
       );
@@ -387,10 +391,11 @@ export default function ProfileManager() {
     try {
       setIsSaving(true);
       setSaveError(null);
-      const updated = await profilesApi.setDefaultDocumentTemplate(
-        requireDefaultProfileId(),
-        template.id,
-      );
+      if (!profile) {
+        return;
+      }
+
+      const updated = await profilesApi.setDefaultDocumentTemplate(profile.id, template.id);
       setDocumentTemplates((current) =>
         current.map((item) => ({ ...item, isDefault: item.id === updated.id })),
       );

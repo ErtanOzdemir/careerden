@@ -25,6 +25,7 @@ describe("API client", () => {
     await expect(requestJson<{ ok: boolean }>("/health")).resolves.toEqual({ ok: true });
     expect(fetch).toHaveBeenCalledWith("/api/health", {
       body: undefined,
+      credentials: "include",
       headers: undefined,
       method: "GET",
     });

@@ -45,6 +45,7 @@ export interface CreateJobApplicationInput extends Partial<
   >
 > {
   profileId: string;
+  shouldProcess?: boolean;
   sourceUrl?: string;
   jobUrl?: string;
 }

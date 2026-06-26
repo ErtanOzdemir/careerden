@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Router as ExpressRouter } from "express";
+import type { Request, Router as ExpressRouter } from "express";
 import multer from "multer";
 import type { CreateProfileUseCase, UpdateProfileUseCase } from "@link2cv/application";
 import {
@@ -8,8 +8,14 @@ import {
   updateDocumentTemplateVariableAliasesSchema,
   updateProfileSchema,
 } from "@link2cv/contracts";
-import type { DocxTemplateRenderer, FileStorage, UserProfileRepository } from "@link2cv/domain";
+import type {
+  DocxTemplateRenderer,
+  FileStorage,
+  UserProfile,
+  UserProfileRepository,
+} from "@link2cv/domain";
 import { validateBody } from "../middleware/validate-body.js";
+import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
 const docxContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const upload = multer({
@@ -23,8 +29,29 @@ export function createProfileRouter(dependencies: {
   profiles: UserProfileRepository;
   storage: FileStorage;
   docxTemplates: DocxTemplateRenderer;
+  getProfileForUser: (user: AuthenticatedRequest["user"]) => Promise<UserProfile>;
+  canAccessProfile: (profileId: string, userId: string) => Promise<boolean>;
 }): ExpressRouter {
   const router = Router();
+
+  router.get("/me", async (request, response, next) => {
+    try {
+      response.json(await dependencies.getProfileForUser(currentUser(request)));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch("/me", validateBody(updateProfileSchema), async (request, response, next) => {
+    try {
+      const profile = await dependencies.getProfileForUser(currentUser(request));
+      const updated = await dependencies.updateProfile.execute(profile.id, request.body);
+
+      response.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.post("/", validateBody(createProfileSchema), async (request, response, next) => {
     try {
@@ -37,6 +64,11 @@ export function createProfileRouter(dependencies: {
 
   router.get("/:id", async (request, response, next) => {
     try {
+      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
       const profile = await dependencies.profiles.findById(request.params.id);
 
       if (!profile) {
@@ -52,6 +84,11 @@ export function createProfileRouter(dependencies: {
 
   router.patch("/:id", validateBody(updateProfileSchema), async (request, response, next) => {
     try {
+      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
       const profile = await dependencies.updateProfile.execute(request.params.id, request.body);
 
       if (!profile) {
@@ -67,6 +104,11 @@ export function createProfileRouter(dependencies: {
 
   router.get("/:id/document-templates", async (request, response, next) => {
     try {
+      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
       const profile = await dependencies.profiles.findById(request.params.id);
 
       if (!profile) {
@@ -82,6 +124,11 @@ export function createProfileRouter(dependencies: {
 
   router.post("/:id/document-templates", upload.single("file"), async (request, response, next) => {
     try {
+      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
       const profile = await dependencies.profiles.findById(request.params.id);
 
       if (!profile) {
@@ -143,6 +190,11 @@ export function createProfileRouter(dependencies: {
     validateBody(updateDocumentTemplateMappingsSchema),
     async (request, response, next) => {
       try {
+        if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
+          response.status(404).json({ error: "Profile not found" });
+          return;
+        }
+
         const template = await dependencies.profiles.findDocumentTemplateById(
           request.params.templateId,
         );
@@ -184,6 +236,11 @@ export function createProfileRouter(dependencies: {
     validateBody(updateDocumentTemplateVariableAliasesSchema),
     async (request, response, next) => {
       try {
+        if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
+          response.status(404).json({ error: "Profile not found" });
+          return;
+        }
+
         const template = await dependencies.profiles.findDocumentTemplateById(
           request.params.templateId,
         );
@@ -207,6 +264,11 @@ export function createProfileRouter(dependencies: {
 
   router.patch("/:id/document-templates/:templateId/default", async (request, response, next) => {
     try {
+      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
       const template = await dependencies.profiles.setDefaultDocumentTemplate(
         request.params.id,
         request.params.templateId,
@@ -228,4 +290,8 @@ export function createProfileRouter(dependencies: {
 
 function isDocxUpload(file: Express.Multer.File): boolean {
   return file.originalname.toLowerCase().endsWith(".docx") || file.mimetype === docxContentType;
+}
+
+function currentUser(request: Request): AuthenticatedRequest["user"] {
+  return (request as AuthenticatedRequest).user;
 }

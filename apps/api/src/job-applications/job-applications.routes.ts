@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Router as ExpressRouter } from "express";
+import type { Request, Router as ExpressRouter } from "express";
 import type {
   DeleteJobApplicationUseCase,
   GenerateDocumentsWithAiUseCase,
@@ -17,11 +17,14 @@ import type {
   JobApplicationEvent,
   JobApplicationInterview,
   JobApplicationChangeSubscriber,
+  JobApplicationQueue,
   JobApplicationRepository,
   MatchAnalysisResult,
   ScrapeBundle,
+  UserProfile,
 } from "@link2cv/domain";
 import {
+  createJobApplicationFromScrapeSchema,
   createJobApplicationContactSchema,
   createJobApplicationEventSchema,
   createJobApplicationInterviewSchema,
@@ -34,6 +37,7 @@ import {
   updateDocumentContentSchema,
 } from "@link2cv/contracts";
 import { validateBody } from "../middleware/validate-body.js";
+import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
 export type JobApplicationWithDocuments = JobApplication & {
   documents: GeneratedDocument[];
@@ -58,10 +62,27 @@ export function createJobApplicationRouter(dependencies: {
   updateDocumentContent: UpdateDocumentContentUseCase;
   jobApplications: JobApplicationRepository;
   jobApplicationChanges: JobApplicationChangeSubscriber;
+  queue: JobApplicationQueue;
   storage: FileStorage;
+  getProfileForUser: (user: AuthenticatedRequest["user"]) => Promise<UserProfile>;
+  canAccessProfile: (profileId: string, userId: string) => Promise<boolean>;
+  canAccessJobApplication: (jobApplicationId: string, userId: string) => Promise<boolean>;
   generateWithAi?: GenerateDocumentsWithAiUseCase;
 }): ExpressRouter {
   const router = Router();
+
+  router.param("id", async (request, response, next, id: string) => {
+    try {
+      if (!(await dependencies.canAccessJobApplication(id, currentUser(request).id))) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.get("/stream", async (request, response, next) => {
     const profileId =
@@ -73,6 +94,11 @@ export function createJobApplicationRouter(dependencies: {
     }
 
     try {
+      if (!(await dependencies.canAccessProfile(profileId, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
       response.status(200);
       response.set({
         "Cache-Control": "no-cache, no-transform",
@@ -106,12 +132,58 @@ export function createJobApplicationRouter(dependencies: {
 
   router.post("/", validateBody(createJobApplicationSchema), async (request, response, next) => {
     try {
+      if (!(await dependencies.canAccessProfile(request.body.profileId, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
+        return;
+      }
+
       const jobApplication = await dependencies.submitJobApplication.execute(request.body);
       response.status(201).json(jobApplication);
     } catch (error) {
       next(error);
     }
   });
+
+  router.post(
+    "/from-scrape",
+    validateBody(createJobApplicationFromScrapeSchema),
+    async (request, response, next) => {
+      try {
+        const profile = await dependencies.getProfileForUser(currentUser(request));
+        const scrape = request.body.scrapeBundle as ScrapeBundle;
+        const jobApplication = await dependencies.jobApplications.create({
+          profileId: profile.id,
+          shouldProcess: true,
+          sourceUrl: request.body.sourceUrl,
+          companyName: scrape.job.companyName,
+          roleTitle: scrape.job.title,
+          roleType: scrape.job.location,
+          jobUrl: request.body.sourceUrl,
+          dateApplied: request.body.dateApplied,
+          applicationStatus: request.body.applicationStatus,
+          priority: request.body.priority,
+          tags: request.body.tags,
+          metadata: request.body.metadata,
+        });
+
+        await dependencies.jobApplications.saveScrapeBundle(jobApplication.id, scrape);
+        await dependencies.jobApplications.addEvent({
+          jobApplicationId: jobApplication.id,
+          type: "processing",
+          title: "Desktop scrape received",
+          metadata: {
+            companyName: scrape.job.companyName,
+            roleTitle: scrape.job.title,
+          },
+        });
+        await dependencies.queue.enqueue({ jobApplicationId: jobApplication.id });
+
+        response.status(201).json(jobApplication);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.get("/", async (request, response, next) => {
     try {
@@ -121,6 +193,11 @@ export function createJobApplicationRouter(dependencies: {
         response
           .status(400)
           .json({ error: "Invalid query parameters", issues: result.error.issues });
+        return;
+      }
+
+      if (!(await dependencies.canAccessProfile(result.data.profileId, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
         return;
       }
 
@@ -145,6 +222,11 @@ export function createJobApplicationRouter(dependencies: {
         response
           .status(400)
           .json({ error: "Invalid query parameters", issues: result.error.issues });
+        return;
+      }
+
+      if (!(await dependencies.canAccessProfile(result.data.profileId, currentUser(request).id))) {
+        response.status(404).json({ error: "Profile not found" });
         return;
       }
 
@@ -776,4 +858,8 @@ async function recordInterviewUpdated(
       lastResponseAt: updated.scheduledAt,
     });
   }
+}
+
+function currentUser(request: Request): AuthenticatedRequest["user"] {
+  return (request as AuthenticatedRequest).user;
 }

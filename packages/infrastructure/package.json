@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json && mkdir -p dist/documents/templates dist/persistence/migrations && cp src/documents/templates/*.html dist/documents/templates/ && cp src/persistence/migrations/*.cjs dist/persistence/migrations/",
+    "build": "rm -rf dist && tsc -p tsconfig.json && mkdir -p dist/documents/templates dist/persistence/migrations dist/persistence/postgres-migrations && cp src/documents/templates/*.html dist/documents/templates/ && cp src/persistence/migrations/*.cjs dist/persistence/migrations/ && cp src/persistence/postgres-migrations/*.cjs dist/persistence/postgres-migrations/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -20,17 +20,23 @@
     "@ai-sdk/deepseek": "^2.0.0",
     "@ai-sdk/google": "^2.0.0",
     "@ai-sdk/openai": "^2.0.0",
+    "@aws-sdk/client-s3": "^3.932.0",
+    "@aws-sdk/s3-request-presigner": "^3.932.0",
     "@link2cv/contracts": "workspace:*",
     "@link2cv/domain": "workspace:*",
     "ai": "^6.0.0",
     "better-sqlite3": "^11.7.0",
+    "bullmq": "^5.64.1",
     "docxtemplater": "^3.68.7",
+    "ioredis": "^5.8.2",
     "knex": "^3.1.0",
     "pizzip": "^3.2.0",
+    "pg": "^8.16.3",
     "playwright": "^1.49.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/pg": "^8.15.6",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

@@ -1,6 +1,10 @@
 function resolveApiBaseUrl(): string {
   if (typeof window !== "undefined") {
     const params = new URLSearchParams(window.location.search);
+    const apiBaseUrl = params.get("apiBaseUrl");
+    if (apiBaseUrl) {
+      return normalizeBaseUrl(apiBaseUrl);
+    }
     const apiPort = params.get("apiPort");
     if (apiPort) {
       return `http://localhost:${apiPort}`;

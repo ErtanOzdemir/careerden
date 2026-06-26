@@ -24,6 +24,7 @@ export async function requestJson<T>(path: string, options: RequestJsonOptions =
     method: options.method ?? "GET",
     headers: options.body ? { "Content-Type": "application/json" } : undefined,
     body: options.body ? JSON.stringify(options.body) : undefined,
+    credentials: "include",
   });
 
   if (response.status === 204) {

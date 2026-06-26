@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { linkedInSessionApi } from "../api/linkedInSession";
 import type { ApiLinkedInSessionStatusResult } from "../api/types";
 
 const statusLabels: Record<ApiLinkedInSessionStatusResult["status"], string> = {
@@ -19,7 +18,7 @@ export default function LinkedInSessionButton() {
 
     async function loadStatus() {
       try {
-        const status = await linkedInSessionApi.status();
+        const status = await loadDesktopStatus();
 
         if (isMounted) {
           setSession(status);
@@ -65,9 +64,7 @@ export default function LinkedInSessionButton() {
       setError(null);
 
       const next =
-        status === "login_in_progress"
-          ? await linkedInSessionApi.save()
-          : await linkedInSessionApi.start();
+        status === "login_in_progress" ? await saveDesktopSession() : await startDesktopSession();
 
       setSession(next);
     } catch (sessionError) {
@@ -103,4 +100,31 @@ export default function LinkedInSessionButton() {
       )}
     </div>
   );
+}
+
+async function loadDesktopStatus(): Promise<ApiLinkedInSessionStatusResult> {
+  if (!window.electronAPI) {
+    return {
+      status: "missing",
+      message: "LinkedIn scraping is available in the desktop app.",
+    };
+  }
+
+  return (await window.electronAPI.getLinkedInSessionStatus()) as ApiLinkedInSessionStatusResult;
+}
+
+async function startDesktopSession(): Promise<ApiLinkedInSessionStatusResult> {
+  if (!window.electronAPI) {
+    throw new Error("LinkedIn session handling is available in the desktop app.");
+  }
+
+  return (await window.electronAPI.startLinkedInSession()) as ApiLinkedInSessionStatusResult;
+}
+
+async function saveDesktopSession(): Promise<ApiLinkedInSessionStatusResult> {
+  if (!window.electronAPI) {
+    throw new Error("LinkedIn session handling is available in the desktop app.");
+  }
+
+  return (await window.electronAPI.saveLinkedInSession()) as ApiLinkedInSessionStatusResult;
 }

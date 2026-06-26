@@ -2,12 +2,10 @@ import { app, BrowserWindow, shell } from "electron";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerIpcHandlers } from "./ipc-handlers.js";
-import { startDesktopServer, type DesktopServer } from "./server.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
-let desktopServer: DesktopServer | null = null;
 
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
@@ -35,11 +33,8 @@ async function createWindow(): Promise<void> {
 
   if (isDev && devServerUrl) {
     const url = new URL(devServerUrl);
-    if (desktopServer) {
-      url.searchParams.set("apiPort", String(desktopServer.port));
-      if (desktopServer.defaultProfileId) {
-        url.searchParams.set("profileId", desktopServer.defaultProfileId);
-      }
+    if (process.env.VITE_API_BASE_URL) {
+      url.searchParams.set("apiBaseUrl", process.env.VITE_API_BASE_URL);
     }
     void mainWindow.loadURL(url.toString());
   } else {
@@ -49,12 +44,6 @@ async function createWindow(): Promise<void> {
 
 void app.whenReady().then(async () => {
   registerIpcHandlers();
-  desktopServer = await startDesktopServer({
-    premiumApiUrl: process.env.LINK2CV_PREMIUM_API_URL,
-    premiumApiTokenProvider: async () => {
-      return process.env.LINK2CV_PREMIUM_API_TOKEN ?? null;
-    },
-  });
   await createWindow();
 
   app.on("activate", () => {

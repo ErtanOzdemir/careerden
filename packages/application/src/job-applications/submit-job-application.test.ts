@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { JobApplicationQueue } from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
@@ -7,7 +6,7 @@ import {
 import { SubmitJobApplicationUseCase } from "./submit-job-application.js";
 
 describe("SubmitJobApplicationUseCase", () => {
-  it("marks the application failed when it cannot enqueue background work", async () => {
+  it("creates source URL tracker applications without enqueueing background work", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
     const profile = await profiles.create({
@@ -16,24 +15,17 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    const queue: JobApplicationQueue = {
-      async enqueue() {
-        throw new Error("Queue unavailable");
-      },
-      async restart() {},
-    };
 
-    await expect(
-      new SubmitJobApplicationUseCase(jobApplications, profiles, queue).execute({
+    const jobApplication = await new SubmitJobApplicationUseCase(jobApplications, profiles).execute(
+      {
         profileId: profile.id,
         sourceUrl: "https://www.linkedin.com/jobs/view/123",
-      }),
-    ).rejects.toThrow("Queue unavailable");
+      },
+    );
 
-    const [jobApplication] = await jobApplications.listByProfileId(profile.id);
-
-    expect(jobApplication?.status).toBe("failed");
-    expect(jobApplication?.failureReason).toBe("Queue unavailable");
+    expect(jobApplication.status).toBe("completed");
+    expect(jobApplication.sourceUrl).toBe("https://www.linkedin.com/jobs/view/123");
+    expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
   });
 
   it("creates manual tracker applications without enqueueing background work", async () => {
@@ -45,24 +37,16 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    const queue: JobApplicationQueue = {
-      async enqueue() {
-        throw new Error("Manual applications should not be queued");
-      },
-      async restart() {},
-    };
 
-    const jobApplication = await new SubmitJobApplicationUseCase(
-      jobApplications,
-      profiles,
-      queue,
-    ).execute({
-      profileId: profile.id,
-      companyName: "Example Inc",
-      roleTitle: "Backend Engineer",
-      priority: "high",
-      tags: ["Remote"],
-    });
+    const jobApplication = await new SubmitJobApplicationUseCase(jobApplications, profiles).execute(
+      {
+        profileId: profile.id,
+        companyName: "Example Inc",
+        roleTitle: "Backend Engineer",
+        priority: "high",
+        tags: ["Remote"],
+      },
+    );
 
     expect(jobApplication.status).toBe("completed");
     expect(jobApplication.sourceUrl).toBeUndefined();

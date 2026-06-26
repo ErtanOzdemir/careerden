@@ -8,6 +8,7 @@ import type {
   ApiJobApplicationAnalytics,
   ApiJobApplicationDetail,
   ApiDocumentContent,
+  ApiScrapeBundle,
 } from "./types";
 
 export interface ListJobApplicationsParams {
@@ -21,6 +22,12 @@ export interface ListJobApplicationsParams {
 export interface CreateJobApplicationInput {
   profileId: string;
   sourceUrl?: string;
+}
+
+export interface CreateJobApplicationFromScrapeInput {
+  metadata?: Record<string, unknown>;
+  scrapeBundle: ApiScrapeBundle;
+  sourceUrl: string;
 }
 
 export interface UpdateJobApplicationInput {
@@ -69,6 +76,13 @@ export const jobApplicationsApi = {
 
   create(input: CreateJobApplicationInput): Promise<ApiJobApplication> {
     return requestJson<ApiJobApplication>("/job-applications", {
+      method: "POST",
+      body: input,
+    });
+  },
+
+  createFromScrape(input: CreateJobApplicationFromScrapeInput): Promise<ApiJobApplication> {
+    return requestJson<ApiJobApplication>("/job-applications/from-scrape", {
       method: "POST",
       body: input,
     });

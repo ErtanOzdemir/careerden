@@ -5,10 +5,11 @@ import type { ApplicationStatus, JobApplication } from "../types";
 import StatusBadge from "../components/StatusBadge";
 import CompanyLogo from "../components/CompanyLogo";
 import Pagination from "../components/Pagination";
-import { requireDefaultProfileId } from "../api/config";
 import { jobApplicationsApi } from "../api/jobApplications";
 import { useJobApplicationChanges, type JobApplicationChange } from "../api/jobApplicationChanges";
 import { mapApiJobApplicationToUi, mapUiStatusToApi } from "../api/mappers";
+import { profilesApi } from "../api/profiles";
+import type { ApiScrapeBundle } from "../api/types";
 
 const statuses: (ApplicationStatus | "All")[] = [
   "All",
@@ -26,7 +27,7 @@ interface ApplicationActionState {
 }
 
 export default function ApplicationsLog() {
-  const profileId = requireDefaultProfileId();
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [sourceUrl, setSourceUrl] = useState("");
   const [applications, setApplications] = useState<ReturnType<typeof mapApiJobApplicationToUi>[]>(
@@ -42,6 +43,10 @@ export default function ApplicationsLog() {
 
   const loadApplications = useCallback(
     async (showLoading = false) => {
+      if (!profileId) {
+        return;
+      }
+
       try {
         if (showLoading) {
           setIsLoading(true);
@@ -69,8 +74,39 @@ export default function ApplicationsLog() {
   );
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfile() {
+      try {
+        const profile = await profilesApi.me();
+
+        if (isMounted) {
+          setProfileId(profile.id);
+        }
+      } catch (profileError) {
+        if (isMounted) {
+          setError(
+            profileError instanceof Error ? profileError.message : "Failed to load profile.",
+          );
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!profileId) {
+      return;
+    }
+
     void loadApplications(true);
-  }, [loadApplications]);
+  }, [loadApplications, profileId]);
 
   const handleRealtimeChange = useCallback(
     async (change: JobApplicationChange) => {
@@ -103,7 +139,7 @@ export default function ApplicationsLog() {
     [statusFilter],
   );
 
-  useJobApplicationChanges(profileId, {
+  useJobApplicationChanges(profileId ?? undefined, {
     onChange: handleRealtimeChange,
     onOpen: () => loadApplications(false),
   });
@@ -113,10 +149,23 @@ export default function ApplicationsLog() {
       setIsSaving(true);
       setError(null);
 
-      const created = await jobApplicationsApi.create({
-        profileId,
-        sourceUrl: sourceUrl.trim() || undefined,
-      });
+      if (!profileId) {
+        throw new Error("Profile is not ready yet.");
+      }
+
+      const trimmedSourceUrl = sourceUrl.trim();
+      const created =
+        trimmedSourceUrl && window.electronAPI
+          ? await jobApplicationsApi.createFromScrape({
+              sourceUrl: trimmedSourceUrl,
+              scrapeBundle: (await window.electronAPI.scrapeLinkedInJob(
+                trimmedSourceUrl,
+              )) as ApiScrapeBundle,
+            })
+          : await jobApplicationsApi.create({
+              profileId,
+              sourceUrl: trimmedSourceUrl || undefined,
+            });
 
       setApplications((current) => [mapApiJobApplicationToUi(created), ...current]);
       setSourceUrl("");

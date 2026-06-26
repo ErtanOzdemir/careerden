@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { DashboardStats } from "../types";
-import { requireDefaultProfileId } from "../api/config";
 import { jobApplicationsApi } from "../api/jobApplications";
 import { mapApiDashboardStats } from "../api/mappers";
+import { profilesApi } from "../api/profiles";
 
 const kpiCards = [
   {
@@ -58,7 +58,8 @@ export default function Dashboard() {
         setIsLoading(true);
         setError(null);
 
-        const profileId = requireDefaultProfileId();
+        const profile = await profilesApi.me();
+        const profileId = profile.id;
         const [analytics, applications] = await Promise.all([
           jobApplicationsApi.analytics(profileId),
           jobApplicationsApi.list({ profileId }),

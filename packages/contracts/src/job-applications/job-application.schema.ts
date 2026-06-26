@@ -59,6 +59,44 @@ export const createJobApplicationSchema = z
     }
   });
 
+export const scrapedJobSchema = z.object({
+  title: z.string().min(1),
+  companyName: z.string().min(1),
+  location: z.string().optional(),
+  description: z.string().min(1),
+  requirements: z.array(z.string()).default([]),
+  companyLinkedInUrl: z.string().url().optional(),
+  raw: z.unknown(),
+});
+
+export const scrapedCompanySchema = z.object({
+  name: z.string().min(1),
+  linkedInUrl: z.string().url().optional(),
+  websiteUrl: z.string().url().optional(),
+  careerPageUrl: z.string().url().optional(),
+  description: z.string().optional(),
+  logoUrl: z.string().url().optional(),
+  logoFileId: z.string().optional(),
+  raw: z.unknown(),
+});
+
+export const scrapeBundleSchema = z.object({
+  job: scrapedJobSchema,
+  companyLinkedIn: scrapedCompanySchema.optional(),
+  companyWebsite: scrapedCompanySchema.optional(),
+  careerPage: scrapedCompanySchema.optional(),
+});
+
+export const createJobApplicationFromScrapeSchema = z.object({
+  sourceUrl: linkedInJobUrlSchema,
+  scrapeBundle: scrapeBundleSchema,
+  dateApplied: z.string().min(1).optional(),
+  applicationStatus: applicationStatusSchema.default("applied"),
+  priority: applicationPrioritySchema.default("medium"),
+  tags: tagsSchema,
+  metadata: metadataSchema,
+});
+
 export const updateJobApplicationSchema = z.object({
   companyName: z.string().min(1).optional(),
   roleTitle: z.string().min(1).optional(),
@@ -151,6 +189,9 @@ export const jobApplicationAnalyticsQuerySchema = z.object({
 });
 
 export type CreateJobApplicationDto = z.infer<typeof createJobApplicationSchema>;
+export type CreateJobApplicationFromScrapeDto = z.infer<
+  typeof createJobApplicationFromScrapeSchema
+>;
 export type UpdateJobApplicationDto = z.infer<typeof updateJobApplicationSchema>;
 export type CreateJobApplicationEventDto = z.infer<typeof createJobApplicationEventSchema>;
 export type CreateJobApplicationContactDto = z.infer<typeof createJobApplicationContactSchema>;

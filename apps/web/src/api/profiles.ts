@@ -10,6 +10,9 @@ import type {
 export const profileUpdatedEvent = "link2cv:profile-updated";
 
 export const profilesApi = {
+  me(): Promise<ApiProfile> {
+    return requestJson<ApiProfile>("/profiles/me");
+  },
   get(id: string): Promise<ApiProfile> {
     return requestJson<ApiProfile>(`/profiles/${id}`);
   },
@@ -68,6 +71,7 @@ export const profilesApi = {
 async function requestForm<T>(path: string, body: FormData): Promise<T> {
   const response = await fetch(buildUrl(path), {
     body,
+    credentials: "include",
     method: "POST",
   });
   const payload = await parseResponse(response);

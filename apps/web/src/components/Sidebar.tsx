@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { requireDefaultProfileId } from "../api/config";
 import { profileUpdatedEvent, profilesApi } from "../api/profiles";
 import type { ApiProfile } from "../api/types";
 
@@ -17,7 +16,7 @@ export default function Sidebar() {
     let isMounted = true;
 
     profilesApi
-      .get(requireDefaultProfileId())
+      .me()
       .then((loadedProfile) => {
         if (isMounted) {
           setProfile(loadedProfile);

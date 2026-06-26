@@ -87,46 +87,42 @@ export function createJobApplicationRouter(dependencies: {
     }
   });
 
-  router.put(
-    "/:id/status",
-    validateBody(updateStatusSchema),
-    async (request, response, next) => {
-      try {
-        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
+  router.put("/:id/status", validateBody(updateStatusSchema), async (request, response, next) => {
+    try {
+      const jobApplication = await dependencies.jobApplications.findById(request.params.id);
 
-        if (!jobApplication) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
-
-        const { status } = request.body;
-
-        if (!canTransitionJobApplicationStatus(jobApplication.status, status)) {
-          response.status(400).json({ error: "Invalid status transition" });
-          return;
-        }
-
-        await dependencies.jobApplications.updateStatus(request.params.id, status);
-
-        await dependencies.jobApplications.addEvent({
-          jobApplicationId: request.params.id,
-          type: "processing",
-          title: "Scraping started",
-        });
-
-        const updated = await dependencies.jobApplications.findById(request.params.id);
-
-        if (!updated) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
-
-        response.json(updated);
-      } catch (error) {
-        next(error);
+      if (!jobApplication) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
       }
-    },
-  );
+
+      const { status } = request.body;
+
+      if (!canTransitionJobApplicationStatus(jobApplication.status, status)) {
+        response.status(400).json({ error: "Invalid status transition" });
+        return;
+      }
+
+      await dependencies.jobApplications.updateStatus(request.params.id, status);
+
+      await dependencies.jobApplications.addEvent({
+        jobApplicationId: request.params.id,
+        type: "processing",
+        title: "Scraping started",
+      });
+
+      const updated = await dependencies.jobApplications.findById(request.params.id);
+
+      if (!updated) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      response.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.put(
     "/:id/scrape-data",

@@ -85,6 +85,7 @@ export class ProcessJobApplicationUseCase {
       };
 
       await this.jobApplications.saveScrapeBundle(jobApplicationId, scrape);
+      await this.transition(jobApplicationId, "scraping", "scraped");
       await this.jobApplications.addEvent({
         jobApplicationId,
         type: "processing",
@@ -93,7 +94,7 @@ export class ProcessJobApplicationUseCase {
       });
 
       if (this.matching) {
-        await this.transition(jobApplicationId, "scraping", "analyzing");
+        await this.transition(jobApplicationId, "scraped", "analyzing");
         await this.jobApplications.addEvent({
           jobApplicationId,
           type: "processing",
@@ -120,7 +121,7 @@ export class ProcessJobApplicationUseCase {
           metadata: { matchScore: analysis.matchScore },
         });
       } else {
-        await this.transition(jobApplicationId, "scraping", "review_ready");
+        await this.transition(jobApplicationId, "scraped", "review_ready");
         await this.jobApplications.addEvent({
           jobApplicationId,
           type: "processing",

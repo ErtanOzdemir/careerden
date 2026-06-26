@@ -21,10 +21,12 @@
 ### Task 1: Domain — Add `scraped` status to workflow
 
 **Files:**
+
 - Modify: `packages/domain/src/job-applications/workflow-status.ts`
 - Test: `packages/domain/src/job-applications/workflow-status.test.ts`
 
 **Interfaces:**
+
 - Consumes: `JobApplicationStatus` union type, `canTransitionJobApplicationStatus()` function
 - Produces: Updated `JobApplicationStatus` including `"scraped"`, updated allowed transitions
 
@@ -59,6 +61,7 @@ const allowedTransitions: Record<JobApplicationStatus, JobApplicationStatus[]> =
 ```
 
 Key changes:
+
 - Add `"scraped"` between `"scraping"` and `"analyzing"`
 - `scraping → scraped` (desktop completes scrape)
 - `scraped → analyzing` (BullMQ worker starts AI)
@@ -85,6 +88,7 @@ it("allows the happy-path worker transitions", () => {
 ```bash
 pnpm --filter @link2cv/domain test -- packages/domain/src/job-applications/workflow-status.test.ts
 ```
+
 Expected: all tests pass
 
 - [ ] **Step 4: Commit**
@@ -99,9 +103,11 @@ git commit -m "feat(domain): add scraped workflow status"
 ### Task 2: Domain — Remove `shouldProcess` from `CreateJobApplicationInput`
 
 **Files:**
+
 - Modify: `packages/domain/src/job-applications/job-application.ts`
 
 **Interfaces:**
+
 - Consumes: `CreateJobApplicationInput` interface
 - Produces: `CreateJobApplicationInput` without `shouldProcess` field
 
@@ -143,11 +149,13 @@ git commit -m "feat(domain): remove shouldProcess from CreateJobApplicationInput
 ### Task 3: Infrastructure — Update repositories to use `sourceUrl` for initial status
 
 **Files:**
+
 - Modify: `packages/infrastructure/src/persistence/job-applications/in-memory-job-application.repository.ts`
 - Modify: `packages/infrastructure/src/persistence/job-applications/sqlite-job-application.repository.ts`
 - Modify: `packages/infrastructure/src/persistence/job-applications/postgres-job-application.repository.ts`
 
 **Interfaces:**
+
 - Consumes: `CreateJobApplicationInput` (no `shouldProcess`)
 - Produces: Repository `create()` sets status based on `input.sourceUrl` presence instead of `input.shouldProcess`
 
@@ -156,6 +164,7 @@ git commit -m "feat(domain): remove shouldProcess from CreateJobApplicationInput
 In `in-memory-job-application.repository.ts`, change the status assignment in `create()`:
 
 Before:
+
 ```typescript
 status: input.shouldProcess ? "queued" : "completed",
 // ...
@@ -163,6 +172,7 @@ title: input.shouldProcess ? "LinkedIn job submitted" : "Application created",
 ```
 
 After:
+
 ```typescript
 status: input.sourceUrl ? "queued" : "completed",
 // ...
@@ -195,6 +205,7 @@ git commit -m "feat(infra): use sourceUrl presence instead of shouldProcess for 
 ### Task 4: Application — Remove `shouldProcess` from test
 
 **Files:**
+
 - Modify: `packages/application/src/job-applications/process-job-application.test.ts`
 
 - [ ] **Step 1: Remove `shouldProcess: true` from test inputs**
@@ -219,10 +230,12 @@ git commit -m "test(application): remove shouldProcess from test fixture"
 ### Task 5: API — Add `PUT /:id/status` and `PUT /:id/scrape-data` routes
 
 **Files:**
+
 - Modify: `apps/api/src/job-applications/job-applications.routes.ts`
 - Modify (if needed): `packages/contracts/src/job-applications/job-application.schema.ts`
 
 **Interfaces:**
+
 - Consumes: `job-applications.routes.ts` dependencies (`jobApplications`, `queue`, etc.)
 - Produces: Two new routes, updated `from-scrape` endpoint
 
@@ -232,7 +245,16 @@ In `job-application.schema.ts`, add new schemas:
 
 ```typescript
 export const updateStatusSchema = z.object({
-  status: z.enum(["queued", "scraping", "scraped", "analyzing", "review_ready", "generating_documents", "completed", "failed"]),
+  status: z.enum([
+    "queued",
+    "scraping",
+    "scraped",
+    "analyzing",
+    "review_ready",
+    "generating_documents",
+    "completed",
+    "failed",
+  ]),
 });
 
 export const submitScrapeDataSchema = z.object({
@@ -277,35 +299,39 @@ router.put("/:id/status", validateBody(updateStatusSchema), async (request, resp
 In `job-applications.routes.ts`, add:
 
 ```typescript
-router.put("/:id/scrape-data", validateBody(submitScrapeDataSchema), async (request, response, next) => {
-  try {
-    const jobApplication = await dependencies.jobApplications.findById(request.params.id);
+router.put(
+  "/:id/scrape-data",
+  validateBody(submitScrapeDataSchema),
+  async (request, response, next) => {
+    try {
+      const jobApplication = await dependencies.jobApplications.findById(request.params.id);
 
-    if (!jobApplication) {
-      response.status(404).json({ error: "Job application not found" });
-      return;
+      if (!jobApplication) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      const scrape = request.body.scrapeBundle as ScrapeBundle;
+      await dependencies.jobApplications.saveScrapeBundle(request.params.id, scrape);
+      await dependencies.jobApplications.updateStatus(request.params.id, "scraped");
+      await dependencies.jobApplications.addEvent({
+        jobApplicationId: request.params.id,
+        type: "processing",
+        title: "Desktop scrape received",
+        metadata: {
+          companyName: scrape.job.companyName,
+          roleTitle: scrape.job.title,
+        },
+      });
+      await dependencies.queue.enqueue({ jobApplicationId: request.params.id });
+
+      const updated = await dependencies.jobApplications.findById(request.params.id);
+      response.json(updated);
+    } catch (error) {
+      next(error);
     }
-
-    const scrape = request.body.scrapeBundle as ScrapeBundle;
-    await dependencies.jobApplications.saveScrapeBundle(request.params.id, scrape);
-    await dependencies.jobApplications.updateStatus(request.params.id, "scraped");
-    await dependencies.jobApplications.addEvent({
-      jobApplicationId: request.params.id,
-      type: "processing",
-      title: "Desktop scrape received",
-      metadata: {
-        companyName: scrape.job.companyName,
-        roleTitle: scrape.job.title,
-      },
-    });
-    await dependencies.queue.enqueue({ jobApplicationId: request.params.id });
-
-    const updated = await dependencies.jobApplications.findById(request.params.id);
-    response.json(updated);
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 ```
 
 - [ ] **Step 4: Run tests to verify existing behavior**
@@ -313,6 +339,7 @@ router.put("/:id/scrape-data", validateBody(submitScrapeDataSchema), async (requ
 ```bash
 pnpm --filter @link2cv/api-app test
 ```
+
 Expected: Existing tests still pass.
 
 - [ ] **Step 5: Commit**
@@ -327,6 +354,7 @@ git commit -m "feat(api): add PUT status and PUT scrape-data endpoints"
 ### Task 6: API — Update `from-scrape` endpoint to set `scraped` status
 
 **Files:**
+
 - Modify: `apps/api/src/job-applications/job-applications.routes.ts`
 
 **Rationale:** The `from-scrape` endpoint creates a job application with scraped data already available. After saving the bundle, it should set status to `scraped` (scraping already done) before enqueuing to BullMQ. Currently it sets status to `queued` via `shouldProcess: true`, but the BullMQ worker will now start from `scraped`.
@@ -340,6 +368,7 @@ await dependencies.jobApplications.updateStatus(jobApplication.id, "scraped");
 ```
 
 The full sequence becomes:
+
 1. Create with `sourceUrl` → status "queued" (automatic from Task 3)
 2. Save scrape bundle
 3. Update status to "scraped" (scraping complete)
@@ -363,15 +392,18 @@ git commit -m "feat(api): set scraped status in from-scrape before enqueue"
 ### Task 7: API — Modify BullMQ worker to start from `scraped`
 
 **Files:**
+
 - Modify: `apps/api/src/job-applications/analyze-scraped-job.worker.ts`
 
 **Interfaces:**
+
 - Consumes: Jobs enqueued from `PUT /:id/scrape-data` and `POST /from-scrape`
 - Produces: Worker processes AI analysis starting from `scraped` status
 
 - [ ] **Step 1: Remove the `queued → scraping` transition at the start of the worker**
 
 The worker currently does:
+
 ```typescript
 await input.jobApplications.updateStatus(jobApplication.id, "scraping");
 await input.jobApplications.addEvent({ ... "Desktop scrape saved" ... });
@@ -407,9 +439,11 @@ git commit -m "fix(api): start AI worker from scraped status, remove redundant s
 ### Task 8: Web — Add API client methods
 
 **Files:**
+
 - Modify: `apps/web/src/api/jobApplications.ts`
 
 **Interfaces:**
+
 - Consumes: Existing `requestJson` client
 - Produces: `updateStatus()` and `submitScrapeData()` methods on the API client
 
@@ -463,9 +497,11 @@ git commit -m "feat(web): add updateStatus and submitScrapeData API methods"
 ### Task 9: Web — Simplify `handleQuickAdd` in ApplicationsLog
 
 **Files:**
+
 - Modify: `apps/web/src/pages/ApplicationsLog.tsx`
 
 **Interfaces:**
+
 - Consumes: `jobApplicationsApi.create()` method
 - Produces: Simplified `handleQuickAdd` that always uses the simple create path
 
@@ -500,6 +536,7 @@ async function handleQuickAdd() {
 ```
 
 Changes:
+
 - Always call `jobApplicationsApi.create()` — no `window.electronAPI` check
 - Remove `createFromScrape` import usage
 - The async scraping happens via the desktop poller
@@ -526,6 +563,7 @@ git commit -m "feat(web): simplify handleQuickAdd to always use simple create"
 ### Task 10: API — Add `processingStatus` filter to list endpoint
 
 **Files:**
+
 - Modify: `packages/contracts/src/job-applications/job-application.schema.ts`
 
 **Rationale:** The web app's poller (running in Electron) needs to filter job applications by processing status to find queued jobs awaiting scraping.
@@ -537,10 +575,18 @@ In `job-application.schema.ts`, add to the existing schema:
 ```typescript
 export const listJobApplicationsQuerySchema = z.object({
   profileId: z.string().min(1),
-  processingStatus: z.enum([
-    "queued", "scraping", "scraped", "analyzing",
-    "review_ready", "generating_documents", "completed", "failed",
-  ]).optional(),
+  processingStatus: z
+    .enum([
+      "queued",
+      "scraping",
+      "scraped",
+      "analyzing",
+      "review_ready",
+      "generating_documents",
+      "completed",
+      "failed",
+    ])
+    .optional(),
   applicationStatus: applicationStatusSchema.optional(),
   // ... rest unchanged
 });
@@ -558,6 +604,7 @@ git commit -m "feat(contracts): add processingStatus filter to list query"
 ### Task 11: Web — Add background scraping poller hook
 
 **Files:**
+
 - Create: `apps/web/src/hooks/useScrapingQueuePoller.ts`
 
 **Rationale:** The web app running inside Electron (`window.electronAPI` is available) already has the user's session cookie and can call the API with full auth. A React hook polls for queued jobs, uses the existing IPC bridge to scrape via the desktop's Playwright, and saves results through the API. This avoids adding auth handling to the Electron main process.
@@ -653,6 +700,7 @@ git commit -m "feat(web): add scraping queue poller hook for Electron"
 ### Task 12: Web — Wire poller and add processingStatus to API client
 
 **Files:**
+
 - Modify: `apps/web/src/pages/ApplicationsLog.tsx`
 - Modify: `apps/web/src/api/jobApplications.ts`
 

@@ -14,6 +14,7 @@ import type {
 export interface ListJobApplicationsParams {
   applicationStatus?: ApiApplicationStatus;
   priority?: ApiApplicationPriority;
+  processingStatus?: string;
   profileId: string;
   sortBy?: "applicationStatus" | "companyName" | "dateApplied" | "roleTitle" | "updatedAt";
   sortDirection?: "asc" | "desc";

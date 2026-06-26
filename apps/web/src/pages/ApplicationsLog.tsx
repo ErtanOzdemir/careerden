@@ -7,6 +7,7 @@ import CompanyLogo from "../components/CompanyLogo";
 import Pagination from "../components/Pagination";
 import { jobApplicationsApi } from "../api/jobApplications";
 import { useJobApplicationChanges, type JobApplicationChange } from "../api/jobApplicationChanges";
+import { useScrapingQueuePoller } from "../api/useScrapingQueuePoller";
 import { mapApiJobApplicationToUi, mapUiStatusToApi } from "../api/mappers";
 import { profilesApi } from "../api/profiles";
 import type { ApiScrapeBundle } from "../api/types";
@@ -143,6 +144,8 @@ export default function ApplicationsLog() {
     onChange: handleRealtimeChange,
     onOpen: () => loadApplications(false),
   });
+
+  useScrapingQueuePoller(profileId);
 
   async function handleQuickAdd() {
     try {

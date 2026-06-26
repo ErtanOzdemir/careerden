@@ -23,7 +23,7 @@ describe("SubmitJobApplicationUseCase", () => {
       },
     );
 
-    expect(jobApplication.status).toBe("completed");
+    expect(jobApplication.status).toBe("queued");
     expect(jobApplication.sourceUrl).toBe("https://www.linkedin.com/jobs/view/123");
     expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
   });

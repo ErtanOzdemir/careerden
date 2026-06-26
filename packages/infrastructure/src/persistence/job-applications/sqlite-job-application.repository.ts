@@ -38,7 +38,7 @@ export class SqliteJobApplicationRepository implements JobApplicationRepository 
         id,
         profile_id: input.profileId,
         source_url: input.sourceUrl ?? null,
-        status: input.shouldProcess ? "queued" : "completed",
+        status: input.sourceUrl ? "queued" : "completed",
         company_name: input.companyName ?? null,
         role_title: input.roleTitle ?? null,
         role_type: input.roleType ?? null,
@@ -58,7 +58,7 @@ export class SqliteJobApplicationRepository implements JobApplicationRepository 
     await this.addEvent({
       jobApplicationId: jobApplication.id,
       type: "created",
-      title: input.shouldProcess ? "LinkedIn job submitted" : "Application created",
+      title: input.sourceUrl ? "LinkedIn job submitted" : "Application created",
       metadata: { sourceUrl: input.sourceUrl },
     });
 

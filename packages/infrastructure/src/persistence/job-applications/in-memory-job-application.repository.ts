@@ -37,7 +37,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       id: randomUUID(),
       profileId: input.profileId,
       sourceUrl: input.sourceUrl,
-      status: input.shouldProcess ? "queued" : "completed",
+      status: input.sourceUrl ? "queued" : "completed",
       tracking: {
         companyName: input.companyName,
         roleTitle: input.roleTitle,
@@ -59,7 +59,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     await this.addEvent({
       jobApplicationId: jobApplication.id,
       type: "created",
-      title: input.shouldProcess ? "LinkedIn job submitted" : "Application created",
+      title: input.sourceUrl ? "LinkedIn job submitted" : "Application created",
       metadata: { sourceUrl: input.sourceUrl },
     });
     return jobApplication;

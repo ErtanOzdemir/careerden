@@ -44,22 +44,12 @@ export function createAnalyzeScrapedJobWorker(input: {
           );
         }
 
-        await input.jobApplications.updateStatus(jobApplication.id, "scraping");
-        await input.jobApplications.addEvent({
-          jobApplicationId: jobApplication.id,
-          type: "processing",
-          title: "Desktop scrape saved",
-          metadata: {
-            companyName: scrape.job.companyName,
-            roleTitle: scrape.job.title,
-          },
-        });
-        await input.jobApplications.updateStatus(jobApplication.id, "analyzing");
         await input.jobApplications.addEvent({
           jobApplicationId: jobApplication.id,
           type: "processing",
           title: "AI analysis started",
         });
+        await input.jobApplications.updateStatus(jobApplication.id, "analyzing");
 
         const analysis = await matching.execute({
           jobApplicationId: jobApplication.id,

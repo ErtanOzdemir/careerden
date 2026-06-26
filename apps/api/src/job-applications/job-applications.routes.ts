@@ -23,6 +23,7 @@ import type {
   ScrapeBundle,
   UserProfile,
 } from "@link2cv/domain";
+import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import {
   createJobApplicationFromScrapeSchema,
   createJobApplicationContactSchema,
@@ -31,9 +32,11 @@ import {
   createJobApplicationSchema,
   jobApplicationAnalyticsQuerySchema,
   listJobApplicationsQuerySchema,
+  submitScrapeDataSchema,
   updateJobApplicationContactSchema,
   updateJobApplicationInterviewSchema,
   updateJobApplicationSchema,
+  updateStatusSchema,
   updateDocumentContentSchema,
 } from "@link2cv/contracts";
 import { validateBody } from "../middleware/validate-body.js";
@@ -83,6 +86,105 @@ export function createJobApplicationRouter(dependencies: {
       next(error);
     }
   });
+
+  router.put(
+    "/:id/status",
+    validateBody(updateStatusSchema),
+    async (request, response, next) => {
+      try {
+        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
+
+        if (!jobApplication) {
+          response.status(404).json({ error: "Job application not found" });
+          return;
+        }
+
+        const { status } = request.body;
+
+        if (status !== "scraping") {
+          response.status(400).json({ error: "Invalid status transition" });
+          return;
+        }
+
+        if (!canTransitionJobApplicationStatus(jobApplication.status, status)) {
+          response.status(400).json({ error: "Invalid status transition" });
+          return;
+        }
+
+        await dependencies.jobApplications.updateStatus(request.params.id, status);
+
+        await dependencies.jobApplications.addEvent({
+          jobApplicationId: request.params.id,
+          type: "processing",
+          title: "Scraping started",
+        });
+
+        const updated = await dependencies.jobApplications.findById(request.params.id);
+        response.json(updated);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.put(
+    "/:id/scrape-data",
+    validateBody(submitScrapeDataSchema),
+    async (request, response, next) => {
+      try {
+        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
+
+        if (!jobApplication) {
+          response.status(404).json({ error: "Job application not found" });
+          return;
+        }
+
+        if (!canTransitionJobApplicationStatus(jobApplication.status, "scraped")) {
+          response.status(400).json({ error: "Invalid status transition" });
+          return;
+        }
+
+        const scrape = request.body.scrapeBundle as ScrapeBundle;
+        await dependencies.jobApplications.saveScrapeBundle(request.params.id, scrape);
+
+        await dependencies.jobApplications.updateTracking(request.params.id, {
+          companyName: scrape.job.companyName,
+          roleTitle: scrape.job.title,
+        });
+
+        await dependencies.jobApplications.updateStatus(request.params.id, "scraped");
+
+        await dependencies.jobApplications.addEvent({
+          jobApplicationId: request.params.id,
+          type: "processing",
+          title: "Scraping complete",
+          metadata: {
+            companyName: scrape.job.companyName,
+            roleTitle: scrape.job.title,
+          },
+        });
+
+        await dependencies.queue.enqueue({ jobApplicationId: request.params.id });
+
+        const updated = await dependencies.jobApplications.findById(request.params.id);
+
+        if (!updated) {
+          response.status(404).json({ error: "Job application not found" });
+          return;
+        }
+
+        response.json(
+          await getJobApplicationDetail({
+            jobApplications: dependencies.jobApplications,
+            storage: dependencies.storage,
+            jobApplication: updated,
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.get("/stream", async (request, response, next) => {
     const profileId =

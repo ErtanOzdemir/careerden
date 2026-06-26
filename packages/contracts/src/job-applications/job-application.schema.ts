@@ -184,6 +184,24 @@ export const listJobApplicationsQuerySchema = z.object({
   sortDirection: z.enum(["asc", "desc"]).default("desc"),
 });
 
+export const updateStatusSchema = z.object({
+  status: z.enum([
+    "queued",
+    "scraping",
+    "scraped",
+    "analyzing",
+    "review_ready",
+    "generating_documents",
+    "completed",
+    "failed",
+  ]),
+});
+
+export const submitScrapeDataSchema = z.object({
+  scrapeBundle: scrapeBundleSchema,
+  sourceUrl: z.string().url().optional(),
+});
+
 export const jobApplicationAnalyticsQuerySchema = z.object({
   profileId: z.string().min(1),
 });

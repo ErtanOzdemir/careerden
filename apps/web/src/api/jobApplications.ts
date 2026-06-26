@@ -30,6 +30,11 @@ export interface CreateJobApplicationFromScrapeInput {
   sourceUrl: string;
 }
 
+export interface SubmitScrapeDataInput {
+  sourceUrl: string;
+  scrapeBundle: ApiScrapeBundle;
+}
+
 export interface UpdateJobApplicationInput {
   applicationStatus?: ApiApplicationStatus;
   metadata?: Record<string, unknown>;
@@ -84,6 +89,20 @@ export const jobApplicationsApi = {
   createFromScrape(input: CreateJobApplicationFromScrapeInput): Promise<ApiJobApplication> {
     return requestJson<ApiJobApplication>("/job-applications/from-scrape", {
       method: "POST",
+      body: input,
+    });
+  },
+
+  updateStatus(id: string, status: string): Promise<ApiJobApplication> {
+    return requestJson<ApiJobApplication>(`/job-applications/${id}/status`, {
+      method: "PUT",
+      body: { status },
+    });
+  },
+
+  submitScrapeData(id: string, input: SubmitScrapeDataInput): Promise<ApiJobApplicationDetail> {
+    return requestJson<ApiJobApplicationDetail>(`/job-applications/${id}/scrape-data`, {
+      method: "PUT",
       body: input,
     });
   },

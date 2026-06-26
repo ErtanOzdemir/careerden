@@ -23,6 +23,7 @@ export interface ListJobApplicationsParams {
 export interface CreateJobApplicationInput {
   profileId: string;
   sourceUrl?: string;
+  jobUrl?: string;
 }
 
 export interface CreateJobApplicationFromScrapeInput {

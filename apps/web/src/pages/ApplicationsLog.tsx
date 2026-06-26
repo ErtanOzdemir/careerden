@@ -161,7 +161,7 @@ export default function ApplicationsLog() {
       if (!trimmedSourceUrl || !window.electronAPI) {
         const created = await jobApplicationsApi.create({
           profileId,
-          sourceUrl: trimmedSourceUrl || undefined,
+          jobUrl: trimmedSourceUrl || undefined,
         });
 
         setApplications((current) => [mapApiJobApplicationToUi(created), ...current]);

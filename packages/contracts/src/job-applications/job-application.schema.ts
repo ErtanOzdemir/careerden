@@ -38,7 +38,7 @@ export const createJobApplicationSchema = z
     metadata: metadataSchema,
   })
   .superRefine((value, context) => {
-    if (value.sourceUrl) {
+    if (value.sourceUrl || value.jobUrl) {
       return;
     }
 

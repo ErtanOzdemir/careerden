@@ -154,18 +154,32 @@ export default function ApplicationsLog() {
       }
 
       const trimmedSourceUrl = sourceUrl.trim();
-      const created =
-        trimmedSourceUrl && window.electronAPI
-          ? await jobApplicationsApi.createFromScrape({
-              sourceUrl: trimmedSourceUrl,
-              scrapeBundle: (await window.electronAPI.scrapeLinkedInJob(
-                trimmedSourceUrl,
-              )) as ApiScrapeBundle,
-            })
-          : await jobApplicationsApi.create({
-              profileId,
-              sourceUrl: trimmedSourceUrl || undefined,
-            });
+
+      if (!trimmedSourceUrl || !window.electronAPI) {
+        const created = await jobApplicationsApi.create({
+          profileId,
+          sourceUrl: trimmedSourceUrl || undefined,
+        });
+
+        setApplications((current) => [mapApiJobApplicationToUi(created), ...current]);
+        setSourceUrl("");
+        return;
+      }
+
+      const created = await jobApplicationsApi.create({
+        profileId,
+        sourceUrl: trimmedSourceUrl,
+      });
+
+      const scrapeBundle = (await window.electronAPI.scrapeLinkedInJob(
+        trimmedSourceUrl,
+      )) as ApiScrapeBundle;
+
+      await jobApplicationsApi.updateStatus(created.id, "scraping");
+      await jobApplicationsApi.submitScrapeData(created.id, {
+        sourceUrl: trimmedSourceUrl,
+        scrapeBundle,
+      });
 
       setApplications((current) => [mapApiJobApplicationToUi(created), ...current]);
       setSourceUrl("");

@@ -101,11 +101,6 @@ export function createJobApplicationRouter(dependencies: {
 
         const { status } = request.body;
 
-        if (status !== "scraping") {
-          response.status(400).json({ error: "Invalid status transition" });
-          return;
-        }
-
         if (!canTransitionJobApplicationStatus(jobApplication.status, status)) {
           response.status(400).json({ error: "Invalid status transition" });
           return;
@@ -120,6 +115,12 @@ export function createJobApplicationRouter(dependencies: {
         });
 
         const updated = await dependencies.jobApplications.findById(request.params.id);
+
+        if (!updated) {
+          response.status(404).json({ error: "Job application not found" });
+          return;
+        }
+
         response.json(updated);
       } catch (error) {
         next(error);

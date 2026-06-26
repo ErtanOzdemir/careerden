@@ -30,7 +30,6 @@ describe("ProcessJobApplicationUseCase", () => {
     });
     const jobApplication = await jobApplications.create({
       profileId: profile.id,
-      shouldProcess: true,
       sourceUrl: "https://www.linkedin.com/jobs/view/123",
     });
     const scraper = createScraper();
@@ -153,7 +152,6 @@ describe("ProcessJobApplicationUseCase", () => {
     });
     const jobApplication = await jobApplications.create({
       profileId: profile.id,
-      shouldProcess: true,
       sourceUrl: "https://www.linkedin.com/jobs/view/456",
     });
     const scraper = createScraper();

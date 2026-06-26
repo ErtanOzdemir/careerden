@@ -256,7 +256,6 @@ export function createJobApplicationRouter(dependencies: {
         const scrape = request.body.scrapeBundle as ScrapeBundle;
         const jobApplication = await dependencies.jobApplications.create({
           profileId: profile.id,
-          shouldProcess: true,
           sourceUrl: request.body.sourceUrl,
           companyName: scrape.job.companyName,
           roleTitle: scrape.job.title,
@@ -270,6 +269,7 @@ export function createJobApplicationRouter(dependencies: {
         });
 
         await dependencies.jobApplications.saveScrapeBundle(jobApplication.id, scrape);
+        await dependencies.jobApplications.updateStatus(jobApplication.id, "scraped");
         await dependencies.jobApplications.addEvent({
           jobApplicationId: jobApplication.id,
           type: "processing",

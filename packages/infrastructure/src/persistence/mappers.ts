@@ -157,12 +157,23 @@ export function toDocumentTemplateVariableAliases(value: unknown): DocumentTempl
   const linkItems = Array.isArray(parsed.linkItems)
     ? (parsed.linkItems as DocumentTemplateVariableAliases["linkItems"])
     : undefined;
+  const certificationItems = Array.isArray(parsed.certificationItems)
+    ? (parsed.certificationItems as DocumentTemplateVariableAliases["certificationItems"])
+    : undefined;
+  const selectedProjects =
+    typeof parsed.selectedProjects === "object" &&
+    parsed.selectedProjects !== null &&
+    !Array.isArray(parsed.selectedProjects)
+      ? (parsed.selectedProjects as DocumentTemplateVariableAliases["selectedProjects"])
+      : undefined;
 
   return {
     fields,
+    ...(certificationItems ? { certificationItems } : {}),
     ...(linkItems ? { linkItems } : {}),
     ...(selectedEducation ? { selectedEducation } : {}),
     ...(selectedExperiences ? { selectedExperiences } : {}),
+    ...(selectedProjects ? { selectedProjects } : {}),
   };
 }
 

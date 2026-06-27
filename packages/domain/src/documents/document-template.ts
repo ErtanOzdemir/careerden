@@ -21,6 +21,7 @@ export type DocumentTemplateField =
   | "role_title"
   | "selected_education"
   | "selected_experiences"
+  | "selected_projects"
   | "skills"
   | "strong_skills"
   | "summary";
@@ -44,10 +45,20 @@ export type SelectedEducationTemplateField =
   | "period"
   | "start_date";
 
+export type SelectedProjectTemplateField =
+  | "achievements"
+  | "description"
+  | "name"
+  | "skills"
+  | "url";
+
 export interface DocumentTemplateVariableAliases {
   fields: Partial<
-    Record<Exclude<DocumentTemplateField, "selected_education" | "selected_experiences">, string>
+    Record<Exclude<DocumentTemplateField, "selected_education" | "selected_experiences" | "selected_projects">, string>
   >;
+  certificationItems?: Array<{
+    variableName?: string;
+  }>;
   linkItems?: Array<{
     variableName?: string;
   }>;
@@ -61,6 +72,12 @@ export interface DocumentTemplateVariableAliases {
     fields: Partial<Record<SelectedExperienceTemplateField, string>>;
     items?: Array<{
       fields: Partial<Record<SelectedExperienceTemplateField, string>>;
+    }>;
+  };
+  selectedProjects?: {
+    fields: Partial<Record<SelectedProjectTemplateField, string>>;
+    items?: Array<{
+      fields: Partial<Record<SelectedProjectTemplateField, string>>;
     }>;
   };
 }

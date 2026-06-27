@@ -21,8 +21,7 @@ const FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
   { field: "experience_list", label: "Experience List" },
   { field: "education_list", label: "Education List" },
   { field: "links", label: "Links" },
-  { field: "projects", label: "Projects" },
-  { field: "certifications", label: "Certifications" },
+  { field: "selected_projects", label: "Selected Projects" },
   { field: "selected_education", label: "Selected Education" },
   { field: "selected_experiences", label: "Selected Experiences" },
 ];
@@ -45,6 +44,14 @@ const EDUCATION_SUB_FIELDS: { key: string; label: string }[] = [
   { key: "start_date", label: "Start Date" },
   { key: "end_date", label: "End Date" },
   { key: "period", label: "Period" },
+  { key: "achievements", label: "Achievements" },
+];
+
+const PROJECT_SUB_FIELDS: { key: string; label: string }[] = [
+  { key: "name", label: "Name" },
+  { key: "description", label: "Description" },
+  { key: "url", label: "URL" },
+  { key: "skills", label: "Skills" },
   { key: "achievements", label: "Achievements" },
 ];
 
@@ -83,10 +90,8 @@ function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): 
       );
     case "links":
       return profile.links.join(", ").slice(0, 60) || "--";
-    case "projects":
+    case "selected_projects":
       return `${profile.projects.length} item${profile.projects.length !== 1 ? "s" : ""}`;
-    case "certifications":
-      return profile.certifications.join(", ").slice(0, 60) || "--";
     case "selected_education":
       return `${profile.education.length} item${profile.education.length !== 1 ? "s" : ""}`;
     case "selected_experiences":
@@ -110,6 +115,15 @@ function getEducationSubPreview(eduIndex: number, subField: string, profile: Api
   if (!edu) return "--";
   const key = subField as keyof typeof edu;
   const value = edu[key];
+  if (Array.isArray(value)) return value.join(", ").slice(0, 60) || "--";
+  return String(value ?? "--").slice(0, 60);
+}
+
+function getProjectSubPreview(projIndex: number, subField: string, profile: ApiProfile): string {
+  const proj = profile.projects[projIndex];
+  if (!proj) return "--";
+  const key = subField as keyof typeof proj;
+  const value = proj[key];
   if (Array.isArray(value)) return value.join(", ").slice(0, 60) || "--";
   return String(value ?? "--").slice(0, 60);
 }
@@ -419,6 +433,169 @@ function EducationMappingGroup({
   );
 }
 
+function ProjectsMappingGroup({
+  profile,
+  placeholders,
+  usedPlaceholders,
+  aliases,
+  onChangeAliases,
+}: {
+  profile: ApiProfile;
+  placeholders: string[];
+  usedPlaceholders: Set<string>;
+  aliases: ApiDocumentTemplateVariableAliases;
+  onChangeAliases: (aliases: ApiDocumentTemplateVariableAliases) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  function handleSubFieldChange(projIndex: number, subField: string, placeholder: string) {
+    const next = structuredClone(aliases);
+    if (!next.selectedProjects) {
+      next.selectedProjects = { fields: {} };
+    }
+    if (!next.selectedProjects.items) {
+      next.selectedProjects.items = [];
+    }
+    while (next.selectedProjects.items.length <= projIndex) {
+      next.selectedProjects.items.push({ fields: {} });
+    }
+    if (placeholder) {
+      (next.selectedProjects.items[projIndex].fields as Record<string, string>)[subField] =
+        placeholder;
+    } else {
+      delete (next.selectedProjects.items[projIndex].fields as Record<string, string | undefined>)[
+        subField
+      ];
+    }
+    onChangeAliases(next);
+  }
+
+  function getCurrentValue(projIndex: number, subField: string): string {
+    return (
+      (
+        aliases.selectedProjects?.items?.[projIndex]?.fields as Record<string, string | undefined>
+      )?.[subField] ?? ""
+    );
+  }
+
+  const itemCount = profile.projects.length;
+
+  if (itemCount === 0) {
+    return (
+      <div className="border-t border-border px-5 py-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ChevronRight className="size-4" />
+          <span>Selected Projects</span>
+          <span className="text-xs">(0 items)</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-border">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-2 px-5 py-3 text-sm text-foreground hover:bg-muted"
+      >
+        {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        <span>Selected Projects</span>
+        <span className="text-xs text-muted-foreground">
+          ({itemCount} item{itemCount !== 1 ? "s" : ""}, {itemCount * PROJECT_SUB_FIELDS.length}{" "}
+          sub-fields)
+        </span>
+      </button>
+      {expanded && (
+        <div className="space-y-3 px-5 pb-4">
+          {profile.projects.map((_proj, projIndex) => (
+            <div key={projIndex} className="rounded-lg border border-border">
+              <div className="border-b border-border bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                Project {projIndex + 1}
+              </div>
+              <div className="divide-y divide-border">
+                {PROJECT_SUB_FIELDS.map(({ key, label }) => (
+                  <div key={key} className="flex items-center gap-3 px-3 py-2">
+                    <span className="w-24 shrink-0 text-xs text-muted-foreground">{label}</span>
+                    <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                      {getProjectSubPreview(projIndex, key, profile)}
+                    </span>
+                    <div className="w-40 shrink-0">
+                      <MappingDropdown
+                        value={getCurrentValue(projIndex, key)}
+                        placeholders={placeholders}
+                        usedPlaceholders={usedPlaceholders}
+                        onChange={(p) => handleSubFieldChange(projIndex, key, p)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CertificationsMappingGroup({
+  profile,
+  placeholders,
+  usedPlaceholders,
+  aliases,
+  onChangeAliases,
+}: {
+  profile: ApiProfile;
+  placeholders: string[];
+  usedPlaceholders: Set<string>;
+  aliases: ApiDocumentTemplateVariableAliases;
+  onChangeAliases: (aliases: ApiDocumentTemplateVariableAliases) => void;
+}) {
+  function handleCertChange(certIndex: number, placeholder: string) {
+    const next = structuredClone(aliases);
+    if (!next.certificationItems) {
+      next.certificationItems = [];
+    }
+    while (next.certificationItems.length <= certIndex) {
+      next.certificationItems.push({});
+    }
+    next.certificationItems[certIndex].variableName = placeholder || undefined;
+    onChangeAliases(next);
+  }
+
+  function getCurrentValue(certIndex: number): string {
+    return aliases.certificationItems?.[certIndex]?.variableName ?? "";
+  }
+
+  const certCount = profile.certifications.length;
+
+  if (certCount === 0) {
+    return null;
+  }
+
+  return (
+    <div className="border-t border-border px-5 py-3">
+      <div className="mb-2 text-xs font-medium text-muted-foreground">Certifications</div>
+      <div className="divide-y divide-border rounded-lg border border-border">
+        {profile.certifications.map((cert, certIndex) => (
+          <div key={certIndex} className="flex items-center gap-3 px-3 py-2">
+            <span className="min-w-0 flex-1 truncate text-xs text-foreground">{cert}</span>
+            <div className="w-40 shrink-0">
+              <MappingDropdown
+                value={getCurrentValue(certIndex)}
+                placeholders={placeholders}
+                usedPlaceholders={usedPlaceholders}
+                onChange={(p) => handleCertChange(certIndex, p)}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function LinksMappingGroup({
   profile,
   placeholders,
@@ -529,9 +706,23 @@ export default function TemplateVariableMapping({
         }
       }
     }
+    const projItems = variableAliases.selectedProjects?.items;
+    if (projItems) {
+      for (const item of projItems) {
+        for (const p of Object.values(item.fields as Record<string, string | undefined>)) {
+          if (p) used.add(p);
+        }
+      }
+    }
     const links = variableAliases.linkItems;
     if (links) {
       for (const item of links) {
+        if (item.variableName) used.add(item.variableName);
+      }
+    }
+    const certs = variableAliases.certificationItems;
+    if (certs) {
+      for (const item of certs) {
         if (item.variableName) used.add(item.variableName);
       }
     }
@@ -633,6 +824,22 @@ export default function TemplateVariableMapping({
       />
 
       <EducationMappingGroup
+        profile={profile}
+        placeholders={placeholders}
+        usedPlaceholders={usedPlaceholders}
+        aliases={variableAliases}
+        onChangeAliases={setVariableAliases}
+      />
+
+      <ProjectsMappingGroup
+        profile={profile}
+        placeholders={placeholders}
+        usedPlaceholders={usedPlaceholders}
+        aliases={variableAliases}
+        onChangeAliases={setVariableAliases}
+      />
+
+      <CertificationsMappingGroup
         profile={profile}
         placeholders={placeholders}
         usedPlaceholders={usedPlaceholders}

@@ -8,6 +8,7 @@ import type {
   RichTextNode,
   SelectedEducationTemplateField,
   SelectedExperienceTemplateField,
+  SelectedProjectTemplateField,
 } from "@link2cv/domain";
 
 const placeholderPattern = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
@@ -88,6 +89,7 @@ export function buildDocxAliasData(
   }
 
   addLinkAliases(aliases, data.links, template.variableAliases.linkItems);
+  addLinkAliases(aliases, data.certifications, template.variableAliases.certificationItems);
   addSelectedExperienceAliases(
     aliases,
     data.selected_experiences,
@@ -97,6 +99,11 @@ export function buildDocxAliasData(
     aliases,
     data.selected_education,
     template.variableAliases.selectedEducation,
+  );
+  addSelectedProjectAliases(
+    aliases,
+    data.selected_projects,
+    template.variableAliases.selectedProjects,
   );
   addFieldMappings(aliases, data, template.fieldMappings);
 
@@ -182,6 +189,40 @@ function addSelectedEducationAliases(
     for (const [field, variableName] of Object.entries(configuredItem.fields)) {
       if (variableName) {
         aliases[variableName] = toDocxValue(education[field]);
+      }
+    }
+  });
+}
+
+function addSelectedProjectAliases(
+  aliases: Record<string, unknown>,
+  value: unknown,
+  configured:
+    | {
+        fields: Partial<Record<SelectedProjectTemplateField, string>>;
+        items?: Array<{
+          fields: Partial<Record<SelectedProjectTemplateField, string>>;
+        }>;
+      }
+    | undefined,
+) {
+  if (!Array.isArray(value) || !configured) {
+    return;
+  }
+
+  const itemAliases =
+    configured.items && configured.items.length > 0
+      ? configured.items
+      : [{ fields: configured.fields }];
+
+  itemAliases.forEach((configuredItem, index) => {
+    const item = value[index];
+    const project =
+      typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
+
+    for (const [field, variableName] of Object.entries(configuredItem.fields)) {
+      if (variableName) {
+        aliases[variableName] = toDocxValue(project[field]);
       }
     }
   });

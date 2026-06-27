@@ -20,6 +20,7 @@ export const documentTemplateFieldSchema = z.enum([
   "role_title",
   "selected_education",
   "selected_experiences",
+  "selected_projects",
   "skills",
   "strong_skills",
   "summary",
@@ -55,8 +56,23 @@ const selectedEducationFieldSchema = z.enum([
   "start_date",
 ]);
 
+const selectedProjectFieldSchema = z.enum([
+  "achievements",
+  "description",
+  "name",
+  "skills",
+  "url",
+]);
+
 export const documentTemplateVariableAliasesSchema = z.object({
   fields: z.record(documentTemplateFieldSchema, templateVariableNameSchema.optional()).default({}),
+  certificationItems: z
+    .array(
+      z.object({
+        variableName: templateVariableNameSchema.optional(),
+      }),
+    )
+    .optional(),
   linkItems: z
     .array(
       z.object({
@@ -90,6 +106,22 @@ export const documentTemplateVariableAliasesSchema = z.object({
           z.object({
             fields: z
               .record(selectedExperienceFieldSchema, templateVariableNameSchema.optional())
+              .default({}),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+  selectedProjects: z
+    .object({
+      fields: z
+        .record(selectedProjectFieldSchema, templateVariableNameSchema.optional())
+        .default({}),
+      items: z
+        .array(
+          z.object({
+            fields: z
+              .record(selectedProjectFieldSchema, templateVariableNameSchema.optional())
               .default({}),
           }),
         )

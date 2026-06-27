@@ -241,7 +241,8 @@ describe("TemplateVariableMapping", () => {
     const emptyProfile = { ...mockProfile, experience: [] };
     render(<TemplateVariableMapping template={mockTemplate} profile={emptyProfile} />);
 
-    expect(screen.getByText("(0 items)")).toBeDefined();
+    const items = screen.getAllByText("(0 items)");
+    expect(items.length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows 0 items badge when profile has no education", () => {

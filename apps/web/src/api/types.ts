@@ -47,6 +47,7 @@ export type ApiDocumentTemplateField =
   | "role_title"
   | "selected_education"
   | "selected_experiences"
+  | "selected_projects"
   | "skills"
   | "strong_skills"
   | "summary";
@@ -70,10 +71,20 @@ export type ApiSelectedEducationTemplateField =
   | "period"
   | "start_date";
 
+export type ApiSelectedProjectTemplateField =
+  | "achievements"
+  | "description"
+  | "name"
+  | "skills"
+  | "url";
+
 export interface ApiDocumentTemplateVariableAliases {
   fields: Partial<
-    Record<Exclude<ApiDocumentTemplateField, "selected_education" | "selected_experiences">, string>
+    Record<Exclude<ApiDocumentTemplateField, "selected_education" | "selected_experiences" | "selected_projects">, string>
   >;
+  certificationItems?: Array<{
+    variableName?: string;
+  }>;
   linkItems?: Array<{
     variableName?: string;
   }>;
@@ -87,6 +98,12 @@ export interface ApiDocumentTemplateVariableAliases {
     fields: Partial<Record<ApiSelectedExperienceTemplateField, string>>;
     items?: Array<{
       fields: Partial<Record<ApiSelectedExperienceTemplateField, string>>;
+    }>;
+  };
+  selectedProjects?: {
+    fields: Partial<Record<ApiSelectedProjectTemplateField, string>>;
+    items?: Array<{
+      fields: Partial<Record<ApiSelectedProjectTemplateField, string>>;
     }>;
   };
 }

@@ -81,8 +81,12 @@ function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): 
       );
     case "links":
       return profile.links.join(", ").slice(0, 60) || "--";
+    case "selected_education":
+      return `${profile.education.length} item${profile.education.length !== 1 ? "s" : ""}`;
+    case "selected_experiences":
+      return `${profile.experience.length} item${profile.experience.length !== 1 ? "s" : ""}`;
     default:
-      return "-- (auto-generated)";
+      return "--";
   }
 }
 

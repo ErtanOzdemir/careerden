@@ -6,12 +6,16 @@ const inputClass =
 export function Field({
   label,
   defaultValue,
+  value,
+  onChange,
   placeholder,
   type = "text",
   className,
 }: {
   label: string;
   defaultValue?: string;
+  value?: string;
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
   placeholder?: string;
   type?: string;
   className?: string;
@@ -21,7 +25,9 @@ export function Field({
       <label className="text-sm font-medium text-foreground">{label}</label>
       <input
         type={type}
-        defaultValue={defaultValue}
+        defaultValue={onChange ? undefined : defaultValue}
+        value={onChange ? value : undefined}
+        onChange={onChange}
         placeholder={placeholder}
         className={inputClass}
       />
@@ -32,12 +38,16 @@ export function Field({
 export function TextAreaField({
   label,
   defaultValue,
+  value,
+  onChange,
   placeholder,
   rows = 4,
   className,
 }: {
   label: string;
   defaultValue?: string;
+  value?: string;
+  onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
   placeholder?: string;
   rows?: number;
   className?: string;
@@ -46,7 +56,9 @@ export function TextAreaField({
     <div className={cn("space-y-1.5", className)}>
       <label className="text-sm font-medium text-foreground">{label}</label>
       <textarea
-        defaultValue={defaultValue}
+        defaultValue={onChange ? undefined : defaultValue}
+        value={onChange ? value : undefined}
+        onChange={onChange}
         placeholder={placeholder}
         rows={rows}
         className={cn(inputClass, "resize-none leading-relaxed")}

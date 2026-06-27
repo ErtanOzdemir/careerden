@@ -17,6 +17,26 @@ export const aiMatchResultSchema = z.object({
       }),
     )
     .optional(),
+  skillSuggestions: z.array(z.string().min(1)).optional(),
+  educationEnhancements: z
+    .array(
+      z.object({
+        educationIndex: z.number().int().min(0),
+        enhancedDescription: z.string().min(1).optional(),
+        enhancedAchievements: z.array(z.string().min(1)).optional(),
+      }),
+    )
+    .optional(),
+  projectEnhancements: z
+    .array(
+      z.object({
+        projectIndex: z.number().int().min(0),
+        enhancedDescription: z.string().min(1).optional(),
+        enhancedAchievements: z.array(z.string().min(1)).optional(),
+      }),
+    )
+    .optional(),
+  certificationSuggestions: z.array(z.string().min(1)).optional(),
 });
 
 export type AiMatchResultDto = z.infer<typeof aiMatchResultSchema>;

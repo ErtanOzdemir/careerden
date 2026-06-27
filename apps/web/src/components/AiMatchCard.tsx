@@ -1,8 +1,26 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import type { ApiDocumentContent, RichDocument } from "../api/types";
-import type { JobApplication } from "../types";
+import type { ApiDocumentContent, ApiDocumentContentSelections, RichDocument } from "../api/types";
+import type { JobApplication, Profile } from "../types";
 import RichTextEditor, { RichTextViewer } from "./RichTextEditor";
+import EnhancedFieldRow from "./EnhancedFieldRow";
+import { SelectionToggle } from "./link2cv/selection-toggle";
+import {
+  Award,
+  BadgeCheck,
+  BarChart3,
+  Brain,
+  BriefcaseBusiness,
+  Check,
+  CheckCircle,
+  FileText,
+  GraduationCap,
+  Package,
+  Pencil,
+  Rocket,
+  Save,
+  Sparkles,
+  XCircle,
+} from "lucide-react";
 
 interface AiMatchCardProps {
   aiMatch: NonNullable<JobApplication["aiMatch"]>;
@@ -11,16 +29,20 @@ interface AiMatchCardProps {
   isCreatingCv: boolean;
   isSavingContent: boolean;
   documentContent: ApiDocumentContent;
+  profile?: Profile;
   onSaveContent: (content: ApiDocumentContent) => Promise<void>;
   onCreateCv: () => Promise<void> | void;
 }
 
 const wizardSteps = [
-  { label: "Match", icon: "analytics" },
-  { label: "Summary", icon: "subject" },
-  { label: "Experience", icon: "work_history" },
-  { label: "Skills", icon: "psychology" },
-  { label: "Approval", icon: "verified" },
+  { label: "Match", Icon: BarChart3 },
+  { label: "Summary", Icon: FileText },
+  { label: "Experience", Icon: BriefcaseBusiness },
+  { label: "Skills", Icon: Brain },
+  { label: "Education", Icon: GraduationCap },
+  { label: "Projects", Icon: Rocket },
+  { label: "Certifications", Icon: BadgeCheck },
+  { label: "Approval", Icon: CheckCircle },
 ] as const;
 
 export default function AiMatchCard({
@@ -30,10 +52,10 @@ export default function AiMatchCard({
   isCreatingCv,
   isSavingContent,
   documentContent,
+  profile,
   onSaveContent,
   onCreateCv,
 }: AiMatchCardProps) {
-  const [isOpen, setIsOpen] = useState(canCreateCv && !hasGeneratedDocuments);
   const [activeStep, setActiveStep] = useState(0);
   const [isApproved, setIsApproved] = useState(false);
   const [draftContent, setDraftContent] = useState(documentContent);
@@ -42,19 +64,6 @@ export default function AiMatchCard({
   const circumference = 2 * Math.PI * scoreRadius;
   const offset = circumference - (aiMatch.score / 100) * circumference;
   const createDisabled = !canCreateCv || !isApproved || isCreatingCv || isSavingContent;
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     setDraftContent(documentContent);
@@ -70,7 +79,6 @@ export default function AiMatchCard({
     }
 
     await onCreateCv();
-    setIsOpen(false);
   }
 
   async function handleSaveContent(content: ApiDocumentContent) {
@@ -80,33 +88,35 @@ export default function AiMatchCard({
   }
 
   return (
-    <>
-      <section className="bg-inverse-surface text-inverse-on-surface p-lg rounded-xl shadow-lg">
-        <div className="flex items-start justify-between gap-md mb-lg">
+    <div className="space-y-6">
+      <section className="rounded-xl border border-border bg-card p-6">
+        <div className="flex items-start justify-between gap-4 mb-6">
           <div>
-            <h3 className="font-display font-headline-md flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary-fixed-dim">auto_awesome</span>
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="size-5 text-primary" />
               AI Match Intelligence
             </h3>
-            <p className="text-body-sm opacity-70 mt-1">{aiMatch.recommendation}</p>
+            <p className="text-xs text-muted-foreground mt-1">{aiMatch.recommendation}</p>
           </div>
-          <span className="bg-primary px-3 py-1 rounded-full text-label-sm font-bold text-on-primary">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold ${scoreBgClass(aiMatch.score)}`}
+          >
             {aiMatch.score}% Match
           </span>
         </div>
 
-        <div className="grid grid-cols-[auto,1fr] gap-md items-center">
+        <div className="grid grid-cols-[auto,1fr] gap-4 items-center">
           <ScoreRing score={aiMatch.score} offset={offset} circumference={circumference} />
           <div className="min-w-0">
-            <p className="text-body-md opacity-80 line-clamp-3">{aiMatch.summary}</p>
-            <div className="mt-md flex flex-wrap gap-2">
+            <p className="text-sm text-foreground/80 line-clamp-3">{aiMatch.summary}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
               {aiMatch.keywords.slice(0, 4).map((kw) => (
                 <span
                   key={kw.keyword}
-                  className={`px-2 py-1 rounded text-label-sm border ${
+                  className={`px-2 py-1 rounded text-xs font-semibold border ${
                     kw.match
-                      ? "border-success-fixed/50 bg-success/30 text-success-fixed"
-                      : "border-error-fixed/50 bg-error/30 text-error-fixed"
+                      ? "border-success bg-success-soft text-success"
+                      : "border-destructive/30 bg-danger-soft text-destructive"
                   }`}
                 >
                   {kw.keyword}
@@ -115,145 +125,358 @@ export default function AiMatchCard({
             </div>
           </div>
         </div>
-
-        <button
-          className="mt-lg w-full bg-primary text-on-primary rounded-lg py-3 px-4 font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          disabled={isCreatingCv}
-          onClick={() => setIsOpen(true)}
-          type="button"
-        >
-          <span className="material-symbols-outlined">rate_review</span>
-          {hasGeneratedDocuments ? "Review and regenerate CV" : "Review Match"}
-        </button>
       </section>
 
-      {isOpen &&
-        createPortal(
-          <div
-            aria-modal="true"
-            className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/50 p-sm backdrop-blur-sm sm:p-md"
-            role="dialog"
-          >
-            <section className="flex max-h-[calc(100dvh-1rem)] w-full max-w-5xl min-h-0 flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface text-on-surface shadow-2xl sm:max-h-[90dvh]">
-              <header className="flex shrink-0 items-start justify-between gap-md border-b border-outline-variant p-md sm:p-lg">
-                <div>
-                  <h3 className="font-display font-headline-md flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">auto_awesome</span>
-                    AI Match Intelligence
-                  </h3>
-                  <p className="text-body-sm text-secondary mt-1">
-                    {hasGeneratedDocuments
-                      ? "Review and regenerate documents"
-                      : "Review AI changes"}
-                  </p>
-                </div>
-                <button
-                  className="material-symbols-outlined p-2 rounded-full hover:bg-surface-container-high cursor-pointer"
-                  onClick={() => setIsOpen(false)}
-                  title="Close"
-                  type="button"
-                >
-                  close
-                </button>
-              </header>
+      <section className="rounded-xl border border-border bg-card text-foreground overflow-hidden">
+        <div className="shrink-0 overflow-x-auto border-b border-border px-4 pt-2 sm:px-6 sm:pt-4">
+          <div className="flex min-w-max gap-2">
+            {wizardSteps.map((step, index) => (
+              <button
+                key={step.label}
+                className={`px-3 py-2 border-b-2 text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors ${
+                  activeStep === index
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setActiveStep(index)}
+                type="button"
+              >
+                <step.Icon className="size-[18px]" />
+                {step.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-              <div className="wizard-tabs shrink-0 overflow-x-auto border-b border-outline-variant px-md pt-sm sm:px-lg sm:pt-md">
-                <div className="flex min-w-max gap-2">
-                  {wizardSteps.map((step, index) => (
-                    <button
-                      key={step.label}
-                      className={`px-3 py-2 border-b-2 text-label-md font-bold flex items-center gap-2 cursor-pointer transition-colors ${
-                        activeStep === index
-                          ? "border-primary text-primary"
-                          : "border-transparent text-secondary hover:text-on-surface"
-                      }`}
-                      onClick={() => setActiveStep(index)}
-                      type="button"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">{step.icon}</span>
-                      {step.label}
-                    </button>
-                  ))}
-                </div>
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+          {activeStep === 0 && <MatchStep aiMatch={aiMatch} />}
+          {activeStep === 1 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <SelectionToggle
+                  value={
+                    draftContent.selections?.customizedSummary === "original" ? "original" : "ai"
+                  }
+                  onChange={(value) =>
+                    setDraftContent(updateSelection(draftContent, ["customizedSummary"], value))
+                  }
+                  options={[
+                    { value: "ai", label: "AI Enhanced" },
+                    { value: "original", label: "Original" },
+                  ]}
+                />
               </div>
-
-              <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-md sm:p-lg">
-                {activeStep === 0 && <MatchStep aiMatch={aiMatch} />}
-                {activeStep === 1 && (
-                  <SummaryStep
-                    aiMatch={aiMatch}
+              <div className="grid md:grid-cols-2 md:divide-x gap-6">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Original Profile Summary</h3>
+                  <TextPanel
+                    label="Your Input"
+                    title="Current Profile Summary"
+                    tone="neutral"
+                    value={aiMatch.currentSummary}
+                  />
+                </div>
+                <div className="space-y-2 md:pl-4">
+                  <h3 className="text-sm font-semibold">Tailored CV Summary</h3>
+                  <EditableRichDocumentField
+                    ariaLabel="Tailored CV summary"
                     document={draftContent.customizedSummary}
                     isSaving={isSavingContent}
-                    onSave={(customizedSummary) =>
-                      handleSaveContent({ ...draftContent, customizedSummary })
+                    onSave={(value) =>
+                      handleSaveContent({ ...draftContent, customizedSummary: value })
                     }
                   />
-                )}
-                {activeStep === 2 && (
-                  <ExperienceStep
-                    aiMatch={aiMatch}
-                    documentContent={draftContent}
-                    isSaving={isSavingContent}
-                    onSave={handleSaveContent}
-                  />
-                )}
-                {activeStep === 3 && <SkillsStep aiMatch={aiMatch} />}
-                {activeStep === 4 && (
-                  <ApprovalStep
-                    canCreateCv={canCreateCv}
-                    hasGeneratedDocuments={hasGeneratedDocuments}
-                    isApproved={isApproved}
-                    isCreatingCv={isCreatingCv}
-                    onApprovalChange={setIsApproved}
-                  />
+                </div>
+              </div>
+            </div>
+          )}
+          {activeStep === 2 && (
+            <ExperienceStep
+              aiMatch={aiMatch}
+              documentContent={draftContent}
+              isSaving={isSavingContent}
+              onSave={handleSaveContent}
+            />
+          )}
+          {activeStep === 3 && (
+            <div className="space-y-6">
+              <h2 className="text-base font-semibold">Skills Comparison</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <SelectionToggle
+                  value={draftContent.selections?.skills === "original" ? "original" : "ai"}
+                  onChange={(value) =>
+                    setDraftContent(updateSelection(draftContent, ["skills"], value))
+                  }
+                  options={[
+                    { value: "ai", label: "AI Suggestions" },
+                    { value: "original", label: "Profile Skills" },
+                  ]}
+                />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Profile Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {aiMatch.yourSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-3 py-1 bg-muted rounded-full text-xs font-semibold"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                {(draftContent.skillSuggestions ?? []).length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">AI Suggestions</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {draftContent.skillSuggestions?.map((skill) => (
+                        <span
+                          key={skill}
+                          className="px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-semibold"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-
-              <footer className="flex shrink-0 flex-col justify-between gap-md border-t border-outline-variant p-md sm:flex-row sm:items-center sm:p-lg">
-                <button
-                  className="px-4 py-2 rounded-lg border border-outline-variant text-secondary hover:bg-surface-container-high cursor-pointer disabled:opacity-50"
-                  disabled={activeStep === 0}
-                  onClick={() => setActiveStep((current) => Math.max(0, current - 1))}
-                  type="button"
-                >
-                  Back
-                </button>
-                <div className="flex gap-2 justify-end">
-                  {activeStep < wizardSteps.length - 1 ? (
-                    <button
-                      className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold flex items-center gap-2 cursor-pointer"
-                      onClick={() =>
-                        setActiveStep((current) => Math.min(wizardSteps.length - 1, current + 1))
-                      }
-                      type="button"
-                    >
-                      Next
-                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    </button>
-                  ) : (
-                    <button
-                      className="px-5 py-2 rounded-lg bg-primary text-on-primary font-bold flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                      disabled={createDisabled}
-                      onClick={() => void handleCreateCv()}
-                      type="button"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">
-                        {hasGeneratedDocuments ? "check_circle" : "description"}
+            </div>
+          )}
+          {activeStep === 4 && (
+            <div className="space-y-8">
+              <h2 className="text-base font-semibold">Education Enhancements</h2>
+              {(aiMatch.educationOptimizations ?? []).map((edu, eduIndex) => {
+                const enhancement = draftContent.educationEnhancements?.find(
+                  (e) => e.educationIndex === eduIndex,
+                );
+                return (
+                  <div key={eduIndex} className="space-y-4">
+                    <h3 className="text-base font-semibold">
+                      {edu.institution} — {edu.degree}
+                    </h3>
+                    {edu.items
+                      .filter((item) => item.kind === "achievement")
+                      .map((item, achievementIndex) => (
+                        <EnhancedFieldRow
+                          key={`edu-${eduIndex}-${achievementIndex}`}
+                          label={`Achievement ${achievementIndex + 1}`}
+                          original={item.actual}
+                          enhanced={enhancement?.achievements?.[achievementIndex]}
+                          selection={
+                            draftContent.selections?.education?.[String(eduIndex)]?.achievements?.[
+                              String(achievementIndex)
+                            ]
+                          }
+                          onSelectionChange={(value) =>
+                            setDraftContent(
+                              updateSelection(
+                                draftContent,
+                                [
+                                  "education",
+                                  String(eduIndex),
+                                  "achievements",
+                                  String(achievementIndex),
+                                ],
+                                value,
+                              ),
+                            )
+                          }
+                          onSave={(content) =>
+                            setDraftContent(
+                              updateEducationAchievement(
+                                draftContent,
+                                eduIndex,
+                                achievementIndex,
+                                content,
+                              ),
+                            )
+                          }
+                        />
+                      ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {activeStep === 5 && (
+            <div className="space-y-8">
+              <h2 className="text-base font-semibold">Project Enhancements</h2>
+              {(aiMatch.projectOptimizations ?? []).map((project, projectIndex) => {
+                const enhancement = draftContent.projectEnhancements?.find(
+                  (p) => p.projectIndex === projectIndex,
+                );
+                const descriptionItem = project.items.find((item) => item.kind === "description");
+                const achievementItems = project.items.filter(
+                  (item) => item.kind === "achievement",
+                );
+                return (
+                  <div key={projectIndex} className="space-y-4">
+                    <h3 className="text-base font-semibold">{project.name}</h3>
+                    {descriptionItem && (
+                      <EnhancedFieldRow
+                        label="Description"
+                        original={descriptionItem.actual}
+                        enhanced={enhancement?.description}
+                        selection={
+                          draftContent.selections?.projects?.[String(projectIndex)]?.description
+                        }
+                        onSelectionChange={(value) =>
+                          setDraftContent(
+                            updateSelection(
+                              draftContent,
+                              ["projects", String(projectIndex), "description"],
+                              value,
+                            ),
+                          )
+                        }
+                        onSave={(content) =>
+                          setDraftContent(
+                            updateProjectDescription(draftContent, projectIndex, content),
+                          )
+                        }
+                      />
+                    )}
+                    {achievementItems.map((item, achievementIndex) => (
+                      <EnhancedFieldRow
+                        key={`proj-${projectIndex}-${achievementIndex}`}
+                        label={`Achievement ${achievementIndex + 1}`}
+                        original={item.actual}
+                        enhanced={enhancement?.achievements?.[achievementIndex]}
+                        selection={
+                          draftContent.selections?.projects?.[String(projectIndex)]?.achievements?.[
+                            String(achievementIndex)
+                          ]
+                        }
+                        onSelectionChange={(value) =>
+                          setDraftContent(
+                            updateSelection(
+                              draftContent,
+                              [
+                                "projects",
+                                String(projectIndex),
+                                "achievements",
+                                String(achievementIndex),
+                              ],
+                              value,
+                            ),
+                          )
+                        }
+                        onSave={(content) =>
+                          setDraftContent(
+                            updateProjectAchievement(
+                              draftContent,
+                              projectIndex,
+                              achievementIndex,
+                              content,
+                            ),
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {activeStep === 6 && (
+            <div className="space-y-6">
+              <h2 className="text-base font-semibold">Certification Suggestions</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <SelectionToggle
+                  value={draftContent.selections?.certifications === "original" ? "original" : "ai"}
+                  onChange={(value) =>
+                    setDraftContent(updateSelection(draftContent, ["certifications"], value))
+                  }
+                  options={[
+                    { value: "ai", label: "AI Suggestions" },
+                    { value: "original", label: "Profile Certifications" },
+                  ]}
+                />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Profile Certifications</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {(profile?.certifications ?? []).map((cert) => (
+                      <span
+                        key={cert}
+                        className="px-3 py-1 bg-muted rounded-full text-xs font-semibold"
+                      >
+                        {cert}
                       </span>
-                      {isCreatingCv
-                        ? "Creating..."
-                        : hasGeneratedDocuments
-                          ? "Regenerate CV"
-                          : "Create CV"}
-                    </button>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </footer>
-            </section>
-          </div>,
-          document.body,
-        )}
-    </>
+                {(draftContent.certificationSuggestions ?? []).length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">AI Suggestions</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {draftContent.certificationSuggestions?.map((cert) => (
+                        <span
+                          key={cert}
+                          className="px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-semibold"
+                        >
+                          {cert}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {activeStep === 7 && (
+            <ApprovalStep
+              canCreateCv={canCreateCv}
+              hasGeneratedDocuments={hasGeneratedDocuments}
+              isApproved={isApproved}
+              isCreatingCv={isCreatingCv}
+              onApprovalChange={setIsApproved}
+            />
+          )}
+        </div>
+
+        <footer className="flex shrink-0 flex-col justify-between gap-4 border-t border-border p-4 sm:flex-row sm:items-center sm:p-6">
+          <button
+            className="px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted cursor-pointer disabled:opacity-50"
+            disabled={activeStep === 0}
+            onClick={() => setActiveStep((current) => Math.max(0, current - 1))}
+            type="button"
+          >
+            Back
+          </button>
+          <div className="flex gap-2 justify-end">
+            {activeStep < wizardSteps.length - 1 ? (
+              <button
+                className="px-5 py-2 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center gap-2 cursor-pointer"
+                onClick={() =>
+                  setActiveStep((current) => Math.min(wizardSteps.length - 1, current + 1))
+                }
+                type="button"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                className="px-5 py-2 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={createDisabled}
+                onClick={() => void handleCreateCv()}
+                type="button"
+              >
+                {isCreatingCv
+                  ? "Creating..."
+                  : hasGeneratedDocuments
+                    ? "Regenerate CV"
+                    : "Create CV"}
+              </button>
+            )}
+          </div>
+        </footer>
+      </section>
+    </div>
   );
 }
 
@@ -266,11 +489,14 @@ function ScoreRing({
   offset: number;
   score: number;
 }) {
+  const ringColor =
+    score >= 70 ? "text-success" : score >= 50 ? "text-warning" : "text-destructive";
+
   return (
     <div className="relative w-24 h-24 flex items-center justify-center">
       <svg className="w-full h-full -rotate-90">
         <circle
-          className="text-on-surface-variant opacity-30"
+          className="text-muted"
           cx="48"
           cy="48"
           fill="transparent"
@@ -279,7 +505,7 @@ function ScoreRing({
           strokeWidth="7"
         />
         <circle
-          className="text-primary-fixed-dim"
+          className={ringColor}
           cx="48"
           cy="48"
           fill="transparent"
@@ -292,10 +518,12 @@ function ScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-headline-md text-primary-fixed-dim leading-none">
+        <span
+          className={`text-lg font-semibold leading-none ${score >= 70 ? "text-success" : score >= 50 ? "text-warning" : "text-destructive"}`}
+        >
           {score}
         </span>
-        <span className="text-label-sm uppercase opacity-70">Match</span>
+        <span className="text-xs font-semibold uppercase opacity-70">Match</span>
       </div>
     </div>
   );
@@ -306,25 +534,25 @@ function MatchStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]
   const missingKeywords = aiMatch.keywords.filter((keyword) => !keyword.match);
 
   return (
-    <div className="space-y-lg">
-      <div className="grid md:grid-cols-3 gap-md">
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-3 gap-4">
         <Metric label="Match Score" value={`${aiMatch.score}%`} />
         <Metric label="Strong Skills" value={String(aiMatch.yourSkills.length)} />
         <Metric label="Suggested Skills" value={String(aiMatch.suggestedSkills.length)} />
       </div>
-      <section className="space-y-md">
-        <h4 className="text-label-md font-bold uppercase text-secondary">Keyword Analysis</h4>
-        <div className="grid grid-cols-1 gap-md md:grid-cols-2">
+      <section className="space-y-4">
+        <h4 className="text-sm font-semibold uppercase text-muted-foreground">Keyword Analysis</h4>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <KeywordGroup
             emptyMessage="No matched keywords"
-            icon="check_circle"
+            Icon={CheckCircle}
             keywords={matchedKeywords.map((keyword) => keyword.keyword)}
             label="Matched Keywords"
             tone="matched"
           />
           <KeywordGroup
             emptyMessage="No missing keywords"
-            icon="cancel"
+            Icon={XCircle}
             keywords={missingKeywords.map((keyword) => keyword.keyword)}
             label="Missing Keywords"
             tone="missing"
@@ -337,31 +565,30 @@ function MatchStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]
 
 function KeywordGroup(props: {
   emptyMessage: string;
-  icon: string;
+  Icon: React.FC<{ className?: string }>;
   keywords: string[];
   label: string;
   tone: "matched" | "missing";
 }) {
   const isMatched = props.tone === "matched";
+  const Icon = props.Icon;
 
   return (
     <div
-      className={`min-h-36 rounded-lg border p-md ${
-        isMatched
-          ? "border-success-outline bg-success-container"
-          : "border-error/50 bg-error-container"
+      className={`min-h-36 rounded-lg border p-4 ${
+        isMatched ? "border-success bg-success-soft" : "border-destructive/30 bg-danger-soft"
       }`}
     >
       <div
-        className={`mb-md flex items-center justify-between gap-sm ${
-          isMatched ? "text-on-success-container" : "text-on-error-container"
+        className={`mb-4 flex items-center justify-between gap-2 ${
+          isMatched ? "text-success" : "text-destructive"
         }`}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <span className="material-symbols-outlined text-[18px]">{props.icon}</span>
-          <h5 className="text-label-md font-bold">{props.label}</h5>
+          <Icon className="size-[18px]" />
+          <h5 className="text-sm font-semibold">{props.label}</h5>
         </div>
-        <span className="text-label-md font-bold">{props.keywords.length}</span>
+        <span className="text-sm font-semibold">{props.keywords.length}</span>
       </div>
 
       {props.keywords.length > 0 ? (
@@ -369,57 +596,18 @@ function KeywordGroup(props: {
           {props.keywords.map((keyword) => (
             <span
               key={keyword}
-              className={`flex items-center gap-1 rounded-lg border bg-white/70 px-3 py-1 text-label-md ${
-                isMatched
-                  ? "border-success-outline text-on-success-container"
-                  : "border-error/50 text-on-error-container"
+              className={`flex items-center gap-1 rounded-lg border bg-card px-3 py-1 text-sm ${
+                isMatched ? "border-success text-success" : "border-destructive/30 text-destructive"
               }`}
             >
-              <span className="material-symbols-outlined text-[16px]">
-                {isMatched ? "check" : "close"}
-              </span>
+              <Check className="size-[16px]" />
               {keyword}
             </span>
           ))}
         </div>
       ) : (
-        <p className="text-body-md text-on-surface-variant">{props.emptyMessage}</p>
+        <p className="text-sm text-muted-foreground">{props.emptyMessage}</p>
       )}
-    </div>
-  );
-}
-
-function SummaryStep({
-  aiMatch,
-  document,
-  isSaving,
-  onSave,
-}: {
-  aiMatch: NonNullable<JobApplication["aiMatch"]>;
-  document: RichDocument;
-  isSaving: boolean;
-  onSave: (document: RichDocument) => Promise<void>;
-}) {
-  return (
-    <div className="grid md:grid-cols-2 gap-md">
-      <TextPanel
-        label="Your Input"
-        title="Current Profile Summary"
-        tone="neutral"
-        value={aiMatch.currentSummary}
-      />
-      <section className="rounded-lg border border-primary/40 bg-primary/10 p-md">
-        <span className="inline-flex px-2 py-1 rounded text-label-sm font-bold mb-sm bg-primary/20 text-primary">
-          AI Enhanced
-        </span>
-        <EditableRichDocumentField
-          ariaLabel="Tailored CV summary"
-          document={document}
-          isSaving={isSaving}
-          onSave={onSave}
-          title="Tailored CV Summary"
-        />
-      </section>
     </div>
   );
 }
@@ -451,18 +639,18 @@ function ExperienceStep({
         ];
 
   return (
-    <div className="space-y-lg">
+    <div className="space-y-6">
       {optimizations.map((experience, experienceIndex) => (
         <section
           key={`${experience.company}-${experience.title}`}
-          className="rounded-lg border border-outline-variant bg-surface-container-low p-md space-y-md"
+          className="rounded-lg border border-border bg-muted/40 p-4 space-y-4"
         >
           <div>
-            <h4 className="text-body-lg font-bold">{experience.title}</h4>
-            <p className="text-body-sm text-secondary">{experience.company}</p>
+            <h4 className="text-base font-semibold">{experience.title}</h4>
+            <p className="text-xs text-muted-foreground">{experience.company}</p>
           </div>
           {experience.items.length > 0 ? (
-            <div className="space-y-md">
+            <div className="space-y-4">
               {experience.items.map((item, index) => {
                 const enhancement = documentContent.experienceEnhancements.find(
                   (candidate) => candidate.experienceIndex === experienceIndex,
@@ -498,21 +686,12 @@ function ExperienceStep({
               })}
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-outline-variant bg-surface px-md py-sm text-body-md text-secondary">
+            <p className="rounded-lg border border-dashed border-border bg-card px-4 py-2 text-sm text-muted-foreground">
               No descriptions or achievements added for this experience.
             </p>
           )}
         </section>
       ))}
-    </div>
-  );
-}
-
-function SkillsStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]> }) {
-  return (
-    <div className="grid md:grid-cols-2 gap-md">
-      <TagPanel label="Your Input" skills={aiMatch.yourSkills} title="Current Skills" />
-      <TagPanel label="AI Suggested" skills={aiMatch.suggestedSkills} title="Suggested Additions" />
     </div>
   );
 }
@@ -531,28 +710,28 @@ function ApprovalStep({
   onApprovalChange: (value: boolean) => void;
 }) {
   return (
-    <div className="w-full max-w-3xl space-y-lg">
-      <div className="w-full rounded-xl border border-outline-variant bg-surface-container-low p-5 sm:p-6">
-        <h4 className="flex items-center gap-2 whitespace-nowrap text-body-lg font-bold">
-          <span className="material-symbols-outlined text-[20px] text-primary">
-            {hasGeneratedDocuments ? "check_circle" : "verified"}
-          </span>
+    <div className="w-full max-w-3xl space-y-6">
+      <div className="w-full rounded-xl border border-border bg-muted/40 p-5 sm:p-6">
+        <h4 className="flex items-center gap-2 whitespace-nowrap text-base font-semibold">
+          {hasGeneratedDocuments ? (
+            <CheckCircle className="size-5 text-primary" />
+          ) : (
+            <BadgeCheck className="size-5 text-primary" />
+          )}
           <span>{hasGeneratedDocuments ? "Regenerate CV" : "Approve AI changes"}</span>
         </h4>
         {hasGeneratedDocuments ? (
           <div className="mt-3 flex min-h-20 w-full items-center gap-4 rounded-xl border border-primary/20 bg-primary/10 px-4 py-4">
-            <span className="material-symbols-outlined text-[28px] text-primary">folder_zip</span>
+            <Package className="size-7 text-primary" />
             <div className="min-w-0">
-              <div className="text-body-md font-semibold text-on-surface">
-                Generated files ready
-              </div>
-              <div className="text-body-sm text-secondary">
+              <div className="text-sm font-semibold text-foreground">Generated files ready</div>
+              <div className="text-xs text-muted-foreground">
                 Save any edits, approve them, then regenerate to replace the current files.
               </div>
             </div>
           </div>
         ) : (
-          <p className="mt-3 text-body-md text-secondary">
+          <p className="mt-3 text-sm text-muted-foreground">
             {canCreateCv
               ? "Your current profile inputs and AI-enhanced content are ready for document generation."
               : "AI analysis is not ready for document generation yet."}
@@ -560,7 +739,7 @@ function ApprovalStep({
         )}
       </div>
 
-      <label className="flex w-full items-start gap-3 rounded-lg border border-outline-variant p-md cursor-pointer">
+      <label className="flex w-full items-start gap-3 rounded-lg border border-border p-4 cursor-pointer">
         <input
           checked={isApproved}
           className="mt-1 h-4 w-4 accent-primary"
@@ -569,8 +748,8 @@ function ApprovalStep({
           type="checkbox"
         />
         <span>
-          <span className="block font-bold">I approve these CV changes.</span>
-          <span className="block text-body-sm text-secondary mt-1">
+          <span className="block font-semibold">I approve these CV changes.</span>
+          <span className="block text-xs text-muted-foreground mt-1">
             {hasGeneratedDocuments
               ? "Replace the generated CV and cover letter with the saved content."
               : "Create the CV and cover letter from this saved content."}
@@ -594,21 +773,19 @@ function TextPanel({
 }) {
   return (
     <section
-      className={`rounded-lg border p-md ${
-        tone === "primary"
-          ? "border-primary/40 bg-primary/10"
-          : "border-outline-variant bg-surface-container-low"
+      className={`rounded-lg border p-4 ${
+        tone === "primary" ? "border-primary/40 bg-primary/10" : "border-border bg-muted/40"
       }`}
     >
       <span
-        className={`inline-flex px-2 py-1 rounded text-label-sm font-bold mb-sm ${
-          tone === "primary" ? "bg-primary/20 text-primary" : "bg-surface-container-high"
+        className={`inline-flex px-2 py-1 rounded text-xs font-semibold mb-2 ${
+          tone === "primary" ? "bg-primary/20 text-primary" : "bg-muted"
         }`}
       >
         {label}
       </span>
-      <h4 className="text-body-lg font-bold mb-sm">{title}</h4>
-      <p className="text-body-md text-on-surface-variant">{value}</p>
+      <h4 className="text-base font-semibold mb-2">{title}</h4>
+      <p className="text-sm text-muted-foreground">{value}</p>
     </section>
   );
 }
@@ -627,24 +804,26 @@ function ExperienceComparisonRow({
   onSave: (document: RichDocument) => Promise<void>;
 }) {
   return (
-    <section className="rounded-lg bg-surface p-md">
-      <div className="mb-sm flex items-center gap-2">
-        <span className="material-symbols-outlined text-[18px] text-primary">
-          {kind === "description" ? "subject" : "military_tech"}
-        </span>
-        <span className="text-label-md font-bold uppercase text-secondary">
+    <section className="rounded-lg bg-card p-4">
+      <div className="mb-2 flex items-center gap-2">
+        {kind === "description" ? (
+          <FileText className="size-[18px] text-primary" />
+        ) : (
+          <Award className="size-[18px] text-primary" />
+        )}
+        <span className="text-sm font-semibold uppercase text-muted-foreground">
           {kind === "description" ? "Role Description" : "Achievement"}
         </span>
       </div>
-      <div className="grid gap-md md:grid-cols-2 md:divide-x md:divide-outline-variant">
-        <div className="space-y-xs">
-          <span className="text-label-sm font-bold uppercase text-secondary">Actual Version</span>
-          <p className="text-body-md text-on-surface-variant">{actual}</p>
-        </div>
-        <div className="space-y-xs md:pl-md">
-          <span className="text-label-sm font-bold uppercase text-primary">
-            AI Enhanced Version
+      <div className="grid gap-4 md:grid-cols-2 md:divide-x md:divide-border">
+        <div className="space-y-1">
+          <span className="text-xs font-semibold uppercase text-muted-foreground">
+            Actual Version
           </span>
+          <p className="text-sm text-muted-foreground">{actual}</p>
+        </div>
+        <div className="space-y-1 md:pl-4">
+          <span className="text-xs font-semibold uppercase text-primary">AI Enhanced Version</span>
           {document ? (
             <EditableRichDocumentField
               ariaLabel={`Enhanced ${kind}`}
@@ -653,7 +832,7 @@ function ExperienceComparisonRow({
               onSave={onSave}
             />
           ) : (
-            <p className="text-body-md text-on-surface-variant">
+            <p className="text-sm text-muted-foreground">
               No AI-enhanced version available for this item.
             </p>
           )}
@@ -701,27 +880,27 @@ function EditableRichDocumentField({
 
   return (
     <div>
-      <div className="mb-sm flex items-center justify-between gap-sm">
-        {title ? <h4 className="text-body-lg font-bold">{title}</h4> : <span />}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        {title ? <h4 className="text-base font-semibold">{title}</h4> : <span />}
         {!isEditing && (
           <button
-            className="inline-flex items-center gap-1 rounded-lg border border-primary px-3 py-1.5 text-label-md font-bold text-primary hover:bg-primary/10"
+            className="inline-flex items-center gap-1 rounded-lg border border-primary px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
             disabled={isSaving}
             onClick={() => setIsEditing(true)}
             type="button"
           >
-            <span className="material-symbols-outlined text-[18px]">edit</span>
+            <Pencil className="size-[18px]" />
             Edit
           </button>
         )}
       </div>
 
       {isEditing ? (
-        <div className="space-y-sm">
+        <div className="space-y-2">
           <RichTextEditor ariaLabel={ariaLabel} onChange={setDraft} value={draft} />
           <div className="flex justify-end gap-2">
             <button
-              className="rounded-lg border border-outline-variant px-3 py-2 text-label-md font-bold text-secondary hover:bg-surface-container-high disabled:opacity-60"
+              className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted disabled:opacity-60"
               disabled={isSaving}
               onClick={cancelEditing}
               type="button"
@@ -729,12 +908,12 @@ function EditableRichDocumentField({
               Cancel
             </button>
             <button
-              className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-label-md font-bold text-on-primary disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
               disabled={isSaving}
               onClick={() => void saveEditing()}
               type="button"
             >
-              <span className="material-symbols-outlined text-[18px]">save</span>
+              <Save className="size-[18px]" />
               {isSaving ? "Saving..." : "Save"}
             </button>
           </div>
@@ -780,36 +959,92 @@ function updateExperienceDocument(
   };
 }
 
-function TagPanel({ label, skills, title }: { label: string; skills: string[]; title: string }) {
-  return (
-    <section className="rounded-lg border border-outline-variant bg-surface-container-low p-md">
-      <span className="inline-flex px-2 py-1 rounded text-label-sm font-bold mb-sm bg-surface-container-high">
-        {label}
-      </span>
-      <h4 className="text-body-lg font-bold mb-sm">{title}</h4>
-      <div className="flex flex-wrap gap-2">
-        {skills.length > 0 ? (
-          skills.map((skill) => (
-            <span
-              key={skill}
-              className="px-3 py-1 rounded-lg border border-outline-variant bg-surface text-label-md"
-            >
-              {skill}
-            </span>
-          ))
-        ) : (
-          <span className="text-body-md text-secondary">No items</span>
-        )}
-      </div>
-    </section>
-  );
+function updateSelection(
+  documentContent: ApiDocumentContent,
+  path: string[],
+  value: "ai" | "original",
+): ApiDocumentContent {
+  const selections = { ...documentContent.selections };
+  let current: Record<string, unknown> = selections;
+  for (let i = 0; i < path.length - 1; i++) {
+    if (!current[path[i]]) {
+      current[path[i]] = {} as Record<string, unknown>;
+    }
+    current = current[path[i]] as Record<string, unknown>;
+  }
+  current[path[path.length - 1]] = value;
+  return { ...documentContent, selections: selections as ApiDocumentContentSelections };
+}
+
+function updateEducationAchievement(
+  documentContent: ApiDocumentContent,
+  educationIndex: number,
+  achievementIndex: number,
+  content: RichDocument,
+): ApiDocumentContent {
+  const educationEnhancements = [...documentContent.educationEnhancements];
+  const existing = educationEnhancements.find((e) => e.educationIndex === educationIndex);
+  if (existing) {
+    const achievements = [...existing.achievements];
+    achievements[achievementIndex] = content;
+    const idx = educationEnhancements.indexOf(existing);
+    educationEnhancements[idx] = { ...existing, achievements };
+  } else {
+    const achievements: RichDocument[] = [];
+    achievements[achievementIndex] = content;
+    educationEnhancements.push({ educationIndex, achievements });
+  }
+  return { ...documentContent, educationEnhancements };
+}
+
+function updateProjectDescription(
+  documentContent: ApiDocumentContent,
+  projectIndex: number,
+  content: RichDocument,
+): ApiDocumentContent {
+  const projectEnhancements = [...documentContent.projectEnhancements];
+  const existing = projectEnhancements.find((p) => p.projectIndex === projectIndex);
+  if (existing) {
+    const idx = projectEnhancements.indexOf(existing);
+    projectEnhancements[idx] = { ...existing, description: content };
+  } else {
+    projectEnhancements.push({ projectIndex, description: content, achievements: [] });
+  }
+  return { ...documentContent, projectEnhancements };
+}
+
+function updateProjectAchievement(
+  documentContent: ApiDocumentContent,
+  projectIndex: number,
+  achievementIndex: number,
+  content: RichDocument,
+): ApiDocumentContent {
+  const projectEnhancements = [...documentContent.projectEnhancements];
+  const existing = projectEnhancements.find((p) => p.projectIndex === projectIndex);
+  if (existing) {
+    const achievements = [...existing.achievements];
+    achievements[achievementIndex] = content;
+    const idx = projectEnhancements.indexOf(existing);
+    projectEnhancements[idx] = { ...existing, achievements };
+  } else {
+    const achievements: RichDocument[] = [];
+    achievements[achievementIndex] = content;
+    projectEnhancements.push({ projectIndex, achievements });
+  }
+  return { ...documentContent, projectEnhancements };
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <section className="rounded-lg border border-outline-variant bg-surface-container-low p-md">
-      <p className="text-label-md text-secondary uppercase font-bold">{label}</p>
-      <p className="text-headline-md font-display mt-1">{value}</p>
+    <section className="rounded-lg border border-border bg-muted/40 p-4">
+      <p className="text-sm text-muted-foreground uppercase font-semibold">{label}</p>
+      <p className="text-lg font-semibold mt-1">{value}</p>
     </section>
   );
+}
+
+function scoreBgClass(score: number) {
+  if (score >= 70) return "bg-success text-success-foreground";
+  if (score >= 50) return "bg-warning text-warning-foreground";
+  return "bg-destructive text-destructive-foreground";
 }

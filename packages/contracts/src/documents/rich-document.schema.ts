@@ -98,6 +98,30 @@ export const richDocumentSchema = z
     }
   });
 
+const fieldSelectionSchema = z.enum(["ai", "original"]).optional();
+
+const indexSelectionsSchema = z
+  .record(
+    z.string(),
+    z.object({
+      description: fieldSelectionSchema,
+      achievements: z.record(z.string(), fieldSelectionSchema),
+    }),
+  )
+  .default({});
+
+const documentContentSelectionsSchema = z
+  .object({
+    customizedSummary: fieldSelectionSchema,
+    skills: fieldSelectionSchema,
+    certifications: fieldSelectionSchema,
+    experience: indexSelectionsSchema,
+    education: indexSelectionsSchema,
+    projects: indexSelectionsSchema,
+  })
+  .strict()
+  .default({});
+
 export const documentContentSchema = z
   .object({
     customizedSummary: richDocumentSchema,
@@ -112,6 +136,33 @@ export const documentContentSchema = z
           .strict(),
       )
       .max(100),
+    skillSuggestions: z.array(z.string().min(1)).max(100).default([]),
+    educationEnhancements: z
+      .array(
+        z
+          .object({
+            educationIndex: z.number().int().min(0),
+            description: richDocumentSchema.optional(),
+            achievements: z.array(richDocumentSchema).max(100),
+          })
+          .strict(),
+      )
+      .max(100)
+      .default([]),
+    projectEnhancements: z
+      .array(
+        z
+          .object({
+            projectIndex: z.number().int().min(0),
+            description: richDocumentSchema.optional(),
+            achievements: z.array(richDocumentSchema).max(100),
+          })
+          .strict(),
+      )
+      .max(100)
+      .default([]),
+    certificationSuggestions: z.array(z.string().min(1)).max(100).default([]),
+    selections: documentContentSelectionsSchema,
   })
   .strict();
 

@@ -134,6 +134,27 @@ function mapInitialDocumentContent(match: ApiMatchAnalysis) {
         : {}),
       achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
     })),
+    skillSuggestions: match.skillSuggestions ?? [],
+    educationEnhancements: (match.educationEnhancements ?? []).map((enhancement) => ({
+      educationIndex: enhancement.educationIndex,
+      ...(enhancement.enhancedDescription
+        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
+        : {}),
+      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+    })),
+    projectEnhancements: (match.projectEnhancements ?? []).map((enhancement) => ({
+      projectIndex: enhancement.projectIndex,
+      ...(enhancement.enhancedDescription
+        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
+        : {}),
+      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+    })),
+    certificationSuggestions: match.certificationSuggestions ?? [],
+    selections: {
+      experience: {},
+      education: {},
+      projects: {},
+    },
   };
 }
 
@@ -369,6 +390,42 @@ function mapMatchAnalysis(
     }),
     yourSkills,
     suggestedSkills: match.missingSkills,
+    educationOptimizations: profile?.education.map((education, index) => {
+      const enhancement = match.educationEnhancements?.find(
+        (item) => item.educationIndex === index,
+      );
+      return {
+        institution: education.institution,
+        degree: [education.degree, education.field].filter(Boolean).join(", ") || "Education",
+        items: education.achievements.map((achievement, achievementIndex) => ({
+          actual: achievement,
+          enhanced: enhancement?.enhancedAchievements?.[achievementIndex],
+          kind: "achievement" as const,
+        })),
+      };
+    }),
+    projectOptimizations: profile?.projects.map((project, index) => {
+      const enhancement = match.projectEnhancements?.find((item) => item.projectIndex === index);
+      return {
+        name: project.name,
+        items: [
+          ...(project.description
+            ? [
+                {
+                  actual: project.description,
+                  enhanced: enhancement?.enhancedDescription,
+                  kind: "description" as const,
+                },
+              ]
+            : []),
+          ...project.achievements.map((achievement, achievementIndex) => ({
+            actual: achievement,
+            enhanced: enhancement?.enhancedAchievements?.[achievementIndex],
+            kind: "achievement" as const,
+          })),
+        ],
+      };
+    }),
   };
 }
 

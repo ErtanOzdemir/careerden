@@ -163,11 +163,21 @@ function toTemplateData(
     location: profile.location ?? "",
     links: profile.links,
     role_title: jobApplication.tracking.roleTitle ?? scrapedJob?.title ?? "",
-    summary: documentContent.customizedSummary,
+    summary:
+      documentContent.selections?.customizedSummary === "original"
+        ? profile.summary
+          ? documentContentFromText(profile.summary)
+          : documentContent.customizedSummary
+        : documentContent.customizedSummary,
     raw_summary: profile.summary ?? "",
-    skills: profile.skills,
+    skills:
+      documentContent.selections?.skills === "original"
+        ? profile.skills
+        : documentContent.skillSuggestions && documentContent.skillSuggestions.length > 0
+          ? documentContent.skillSuggestions
+          : profile.skills,
     education_list: profile.education,
-    selected_education: toSelectedEducation(profile.education),
+    selected_education: toSelectedEducation(profile.education, documentContent),
     experience_list: enhancedExperiences,
     raw_experience_list: profile.experience,
     selected_experiences: enhancedExperiences,
@@ -181,10 +191,38 @@ function toTemplateData(
   };
 }
 
-function toSelectedEducation(education: ProfileEducation[]): Record<string, unknown>[] {
-  return education.map((item) => {
+function toSelectedEducation(
+  education: ProfileEducation[],
+  documentContent: DocumentContent,
+): Record<string, unknown>[] {
+  return education.map((item, index) => {
+    const enhancement = documentContent.educationEnhancements?.find(
+      (e) => e.educationIndex === index,
+    );
+    const selection = documentContent.selections?.education?.[String(index)];
     const startDate = item.startDate ?? "";
     const endDate = item.endDate ?? "";
+
+    const description =
+      selection?.description === "ai" && enhancement?.description
+        ? enhancement.description
+        : undefined;
+
+    const achievements =
+      selection?.achievements && enhancement?.achievements
+        ? item.achievements.map((achievement, achievementIndex) => {
+            const achievementSelection = selection.achievements[String(achievementIndex)];
+            if (
+              achievementSelection === "original" ||
+              !enhancement.achievements[achievementIndex]
+            ) {
+              return documentContentFromText(achievement);
+            }
+            return enhancement.achievements[achievementIndex];
+          })
+        : enhancement?.achievements && enhancement.achievements.length > 0
+          ? enhancement.achievements
+          : item.achievements.map(documentContentFromText);
 
     return {
       institution: item.institution,
@@ -193,7 +231,8 @@ function toSelectedEducation(education: ProfileEducation[]): Record<string, unkn
       start_date: startDate,
       end_date: endDate || "Present",
       period: formatPeriod(startDate, endDate),
-      achievements: item.achievements,
+      achievements,
+      ...(description ? { description } : {}),
     };
   });
 }
@@ -206,8 +245,32 @@ function toSelectedExperiences(
     const enhancement = documentContent.experienceEnhancements.find(
       (item) => item.experienceIndex === index,
     );
+    const selection = documentContent.selections?.experience?.[String(index)];
     const startDate = experience.startDate ?? "";
     const endDate = experience.endDate ?? "";
+
+    const description =
+      selection?.description === "original"
+        ? experience.description
+          ? documentContentFromText(experience.description)
+          : undefined
+        : (enhancement?.description ??
+          (experience.description ? documentContentFromText(experience.description) : undefined));
+
+    const achievements = selection?.achievements
+      ? experience.achievements.map((achievement, achievementIndex) => {
+          const achievementSelection = selection.achievements[String(achievementIndex)];
+          if (
+            achievementSelection === "original" ||
+            !enhancement?.achievements?.[achievementIndex]
+          ) {
+            return documentContentFromText(achievement);
+          }
+          return enhancement.achievements[achievementIndex];
+        })
+      : enhancement?.achievements && enhancement.achievements.length > 0
+        ? enhancement.achievements
+        : experience.achievements.map(documentContentFromText);
 
     return {
       title: experience.title,
@@ -215,13 +278,8 @@ function toSelectedExperiences(
       start_date: startDate,
       end_date: endDate || "Present",
       period: formatPeriod(startDate, endDate),
-      description:
-        enhancement?.description ??
-        (experience.description ? documentContentFromText(experience.description) : ""),
-      achievements:
-        enhancement?.achievements && enhancement.achievements.length > 0
-          ? enhancement.achievements
-          : experience.achievements.map(documentContentFromText),
+      description,
+      achievements,
       skills: experience.skills ?? [],
     };
   });

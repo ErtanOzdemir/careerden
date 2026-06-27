@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/link2cv/panel.js";
 import { profilesApi } from "../api/profiles.js";
@@ -18,6 +18,7 @@ const variables = [
 export default function TemplateManager() {
   const [templates, setTemplates] = useState<ApiDocumentTemplate[]>([]);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,12 +92,21 @@ export default function TemplateManager() {
             Drag and drop a DOCX or PDF file, or browse. Use variables below so Link2CV can fill in
             tailored content.
           </p>
-          <label className="mt-4 cursor-pointer">
-            <Button variant="outline" size="sm">
-              <span>Browse files</span>
-            </Button>
-            <input type="file" accept=".docx,.pdf" onChange={handleUpload} className="hidden" />
-          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            <span>Browse files</span>
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".docx,.pdf"
+            onChange={handleUpload}
+            className="hidden"
+          />
         </div>
       </Panel>
 

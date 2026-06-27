@@ -3,6 +3,21 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import type { RichDocument } from "../api/types";
 import { fromTiptapJson, toTiptapJson } from "./richDocumentAdapter";
 import { applyLink, createRichTextExtensions } from "./richTextExtensions";
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Heading2,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  Table,
+  Trash2,
+  Underline,
+} from "lucide-react";
 
 interface RichTextEditorProps {
   ariaLabel: string;
@@ -18,7 +33,7 @@ export function RichTextViewer({ ariaLabel, value }: { ariaLabel: string; value:
     editorProps: {
       attributes: {
         "aria-label": ariaLabel,
-        class: "rich-editor-content text-body-md text-on-surface-variant outline-none",
+        class: "rich-editor-content text-sm text-muted-foreground outline-none",
       },
     },
   });
@@ -42,8 +57,7 @@ export default function RichTextEditor({ ariaLabel, onChange, value }: RichTextE
     editorProps: {
       attributes: {
         "aria-label": ariaLabel,
-        class:
-          "rich-editor-content min-h-32 rounded-b-lg bg-surface px-3 py-3 text-body-md outline-none",
+        class: "rich-editor-content min-h-32 rounded-b-lg bg-card px-3 py-3 text-sm outline-none",
       },
     },
     onUpdate({ editor: updatedEditor }) {
@@ -78,89 +92,98 @@ export default function RichTextEditor({ ariaLabel, onChange, value }: RichTextE
   }
 
   return (
-    <div className="rounded-lg border border-outline-variant bg-surface">
-      <div className="flex flex-wrap gap-1 border-b border-outline-variant bg-surface-container-low px-2 py-2">
+    <div className="rounded-lg border border-border bg-card">
+      <div className="flex flex-wrap gap-1 border-b border-border bg-muted px-2 py-2">
         <ToolbarButton
           active={editor.isActive("bold")}
-          icon="format_bold"
           label="Bold"
           onClick={() => editor.chain().focus().toggleBold().run()}
-        />
+        >
+          <Bold className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive("italic")}
-          icon="format_italic"
           label="Italic"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-        />
+        >
+          <Italic className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive("underline")}
-          icon="format_underlined"
           label="Underline"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-        />
+        >
+          <Underline className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive("bulletList")}
-          icon="format_list_bulleted"
           label="Bullet list"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-        />
+        >
+          <List className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive("orderedList")}
-          icon="format_list_numbered"
           label="Numbered list"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        />
+        >
+          <ListOrdered className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive("heading", { level: 2 })}
-          icon="title"
           label="Heading"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        />
-        <ToolbarButton
-          active={editor.isActive("link")}
-          icon="link"
-          label="Link"
-          onClick={setLink}
-        />
+        >
+          <Heading2 className="size-[18px]" />
+        </ToolbarButton>
+        <ToolbarButton active={editor.isActive("link")} label="Link" onClick={setLink}>
+          <Link className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive({ textAlign: "left" })}
-          icon="format_align_left"
           label="Align left"
           onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        />
+        >
+          <AlignLeft className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive({ textAlign: "center" })}
-          icon="format_align_center"
           label="Align center"
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        />
+        >
+          <AlignCenter className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive({ textAlign: "right" })}
-          icon="format_align_right"
           label="Align right"
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
-        />
+        >
+          <AlignRight className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive({ textAlign: "justify" })}
-          icon="format_align_justify"
           label="Justify"
           onClick={() => editor.chain().focus().setTextAlign("justify").run()}
-        />
+        >
+          <AlignJustify className="size-[18px]" />
+        </ToolbarButton>
         <ToolbarButton
           active={editor.isActive("table")}
-          icon="table"
           label="Insert table"
           onClick={() =>
             editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()
           }
-        />
+        >
+          <Table className="size-[18px]" />
+        </ToolbarButton>
         {editor.isActive("table") && (
           <ToolbarButton
             active={false}
-            icon="delete"
             label="Delete table"
             onClick={() => editor.chain().focus().deleteTable().run()}
-          />
+          >
+            <Trash2 className="size-[18px]" />
+          </ToolbarButton>
         )}
       </div>
       <EditorContent editor={editor} />
@@ -170,23 +193,21 @@ export default function RichTextEditor({ ariaLabel, onChange, value }: RichTextE
 
 function ToolbarButton(props: {
   active: boolean;
-  icon: string;
   label: string;
   onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
       aria-label={props.label}
       className={`inline-flex h-8 w-8 items-center justify-center rounded ${
-        props.active
-          ? "bg-primary text-on-primary"
-          : "text-secondary hover:bg-surface-container-high"
+        props.active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
       }`}
       onClick={props.onClick}
       title={props.label}
       type="button"
     >
-      <span className="material-symbols-outlined text-[18px]">{props.icon}</span>
+      {props.children}
     </button>
   );
 }

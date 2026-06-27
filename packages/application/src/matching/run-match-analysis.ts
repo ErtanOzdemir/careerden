@@ -48,6 +48,14 @@ export class RunMatchAnalysisUseCase {
           coverLetterGuidance: "Optional guidance for the cover letter",
           experienceEnhancements:
             "Optional array keyed by zero-based profile experience index. Include enhancedDescription and enhancedAchievements only when grounded in the original profile experience.",
+          skillSuggestions:
+            "Optional. Skills from the profile that are most relevant for this job. Do not invent skills not present in the profile.",
+          educationEnhancements:
+            "Optional array keyed by zero-based profile education index. Include enhancedDescription and enhancedAchievements only when grounded in the original profile education.",
+          projectEnhancements:
+            "Optional array keyed by zero-based profile projects index. Include enhancedDescription and enhancedAchievements only when grounded in the original profile projects.",
+          certificationSuggestions:
+            "Optional. Profile certifications most relevant for this job. Do not invent certifications not present in the profile.",
         },
       }),
       outputSchema: aiMatchResultSchema,

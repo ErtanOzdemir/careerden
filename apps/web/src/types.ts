@@ -102,6 +102,15 @@ export interface JobApplication {
     }[];
     yourSkills: string[];
     suggestedSkills: string[];
+    educationOptimizations?: {
+      institution: string;
+      degree: string;
+      items: ExperienceOptimizationItem[];
+    }[];
+    projectOptimizations?: {
+      name: string;
+      items: ExperienceOptimizationItem[];
+    }[];
   };
 }
 
@@ -119,6 +128,7 @@ export interface Profile {
   skills: SkillCategory[];
   education: Education[];
   documents: Document[];
+  certifications?: string[];
 }
 
 export interface Experience {

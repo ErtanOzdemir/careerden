@@ -15,10 +15,26 @@ export interface MatchAnalysisResult {
   interviewTips: string[];
   coverLetterGuidance?: string[];
   experienceEnhancements?: ExperienceEnhancement[];
+  skillSuggestions?: string[];
+  educationEnhancements?: EducationEnhancement[];
+  projectEnhancements?: ProjectEnhancement[];
+  certificationSuggestions?: string[];
 }
 
 export interface ExperienceEnhancement {
   experienceIndex: number;
+  enhancedDescription?: string;
+  enhancedAchievements?: string[];
+}
+
+export interface EducationEnhancement {
+  educationIndex: number;
+  enhancedDescription?: string;
+  enhancedAchievements?: string[];
+}
+
+export interface ProjectEnhancement {
+  projectIndex: number;
   enhancedDescription?: string;
   enhancedAchievements?: string[];
 }

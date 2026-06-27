@@ -6,14 +6,16 @@ import { StatusBadge } from "../components/link2cv/status-badge.js";
 import type { DisplayStatus } from "../components/link2cv/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
-import { mapApiJobApplicationToUi } from "../api/mappers.js";
+import { mapApiJobApplicationToUi, mapApiProfileToUi } from "../api/mappers.js";
 import {
   useJobApplicationChanges,
   type JobApplicationChange,
 } from "../api/jobApplicationChanges.js";
-import type { JobApplication } from "../types.js";
+import type { JobApplication, Profile } from "../types.js";
 import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
+import AiMatchCard from "../components/AiMatchCard.js";
+import type { ApiDocumentContent } from "../api/types.js";
 import {
   ArrowLeft,
   MapPin,
@@ -21,8 +23,6 @@ import {
   Sparkles,
   ExternalLink,
   Check,
-  TriangleAlert,
-  Lightbulb,
   FileText,
   Download,
   Pencil,
@@ -44,10 +44,12 @@ const tabs: { id: Tab; label: string }[] = [
 export default function AppDetail() {
   const { id } = useParams();
   const [app, setApp] = useState<JobApplication | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("overview");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSavingContent, setIsSavingContent] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -73,8 +75,11 @@ export default function AppDetail() {
         setIsLoading(true);
         setError(null);
         const detail = await jobApplicationsApi.get(id!);
-        const profile = await profilesApi.get(detail.profileId);
-        if (isMounted) setApp(mapApiJobApplicationToUi(detail, profile));
+        const profileData = await profilesApi.get(detail.profileId);
+        if (isMounted) {
+          setApp(mapApiJobApplicationToUi(detail, profileData));
+          setProfile(mapApiProfileToUi(profileData));
+        }
       } catch (e) {
         if (isMounted) setError(e instanceof Error ? e.message : "Failed to load.");
       } finally {
@@ -108,9 +113,10 @@ export default function AppDetail() {
   async function refresh() {
     if (!id) return;
     const detail = await jobApplicationsApi.get(id);
-    const profile = await profilesApi.get(detail.profileId);
-    const mapped = mapApiJobApplicationToUi(detail, profile);
+    const profileData = await profilesApi.get(detail.profileId);
+    const mapped = mapApiJobApplicationToUi(detail, profileData);
     setApp(mapped);
+    setProfile(mapApiProfileToUi(profileData));
     setNotes(mapped.interviewNotes ?? "");
   }
 
@@ -120,7 +126,9 @@ export default function AppDetail() {
       setIsUpdatingStatus(true);
       setError(null);
       await jobApplicationsApi.update(id, {
-        applicationStatus: mapUiStatusToApi(newStatus as "Applied" | "Interviewing" | "Offer" | "Rejected"),
+        applicationStatus: mapUiStatusToApi(
+          newStatus as "Applied" | "Interviewing" | "Offer" | "Rejected",
+        ),
       });
       await refresh();
     } catch (e) {
@@ -199,6 +207,20 @@ export default function AppDetail() {
       setError(e instanceof Error ? e.message : "Failed.");
     } finally {
       setIsGenerating(false);
+    }
+  }
+
+  async function handleSaveDocumentContent(content: ApiDocumentContent) {
+    if (!id) return;
+    try {
+      setIsSavingContent(true);
+      setError(null);
+      await jobApplicationsApi.updateDocumentContent(id, content);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save.");
+    } finally {
+      setIsSavingContent(false);
     }
   }
 
@@ -394,7 +416,30 @@ export default function AppDetail() {
       </div>
 
       {tab === "overview" && <OverviewTab app={app} />}
-      {tab === "analysis" && <AnalysisTab app={app} />}
+      {tab === "analysis" &&
+        (app.aiMatch && app.documentContent ? (
+          <AiMatchCard
+            aiMatch={app.aiMatch}
+            canCreateCv={["review_ready", "completed"].includes(app.processingStatus ?? "")}
+            hasGeneratedDocuments={(app.generatedDocuments?.length ?? 0) > 0}
+            isCreatingCv={isGenerating}
+            isSavingContent={isSavingContent}
+            documentContent={app.documentContent}
+            profile={profile ?? undefined}
+            onSaveContent={handleSaveDocumentContent}
+            onCreateCv={handleGenerateDocuments}
+          />
+        ) : (
+          <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
+            <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Sparkles className="size-5" />
+            </div>
+            <p className="mt-4 text-sm font-medium text-foreground">Match analysis in progress</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              Once we finish extracting the job details, the AI wizard will appear here.
+            </p>
+          </div>
+        ))}
       {tab === "documents" && (
         <DocumentsTab
           app={app}
@@ -473,125 +518,6 @@ function OverviewTab({ app }: { app: JobApplication }) {
         </dl>
       </Panel>
     </div>
-  );
-}
-
-function AnalysisTab({ app }: { app: JobApplication }) {
-  if (!app.aiMatch)
-    return (
-      <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
-        <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <Sparkles className="size-5" />
-        </div>
-        <p className="mt-4 text-sm font-medium text-foreground">Match analysis in progress</p>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-          Once we finish extracting the job details, analysis will appear here.
-        </p>
-      </div>
-    );
-
-  const m = app.aiMatch;
-  return (
-    <div className="space-y-6">
-      <Panel className="p-6">
-        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
-          <MatchRing score={m.score} />
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              {m.score >= 70 ? "Strong match for your profile" : "Review before applying"}
-            </h3>
-            <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-              {m.summary}
-            </p>
-          </div>
-        </div>
-      </Panel>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <AnalysisColumn icon={Check} tone="success" title="Strengths" items={m.yourSkills} />
-        <AnalysisColumn
-          icon={TriangleAlert}
-          tone="warning"
-          title="Gaps to address"
-          items={m.suggestedSkills}
-        />
-        <AnalysisColumn
-          icon={Lightbulb}
-          tone="info"
-          title="Recommendations"
-          items={m.bulletOptimizations.slice(0, 5).map((b) => b.enhanced)}
-        />
-      </div>
-    </div>
-  );
-}
-
-function MatchRing({ score }: { score: number }) {
-  const color =
-    score >= 70 ? "stroke-success" : score >= 50 ? "stroke-warning" : "stroke-destructive";
-  const textColor =
-    score >= 70 ? "text-success" : score >= 50 ? "text-warning-foreground" : "text-destructive";
-  return (
-    <div className="relative flex size-24 shrink-0 items-center justify-center">
-      <svg className="size-24 -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="42" className="fill-none stroke-muted" strokeWidth="8" />
-        <circle
-          cx="50"
-          cy="50"
-          r="42"
-          className={cn("fill-none", color)}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={`${(score / 100) * 264} 264`}
-        />
-      </svg>
-      <div className="absolute text-center">
-        <span className={cn("text-xl font-semibold", textColor)}>{score}%</span>
-        <span className="block text-[0.65rem] text-muted-foreground">match</span>
-      </div>
-    </div>
-  );
-}
-
-const toneStyles = {
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning-foreground",
-  info: "bg-info-soft text-info",
-};
-
-function AnalysisColumn({
-  icon: Icon,
-  tone,
-  title,
-  items,
-}: {
-  icon: typeof Check;
-  tone: keyof typeof toneStyles;
-  title: string;
-  items: string[];
-}) {
-  return (
-    <Panel>
-      <div className="flex items-center gap-2.5 px-5 py-4">
-        <span
-          className={cn("flex size-7 items-center justify-center rounded-lg", toneStyles[tone])}
-        >
-          <Icon className="size-4" />
-        </span>
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      </div>
-      <ul className="space-y-3 border-t border-border px-5 py-4">
-        {items.length > 0 ? (
-          items.map((item, i) => (
-            <li key={i} className="flex gap-2.5 text-sm text-muted-foreground">
-              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-border" />
-              {item}
-            </li>
-          ))
-        ) : (
-          <li className="text-sm text-muted-foreground">No items yet.</li>
-        )}
-      </ul>
-    </Panel>
   );
 }
 
@@ -779,7 +705,9 @@ function TimelineTab({
               <input
                 type="datetime-local"
                 value={interviewForm.scheduledAt}
-                onChange={(e) => onSetInterviewForm({ ...interviewForm, scheduledAt: e.target.value })}
+                onChange={(e) =>
+                  onSetInterviewForm({ ...interviewForm, scheduledAt: e.target.value })
+                }
                 className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
                 required
               />

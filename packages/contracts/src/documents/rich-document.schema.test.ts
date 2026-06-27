@@ -129,6 +129,15 @@ describe("documentContentSchema", () => {
           achievements: [paragraph],
         },
       ],
+      skillSuggestions: [],
+      educationEnhancements: [],
+      projectEnhancements: [],
+      certificationSuggestions: [],
+      selections: {
+        experience: {},
+        education: {},
+        projects: {},
+      },
     });
   });
 });

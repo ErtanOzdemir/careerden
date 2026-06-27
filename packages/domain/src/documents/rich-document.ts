@@ -60,9 +60,53 @@ export interface DocumentContentExperienceEnhancement {
   achievements: RichDocument[];
 }
 
+export interface DocumentContentEducationEnhancement {
+  educationIndex: number;
+  description?: RichDocument;
+  achievements: RichDocument[];
+}
+
+export interface DocumentContentProjectEnhancement {
+  projectIndex: number;
+  description?: RichDocument;
+  achievements: RichDocument[];
+}
+
+export interface DocumentContentSelections {
+  customizedSummary?: "ai" | "original";
+  skills?: "ai" | "original";
+  certifications?: "ai" | "original";
+  experience: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  education: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  projects: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+}
+
 export interface DocumentContent {
   customizedSummary: RichDocument;
   experienceEnhancements: DocumentContentExperienceEnhancement[];
+  skillSuggestions?: string[];
+  educationEnhancements?: DocumentContentEducationEnhancement[];
+  projectEnhancements?: DocumentContentProjectEnhancement[];
+  certificationSuggestions?: string[];
+  selections?: DocumentContentSelections;
 }
 
 export function richDocumentFromText(text: string): RichDocument {
@@ -86,6 +130,18 @@ export function documentContentFromMatchAnalysis(input: {
     enhancedDescription?: string;
     enhancedAchievements?: string[];
   }>;
+  skillSuggestions?: string[];
+  educationEnhancements?: Array<{
+    educationIndex: number;
+    enhancedDescription?: string;
+    enhancedAchievements?: string[];
+  }>;
+  projectEnhancements?: Array<{
+    projectIndex: number;
+    enhancedDescription?: string;
+    enhancedAchievements?: string[];
+  }>;
+  certificationSuggestions?: string[];
 }): DocumentContent {
   return {
     customizedSummary: richDocumentFromText(input.customizedSummary),
@@ -96,6 +152,27 @@ export function documentContentFromMatchAnalysis(input: {
         : {}),
       achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
     })),
+    skillSuggestions: input.skillSuggestions ?? [],
+    educationEnhancements: (input.educationEnhancements ?? []).map((enhancement) => ({
+      educationIndex: enhancement.educationIndex,
+      ...(enhancement.enhancedDescription
+        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
+        : {}),
+      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+    })),
+    projectEnhancements: (input.projectEnhancements ?? []).map((enhancement) => ({
+      projectIndex: enhancement.projectIndex,
+      ...(enhancement.enhancedDescription
+        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
+        : {}),
+      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+    })),
+    certificationSuggestions: input.certificationSuggestions ?? [],
+    selections: {
+      experience: {},
+      education: {},
+      projects: {},
+    },
   };
 }
 

@@ -194,6 +194,18 @@ export interface ApiMatchAnalysis {
   missingSkills: string[];
   recommendedAchievements: string[];
   strongSkills: string[];
+  skillSuggestions?: string[];
+  educationEnhancements?: {
+    educationIndex: number;
+    enhancedDescription?: string;
+    enhancedAchievements?: string[];
+  }[];
+  projectEnhancements?: {
+    projectIndex: number;
+    enhancedDescription?: string;
+    enhancedAchievements?: string[];
+  }[];
+  certificationSuggestions?: string[];
 }
 
 export type RichTextMark =
@@ -234,6 +246,33 @@ export interface RichDocument {
   blocks: RichBlock[];
 }
 
+export interface ApiDocumentContentSelections {
+  customizedSummary?: "ai" | "original";
+  skills?: "ai" | "original";
+  certifications?: "ai" | "original";
+  experience: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  education: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  projects: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+}
+
 export interface ApiDocumentContent {
   customizedSummary: RichDocument;
   experienceEnhancements: Array<{
@@ -241,6 +280,19 @@ export interface ApiDocumentContent {
     description?: RichDocument;
     achievements: RichDocument[];
   }>;
+  skillSuggestions: string[];
+  educationEnhancements: Array<{
+    educationIndex: number;
+    description?: RichDocument;
+    achievements: RichDocument[];
+  }>;
+  projectEnhancements: Array<{
+    projectIndex: number;
+    description?: RichDocument;
+    achievements: RichDocument[];
+  }>;
+  certificationSuggestions: string[];
+  selections: ApiDocumentContentSelections;
 }
 
 export interface ApiJobApplicationDetail extends ApiJobApplication {

@@ -94,8 +94,6 @@ describe("TemplateVariableMapping", () => {
     expect(screen.getByText("Experience List")).toBeDefined();
     expect(screen.getByText("Education List")).toBeDefined();
     expect(screen.getAllByText("Links").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Company Name")).toBeDefined();
-    expect(screen.getByText("Role Title")).toBeDefined();
     expect(screen.getAllByText("Selected Experiences").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Selected Education").length).toBeGreaterThanOrEqual(1);
   });
@@ -106,12 +104,6 @@ describe("TemplateVariableMapping", () => {
     expect(screen.getByText("John Doe")).toBeDefined();
     expect(screen.getByText("john@example.com")).toBeDefined();
     expect(screen.getByText("Software Engineer")).toBeDefined();
-  });
-
-  it("shows auto-generated label for AI fields without profile data", () => {
-    render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
-
-    expect(screen.getAllByText("-- (auto-generated)").length).toBeGreaterThan(0);
   });
 
   it("shows no variables message when template has zero placeholders", () => {

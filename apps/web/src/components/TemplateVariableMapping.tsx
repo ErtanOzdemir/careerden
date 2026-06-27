@@ -18,12 +18,7 @@ const FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
   { field: "location", label: "Location" },
   { field: "summary", label: "Summary" },
   { field: "skills", label: "Skills" },
-  { field: "experience_list", label: "Experience List" },
-  { field: "education_list", label: "Education List" },
   { field: "links", label: "Links" },
-  { field: "selected_projects", label: "Selected Projects" },
-  { field: "selected_education", label: "Selected Education" },
-  { field: "selected_experiences", label: "Selected Experiences" },
 ];
 
 const EXPERIENCE_SUB_FIELDS: { key: string; label: string }[] = [

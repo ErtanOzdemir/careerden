@@ -91,8 +91,6 @@ describe("TemplateVariableMapping", () => {
     expect(screen.getByText("Profession")).toBeDefined();
     expect(screen.getByText("Summary")).toBeDefined();
     expect(screen.getByText("Skills")).toBeDefined();
-    expect(screen.getByText("Experience List")).toBeDefined();
-    expect(screen.getByText("Education List")).toBeDefined();
     expect(screen.getAllByText("Links").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Selected Experiences").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Selected Education").length).toBeGreaterThanOrEqual(1);

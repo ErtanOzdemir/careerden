@@ -101,7 +101,9 @@ export default function Settings() {
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Link2CV is up to date</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">You're running the latest version.</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              You're running the latest version.
+            </p>
           </div>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setUpdateOpen(true)}>

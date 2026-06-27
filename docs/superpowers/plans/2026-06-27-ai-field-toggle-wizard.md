@@ -20,11 +20,13 @@
 ### Task 1: Domain types — DocumentContent, DocumentContentSelections, MatchAnalysisResult
 
 **Files:**
+
 - Modify: `packages/domain/src/documents/rich-document.ts:57-66`
 - Modify: `packages/domain/src/matching/match-analysis.ts:9-24`
 - Test: `packages/domain/src/documents/rich-document.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing (first task)
 - Produces:
   - `DocumentContentSelections` interface
@@ -54,18 +56,27 @@ export interface DocumentContentSelections {
   customizedSummary?: "ai" | "original";
   skills?: "ai" | "original";
   certifications?: "ai" | "original";
-  experience: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
-  education: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
-  projects: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
+  experience: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  education: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  projects: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
 }
 ```
 
@@ -142,10 +153,12 @@ git commit -m "feat(domain): add DocumentContentSelections and expand CV section
 ### Task 2: Domain — documentContentFromMatchAnalysis expansion
 
 **Files:**
+
 - Modify: `packages/domain/src/documents/rich-document.ts:82-100`
 - Test: `packages/domain/src/documents/rich-document.test.ts`
 
 **Interfaces:**
+
 - Consumes: Expanded `DocumentContent`, `MatchAnalysisResult` from Task 1
 - Produces: Updated `documentContentFromMatchAnalysis` that maps new AI fields to `DocumentContent`
 
@@ -228,9 +241,11 @@ git commit -m "feat(domain): expand documentContentFromMatchAnalysis for new CV 
 ### Task 3: Contract schemas — rich-document.schema.ts expansion
 
 **Files:**
+
 - Modify: `packages/contracts/src/documents/rich-document.schema.ts:101-126`
 
 **Interfaces:**
+
 - Consumes: `DocumentContent`, `DocumentContentSelections` from Task 1
 - Produces: Updated `documentContentSchema` and `documentContentDto` with new optional fields
 
@@ -239,9 +254,7 @@ git commit -m "feat(domain): expand documentContentFromMatchAnalysis for new CV 
 Replace lines 101-116 in `packages/contracts/src/documents/rich-document.schema.ts`:
 
 ```typescript
-const fieldSelectionSchema = z
-  .enum(["ai", "original"])
-  .optional();
+const fieldSelectionSchema = z.enum(["ai", "original"]).optional();
 
 const indexSelectionsSchema = z
   .record(
@@ -330,9 +343,11 @@ git commit -m "feat(contracts): expand documentContentSchema for new CV sections
 ### Task 4: Contract schemas — ai-match-result.schema.ts expansion
 
 **Files:**
+
 - Modify: `packages/contracts/src/matching/ai-match-result.schema.ts:3-20`
 
 **Interfaces:**
+
 - Consumes: `MatchAnalysisResult` from Task 1
 - Produces: Updated `aiMatchResultSchema` with new optional fields
 
@@ -401,9 +416,11 @@ git commit -m "feat(contracts): expand aiMatchResultSchema for new CV sections"
 ### Task 5: Application — run-match-analysis.ts AI prompt expansion
 
 **Files:**
+
 - Modify: `packages/application/src/matching/run-match-analysis.ts:31-52`
 
 **Interfaces:**
+
 - Consumes: `aiMatchResultSchema` from Task 4, `documentContentFromMatchAnalysis` from Task 2
 - Produces: Updated AI prompt with instructions for new output fields. No signature changes.
 
@@ -455,9 +472,11 @@ git commit -m "feat(application): expand AI prompt with new CV section fields"
 ### Task 6: Application — generate-documents.ts selection-aware toTemplateData
 
 **Files:**
+
 - Modify: `packages/application/src/documents/generate-documents.ts:145-228`
 
 **Interfaces:**
+
 - Consumes: Expanded `DocumentContent` with selections from Task 1
 - Produces: Updated `toTemplateData` and `toSelectedExperiences` that respect selections
 
@@ -506,21 +525,26 @@ function toSelectedExperiences(
 
     const description =
       selection?.description === "original"
-        ? (experience.description ? documentContentFromText(experience.description) : undefined)
-        : (enhancement?.description ?? (experience.description ? documentContentFromText(experience.description) : undefined));
+        ? experience.description
+          ? documentContentFromText(experience.description)
+          : undefined
+        : (enhancement?.description ??
+          (experience.description ? documentContentFromText(experience.description) : undefined));
 
-    const achievements =
-      selection?.achievements
-        ? experience.achievements.map((achievement, achievementIndex) => {
-            const achievementSelection = selection.achievements[String(achievementIndex)];
-            if (achievementSelection === "original" || !enhancement?.achievements?.[achievementIndex]) {
-              return documentContentFromText(achievement);
-            }
-            return enhancement.achievements[achievementIndex];
-          })
-        : (enhancement?.achievements && enhancement.achievements.length > 0
-            ? enhancement.achievements
-            : experience.achievements.map(documentContentFromText));
+    const achievements = selection?.achievements
+      ? experience.achievements.map((achievement, achievementIndex) => {
+          const achievementSelection = selection.achievements[String(achievementIndex)];
+          if (
+            achievementSelection === "original" ||
+            !enhancement?.achievements?.[achievementIndex]
+          ) {
+            return documentContentFromText(achievement);
+          }
+          return enhancement.achievements[achievementIndex];
+        })
+      : enhancement?.achievements && enhancement.achievements.length > 0
+        ? enhancement.achievements
+        : experience.achievements.map(documentContentFromText);
 
     return {
       title: experience.title,
@@ -558,18 +582,20 @@ function toSelectedEducation(
         ? enhancement.description
         : undefined;
 
-    const achievements =
-      selection?.achievements
-        ? item.achievements.map((achievement, achievementIndex) => {
-            const achievementSelection = selection.achievements[String(achievementIndex)];
-            if (achievementSelection === "original" || !enhancement?.achievements?.[achievementIndex]) {
-              return documentContentFromText(achievement);
-            }
-            return enhancement.achievements[achievementIndex];
-          })
-        : (enhancement?.achievements && enhancement.achievements.length > 0
-            ? enhancement.achievements
-            : item.achievements.map(documentContentFromText));
+    const achievements = selection?.achievements
+      ? item.achievements.map((achievement, achievementIndex) => {
+          const achievementSelection = selection.achievements[String(achievementIndex)];
+          if (
+            achievementSelection === "original" ||
+            !enhancement?.achievements?.[achievementIndex]
+          ) {
+            return documentContentFromText(achievement);
+          }
+          return enhancement.achievements[achievementIndex];
+        })
+      : enhancement?.achievements && enhancement.achievements.length > 0
+        ? enhancement.achievements
+        : item.achievements.map(documentContentFromText);
 
     return {
       institution: item.institution,
@@ -605,9 +631,11 @@ git commit -m "feat(application): make template rendering selection-aware for al
 ### Task 7: Web types — api/types.ts ApiDocumentContent expansion
 
 **Files:**
+
 - Modify: `apps/web/src/api/types.ts:237-244`
 
 **Interfaces:**
+
 - Consumes: Expanded `DocumentContent` from Task 1
 - Produces: Updated `ApiDocumentContent` matching the expanded backend shape
 
@@ -620,18 +648,27 @@ export interface ApiDocumentContentSelections {
   customizedSummary?: "ai" | "original";
   skills?: "ai" | "original";
   certifications?: "ai" | "original";
-  experience: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
-  education: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
-  projects: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
+  experience: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  education: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  projects: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
 }
 
 export interface ApiDocumentContent {
@@ -677,9 +714,11 @@ git commit -m "feat(web-types): expand ApiDocumentContent for new CV sections an
 ### Task 8: Web mappers — api/mappers.ts new field mapping
 
 **Files:**
+
 - Modify: `apps/web/src/api/mappers.ts:127-138`
 
 **Interfaces:**
+
 - Consumes: Expanded `ApiDocumentContent` from Task 7, expanded `ApiMatchAnalysis` from Task 4
 - Produces: Updated `mapInitialDocumentContent` that includes new fields; expanded `mapMatchAnalysis` with new sections
 
@@ -790,11 +829,13 @@ git commit -m "feat(web-mappers): map new CV section AI fields from API"
 ### Task 9: Web wizard — AiMatchCard.tsx step structure and EnhancedFieldRow
 
 **Files:**
+
 - Modify: `apps/web/src/components/AiMatchCard.tsx`
 - Modify: `apps/web/src/types.ts:88-106`
 - Create: `apps/web/src/components/EnhancedFieldRow.tsx`
 
 **Interfaces:**
+
 - Consumes: Expanded `ApiDocumentContent` from Task 7, expanded `aiMatch` from Task 8
 - Produces: Reusable `EnhancedFieldRow` component with toggle + rich text editor; updated wizard with 8 steps
 
@@ -875,10 +916,7 @@ export default function EnhancedFieldRow({
       {selection === "ai" && enhanced ? (
         isEditing ? (
           <div>
-            <RichTextEditor
-              value={draft ?? enhanced}
-              onChange={(value) => setDraft(value)}
-            />
+            <RichTextEditor value={draft ?? enhanced} onChange={(value) => setDraft(value)} />
             <div className="flex gap-2 mt-sm">
               <button
                 type="button"
@@ -969,215 +1007,258 @@ Replace the Skills step (around lines 511-517) and add Education, Projects, Cert
 For Skills step, add toggle alongside tags:
 
 ```tsx
-{activeStep === 3 && (
-  <div className="space-y-lg">
-    <h2 className="font-display font-headline-sm">Skills Comparison</h2>
-    <div className="flex items-center gap-sm mb-md">
-      <span className="text-label-sm font-medium">Use:</span>
-      <button
-        type="button"
-        onClick={() => setDraftContent(updateSelection(draftContent, ["skills"], "ai"))}
-        className={`px-3 py-1 rounded-full text-label-sm ${
-          draftContent.selections?.skills !== "original"
-            ? "bg-primary text-on-primary"
-            : "bg-surface-container-high text-on-surface-variant"
-        }`}
-      >
-        AI Suggestions
-      </button>
-      <button
-        type="button"
-        onClick={() => setDraftContent(updateSelection(draftContent, ["skills"], "original"))}
-        className={`px-3 py-1 rounded-full text-label-sm ${
-          draftContent.selections?.skills === "original"
-            ? "bg-primary text-on-primary"
-            : "bg-surface-container-high text-on-surface-variant"
-        }`}
-      >
-        Profile Skills
-      </button>
-    </div>
-    <div className="grid md:grid-cols-2 gap-md">
-      <div className="space-y-sm">
-        <h3 className="font-label-md">Profile Skills</h3>
-        <div className="flex flex-wrap gap-2">
-          {aiMatch.yourSkills.map((skill) => (
-            <span key={skill} className="px-3 py-1 bg-surface-container-high rounded-full text-label-sm">
-              {skill}
-            </span>
-          ))}
-        </div>
+{
+  activeStep === 3 && (
+    <div className="space-y-lg">
+      <h2 className="font-display font-headline-sm">Skills Comparison</h2>
+      <div className="flex items-center gap-sm mb-md">
+        <span className="text-label-sm font-medium">Use:</span>
+        <button
+          type="button"
+          onClick={() => setDraftContent(updateSelection(draftContent, ["skills"], "ai"))}
+          className={`px-3 py-1 rounded-full text-label-sm ${
+            draftContent.selections?.skills !== "original"
+              ? "bg-primary text-on-primary"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}
+        >
+          AI Suggestions
+        </button>
+        <button
+          type="button"
+          onClick={() => setDraftContent(updateSelection(draftContent, ["skills"], "original"))}
+          className={`px-3 py-1 rounded-full text-label-sm ${
+            draftContent.selections?.skills === "original"
+              ? "bg-primary text-on-primary"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}
+        >
+          Profile Skills
+        </button>
       </div>
-      {draftContent.skillSuggestions.length > 0 && (
+      <div className="grid md:grid-cols-2 gap-md">
         <div className="space-y-sm">
-          <h3 className="font-label-md">AI Suggestions</h3>
+          <h3 className="font-label-md">Profile Skills</h3>
           <div className="flex flex-wrap gap-2">
-            {draftContent.skillSuggestions.map((skill) => (
-              <span key={skill} className="px-3 py-1 bg-primary-container text-on-primary-container rounded-full text-label-sm">
+            {aiMatch.yourSkills.map((skill) => (
+              <span
+                key={skill}
+                className="px-3 py-1 bg-surface-container-high rounded-full text-label-sm"
+              >
                 {skill}
               </span>
             ))}
           </div>
         </div>
-      )}
+        {draftContent.skillSuggestions.length > 0 && (
+          <div className="space-y-sm">
+            <h3 className="font-label-md">AI Suggestions</h3>
+            <div className="flex flex-wrap gap-2">
+              {draftContent.skillSuggestions.map((skill) => (
+                <span
+                  key={skill}
+                  className="px-3 py-1 bg-primary-container text-on-primary-container rounded-full text-label-sm"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-)}
+  );
+}
 ```
 
 For Education step (new step index 4), iterate educationEnhancements and profile education:
 
 ```tsx
-{activeStep === 4 && (
-  <div className="space-y-xl">
-    <h2 className="font-display font-headline-sm">Education Enhancements</h2>
-    {profile?.education.map((edu, eduIndex) => {
-      const enhancement = draftContent.educationEnhancements.find(
-        (e) => e.educationIndex === eduIndex,
-      );
-      return (
-        <div key={eduIndex} className="space-y-md">
-          <h3 className="font-label-lg">{edu.institution} — {edu.degree}{edu.field ? `, ${edu.field}` : ""}</h3>
-          {edu.achievements.map((achievement, achievementIndex) => (
-            <EnhancedFieldRow
-              key={`edu-${eduIndex}-${achievementIndex}`}
-              label={`Achievement ${achievementIndex + 1}`}
-              original={achievement}
-              enhanced={enhancement?.achievements?.[achievementIndex]}
-              selection={draftContent.selections?.education?.[String(eduIndex)]?.achievements?.[String(achievementIndex)]}
-              onSelectionChange={(value) =>
-                setDraftContent(
-                  updateSelection(draftContent, ["education", String(eduIndex), "achievements", String(achievementIndex)], value),
-                )
-              }
-              onSave={(content) =>
-                setDraftContent(
-                  updateEducationAchievement(draftContent, eduIndex, achievementIndex, content),
-                )
-              }
-            />
-          ))}
-        </div>
-      );
-    })}
-  </div>
-)}
+{
+  activeStep === 4 && (
+    <div className="space-y-xl">
+      <h2 className="font-display font-headline-sm">Education Enhancements</h2>
+      {profile?.education.map((edu, eduIndex) => {
+        const enhancement = draftContent.educationEnhancements.find(
+          (e) => e.educationIndex === eduIndex,
+        );
+        return (
+          <div key={eduIndex} className="space-y-md">
+            <h3 className="font-label-lg">
+              {edu.institution} — {edu.degree}
+              {edu.field ? `, ${edu.field}` : ""}
+            </h3>
+            {edu.achievements.map((achievement, achievementIndex) => (
+              <EnhancedFieldRow
+                key={`edu-${eduIndex}-${achievementIndex}`}
+                label={`Achievement ${achievementIndex + 1}`}
+                original={achievement}
+                enhanced={enhancement?.achievements?.[achievementIndex]}
+                selection={
+                  draftContent.selections?.education?.[String(eduIndex)]?.achievements?.[
+                    String(achievementIndex)
+                  ]
+                }
+                onSelectionChange={(value) =>
+                  setDraftContent(
+                    updateSelection(
+                      draftContent,
+                      ["education", String(eduIndex), "achievements", String(achievementIndex)],
+                      value,
+                    ),
+                  )
+                }
+                onSave={(content) =>
+                  setDraftContent(
+                    updateEducationAchievement(draftContent, eduIndex, achievementIndex, content),
+                  )
+                }
+              />
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 ```
 
 For Projects step (new step index 5):
 
 ```tsx
-{activeStep === 5 && (
-  <div className="space-y-xl">
-    <h2 className="font-display font-headline-sm">Project Enhancements</h2>
-    {profile?.projects.map((project, projectIndex) => {
-      const enhancement = draftContent.projectEnhancements.find(
-        (p) => p.projectIndex === projectIndex,
-      );
-      return (
-        <div key={projectIndex} className="space-y-md">
-          <h3 className="font-label-lg">{project.name}</h3>
-          {project.description && (
-            <EnhancedFieldRow
-              label="Description"
-              original={project.description}
-              enhanced={enhancement?.description}
-              selection={draftContent.selections?.projects?.[String(projectIndex)]?.description}
-              onSelectionChange={(value) =>
-                setDraftContent(
-                  updateSelection(draftContent, ["projects", String(projectIndex), "description"], value),
-                )
-              }
-              onSave={(content) =>
-                setDraftContent(
-                  updateProjectDescription(draftContent, projectIndex, content),
-                )
-              }
-            />
-          )}
-          {project.achievements.map((achievement, achievementIndex) => (
-            <EnhancedFieldRow
-              key={`proj-${projectIndex}-${achievementIndex}`}
-              label={`Achievement ${achievementIndex + 1}`}
-              original={achievement}
-              enhanced={enhancement?.achievements?.[achievementIndex]}
-              selection={draftContent.selections?.projects?.[String(projectIndex)]?.achievements?.[String(achievementIndex)]}
-              onSelectionChange={(value) =>
-                setDraftContent(
-                  updateSelection(draftContent, ["projects", String(projectIndex), "achievements", String(achievementIndex)], value),
-                )
-              }
-              onSave={(content) =>
-                setDraftContent(
-                  updateProjectAchievement(draftContent, projectIndex, achievementIndex, content),
-                )
-              }
-            />
-          ))}
-        </div>
-      );
-    })}
-  </div>
-)}
+{
+  activeStep === 5 && (
+    <div className="space-y-xl">
+      <h2 className="font-display font-headline-sm">Project Enhancements</h2>
+      {profile?.projects.map((project, projectIndex) => {
+        const enhancement = draftContent.projectEnhancements.find(
+          (p) => p.projectIndex === projectIndex,
+        );
+        return (
+          <div key={projectIndex} className="space-y-md">
+            <h3 className="font-label-lg">{project.name}</h3>
+            {project.description && (
+              <EnhancedFieldRow
+                label="Description"
+                original={project.description}
+                enhanced={enhancement?.description}
+                selection={draftContent.selections?.projects?.[String(projectIndex)]?.description}
+                onSelectionChange={(value) =>
+                  setDraftContent(
+                    updateSelection(
+                      draftContent,
+                      ["projects", String(projectIndex), "description"],
+                      value,
+                    ),
+                  )
+                }
+                onSave={(content) =>
+                  setDraftContent(updateProjectDescription(draftContent, projectIndex, content))
+                }
+              />
+            )}
+            {project.achievements.map((achievement, achievementIndex) => (
+              <EnhancedFieldRow
+                key={`proj-${projectIndex}-${achievementIndex}`}
+                label={`Achievement ${achievementIndex + 1}`}
+                original={achievement}
+                enhanced={enhancement?.achievements?.[achievementIndex]}
+                selection={
+                  draftContent.selections?.projects?.[String(projectIndex)]?.achievements?.[
+                    String(achievementIndex)
+                  ]
+                }
+                onSelectionChange={(value) =>
+                  setDraftContent(
+                    updateSelection(
+                      draftContent,
+                      ["projects", String(projectIndex), "achievements", String(achievementIndex)],
+                      value,
+                    ),
+                  )
+                }
+                onSave={(content) =>
+                  setDraftContent(
+                    updateProjectAchievement(draftContent, projectIndex, achievementIndex, content),
+                  )
+                }
+              />
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 ```
 
 For Certifications step (new step index 6):
 
 ```tsx
-{activeStep === 6 && (
-  <div className="space-y-lg">
-    <h2 className="font-display font-headline-sm">Certification Suggestions</h2>
-    <div className="flex items-center gap-sm mb-md">
-      <span className="text-label-sm font-medium">Use:</span>
-      <button
-        type="button"
-        onClick={() => setDraftContent(updateSelection(draftContent, ["certifications"], "ai"))}
-        className={`px-3 py-1 rounded-full text-label-sm ${
-          draftContent.selections?.certifications !== "original"
-            ? "bg-primary text-on-primary"
-            : "bg-surface-container-high text-on-surface-variant"
-        }`}
-      >
-        AI Suggestions
-      </button>
-      <button
-        type="button"
-        onClick={() => setDraftContent(updateSelection(draftContent, ["certifications"], "original"))}
-        className={`px-3 py-1 rounded-full text-label-sm ${
-          draftContent.selections?.certifications === "original"
-            ? "bg-primary text-on-primary"
-            : "bg-surface-container-high text-on-surface-variant"
-        }`}
-      >
-        Profile Certifications
-      </button>
-    </div>
-    <div className="grid md:grid-cols-2 gap-md">
-      <div className="space-y-sm">
-        <h3 className="font-label-md">Profile Certifications</h3>
-        <div className="flex flex-wrap gap-2">
-          {(profile?.certifications ?? []).map((cert) => (
-            <span key={cert} className="px-3 py-1 bg-surface-container-high rounded-full text-label-sm">
-              {cert}
-            </span>
-          ))}
-        </div>
+{
+  activeStep === 6 && (
+    <div className="space-y-lg">
+      <h2 className="font-display font-headline-sm">Certification Suggestions</h2>
+      <div className="flex items-center gap-sm mb-md">
+        <span className="text-label-sm font-medium">Use:</span>
+        <button
+          type="button"
+          onClick={() => setDraftContent(updateSelection(draftContent, ["certifications"], "ai"))}
+          className={`px-3 py-1 rounded-full text-label-sm ${
+            draftContent.selections?.certifications !== "original"
+              ? "bg-primary text-on-primary"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}
+        >
+          AI Suggestions
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setDraftContent(updateSelection(draftContent, ["certifications"], "original"))
+          }
+          className={`px-3 py-1 rounded-full text-label-sm ${
+            draftContent.selections?.certifications === "original"
+              ? "bg-primary text-on-primary"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}
+        >
+          Profile Certifications
+        </button>
       </div>
-      {draftContent.certificationSuggestions.length > 0 && (
+      <div className="grid md:grid-cols-2 gap-md">
         <div className="space-y-sm">
-          <h3 className="font-label-md">AI Suggestions</h3>
+          <h3 className="font-label-md">Profile Certifications</h3>
           <div className="flex flex-wrap gap-2">
-            {draftContent.certificationSuggestions.map((cert) => (
-              <span key={cert} className="px-3 py-1 bg-primary-container text-on-primary-container rounded-full text-label-sm">
+            {(profile?.certifications ?? []).map((cert) => (
+              <span
+                key={cert}
+                className="px-3 py-1 bg-surface-container-high rounded-full text-label-sm"
+              >
                 {cert}
               </span>
             ))}
           </div>
         </div>
-      )}
+        {draftContent.certificationSuggestions.length > 0 && (
+          <div className="space-y-sm">
+            <h3 className="font-label-md">AI Suggestions</h3>
+            <div className="flex flex-wrap gap-2">
+              {draftContent.certificationSuggestions.map((cert) => (
+                <span
+                  key={cert}
+                  className="px-3 py-1 bg-primary-container text-on-primary-container rounded-full text-label-sm"
+                >
+                  {cert}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-)}
+  );
+}
 ```
 
 - [ ] **Step 6: Add helper functions for education/project content updates**
@@ -1249,50 +1330,54 @@ function updateProjectAchievement(
 Update the Summary step to use the toggle pattern. The existing `EditableRichDocumentField` handles the editing — add the toggle above it:
 
 ```tsx
-{activeStep === 1 && (
-  <div className="space-y-lg">
-    <div className="flex items-center gap-sm mb-md">
-      <span className="text-label-sm font-medium">Use:</span>
-      <button
-        type="button"
-        onClick={() => setDraftContent(updateSelection(draftContent, ["customizedSummary"], "ai"))}
-        className={`px-3 py-1 rounded-full text-label-sm ${
-          draftContent.selections?.customizedSummary !== "original"
-            ? "bg-primary text-on-primary"
-            : "bg-surface-container-high text-on-surface-variant"
-        }`}
-      >
-        AI Enhanced
-      </button>
-      <button
-        type="button"
-        onClick={() => setDraftContent(updateSelection(draftContent, ["customizedSummary"], "original"))}
-        className={`px-3 py-1 rounded-full text-label-sm ${
-          draftContent.selections?.customizedSummary === "original"
-            ? "bg-primary text-on-primary"
-            : "bg-surface-container-high text-on-surface-variant"
-        }`}
-      >
-        Original
-      </button>
-    </div>
-    <div className="grid md:grid-cols-2 md:divide-x gap-lg">
-      <div className="space-y-sm">
-        <h3 className="font-label-md">Original Profile Summary</h3>
-        <TextPanel>{aiMatch.currentSummary}</TextPanel>
-      </div>
-      <div className="space-y-sm">
-        <h3 className="font-label-md">Tailored CV Summary</h3>
-        <EditableRichDocumentField
-          value={draftContent.customizedSummary}
-          onSave={(value) =>
-            setDraftContent({ ...draftContent, customizedSummary: value })
+{
+  activeStep === 1 && (
+    <div className="space-y-lg">
+      <div className="flex items-center gap-sm mb-md">
+        <span className="text-label-sm font-medium">Use:</span>
+        <button
+          type="button"
+          onClick={() =>
+            setDraftContent(updateSelection(draftContent, ["customizedSummary"], "ai"))
           }
-        />
+          className={`px-3 py-1 rounded-full text-label-sm ${
+            draftContent.selections?.customizedSummary !== "original"
+              ? "bg-primary text-on-primary"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}
+        >
+          AI Enhanced
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setDraftContent(updateSelection(draftContent, ["customizedSummary"], "original"))
+          }
+          className={`px-3 py-1 rounded-full text-label-sm ${
+            draftContent.selections?.customizedSummary === "original"
+              ? "bg-primary text-on-primary"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}
+        >
+          Original
+        </button>
+      </div>
+      <div className="grid md:grid-cols-2 md:divide-x gap-lg">
+        <div className="space-y-sm">
+          <h3 className="font-label-md">Original Profile Summary</h3>
+          <TextPanel>{aiMatch.currentSummary}</TextPanel>
+        </div>
+        <div className="space-y-sm">
+          <h3 className="font-label-md">Tailored CV Summary</h3>
+          <EditableRichDocumentField
+            value={draftContent.customizedSummary}
+            onSave={(value) => setDraftContent({ ...draftContent, customizedSummary: value })}
+          />
+        </div>
       </div>
     </div>
-  </div>
-)}
+  );
+}
 ```
 
 - [ ] **Step 8: Pass profile prop to AiMatchCard**
@@ -1339,6 +1424,7 @@ git commit -m "feat(web-wizard): add per-field AI/Original toggle and expand to 
 ### Task 10: Quality gates
 
 **Files:**
+
 - No file changes, verification only.
 
 - [ ] **Step 1: Run full typecheck**
@@ -1380,4 +1466,3 @@ pnpm test
 ```
 
 Expected: PASS. If any tests break (e.g., rich-document.test.ts due to schema changes), fix them.
-

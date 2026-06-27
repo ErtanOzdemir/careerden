@@ -1,7 +1,12 @@
 import { useState, useMemo } from "react";
 import { Button } from "./ui/button.js";
 import { profilesApi } from "../api/profiles.js";
-import type { ApiDocumentTemplate, ApiDocumentTemplateField, ApiDocumentTemplateVariableAliases, ApiProfile } from "../api/types.js";
+import type {
+  ApiDocumentTemplate,
+  ApiDocumentTemplateField,
+  ApiDocumentTemplateVariableAliases,
+  ApiProfile,
+} from "../api/types.js";
 import { cn } from "../lib/utils.js";
 import { ChevronDown, ChevronRight, Save, AlertCircle } from "lucide-react";
 
@@ -51,17 +56,41 @@ const EDUCATION_SUB_FIELDS: { key: string; label: string }[] = [
 
 function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): string {
   switch (field) {
-    case "full_name": return profile.fullName || "--";
-    case "email": return profile.email || "--";
-    case "profession": return profile.profession || "--";
-    case "headline": return profile.headline || "--";
-    case "location": return profile.location || "--";
-    case "summary": return profile.summary?.slice(0, 60) + (profile.summary && profile.summary.length > 60 ? "..." : "") || "--";
-    case "skills": return profile.skills.join(", ").slice(0, 60) || "--";
-    case "experience_list": return profile.experience.map((e) => e.title).join(", ").slice(0, 60) || "--";
-    case "education_list": return profile.education.map((e) => e.institution).join(", ").slice(0, 60) || "--";
-    case "links": return profile.links.join(", ").slice(0, 60) || "--";
-    default: return "-- (auto-generated)";
+    case "full_name":
+      return profile.fullName || "--";
+    case "email":
+      return profile.email || "--";
+    case "profession":
+      return profile.profession || "--";
+    case "headline":
+      return profile.headline || "--";
+    case "location":
+      return profile.location || "--";
+    case "summary":
+      return (
+        profile.summary?.slice(0, 60) +
+          (profile.summary && profile.summary.length > 60 ? "..." : "") || "--"
+      );
+    case "skills":
+      return profile.skills.join(", ").slice(0, 60) || "--";
+    case "experience_list":
+      return (
+        profile.experience
+          .map((e) => e.title)
+          .join(", ")
+          .slice(0, 60) || "--"
+      );
+    case "education_list":
+      return (
+        profile.education
+          .map((e) => e.institution)
+          .join(", ")
+          .slice(0, 60) || "--"
+      );
+    case "links":
+      return profile.links.join(", ").slice(0, 60) || "--";
+    default:
+      return "-- (auto-generated)";
   }
 }
 
@@ -131,7 +160,9 @@ function MappingDropdown({
         <span className={cn(!value && "text-muted-foreground")}>
           {value ? `{{${value}}}` : "Unmapped"}
         </span>
-        <ChevronDown className={cn("size-3 text-muted-foreground transition-transform", open && "rotate-180")} />
+        <ChevronDown
+          className={cn("size-3 text-muted-foreground transition-transform", open && "rotate-180")}
+        />
       </button>
       {open && (
         <>
@@ -139,7 +170,10 @@ function MappingDropdown({
           <div className="absolute right-0 z-20 mt-1 max-h-48 w-full min-w-[200px] overflow-auto rounded-lg border border-border bg-card py-1 shadow-lg">
             <button
               type="button"
-              onClick={() => { onChange(""); setOpen(false); }}
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
             >
               Unmapped
@@ -151,11 +185,16 @@ function MappingDropdown({
                 <button
                   key={p}
                   type="button"
-                  onClick={() => { onChange(p); setOpen(false); }}
+                  onClick={() => {
+                    onChange(p);
+                    setOpen(false);
+                  }}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted"
                 >
                   <span>{`{{${p}}}`}</span>
-                  {alreadyUsed && <span className="ml-auto text-[0.65rem] text-muted-foreground">mapped</span>}
+                  {alreadyUsed && (
+                    <span className="ml-auto text-[0.65rem] text-muted-foreground">mapped</span>
+                  )}
                 </button>
               );
             })}
@@ -193,15 +232,22 @@ function ExperienceMappingGroup({
       next.selectedExperiences.items.push({ fields: {} });
     }
     if (placeholder) {
-      (next.selectedExperiences.items[expIndex].fields as Record<string, string>)[subField] = placeholder;
+      (next.selectedExperiences.items[expIndex].fields as Record<string, string>)[subField] =
+        placeholder;
     } else {
-      delete (next.selectedExperiences.items[expIndex].fields as Record<string, string | undefined>)[subField];
+      delete (
+        next.selectedExperiences.items[expIndex].fields as Record<string, string | undefined>
+      )[subField];
     }
     onChangeAliases(next);
   }
 
   function getCurrentValue(expIndex: number, subField: string): string {
-    return (aliases.selectedExperiences?.items?.[expIndex]?.fields as Record<string, string | undefined>)?.[subField] ?? "";
+    return (
+      (
+        aliases.selectedExperiences?.items?.[expIndex]?.fields as Record<string, string | undefined>
+      )?.[subField] ?? ""
+    );
   }
 
   const itemCount = profile.experience.length;
@@ -228,7 +274,8 @@ function ExperienceMappingGroup({
         {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         <span>Selected Experiences</span>
         <span className="text-xs text-muted-foreground">
-          ({itemCount} item{itemCount !== 1 ? "s" : ""}, {itemCount * EXPERIENCE_SUB_FIELDS.length} sub-fields)
+          ({itemCount} item{itemCount !== 1 ? "s" : ""}, {itemCount * EXPERIENCE_SUB_FIELDS.length}{" "}
+          sub-fields)
         </span>
       </button>
       {expanded && (
@@ -291,15 +338,22 @@ function EducationMappingGroup({
       next.selectedEducation.items.push({ fields: {} });
     }
     if (placeholder) {
-      (next.selectedEducation.items[eduIndex].fields as Record<string, string>)[subField] = placeholder;
+      (next.selectedEducation.items[eduIndex].fields as Record<string, string>)[subField] =
+        placeholder;
     } else {
-      delete (next.selectedEducation.items[eduIndex].fields as Record<string, string | undefined>)[subField];
+      delete (next.selectedEducation.items[eduIndex].fields as Record<string, string | undefined>)[
+        subField
+      ];
     }
     onChangeAliases(next);
   }
 
   function getCurrentValue(eduIndex: number, subField: string): string {
-    return (aliases.selectedEducation?.items?.[eduIndex]?.fields as Record<string, string | undefined>)?.[subField] ?? "";
+    return (
+      (
+        aliases.selectedEducation?.items?.[eduIndex]?.fields as Record<string, string | undefined>
+      )?.[subField] ?? ""
+    );
   }
 
   const itemCount = profile.education.length;
@@ -326,7 +380,8 @@ function EducationMappingGroup({
         {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         <span>Selected Education</span>
         <span className="text-xs text-muted-foreground">
-          ({itemCount} item{itemCount !== 1 ? "s" : ""}, {itemCount * EDUCATION_SUB_FIELDS.length} sub-fields)
+          ({itemCount} item{itemCount !== 1 ? "s" : ""}, {itemCount * EDUCATION_SUB_FIELDS.length}{" "}
+          sub-fields)
         </span>
       </button>
       {expanded && (
@@ -403,9 +458,7 @@ function LinksMappingGroup({
       <div className="divide-y divide-border rounded-lg border border-border">
         {profile.links.map((link, linkIndex) => (
           <div key={linkIndex} className="flex items-center gap-3 px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-              {link}
-            </span>
+            <span className="min-w-0 flex-1 truncate text-xs text-foreground">{link}</span>
             <div className="w-40 shrink-0">
               <MappingDropdown
                 value={getCurrentValue(linkIndex)}
@@ -426,7 +479,10 @@ interface TemplateVariableMappingProps {
   profile: ApiProfile;
 }
 
-export default function TemplateVariableMapping({ template, profile }: TemplateVariableMappingProps) {
+export default function TemplateVariableMapping({
+  template,
+  profile,
+}: TemplateVariableMappingProps) {
   const initialFlat = useMemo(
     () => invertFieldMappings(template.fieldMappings),
     [template.fieldMappings],
@@ -440,8 +496,8 @@ export default function TemplateVariableMapping({ template, profile }: TemplateV
     return init;
   });
 
-  const [variableAliases, setVariableAliases] = useState<ApiDocumentTemplateVariableAliases>(
-    () => structuredClone(template.variableAliases),
+  const [variableAliases, setVariableAliases] = useState<ApiDocumentTemplateVariableAliases>(() =>
+    structuredClone(template.variableAliases),
   );
 
   const [saving, setSaving] = useState(false);
@@ -596,12 +652,8 @@ export default function TemplateVariableMapping({ template, profile }: TemplateV
 
       <div className="flex items-center justify-between border-t border-border px-5 py-3">
         <div>
-          {saveError && (
-            <span className="text-xs text-destructive">{saveError}</span>
-          )}
-          {saveSuccess && (
-            <span className="text-xs text-success">Mapping saved</span>
-          )}
+          {saveError && <span className="text-xs text-destructive">{saveError}</span>}
+          {saveSuccess && <span className="text-xs text-success">Mapping saved</span>}
         </div>
         <Button
           variant="default"

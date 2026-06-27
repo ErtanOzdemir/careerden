@@ -24,18 +24,27 @@ interface DocumentContentSelections {
   customizedSummary?: "ai" | "original";
   skills?: "ai" | "original";
   certifications?: "ai" | "original";
-  experience: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
-  education: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
-  projects: Record<string, {
-    description?: "ai" | "original";
-    achievements: Record<string, "ai" | "original">;
-  }>;
+  experience: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  education: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
+  projects: Record<
+    string,
+    {
+      description?: "ai" | "original";
+      achievements: Record<string, "ai" | "original">;
+    }
+  >;
 }
 
 interface DocumentContent {
@@ -86,6 +95,7 @@ interface MatchAnalysisResult {
 ### Per-field UI pattern
 
 Each enhanced field shows:
+
 1. A toggle segment control: "AI" | "Original"
 2. When AI selected: rich text editor (Tiptap) for editing the AI content
 3. When Original selected: read-only display of the original profile text
@@ -96,14 +106,14 @@ The existing `ExperienceComparisonRow` gets generalized to a reusable
 
 ### New steps
 
-| Step | Fields | Toggle granularity |
-|------|--------|--------------------|
-| Summary | 1 field | Per-field |
-| Experience | Per-experience: description + achievements | Per description, per achievement |
-| Skills | Skill list (tags) | Per-section |
-| Education | Per-education: description + achievements | Per description, per achievement |
-| Projects | Per-project: description + achievements | Per description, per achievement |
-| Certifications | Certification list (tags) | Per-section |
+| Step           | Fields                                     | Toggle granularity               |
+| -------------- | ------------------------------------------ | -------------------------------- |
+| Summary        | 1 field                                    | Per-field                        |
+| Experience     | Per-experience: description + achievements | Per description, per achievement |
+| Skills         | Skill list (tags)                          | Per-section                      |
+| Education      | Per-education: description + achievements  | Per description, per achievement |
+| Projects       | Per-project: description + achievements    | Per description, per achievement |
+| Certifications | Certification list (tags)                  | Per-section                      |
 
 ## AI & Backend Changes
 
@@ -122,10 +132,12 @@ compat with existing AI providers.
 ### Template rendering (`generate-documents.ts`)
 
 `toTemplateData` checks `selections` per field:
+
 ```
 if (selections.summary === "original") → profile.summary
 else → documentContent.customizedSummary (default: AI)
 ```
+
 Same pattern for skills, education, projects, certifications.
 
 ### `documentContentFromMatchAnalysis`
@@ -135,6 +147,7 @@ Expands to convert the new AI string results to `RichDocument` format.
 ## Migration
 
 All new `DocumentContent` fields are optional with defaults:
+
 - `selections` defaults to `{}` (empty = use AI, current behavior)
 - `skillSuggestions`, `certificationSuggestions` default to `[]`
 - `educationEnhancements`, `projectEnhancements` default to `[]`
@@ -143,25 +156,25 @@ Existing `documentContent` JSON in the DB is valid as-is. No migration SQL neede
 
 ## Files Changed
 
-| Layer | File |
-|-------|------|
-| Domain | `packages/domain/src/documents/rich-document.ts` |
-| Domain | `packages/domain/src/matching/match-analysis.ts` |
-| Contracts | `packages/contracts/src/documents/rich-document.schema.ts` |
-| Contracts | `packages/contracts/src/matching/ai-match-result.schema.ts` |
-| Application | `packages/application/src/matching/run-match-analysis.ts` |
-| Application | `packages/application/src/documents/generate-documents.ts` |
-| Web types | `apps/web/src/api/types.ts` |
-| Web mappers | `apps/web/src/api/mappers.ts` |
-| Web wizard | `apps/web/src/components/AiMatchCard.tsx` |
-| Web editor | `apps/web/src/components/RichTextEditor.tsx` (minor: toggle support) |
+| Layer       | File                                                                 |
+| ----------- | -------------------------------------------------------------------- |
+| Domain      | `packages/domain/src/documents/rich-document.ts`                     |
+| Domain      | `packages/domain/src/matching/match-analysis.ts`                     |
+| Contracts   | `packages/contracts/src/documents/rich-document.schema.ts`           |
+| Contracts   | `packages/contracts/src/matching/ai-match-result.schema.ts`          |
+| Application | `packages/application/src/matching/run-match-analysis.ts`            |
+| Application | `packages/application/src/documents/generate-documents.ts`           |
+| Web types   | `apps/web/src/api/types.ts`                                          |
+| Web mappers | `apps/web/src/api/mappers.ts`                                        |
+| Web wizard  | `apps/web/src/components/AiMatchCard.tsx`                            |
+| Web editor  | `apps/web/src/components/RichTextEditor.tsx` (minor: toggle support) |
 
 ## Testing
 
-| Layer | What to test |
-|-------|-------------|
-| Domain | `documentContentFromMatchAnalysis` handles new fields; selection defaults |
-| Contracts | Expanded Zod schemas validate old and new shapes |
-| Application | `toTemplateData` respects selections (AI vs original per field) |
-| API | `PUT /:id/document-content` accepts expanded shape; `GET` returns selections |
-| Web UI | Each wizard step renders toggle; toggle state persists across save |
+| Layer       | What to test                                                                 |
+| ----------- | ---------------------------------------------------------------------------- |
+| Domain      | `documentContentFromMatchAnalysis` handles new fields; selection defaults    |
+| Contracts   | Expanded Zod schemas validate old and new shapes                             |
+| Application | `toTemplateData` respects selections (AI vs original per field)              |
+| API         | `PUT /:id/document-content` accepts expanded shape; `GET` returns selections |
+| Web UI      | Each wizard step renders toggle; toggle state persists across save           |

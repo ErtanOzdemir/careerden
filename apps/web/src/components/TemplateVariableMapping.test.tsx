@@ -174,9 +174,9 @@ describe("TemplateVariableMapping", () => {
     (profilesApi.updateDocumentTemplateMappings as ReturnType<typeof vi.fn>).mockResolvedValue(
       mappedTemplate,
     );
-    (profilesApi.updateDocumentTemplateVariableAliases as ReturnType<typeof vi.fn>).mockResolvedValue(
-      mappedTemplate,
-    );
+    (
+      profilesApi.updateDocumentTemplateVariableAliases as ReturnType<typeof vi.fn>
+    ).mockResolvedValue(mappedTemplate);
 
     render(<TemplateVariableMapping template={mappedTemplate} profile={mockProfile} />);
 

@@ -18,16 +18,16 @@ Add an interactive variable mapping section to the TemplateManager page so users
 
 ### New Files
 
-| File | Purpose |
-|------|---------|
-| `apps/web/src/components/TemplateVariableMapping.tsx` | Mapping panel — renders per-template field rows with dropdowns |
-| `apps/web/src/components/TemplateVariableMapping.test.tsx` | Component tests |
+| File                                                       | Purpose                                                        |
+| ---------------------------------------------------------- | -------------------------------------------------------------- |
+| `apps/web/src/components/TemplateVariableMapping.tsx`      | Mapping panel — renders per-template field rows with dropdowns |
+| `apps/web/src/components/TemplateVariableMapping.test.tsx` | Component tests                                                |
 
 ### Modified Files
 
-| File | Change |
-|------|--------|
-| `apps/web/src/pages/TemplateManager.tsx` | Replace static variable reference panel (lines 126–147) with `<TemplateVariableMapping>`. Each `TemplateGroup` card gains an expandable mapping section. |
+| File                                       | Change                                                                                                                                                                                                                       |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/pages/TemplateManager.tsx`   | Replace static variable reference panel (lines 126–147) with `<TemplateVariableMapping>`. Each `TemplateGroup` card gains an expandable mapping section.                                                                     |
 | `apps/api/src/profiles/profiles.routes.ts` | Relax `fieldMappings` validation at lines 207–220 to allow mapped placeholders with empty string `""` as the field value (unmapped). Currently requires every placeholder key to have a valid `DocumentTemplateField` value. |
 
 ### No New Backend Files
@@ -62,12 +62,14 @@ TemplateManager
 1. **Flat mappings** — `Record<string, string>`  
    `{ [DocumentTemplateField]: placeholderName | "" }`  
    Initialized by inverting the template's existing `fieldMappings`:
+
    ```
    Object.entries(template.fieldMappings).reduce(
      (acc, [placeholder, field]) => ({ ...acc, [field]: placeholder }),
      {}
    )
    ```
+
    Missing canonical fields default to `""` (unmapped).
 
 2. **Sub-field aliases** — `DocumentTemplateVariableAliases`  
@@ -79,10 +81,13 @@ TemplateManager
 interface TemplateVariableMappingProps {
   template: ApiDocumentTemplate;
   profile: ApiProfile;
-  onSave: (templateId: string, mappings: {
-    fieldMappings: Record<string, DocumentTemplateField>;
-    variableAliases: DocumentTemplateVariableAliases;
-  }) => Promise<void>;
+  onSave: (
+    templateId: string,
+    mappings: {
+      fieldMappings: Record<string, DocumentTemplateField>;
+      variableAliases: DocumentTemplateVariableAliases;
+    },
+  ) => Promise<void>;
 }
 ```
 
@@ -106,28 +111,28 @@ Toast: success or error
 
 ### Field Value Preview
 
-| Field | Preview Source | Example |
-|-------|---------------|---------|
-| `full_name` | `profile.fullName` | `"John Doe"` |
-| `email` | `profile.email` | `"john@acme.com"` |
-| `profession` | `profile.profession` | `"Engineer"` |
-| `headline` | `profile.headline` | `"Senior Developer"` |
-| `location` | `profile.location` | `"New York"` |
-| `summary` | `profile.summary` | `"Experienced..."` (truncated) |
-| `skills` | `profile.skills.join(", ")` | `"React, Node, TS"` (truncated) |
-| `experience_list` | `profile.experience.map(e => e.title).join(", ")` | `"SE, Sr SE, Lead"` |
-| `education_list` | `profile.education.map(e => e.institution).join(", ")` | `"MIT, Stanford"` |
-| `links` | `profile.links.join(", ")` | `"github, linkedin"` |
-| `company_name` | AI-generated | `"-- (auto-generated)"` |
-| `role_title` | AI-generated | `"-- (auto-generated)"` |
-| `job_description` | AI-generated | `"-- (auto-generated)"` |
-| `job_location` | AI-generated | `"-- (auto-generated)"` |
-| `customized_summary` | AI-generated | `"-- (auto-generated)"` |
-| `missing_skills` | AI-generated | `"-- (auto-generated)"` |
-| `strong_skills` | AI-generated | `"-- (auto-generated)"` |
-| `recommended_achievements` | AI-generated | `"-- (auto-generated)"` |
-| `selected_experiences` | Complex — per-item sub-fields below | See compound fields |
-| `selected_education` | Complex — per-item sub-fields below | See compound fields |
+| Field                      | Preview Source                                         | Example                         |
+| -------------------------- | ------------------------------------------------------ | ------------------------------- |
+| `full_name`                | `profile.fullName`                                     | `"John Doe"`                    |
+| `email`                    | `profile.email`                                        | `"john@acme.com"`               |
+| `profession`               | `profile.profession`                                   | `"Engineer"`                    |
+| `headline`                 | `profile.headline`                                     | `"Senior Developer"`            |
+| `location`                 | `profile.location`                                     | `"New York"`                    |
+| `summary`                  | `profile.summary`                                      | `"Experienced..."` (truncated)  |
+| `skills`                   | `profile.skills.join(", ")`                            | `"React, Node, TS"` (truncated) |
+| `experience_list`          | `profile.experience.map(e => e.title).join(", ")`      | `"SE, Sr SE, Lead"`             |
+| `education_list`           | `profile.education.map(e => e.institution).join(", ")` | `"MIT, Stanford"`               |
+| `links`                    | `profile.links.join(", ")`                             | `"github, linkedin"`            |
+| `company_name`             | AI-generated                                           | `"-- (auto-generated)"`         |
+| `role_title`               | AI-generated                                           | `"-- (auto-generated)"`         |
+| `job_description`          | AI-generated                                           | `"-- (auto-generated)"`         |
+| `job_location`             | AI-generated                                           | `"-- (auto-generated)"`         |
+| `customized_summary`       | AI-generated                                           | `"-- (auto-generated)"`         |
+| `missing_skills`           | AI-generated                                           | `"-- (auto-generated)"`         |
+| `strong_skills`            | AI-generated                                           | `"-- (auto-generated)"`         |
+| `recommended_achievements` | AI-generated                                           | `"-- (auto-generated)"`         |
+| `selected_experiences`     | Complex — per-item sub-fields below                    | See compound fields             |
+| `selected_education`       | Complex — per-item sub-fields below                    | See compound fields             |
 
 AI-generated fields show `"-- (auto-generated)"` since the profile doesn't contain this data yet (it's produced during document generation).
 
@@ -233,12 +238,12 @@ AI-generated fields show `"-- (auto-generated)"` since the profile doesn't conta
 
 ## Populating variableAliases from the UI
 
-| UI Action | variableAliases Path |
-|-----------|---------------------|
-| Experience 1 → Title → `{{exp1_title}}` | `selectedExperiences.items[0].title = "exp1_title"` |
+| UI Action                                   | variableAliases Path                                    |
+| ------------------------------------------- | ------------------------------------------------------- |
+| Experience 1 → Title → `{{exp1_title}}`     | `selectedExperiences.items[0].title = "exp1_title"`     |
 | Experience 2 → Company → `{{exp2_company}}` | `selectedExperiences.items[1].company = "exp2_company"` |
-| Education 1 → Institution → `{{school}}` | `selectedEducation.items[0].institution = "school"` |
-| Link 1 → `{{github}}` | `linkItems[0].variableName = "github"` |
+| Education 1 → Institution → `{{school}}`    | `selectedEducation.items[0].institution = "school"`     |
+| Link 1 → `{{github}}`                       | `linkItems[0].variableName = "github"`                  |
 
 The `fields` (default) level of `variableAliases` is not exposed in this UI and is preserved from the existing template data. Per-item aliases take rendering priority over defaults.
 
@@ -254,37 +259,37 @@ The new UI populates both `fieldMappings` and `variableAliases` so the renderer 
 
 ## Complexity Handling for Array Fields
 
-| Field | Expansion | Rows Generated |
-|-------|-----------|----------------|
+| Field                  | Expansion              | Rows Generated                  |
+| ---------------------- | ---------------------- | ------------------------------- |
 | `selected_experiences` | N items × 8 sub-fields | `profile.experience.length × 8` |
-| `selected_education` | N items × 7 sub-fields | `profile.education.length × 7` |
-| `links` | N items × 1 sub-field | `profile.links.length` |
-| `experience_list` | 1 row (flat) | 1 |
-| `education_list` | 1 row (flat) | 1 |
-| `skills` | 1 row (flat) | 1 |
+| `selected_education`   | N items × 7 sub-fields | `profile.education.length × 7`  |
+| `links`                | N items × 1 sub-field  | `profile.links.length`          |
+| `experience_list`      | 1 row (flat)           | 1                               |
+| `education_list`       | 1 row (flat)           | 1                               |
+| `skills`               | 1 row (flat)           | 1                               |
 
 Complex field groups start collapsed to avoid overwhelming the user. Group items render inside bordered containers with headers.
 
 ## Edge Cases
 
-| Case | Handling |
-|------|----------|
-| Template has 0 extracted placeholders | Show "No variables detected in this template" message. Save button hidden. |
-| Profile is empty (no fields populated) | Show `"-- (empty)"` for value previews. Mapping still works. |
-| Complex field has 0 items | Show collapsed group with `"(0 items)"` badge. No sub-field rows rendered. |
+| Case                                                       | Handling                                                                                                                             |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Template has 0 extracted placeholders                      | Show "No variables detected in this template" message. Save button hidden.                                                           |
+| Profile is empty (no fields populated)                     | Show `"-- (empty)"` for value previews. Mapping still works.                                                                         |
+| Complex field has 0 items                                  | Show collapsed group with `"(0 items)"` badge. No sub-field rows rendered.                                                           |
 | User uploads new template while viewing another's mappings | Templates are listed independently. Expanding a different template loads its own `fieldMappings`/`variableAliases`. No interference. |
-| 50+ placeholders in one template | Dropdown list has `max-height` with overflow scroll. |
-| 10+ experiences (80 sub-field dropdowns) | Each experience group is independently collapsible. |
-| Concurrent saves (double-click) | Save button disabled during API call (loading state). |
+| 50+ placeholders in one template                           | Dropdown list has `max-height` with overflow scroll.                                                                                 |
+| 10+ experiences (80 sub-field dropdowns)                   | Each experience group is independently collapsible.                                                                                  |
+| Concurrent saves (double-click)                            | Save button disabled during API call (loading state).                                                                                |
 
 ## Error Handling
 
-| Error | Response |
-|-------|----------|
-| API validation rejects `fieldMappings` | The route handler is relaxed (see API change below). Unmapped placeholders sent as `{ placeholder: "" }` — empty strings allowed through. |
-| Network failure | Toast: "Failed to save mapping. Please try again." Local state preserved, user can retry. |
+| Error                                                     | Response                                                                                                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| API validation rejects `fieldMappings`                    | The route handler is relaxed (see API change below). Unmapped placeholders sent as `{ placeholder: "" }` — empty strings allowed through.  |
+| Network failure                                           | Toast: "Failed to save mapping. Please try again." Local state preserved, user can retry.                                                  |
 | `variableAliases` save fails but `fieldMappings` succeeds | Toast: "Field mappings saved, but variable aliases failed: <reason>." Partial persistence is acceptable — user can retry just the aliases. |
-| Profile fetch fails | Mapping component still renders dropdowns. Value previews show `"— (unavailable)"`. |
+| Profile fetch fails                                       | Mapping component still renders dropdowns. Value previews show `"— (unavailable)"`.                                                        |
 
 ## API Change
 
@@ -297,10 +302,7 @@ Current validation requires every `placeholders` value is a valid `DocumentTempl
 fieldMappingsSchema = z.record(z.string(), documentTemplateFieldSchema);
 
 // After:
-fieldMappingsSchema = z.record(
-  z.string(),
-  z.union([documentTemplateFieldSchema, z.literal("")])
-);
+fieldMappingsSchema = z.record(z.string(), z.union([documentTemplateFieldSchema, z.literal("")]));
 ```
 
 Unmapped placeholders are omitted from the renderer's `addFieldMappings()` logic — the existing code at `docx-template-renderer.ts:190-206` already skips empty values.

@@ -288,10 +288,15 @@ export default function Dashboard() {
 
 function mapStatus(app: JobApplication): DisplayStatus {
   switch (app.status) {
-    case "Applied": return "applied";
-    case "Interviewing": return "interview";
-    case "Offer": return "offer";
-    case "Rejected": return "rejected";
-    default: return "saved";
+    case "Applied":
+      return "applied";
+    case "Interviewing":
+      return "interview";
+    case "Offer":
+      return "offer";
+    case "Rejected":
+      return "rejected";
+    default:
+      return "saved";
   }
 }

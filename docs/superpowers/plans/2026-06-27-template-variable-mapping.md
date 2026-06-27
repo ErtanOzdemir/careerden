@@ -22,9 +22,11 @@
 ### Task 1: Relax API validation to allow partial fieldMappings
 
 **Files:**
+
 - Modify: `apps/api/src/profiles/profiles.routes.ts:207-220`
 
 **Interfaces:**
+
 - Consumes: existing `updateDocumentTemplateMappingsSchema` from `@link2cv/contracts`
 - Produces: Allows `PATCH /:id/document-templates/:templateId/mappings` to accept a subset of placeholders in `fieldMappings` instead of requiring every detected placeholder
 
@@ -54,6 +56,7 @@ The original code checked `missing` (placeholders without mappings) which forced
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS
 
 - [ ] **Step 3: Commit**
@@ -68,9 +71,11 @@ git commit -m "feat: allow partial fieldMappings in template mappings PATCH"
 ### Task 2: Create TemplateVariableMapping component
 
 **Files:**
+
 - Create: `apps/web/src/components/TemplateVariableMapping.tsx`
 
 **Interfaces:**
+
 - Consumes: `ApiDocumentTemplate`, `ApiProfile` from `../api/types.js`; `profilesApi` from `../api/profiles.js`; `Button` from `./ui/button.js`; `Panel`, `PanelHeader` from `./link2cv/panel.js`; `cn` from `../lib/utils.js`; `ChevronDown`, `ChevronRight`, `Save`, `AlertCircle` from `lucide-react`
 - Produces: `TemplateVariableMapping` default export component
 
@@ -81,7 +86,12 @@ import { useState, useMemo, useCallback } from "react";
 import { Button } from "./ui/button.js";
 import { Panel } from "./link2cv/panel.js";
 import { profilesApi } from "../api/profiles.js";
-import type { ApiDocumentTemplate, ApiDocumentTemplateField, ApiDocumentTemplateVariableAliases, ApiProfile } from "../api/types.js";
+import type {
+  ApiDocumentTemplate,
+  ApiDocumentTemplateField,
+  ApiDocumentTemplateVariableAliases,
+  ApiProfile,
+} from "../api/types.js";
 import { cn } from "../lib/utils.js";
 import { ChevronDown, ChevronRight, Save, AlertCircle } from "lucide-react";
 
@@ -131,17 +141,41 @@ const EDUCATION_SUB_FIELDS: { key: string; label: string }[] = [
 
 function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): string {
   switch (field) {
-    case "full_name": return profile.fullName || "--";
-    case "email": return profile.email || "--";
-    case "profession": return profile.profession || "--";
-    case "headline": return profile.headline || "--";
-    case "location": return profile.location || "--";
-    case "summary": return profile.summary?.slice(0, 60) + (profile.summary && profile.summary.length > 60 ? "..." : "") || "--";
-    case "skills": return profile.skills.join(", ").slice(0, 60) || "--";
-    case "experience_list": return profile.experience.map((e) => e.title).join(", ").slice(0, 60) || "--";
-    case "education_list": return profile.education.map((e) => e.institution).join(", ").slice(0, 60) || "--";
-    case "links": return profile.links.join(", ").slice(0, 60) || "--";
-    default: return "-- (auto-generated)";
+    case "full_name":
+      return profile.fullName || "--";
+    case "email":
+      return profile.email || "--";
+    case "profession":
+      return profile.profession || "--";
+    case "headline":
+      return profile.headline || "--";
+    case "location":
+      return profile.location || "--";
+    case "summary":
+      return (
+        profile.summary?.slice(0, 60) +
+          (profile.summary && profile.summary.length > 60 ? "..." : "") || "--"
+      );
+    case "skills":
+      return profile.skills.join(", ").slice(0, 60) || "--";
+    case "experience_list":
+      return (
+        profile.experience
+          .map((e) => e.title)
+          .join(", ")
+          .slice(0, 60) || "--"
+      );
+    case "education_list":
+      return (
+        profile.education
+          .map((e) => e.institution)
+          .join(", ")
+          .slice(0, 60) || "--"
+      );
+    case "links":
+      return profile.links.join(", ").slice(0, 60) || "--";
+    default:
+      return "-- (auto-generated)";
   }
 }
 
@@ -731,9 +765,11 @@ git commit -m "feat: add TemplateVariableMapping component"
 ### Task 3: Modify TemplateManager to integrate variable mapping
 
 **Files:**
+
 - Modify: `apps/web/src/pages/TemplateManager.tsx`
 
 **Interfaces:**
+
 - Consumes: `TemplateVariableMapping` from `../components/TemplateVariableMapping.js`; `ApiProfile` from `../api/types.js`
 - Produces: Each `TemplateGroup` card now renders an expandable `TemplateVariableMapping` section
 
@@ -953,6 +989,7 @@ function TemplateCard({
 ```
 
 Key changes from original:
+
 - Removed the static `variables` array (lines 9-16) and the hardcoded reference panel (lines 126-147)
 - Added `profile` state from `profilesApi.me()`
 - Changed `profileId` state to `profile` state (full profile object needed for field previews)
@@ -972,9 +1009,11 @@ git commit -m "feat: integrate TemplateVariableMapping into TemplateManager"
 ### Task 4: Write component tests
 
 **Files:**
+
 - Create: `apps/web/src/components/TemplateVariableMapping.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `TemplateVariableMapping` default export; `ApiDocumentTemplate`, `ApiProfile` types
 - Produces: Test coverage for the component
 
@@ -1228,6 +1267,7 @@ describe("TemplateVariableMapping", () => {
 ```bash
 pnpm test apps/web/src/components/TemplateVariableMapping.test.tsx --run
 ```
+
 Expected: All tests PASS
 
 - [ ] **Step 3: Commit**
@@ -1246,6 +1286,7 @@ git commit -m "test: add TemplateVariableMapping component tests"
 ```bash
 pnpm typecheck
 ```
+
 Expected: PASS
 
 - [ ] **Step 2: Lint**
@@ -1253,6 +1294,7 @@ Expected: PASS
 ```bash
 pnpm lint
 ```
+
 Expected: PASS
 
 - [ ] **Step 3: Format check**
@@ -1260,6 +1302,7 @@ Expected: PASS
 ```bash
 pnpm format:check
 ```
+
 Expected: PASS or auto-fix with `pnpm format:fix`
 
 - [ ] **Step 4: Run full test suite**
@@ -1267,6 +1310,7 @@ Expected: PASS or auto-fix with `pnpm format:fix`
 ```bash
 pnpm test
 ```
+
 Expected: All tests PASS
 
 - [ ] **Step 5: Build**
@@ -1274,6 +1318,7 @@ Expected: All tests PASS
 ```bash
 pnpm build
 ```
+
 Expected: PASS
 
 - [ ] **Step 6: Commit (if any formatting fixes were needed)**

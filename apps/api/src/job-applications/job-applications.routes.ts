@@ -146,7 +146,13 @@ export function createJobApplicationRouter(dependencies: {
         const scrape = request.body.scrapeBundle as ScrapeBundle;
         await dependencies.jobApplications.saveScrapeBundle(request.params.id, scrape);
 
-        await storeCompanyLogo(request.params.id, scrape, dependencies.remoteImages, dependencies.storage, dependencies.jobApplications);
+        await storeCompanyLogo(
+          request.params.id,
+          scrape,
+          dependencies.remoteImages,
+          dependencies.storage,
+          dependencies.jobApplications,
+        );
 
         await dependencies.jobApplications.updateTracking(request.params.id, {
           companyName: scrape.job.companyName,
@@ -877,8 +883,10 @@ async function storeCompanyLogo(
     const updatedCompany = { ...companyWithLogo, logoFileId: stored.id };
     const updatedScrape: ScrapeBundle = {
       ...scrape,
-      companyLinkedIn: scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
-      companyWebsite: scrape.companyWebsite === companyWithLogo ? updatedCompany : scrape.companyWebsite,
+      companyLinkedIn:
+        scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
+      companyWebsite:
+        scrape.companyWebsite === companyWithLogo ? updatedCompany : scrape.companyWebsite,
       careerPage: scrape.careerPage === companyWithLogo ? updatedCompany : scrape.careerPage,
     };
     await jobApplications.saveScrapeBundle(jobApplicationId, updatedScrape);

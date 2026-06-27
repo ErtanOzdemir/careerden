@@ -219,9 +219,12 @@ export default function ApplicationsLog() {
           )}
 
           {rows.map((app) => {
-            const isProcessing = ["queued", "scraping", "analyzing", "generating_documents"].includes(
-              app.processingStatus ?? "",
-            );
+            const isProcessing = [
+              "queued",
+              "scraping",
+              "analyzing",
+              "generating_documents",
+            ].includes(app.processingStatus ?? "");
             const isFailed = app.processingStatus === "failed";
             return (
               <button
@@ -256,11 +259,19 @@ export default function ApplicationsLog() {
                     <span className="flex items-center gap-2">
                       <span className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                         <span
-                          className={cn("block h-full rounded-full", matchScoreBarColor(app.matchScore ?? 0))}
+                          className={cn(
+                            "block h-full rounded-full",
+                            matchScoreBarColor(app.matchScore ?? 0),
+                          )}
                           style={{ width: `${app.matchScore}%` }}
                         />
                       </span>
-                      <span className={cn("text-xs font-medium", matchScoreTextColor(app.matchScore ?? 0))}>
+                      <span
+                        className={cn(
+                          "text-xs font-medium",
+                          matchScoreTextColor(app.matchScore ?? 0),
+                        )}
+                      >
                         {app.matchScore}%
                       </span>
                     </span>
@@ -271,7 +282,9 @@ export default function ApplicationsLog() {
                 <div className="col-span-1">
                   <PriorityTag priority={mapUiPriorityToDisplay(app.priority)} />
                 </div>
-                <div className="col-span-2 text-xs text-muted-foreground">{app.dateLabel || "—"}</div>
+                <div className="col-span-2 text-xs text-muted-foreground">
+                  {app.dateLabel || "—"}
+                </div>
                 <div className="col-span-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
                   {app.dateApplied.replace(/, \d{4}$/, "")}
                   <ChevronRight className="size-4 text-muted-foreground/60" />
@@ -291,20 +304,29 @@ export default function ApplicationsLog() {
 
 function mapUiStatusToDisplay(app: JobApplication): DisplayStatus {
   switch (app.status) {
-    case "Applied": return "applied";
-    case "Interviewing": return "interview";
-    case "Offer": return "offer";
-    case "Rejected": return "rejected";
-    default: return "saved";
+    case "Applied":
+      return "applied";
+    case "Interviewing":
+      return "interview";
+    case "Offer":
+      return "offer";
+    case "Rejected":
+      return "rejected";
+    default:
+      return "saved";
   }
 }
 
 function mapUiPriorityToDisplay(priority: string): DisplayPriority {
   switch (priority) {
-    case "High": return "high";
-    case "Low": return "low";
-    case "Mid": return "medium";
-    default: return "medium";
+    case "High":
+      return "high";
+    case "Low":
+      return "low";
+    case "Mid":
+      return "medium";
+    default:
+      return "medium";
   }
 }
 

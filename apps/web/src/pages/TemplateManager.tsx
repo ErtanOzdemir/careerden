@@ -177,7 +177,9 @@ function TemplateCard({
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            {template.format.toUpperCase()} · {template.placeholders.length} variable{template.placeholders.length !== 1 ? "s" : ""} · {new Date(template.updatedAt).toLocaleDateString()}
+            {template.format.toUpperCase()} · {template.placeholders.length} variable
+            {template.placeholders.length !== 1 ? "s" : ""} ·{" "}
+            {new Date(template.updatedAt).toLocaleDateString()}
           </p>
         </div>
         <button
@@ -200,9 +202,7 @@ function TemplateCard({
         </Button>
       </div>
 
-      {showMapping && profile && (
-        <TemplateVariableMapping template={template} profile={profile} />
-      )}
+      {showMapping && profile && <TemplateVariableMapping template={template} profile={profile} />}
     </div>
   );
 }

@@ -28,7 +28,8 @@ cp .env.example .env
 pnpm dev
 ```
 
-The desktop app starts an embedded API server on an available local port. The web app reads that port from the desktop launch URL in desktop mode.
+The desktop app hosts the web UI in Electron. In development it loads the Vite dev server
+and points the renderer at the standalone API server through `?apiBaseUrl=...`.
 
 ## Architecture
 
@@ -37,7 +38,7 @@ Link2CV is a TypeScript monorepo using clean architecture with clear separation 
 ```
 link2cv/
 ├── apps/
-│   ├── desktop/      Electron desktop app and embedded server
+│   ├── desktop/      Electron desktop shell
 │   └── web/          Frontend (vanilla TypeScript + Vite)
 ├── packages/
 │   ├── api/          Express HTTP routes, middleware, and request mapping
@@ -59,8 +60,8 @@ Backend source is organized by bounded context inside those packages. Common con
 | Package Manager | pnpm 9                                   |
 | Monorepo        | Turborepo 2                              |
 | HTTP Framework  | Express 4                                |
-| Database        | SQLite via better-sqlite3 + Knex         |
-| Queue           | In-process job processing                |
+| Database        | PostgreSQL via Knex                      |
+| Queue           | Redis + BullMQ                           |
 | AI              | Vercel AI SDK (OpenAI, Gemini, DeepSeek) |
 | Browser         | Playwright                               |
 | Validation      | Zod 3                                    |

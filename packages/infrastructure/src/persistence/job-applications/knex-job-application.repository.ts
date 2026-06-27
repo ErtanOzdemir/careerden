@@ -28,7 +28,7 @@ import {
   toJobApplicationInterview,
 } from "../mappers.js";
 
-export class SqliteJobApplicationRepository implements JobApplicationRepository {
+export class KnexJobApplicationRepository implements JobApplicationRepository {
   constructor(private readonly db: Knex) {}
 
   async create(input: CreateJobApplicationInput): Promise<JobApplication> {

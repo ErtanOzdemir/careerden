@@ -1,7 +1,7 @@
 import type { Knex } from "knex";
-import { SqliteJobApplicationRepository } from "./sqlite-job-application.repository.js";
+import { KnexJobApplicationRepository } from "./knex-job-application.repository.js";
 
-export class PostgresJobApplicationRepository extends SqliteJobApplicationRepository {
+export class PostgresJobApplicationRepository extends KnexJobApplicationRepository {
   constructor(db: Knex) {
     super(db);
   }

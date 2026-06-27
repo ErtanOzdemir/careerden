@@ -2,9 +2,9 @@ import type { Knex } from "knex";
 import type { CreateUserProfileInput, UserProfile } from "@link2cv/domain";
 import { randomUUID } from "node:crypto";
 import { toUserProfile } from "../mappers.js";
-import { SqliteUserProfileRepository } from "./sqlite-user-profile.repository.js";
+import { KnexUserProfileRepository } from "./knex-user-profile.repository.js";
 
-export class PostgresUserProfileRepository extends SqliteUserProfileRepository {
+export class PostgresUserProfileRepository extends KnexUserProfileRepository {
   constructor(private readonly postgresDb: Knex) {
     super(postgresDb);
   }

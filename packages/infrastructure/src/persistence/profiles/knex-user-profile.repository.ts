@@ -12,7 +12,7 @@ import type {
 import { randomUUID } from "node:crypto";
 import { toDocumentTemplate, toUserProfile } from "../mappers.js";
 
-export class SqliteUserProfileRepository implements UserProfileRepository {
+export class KnexUserProfileRepository implements UserProfileRepository {
   constructor(private readonly db: Knex) {}
 
   async create(input: CreateUserProfileInput): Promise<UserProfile> {

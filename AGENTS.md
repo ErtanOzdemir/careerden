@@ -18,12 +18,12 @@ documents for review or download.
 - API: Express 4.21, Zod 3.24 for validation
 - Desktop runtime: Electron 33 with an embedded Express server
 - Web app: React 19, React Router 7, Vite 6, Tailwind CSS 4, Tiptap 3
-- Persistence: SQLite via `better-sqlite3` 11.7 and Knex 3.1 for database
-  access and migrations
+- Persistence: PostgreSQL via `pg` and Knex 3.1 for API database access and
+  migrations
 - Scraping and rendering: Playwright 1.49
 - AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
 - Document generation: HTML templates, Docxtemplater, LibreOffice/Playwright PDF rendering
-- Storage: local desktop file storage
+- Storage: S3-compatible object storage via RustFS for generated files
 
 ## Naming Conventions
 
@@ -62,11 +62,11 @@ documents for review or download.
   interfaces/adapters so implementations can be swapped.
 - Validate external inputs and AI output with schemas before persisting or rendering.
 - Use explicit workflow status transitions for job applications.
-- The current desktop-first runtime starts an Electron app, creates an embedded Express
-  server on an available local port, and passes that port to the web app as `?apiPort=...`.
-- The desktop runtime uses SQLite for local state, local file storage for generated files,
-  and an in-process self-processing queue for job application processing.
-- SQLite migrations are run through Knex during desktop server startup.
+- The current desktop runtime starts an Electron app and, in development, loads the Vite
+  web app with `?apiBaseUrl=...` pointing at the standalone API server.
+- The API runtime uses PostgreSQL for state, RustFS-compatible object storage for
+  generated files, and Redis/BullMQ for job application processing.
+- PostgreSQL migrations are run through Knex during API startup.
 
 ## Runtime Validation Commands
 

@@ -1,23 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/link2cv/panel.js";
+import TemplateVariableMapping from "../components/TemplateVariableMapping.js";
 import { profilesApi } from "../api/profiles.js";
-import type { ApiDocumentTemplate } from "../api/types.js";
+import type { ApiDocumentTemplate, ApiProfile } from "../api/types.js";
 import { cn } from "../lib/utils.js";
-import { FileText, Upload, Check, MoreHorizontal, FileType2 } from "lucide-react";
-
-const variables = [
-  { token: "{{full_name}}", label: "Full name" },
-  { token: "{{role_title}}", label: "Target role title" },
-  { token: "{{company_name}}", label: "Company name" },
-  { token: "{{summary}}", label: "Professional summary" },
-  { token: "{{key_skills}}", label: "Matched skills" },
-  { token: "{{experience}}", label: "Experience block" },
-];
+import { FileText, Upload, Check, MoreHorizontal } from "lucide-react";
 
 export default function TemplateManager() {
   const [templates, setTemplates] = useState<ApiDocumentTemplate[]>([]);
-  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ApiProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +20,7 @@ export default function TemplateManager() {
       .me()
       .then(async (p) => {
         if (!isMounted) return;
-        setProfileId(p.id);
+        setProfile(p);
         const t = await profilesApi.listDocumentTemplates(p.id);
         if (isMounted) setTemplates(t);
       })
@@ -45,10 +37,10 @@ export default function TemplateManager() {
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (!file || !profileId) return;
+    if (!file || !profile) return;
     try {
       setError(null);
-      const uploaded = await profilesApi.uploadDocumentTemplate(profileId, file);
+      const uploaded = await profilesApi.uploadDocumentTemplate(profile.id, file);
       setTemplates((prev) => [...prev, uploaded]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
@@ -56,10 +48,10 @@ export default function TemplateManager() {
   }
 
   async function handleSetDefault(templateId: string) {
-    if (!profileId) return;
+    if (!profile) return;
     try {
       setError(null);
-      await profilesApi.setDefaultDocumentTemplate(profileId, templateId);
+      await profilesApi.setDefaultDocumentTemplate(profile.id, templateId);
       setTemplates((prev) => prev.map((t) => ({ ...t, isDefault: t.id === templateId })));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to set default.");
@@ -89,8 +81,8 @@ export default function TemplateManager() {
             Upload a CV or cover letter template
           </p>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Drag and drop a DOCX or PDF file, or browse. Use variables below so Link2CV can fill in
-            tailored content.
+            Drag and drop a DOCX or PDF file, or browse. Use the variable mapping section to connect
+            your profile data to template placeholders.
           </p>
           <Button
             variant="outline"
@@ -114,37 +106,16 @@ export default function TemplateManager() {
         <TemplateGroup
           title="CV templates"
           templates={cvTemplates}
+          profile={profile}
           onSetDefault={handleSetDefault}
         />
         <TemplateGroup
           title="Cover letter templates"
           templates={letterTemplates}
+          profile={profile}
           onSetDefault={handleSetDefault}
         />
       </div>
-
-      <Panel>
-        <PanelHeader
-          title="Variable mapping"
-          action={
-            <span className="text-xs text-muted-foreground">Insert these into your templates</span>
-          }
-        />
-        <div className="grid grid-cols-1 gap-px border-t border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
-          {variables.map((v) => (
-            <div
-              key={v.token}
-              className="flex items-center justify-between gap-3 bg-card px-5 py-3"
-            >
-              <div>
-                <p className="text-sm font-medium text-foreground">{v.label}</p>
-                <code className="text-xs text-muted-foreground">{v.token}</code>
-              </div>
-              <FileType2 className="size-4 text-muted-foreground/60" />
-            </div>
-          ))}
-        </div>
-      </Panel>
     </div>
   );
 }
@@ -152,10 +123,12 @@ export default function TemplateManager() {
 function TemplateGroup({
   title,
   templates,
+  profile,
   onSetDefault,
 }: {
   title: string;
   templates: ApiDocumentTemplate[];
+  profile: ApiProfile | null;
   onSetDefault: (id: string) => void;
 }) {
   return (
@@ -164,38 +137,7 @@ function TemplateGroup({
       <div className="divide-y divide-border border-t border-border">
         {templates.length > 0 ? (
           templates.map((t) => (
-            <div key={t.id} className="flex items-center gap-3.5 px-5 py-4">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <FileText className="size-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium text-foreground">{t.fileName}</p>
-                  {t.isDefault && (
-                    <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[0.7rem] font-medium text-success">
-                      <Check className="size-3" />
-                      Default
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t.format.toUpperCase()} · {new Date(t.updatedAt).toLocaleDateString()}
-                </p>
-              </div>
-              <button
-                onClick={() => onSetDefault(t.id)}
-                className={cn(
-                  "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
-                  t.isDefault ? "text-muted-foreground/50" : "text-primary hover:bg-accent",
-                )}
-                disabled={t.isDefault}
-              >
-                {t.isDefault ? "In use" : "Set default"}
-              </button>
-              <Button variant="ghost" size="icon-sm" aria-label="More options">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </div>
+            <TemplateCard key={t.id} template={t} profile={profile} onSetDefault={onSetDefault} />
           ))
         ) : (
           <div className="px-5 py-8 text-center text-sm text-muted-foreground">
@@ -204,5 +146,63 @@ function TemplateGroup({
         )}
       </div>
     </Panel>
+  );
+}
+
+function TemplateCard({
+  template,
+  profile,
+  onSetDefault,
+}: {
+  template: ApiDocumentTemplate;
+  profile: ApiProfile | null;
+  onSetDefault: (id: string) => void;
+}) {
+  const [showMapping, setShowMapping] = useState(false);
+
+  return (
+    <div>
+      <div className="flex items-center gap-3.5 px-5 py-4">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+          <FileText className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium text-foreground">{template.fileName}</p>
+            {template.isDefault && (
+              <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[0.7rem] font-medium text-success">
+                <Check className="size-3" />
+                Default
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {template.format.toUpperCase()} · {template.placeholders.length} variable{template.placeholders.length !== 1 ? "s" : ""} · {new Date(template.updatedAt).toLocaleDateString()}
+          </p>
+        </div>
+        <button
+          onClick={() => onSetDefault(template.id)}
+          className={cn(
+            "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
+            template.isDefault ? "text-muted-foreground/50" : "text-primary hover:bg-accent",
+          )}
+          disabled={template.isDefault}
+        >
+          {template.isDefault ? "In use" : "Set default"}
+        </button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={showMapping ? "Hide variable mapping" : "Show variable mapping"}
+          onClick={() => setShowMapping(!showMapping)}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </div>
+
+      {showMapping && profile && (
+        <TemplateVariableMapping template={template} profile={profile} />
+      )}
+    </div>
   );
 }

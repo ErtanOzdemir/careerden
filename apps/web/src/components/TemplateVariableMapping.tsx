@@ -21,6 +21,8 @@ const FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
   { field: "experience_list", label: "Experience List" },
   { field: "education_list", label: "Education List" },
   { field: "links", label: "Links" },
+  { field: "projects", label: "Projects" },
+  { field: "certifications", label: "Certifications" },
   { field: "selected_education", label: "Selected Education" },
   { field: "selected_experiences", label: "Selected Experiences" },
 ];
@@ -81,6 +83,10 @@ function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): 
       );
     case "links":
       return profile.links.join(", ").slice(0, 60) || "--";
+    case "projects":
+      return `${profile.projects.length} item${profile.projects.length !== 1 ? "s" : ""}`;
+    case "certifications":
+      return profile.certifications.join(", ").slice(0, 60) || "--";
     case "selected_education":
       return `${profile.education.length} item${profile.education.length !== 1 ? "s" : ""}`;
     case "selected_experiences":

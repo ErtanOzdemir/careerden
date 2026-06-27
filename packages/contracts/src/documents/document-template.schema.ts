@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const documentTemplateFieldSchema = z.enum([
+  "certifications",
   "company_name",
   "customized_summary",
   "education_list",
@@ -14,6 +15,7 @@ export const documentTemplateFieldSchema = z.enum([
   "location",
   "missing_skills",
   "profession",
+  "projects",
   "recommended_achievements",
   "role_title",
   "selected_education",

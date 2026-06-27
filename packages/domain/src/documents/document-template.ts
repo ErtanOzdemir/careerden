@@ -2,6 +2,7 @@ export type DocumentTemplateKind = "cv";
 export type DocumentTemplateFormat = "docx";
 
 export type DocumentTemplateField =
+  | "certifications"
   | "company_name"
   | "customized_summary"
   | "education_list"
@@ -12,16 +13,17 @@ export type DocumentTemplateField =
   | "job_description"
   | "job_location"
   | "links"
+  | "location"
   | "missing_skills"
   | "profession"
+  | "projects"
   | "recommended_achievements"
   | "role_title"
   | "selected_education"
   | "selected_experiences"
   | "skills"
   | "strong_skills"
-  | "summary"
-  | "location";
+  | "summary";
 
 export type SelectedExperienceTemplateField =
   | "achievements"

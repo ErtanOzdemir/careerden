@@ -28,6 +28,7 @@ export interface ApiGeneratedDocument {
 }
 
 export type ApiDocumentTemplateField =
+  | "certifications"
   | "company_name"
   | "customized_summary"
   | "education_list"
@@ -41,6 +42,7 @@ export type ApiDocumentTemplateField =
   | "location"
   | "missing_skills"
   | "profession"
+  | "projects"
   | "recommended_achievements"
   | "role_title"
   | "selected_education"

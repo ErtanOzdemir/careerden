@@ -80,6 +80,7 @@ export interface JobApplication {
   processingStatusLabel?: string;
   processingFailureReason?: string;
   processingLog?: ProcessingLogItem[];
+  sourceUrl?: string;
   metadata?: Record<string, unknown>;
   interviewNotes?: string;
   contacts?: Contact[];

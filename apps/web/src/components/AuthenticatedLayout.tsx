@@ -1,13 +1,13 @@
 import { Navigate } from "react-router-dom";
 import { authClient } from "../api/auth";
-import Layout from "./Layout";
+import AppShell from "./AppShell";
 
 export default function AuthenticatedLayout() {
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-secondary">
+      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
         Loading...
       </div>
     );
@@ -17,5 +17,5 @@ export default function AuthenticatedLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  return <Layout />;
+  return <AppShell />;
 }

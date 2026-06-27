@@ -1,70 +1,88 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import Timeline from "../components/Timeline";
-import type { TimelineInterviewInput } from "../components/Timeline";
-import ProcessingLog from "../components/ProcessingLog";
-import AiMatchCard from "../components/AiMatchCard";
-import CompanyLogo from "../components/CompanyLogo";
-import { jobApplicationsApi } from "../api/jobApplications";
-import { profilesApi } from "../api/profiles";
-import { mapApiJobApplicationToUi, mapUiStatusToApi } from "../api/mappers";
-import { useJobApplicationChanges, type JobApplicationChange } from "../api/jobApplicationChanges";
-import type { ApplicationStatus, JobApplication } from "../types";
+import { Button } from "../components/ui/button.js";
+import { Panel, PanelHeader } from "../components/link2cv/panel.js";
+import { StatusBadge } from "../components/link2cv/status-badge.js";
+import type { DisplayStatus } from "../components/link2cv/status-badge.js";
+import { jobApplicationsApi } from "../api/jobApplications.js";
+import { profilesApi } from "../api/profiles.js";
+import { mapApiJobApplicationToUi } from "../api/mappers.js";
+import {
+  useJobApplicationChanges,
+  type JobApplicationChange,
+} from "../api/jobApplicationChanges.js";
+import type { JobApplication } from "../types.js";
+import { mapUiStatusToApi } from "../api/mappers.js";
+import { cn } from "../lib/utils.js";
+import {
+  ArrowLeft,
+  MapPin,
+  Briefcase,
+  Sparkles,
+  ExternalLink,
+  Check,
+  TriangleAlert,
+  Lightbulb,
+  FileText,
+  Download,
+  Pencil,
+  RefreshCw,
+  CalendarClock,
+  Mail,
+  Loader2,
+} from "lucide-react";
 
-const statusOptions: ApplicationStatus[] = ["Applied", "Interviewing", "Offer", "Rejected"];
+type Tab = "overview" | "analysis" | "documents" | "timeline";
+
+const tabs: { id: Tab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "analysis", label: "AI match" },
+  { id: "documents", label: "Documents" },
+  { id: "timeline", label: "Timeline & notes" },
+];
 
 export default function AppDetail() {
   const { id } = useParams();
   const [app, setApp] = useState<JobApplication | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [isAddingContact, setIsAddingContact] = useState(false);
-  const [isAddingInterview, setIsAddingInterview] = useState(false);
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
-  const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
-  const [isSavingDocumentContent, setIsSavingDocumentContent] = useState(false);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [downloadingDocumentId, setDownloadingDocumentId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isAddingInterview, setIsAddingInterview] = useState(false);
+  const [isAddingContact, setIsAddingContact] = useState(false);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [interviewForm, setInterviewForm] = useState({ title: "", scheduledAt: "", type: "" });
+  const [showInterviewForm, setShowInterviewForm] = useState(false);
   const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
-  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
-  const [interviewNotes, setInterviewNotes] = useState("");
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
+    if (!id) {
+      setError("Missing ID");
+      setIsLoading(false);
+      return;
+    }
     let isMounted = true;
 
-    async function loadApplication() {
-      if (!id) {
-        setError("Application ID is missing.");
-        setIsLoading(false);
-        return;
-      }
-
+    async function load() {
       try {
         setIsLoading(true);
         setError(null);
-        const detail = await jobApplicationsApi.get(id);
+        const detail = await jobApplicationsApi.get(id!);
         const profile = await profilesApi.get(detail.profileId);
-
-        if (isMounted) {
-          const mapped = mapApiJobApplicationToUi(detail, profile);
-          setApp(mapped);
-          setInterviewNotes(mapped.interviewNotes ?? "");
-        }
-      } catch (loadError) {
-        if (isMounted) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load application.");
-        }
+        if (isMounted) setApp(mapApiJobApplicationToUi(detail, profile));
+      } catch (e) {
+        if (isMounted) setError(e instanceof Error ? e.message : "Failed to load.");
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     }
 
-    void loadApplication();
-
+    void load();
     return () => {
       isMounted = false;
     };
@@ -72,556 +90,882 @@ export default function AppDetail() {
 
   useJobApplicationChanges(app?.profileId, {
     onChange: async (change: JobApplicationChange) => {
-      if (!id || change.applicationId !== id) {
-        return;
-      }
-
+      if (!id || change.applicationId !== id) return;
       if (change.type === "application.deleted") {
         setApp(null);
-        setError("Application was deleted.");
+        setError("Deleted.");
         return;
       }
-
       try {
-        await refreshApplication(id);
+        await refresh();
       } catch {
-        // Reconnect reconciliation or a later event will restore authoritative state.
+        /* ignore */
       }
     },
-    onOpen: async () => {
-      if (id && app) {
-        await refreshApplication(id);
-      }
-    },
+    onOpen: () => refresh(),
   });
 
-  async function handleStatusChange(status: ApplicationStatus) {
-    if (!id) {
-      return;
-    }
+  async function refresh() {
+    if (!id) return;
+    const detail = await jobApplicationsApi.get(id);
+    const profile = await profilesApi.get(detail.profileId);
+    const mapped = mapApiJobApplicationToUi(detail, profile);
+    setApp(mapped);
+    setNotes(mapped.interviewNotes ?? "");
+  }
 
+  async function handleStatusChange(newStatus: string) {
+    if (!id) return;
     try {
       setIsUpdatingStatus(true);
       setError(null);
-      await jobApplicationsApi.update(id, { applicationStatus: mapUiStatusToApi(status) });
-      await refreshApplication(id);
-    } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Failed to update status.");
+      await jobApplicationsApi.update(id, {
+        applicationStatus: mapUiStatusToApi(newStatus as "Applied" | "Interviewing" | "Offer" | "Rejected"),
+      });
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update status.");
     } finally {
       setIsUpdatingStatus(false);
     }
   }
 
-  async function refreshApplication(jobApplicationId: string) {
-    const detail = await jobApplicationsApi.get(jobApplicationId);
-    const profile = await profilesApi.get(detail.profileId);
-    const mapped = mapApiJobApplicationToUi(detail, profile);
-
-    setApp(mapped);
-    setInterviewNotes(mapped.interviewNotes ?? "");
-  }
-
-  async function handleGenerateDocuments() {
-    if (!id) {
-      return;
-    }
-
-    try {
-      setIsGeneratingDocuments(true);
-      setError(null);
-      const detail = await jobApplicationsApi.generateDocuments(id);
-      const profile = await profilesApi.get(detail.profileId);
-      const mapped = mapApiJobApplicationToUi(detail, profile);
-
-      setApp(mapped);
-      setInterviewNotes(mapped.interviewNotes ?? "");
-    } catch (generateError) {
-      setError(generateError instanceof Error ? generateError.message : "Failed to create CV.");
-    } finally {
-      setIsGeneratingDocuments(false);
-    }
-  }
-
-  async function handleSaveDocumentContent(
-    documentContent: NonNullable<JobApplication["documentContent"]>,
-  ) {
-    if (!id) {
-      return;
-    }
-
-    try {
-      setIsSavingDocumentContent(true);
-      setError(null);
-      await jobApplicationsApi.updateDocumentContent(id, documentContent);
-      setApp((current) => (current ? { ...current, documentContent } : current));
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save document content.");
-      throw saveError;
-    } finally {
-      setIsSavingDocumentContent(false);
-    }
-  }
-
-  async function handleRetryProcessing() {
-    if (!id) {
-      return;
-    }
-
-    try {
-      setIsRetrying(true);
-      setError(null);
-      await jobApplicationsApi.retry(id);
-      await refreshApplication(id);
-    } catch (retryError) {
-      setError(
-        retryError instanceof Error
-          ? retryError.message
-          : "Failed to retry application processing.",
-      );
-    } finally {
-      setIsRetrying(false);
-    }
-  }
-
-  async function handleDownloadDocument(documentId: string) {
-    if (!id) {
-      return;
-    }
-
-    try {
-      setDownloadingDocumentId(documentId);
-      setError(null);
-
-      const document = app?.generatedDocuments?.find((item) => item.id === documentId);
-
-      if (!document) {
-        throw new Error("Document not found.");
-      }
-
-      const { url } = await jobApplicationsApi.getDocumentDownloadUrl(id, { id: document.id });
-
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (downloadError) {
-      setError(downloadError instanceof Error ? downloadError.message : "Failed to download file.");
-    } finally {
-      setDownloadingDocumentId(null);
-    }
-  }
-
-  async function handleAddInterview(input: TimelineInterviewInput) {
-    if (!id) {
-      return;
-    }
-
+  async function handleAddInterview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !interviewForm.title.trim() || !interviewForm.scheduledAt) return;
     try {
       setIsAddingInterview(true);
       setError(null);
       await jobApplicationsApi.createInterview(id, {
-        scheduledAt: input.scheduledAt,
-        title: input.title,
-        type: input.type,
+        title: interviewForm.title.trim(),
+        scheduledAt: interviewForm.scheduledAt,
+        type: interviewForm.type.trim() || undefined,
       });
-      await refreshApplication(id);
-    } catch (addError) {
-      setError(addError instanceof Error ? addError.message : "Failed to add interview.");
+      setInterviewForm({ title: "", scheduledAt: "", type: "" });
+      setShowInterviewForm(false);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add interview.");
     } finally {
       setIsAddingInterview(false);
     }
   }
 
-  async function handleAddContact(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!id || !contactForm.name.trim()) {
-      return;
-    }
-
+  async function handleAddContact(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !contactForm.name.trim()) return;
     try {
       setIsAddingContact(true);
       setError(null);
       await jobApplicationsApi.createContact(id, {
-        email: contactForm.email.trim() || undefined,
         name: contactForm.name.trim(),
         role: contactForm.role.trim() || undefined,
+        email: contactForm.email.trim() || undefined,
       });
       setContactForm({ name: "", role: "", email: "" });
-      setIsContactFormOpen(false);
-      await refreshApplication(id);
-    } catch (addError) {
-      setError(addError instanceof Error ? addError.message : "Failed to add contact.");
+      setShowContactForm(false);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add contact.");
     } finally {
       setIsAddingContact(false);
     }
   }
 
-  async function handleSaveInterviewNotes(nextNotes = interviewNotes) {
-    if (!id || !app) {
-      return;
-    }
-
+  async function handleSaveNotes() {
+    if (!id || !app) return;
     try {
       setIsSavingNotes(true);
       setError(null);
       await jobApplicationsApi.update(id, {
-        metadata: {
-          ...(app.metadata ?? {}),
-          interviewNotes: nextNotes.trim(),
-        },
+        metadata: { ...(app.metadata ?? {}), interviewNotes: notes.trim() },
       });
-      await refreshApplication(id);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save interview notes.");
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save notes.");
     } finally {
       setIsSavingNotes(false);
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-2xl gap-4 text-secondary">
-        Loading application...
-      </div>
-    );
+  async function handleGenerateDocuments() {
+    if (!id) return;
+    try {
+      setIsGenerating(true);
+      setError(null);
+      await jobApplicationsApi.generateDocuments(id);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed.");
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
-  if (!app) {
+  async function handleRetry() {
+    if (!id) return;
+    try {
+      setIsRetrying(true);
+      setError(null);
+      await jobApplicationsApi.retry(id);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed.");
+    } finally {
+      setIsRetrying(false);
+    }
+  }
+
+  async function handleDownload(docId: string) {
+    if (!id) return;
+    try {
+      setDownloadingId(docId);
+      const doc = app?.generatedDocuments?.find((d) => d.id === docId);
+      if (!doc) throw new Error("Not found");
+      const { url } = await jobApplicationsApi.getDocumentDownloadUrl(id, { id: doc.id });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Download failed.");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
+  if (isLoading) return <div className="py-16 text-center text-muted-foreground">Loading...</div>;
+  if (!app)
     return (
-      <div className="flex flex-col items-center justify-center py-2xl gap-4">
-        <span className="material-symbols-outlined text-6xl text-outline">search_off</span>
-        <p className="font-headline-md">{error ?? "Application not found"}</p>
-        <Link to="/applications" className="text-primary font-label-md hover:underline">
-          Back to Applications
+      <div className="py-16 text-center">
+        <p className="text-sm font-medium text-foreground">Application not found</p>
+        <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+        <Link to="/applications" className="mt-4 inline-block text-sm text-primary hover:underline">
+          Back to applications
         </Link>
       </div>
     );
-  }
+
+  const isProcessing = !["completed", "review_ready"].includes(app.processingStatus ?? "");
+  const processingLabel = getProcessingLabel(app);
 
   return (
-    <div className="animate-fade-in max-w-max-width mx-auto">
-      <nav className="flex items-center gap-2 mb-lg text-on-surface-variant pt-lg">
-        <Link
-          to="/applications"
-          className="hover:text-primary transition-colors flex items-center gap-1 font-label-md"
-        >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Back to Boards
-        </Link>
-      </nav>
+    <div className="space-y-6">
+      <Link
+        to="/applications"
+        className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" /> Back to applications
+      </Link>
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-2xl">
-        <div className="flex min-w-0 items-center gap-md">
-          <CompanyLogo
-            className="h-14 w-14 shrink-0 text-lg"
-            company={app.company}
-            logo={app.logo}
-          />
-          <div className="min-w-0">
-            <h2 className="font-display font-headline-lg text-on-surface">{app.role}</h2>
-            <p className="font-body-lg text-secondary">
-              {app.company} &bull; {app.location}
+      <div className="flex flex-col gap-5 rounded-xl border border-border bg-card p-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-base font-semibold text-secondary-foreground">
+            {app.logo ? (
+              <img src={app.logo} alt="" className="size-full object-contain" />
+            ) : (
+              app.company.slice(0, 2)
+            )}
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-lg font-semibold text-foreground">{app.role}</h2>
+              <StatusBadge status={mapStatus(app)} />
+              <select
+                value={app.status}
+                onChange={(e) => void handleStatusChange(e.target.value)}
+                disabled={isUpdatingStatus}
+                className="rounded-lg border border-input bg-card px-2 py-0.5 text-xs font-medium text-foreground outline-none focus:border-ring"
+              >
+                {["Applied", "Interviewing", "Offer", "Rejected"].map((s) => (
+                  <option key={s} value={s}>
+                    {s === app.status ? `${s} (current)` : `→ ${s}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="mt-0.5 text-sm text-muted-foreground">{app.company}</p>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="size-3.5" />
+                {app.location}
+              </span>
+              {app.tags?.[0] && (
+                <span className="flex items-center gap-1.5">
+                  <Briefcase className="size-3.5" />
+                  {app.tags[0]}
+                </span>
+              )}
+              {app.matchScore && (
+                <span
+                  className={cn(
+                    "flex items-center gap-1.5",
+                    (app.matchScore ?? 0) >= 70
+                      ? "text-success"
+                      : (app.matchScore ?? 0) >= 50
+                        ? "text-warning-foreground"
+                        : "text-destructive",
+                  )}
+                >
+                  <Sparkles className="size-3.5" />
+                  {app.matchScore}% match
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (app.sourceUrl) window.open(app.sourceUrl, "_blank", "noopener,noreferrer");
+            }}
+            disabled={!app.sourceUrl}
+          >
+            <ExternalLink className="size-3.5" />
+            View on LinkedIn
+          </Button>
+          {app.aiMatch ? (
+            <Button size="sm" onClick={handleGenerateDocuments} disabled={isGenerating}>
+              <Sparkles className="size-3.5" />
+              {app.generatedDocuments?.length ? "Regenerate" : "Generate documents"}
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handleRetry} disabled={isRetrying}>
+              <RefreshCw className={`size-3.5 ${isRetrying ? "animate-spin" : ""}`} />
+              Start analysis
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {isProcessing && app.processingStatus !== "failed" && (
+        <div className="rounded-xl border border-info/20 bg-info-soft/60 p-4">
+          <div className="flex items-center gap-2.5">
+            <Loader2 className="size-4 animate-spin text-info" />
+            <p className="text-sm font-medium text-foreground">{processingLabel}</p>
+            <span className="ml-auto text-xs text-muted-foreground">Runs in the background</span>
+          </div>
+          <div className="mt-3 flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1 flex-1 rounded-full",
+                  stepDone(app, i) ? "bg-info" : "bg-info/20",
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {app.processingStatus === "failed" && (
+        <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 flex items-center justify-between">
+          <p className="text-sm text-destructive">
+            {app.processingFailureReason ?? "Processing failed"}
+          </p>
+          <Button variant="outline" size="sm" onClick={handleRetry} disabled={isRetrying}>
+            <RefreshCw className="size-3.5" />
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      <div className="flex gap-1 border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "-mb-px border-b-2 px-3.5 py-2.5 text-sm font-medium transition-colors",
+              tab === t.id
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && <OverviewTab app={app} />}
+      {tab === "analysis" && <AnalysisTab app={app} />}
+      {tab === "documents" && (
+        <DocumentsTab
+          app={app}
+          isGenerating={isGenerating}
+          downloadingId={downloadingId}
+          onGenerate={handleGenerateDocuments}
+          onDownload={handleDownload}
+        />
+      )}
+      {tab === "timeline" && (
+        <TimelineTab
+          app={app}
+          interviewForm={interviewForm}
+          showInterviewForm={showInterviewForm}
+          isAddingInterview={isAddingInterview}
+          isSavingNotes={isSavingNotes}
+          contactForm={contactForm}
+          showContactForm={showContactForm}
+          isAddingContact={isAddingContact}
+          notes={notes}
+          onSetInterviewForm={setInterviewForm}
+          onToggleInterviewForm={() => setShowInterviewForm((v) => !v)}
+          onAddInterview={handleAddInterview}
+          onSetContactForm={setContactForm}
+          onToggleContactForm={() => setShowContactForm((v) => !v)}
+          onAddContact={handleAddContact}
+          onNotesChange={setNotes}
+          onSaveNotes={handleSaveNotes}
+        />
+      )}
+    </div>
+  );
+}
+
+// --- Sub-components ---
+
+function OverviewTab({ app }: { app: JobApplication }) {
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <Panel className="lg:col-span-2">
+        <PanelHeader title="Role summary" />
+        <div className="border-t border-border px-5 py-4">
+          {app.description ? (
+            <div>
+              <p className="text-sm leading-relaxed text-muted-foreground">{app.description}</p>
+              {app.requirements && app.requirements.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {app.requirements.map((r, i) => (
+                    <li key={i} className="flex gap-2.5 text-sm text-muted-foreground">
+                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-border" />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Job details are still being extracted.</p>
+          )}
+        </div>
+      </Panel>
+      <Panel>
+        <PanelHeader title="At a glance" />
+        <dl className="divide-y divide-border border-t border-border text-sm">
+          {[
+            ["Source", app.domain],
+            ["Added", app.dateApplied],
+            ["Status", app.status],
+            ["Match", app.matchScore ? `${app.matchScore}%` : "Pending"],
+          ].map(([k, v]) => (
+            <div key={k} className="flex justify-between px-5 py-2.5">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd className="font-medium text-foreground">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </Panel>
+    </div>
+  );
+}
+
+function AnalysisTab({ app }: { app: JobApplication }) {
+  if (!app.aiMatch)
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
+        <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <Sparkles className="size-5" />
+        </div>
+        <p className="mt-4 text-sm font-medium text-foreground">Match analysis in progress</p>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+          Once we finish extracting the job details, analysis will appear here.
+        </p>
+      </div>
+    );
+
+  const m = app.aiMatch;
+  return (
+    <div className="space-y-6">
+      <Panel className="p-6">
+        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+          <MatchRing score={m.score} />
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              {m.score >= 70 ? "Strong match for your profile" : "Review before applying"}
+            </h3>
+            <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+              {m.summary}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-sm">
-          <div className="bg-surface-container-high px-4 py-2 rounded-lg flex items-center gap-3 border border-outline-variant">
-            <span className="font-label-md text-on-surface-variant">Status:</span>
-            <select
-              value={app.status}
-              onChange={(event) => void handleStatusChange(event.target.value as ApplicationStatus)}
-              disabled={isUpdatingStatus}
-              className="bg-transparent border-none font-bold text-primary focus:ring-0 cursor-pointer p-0 pr-8 outline-none disabled:opacity-60"
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {error && <p className="mb-lg text-body-md text-error">{error}</p>}
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
-        <div className="lg:col-span-7 space-y-lg">
-          {app.description && (
-            <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm">
-              <div className="flex items-center justify-between mb-md">
-                <h3 className="font-display font-headline-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">description</span>
-                  Role Summary
-                </h3>
-                {app.processingStatusLabel && (
-                  <span className="text-label-md text-secondary">{app.processingStatusLabel}</span>
-                )}
-              </div>
-              <div className="font-body-md text-on-surface-variant space-y-md">
-                <p>{app.description}</p>
-                {app.requirements && (
-                  <ul className="list-disc pl-5 space-y-sm">
-                    {app.requirements.map((req, i) => (
-                      <li key={i}>{req}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </section>
-          )}
-
-          {app.processingLog && (
-            <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm">
-              <div className="flex items-center justify-between mb-lg">
-                <h3 className="font-display font-headline-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">manage_search</span>
-                  Scraping Log
-                </h3>
-              </div>
-              <ProcessingLog
-                canRetry={app.processingStatus === "failed"}
-                currentStatus={app.processingStatusLabel}
-                failureReason={app.processingFailureReason}
-                isRetrying={isRetrying}
-                items={app.processingLog}
-                onRetry={() => void handleRetryProcessing()}
-              />
-            </section>
-          )}
-
-          {app.timeline && (
-            <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm">
-              <div className="flex items-center justify-between mb-lg">
-                <h3 className="font-display font-headline-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">event_upcoming</span>
-                  Interview Timeline
-                </h3>
-              </div>
-              <Timeline
-                isAdding={isAddingInterview}
-                milestones={app.timeline}
-                onAddInterview={handleAddInterview}
-              />
-            </section>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-lg">
-            {app.contacts && (
-              <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm flex flex-col">
-                <div className="flex items-center justify-between mb-md">
-                  <h3 className="font-display font-headline-md flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">contacts</span>
-                    Key Contacts
-                  </h3>
-                  <button
-                    className="text-primary material-symbols-outlined hover:bg-surface-container-high rounded-full p-1 transition-colors cursor-pointer"
-                    onClick={() => setIsContactFormOpen((current) => !current)}
-                    title="Add contact"
-                    type="button"
-                  >
-                    person_add
-                  </button>
-                </div>
-                {isContactFormOpen && (
-                  <form
-                    className="mb-md grid grid-cols-1 gap-sm rounded-lg bg-surface-container-low p-sm"
-                    onSubmit={(event) => void handleAddContact(event)}
-                  >
-                    <input
-                      className="bg-transparent border-b border-outline-variant focus:border-primary focus:ring-0 text-body-md py-1 outline-none"
-                      onChange={(event) =>
-                        setContactForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                      placeholder="Name"
-                      required
-                      type="text"
-                      value={contactForm.name}
-                    />
-                    <input
-                      className="bg-transparent border-b border-outline-variant focus:border-primary focus:ring-0 text-body-md py-1 outline-none"
-                      onChange={(event) =>
-                        setContactForm((current) => ({ ...current, role: event.target.value }))
-                      }
-                      placeholder="Role"
-                      type="text"
-                      value={contactForm.role}
-                    />
-                    <input
-                      className="bg-transparent border-b border-outline-variant focus:border-primary focus:ring-0 text-body-md py-1 outline-none"
-                      onChange={(event) =>
-                        setContactForm((current) => ({ ...current, email: event.target.value }))
-                      }
-                      placeholder="Email"
-                      type="email"
-                      value={contactForm.email}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        className="flex-1 text-label-md bg-primary text-on-primary rounded py-1 cursor-pointer disabled:opacity-60"
-                        disabled={isAddingContact}
-                        type="submit"
-                      >
-                        {isAddingContact ? "Saving..." : "Save"}
-                      </button>
-                      <button
-                        className="px-3 text-label-md bg-surface-variant rounded py-1 cursor-pointer"
-                        onClick={() => {
-                          setIsContactFormOpen(false);
-                          setContactForm({ name: "", role: "", email: "" });
-                        }}
-                        type="button"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                )}
-                <div className="space-y-md flex-1">
-                  {app.contacts.map((contact, i) => (
-                    <div key={i} className="flex items-start gap-sm">
-                      <div className="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-bold">
-                        {contact.initials}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-body-md font-bold">{contact.name}</div>
-                        <div className="font-label-md text-secondary">{contact.role}</div>
-                        {contact.email && (
-                          <a
-                            className="mt-1 flex min-w-0 items-center gap-1 text-label-sm text-primary hover:underline"
-                            href={`mailto:${contact.email}`}
-                          >
-                            <span className="material-symbols-outlined text-[14px]">mail</span>
-                            <span className="truncate">{contact.email}</span>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm flex flex-col">
-              <div className="flex items-center justify-between mb-md">
-                <h3 className="font-display font-headline-md flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">edit_note</span>
-                  Interview Notes
-                </h3>
-                <div className="flex gap-1">
-                  <button
-                    className="text-secondary hover:text-error material-symbols-outlined text-[20px] transition-colors cursor-pointer"
-                    onClick={() => {
-                      setInterviewNotes("");
-                      void handleSaveInterviewNotes("");
-                    }}
-                    title="Clear"
-                    type="button"
-                  >
-                    delete
-                  </button>
-                  <button
-                    className="text-primary hover:bg-primary/10 px-2 rounded font-label-md transition-colors cursor-pointer disabled:opacity-60"
-                    disabled={isSavingNotes}
-                    onClick={() => void handleSaveInterviewNotes()}
-                    type="button"
-                  >
-                    {isSavingNotes ? "Saving..." : "Save"}
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 flex flex-col bg-surface-container-low rounded-lg p-sm">
-                <div className="flex gap-2 border-b border-outline-variant pb-1 mb-2">
-                  <button className="material-symbols-outlined text-[18px] opacity-60 hover:opacity-100 cursor-pointer">
-                    format_bold
-                  </button>
-                  <button className="material-symbols-outlined text-[18px] opacity-60 hover:opacity-100 cursor-pointer">
-                    format_italic
-                  </button>
-                  <button className="material-symbols-outlined text-[18px] opacity-60 hover:opacity-100 cursor-pointer">
-                    format_list_bulleted
-                  </button>
-                </div>
-                <textarea
-                  className="w-full h-24 p-0 border-none bg-transparent focus:ring-0 text-body-md text-on-surface-variant resize-none custom-scrollbar outline-none"
-                  onChange={(event) => setInterviewNotes(event.target.value)}
-                  placeholder="Start typing your prep notes..."
-                  value={interviewNotes}
-                />
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <div className="lg:col-span-5">
-          <div className="sticky top-24 space-y-lg">
-            {app.aiMatch && app.documentContent && (
-              <AiMatchCard
-                aiMatch={app.aiMatch}
-                canCreateCv={
-                  app.processingStatus === "review_ready" || app.processingStatus === "completed"
-                }
-                documentContent={app.documentContent}
-                hasGeneratedDocuments={(app.generatedDocuments?.length ?? 0) > 0}
-                isCreatingCv={isGeneratingDocuments}
-                isSavingContent={isSavingDocumentContent}
-                onCreateCv={handleGenerateDocuments}
-                onSaveContent={handleSaveDocumentContent}
-              />
-            )}
-
-            <section className="bg-surface-container-high p-lg rounded-xl border border-outline-variant">
-              <div className="flex items-center justify-between mb-md">
-                <div className="flex items-center gap-md">
-                  <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center text-primary border border-outline-variant">
-                    <span className="material-symbols-outlined">attachment</span>
-                  </div>
-                  <div>
-                    <div className="font-body-md font-bold">Generated documents</div>
-                    <div className="font-label-md text-secondary">
-                      {app.generatedDocuments?.length
-                        ? `${app.generatedDocuments.length} ready for download`
-                        : "No generated files yet"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {app.generatedDocuments && app.generatedDocuments.length > 0 ? (
-                <div className="space-y-2">
-                  {app.generatedDocuments.map((document) => (
-                    <div
-                      key={document.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-outline-variant bg-surface px-4 py-3"
-                    >
-                      <div className="min-w-0">
-                        <div className="font-body-md font-bold truncate">{document.name}</div>
-                        <div className="font-label-md text-secondary">
-                          {document.kind === "cv" ? "CV" : "Cover letter"} •{" "}
-                          {document.format.toUpperCase()} • {document.createdAt}
-                        </div>
-                      </div>
-                      <button
-                        className="inline-flex items-center gap-2 rounded-lg bg-primary text-on-primary px-3 py-2 text-label-md font-bold cursor-pointer disabled:opacity-60"
-                        disabled={downloadingDocumentId === document.id}
-                        onClick={() => void handleDownloadDocument(document.id)}
-                        type="button"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {downloadingDocumentId === document.id ? "progress_activity" : "download"}
-                        </span>
-                        {downloadingDocumentId === document.id ? "Opening..." : "Download"}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-lg border border-dashed border-outline-variant bg-surface px-4 py-6 text-body-md text-secondary">
-                  Create the CV from the AI Match wizard to generate downloadable files.
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
+      </Panel>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <AnalysisColumn icon={Check} tone="success" title="Strengths" items={m.yourSkills} />
+        <AnalysisColumn
+          icon={TriangleAlert}
+          tone="warning"
+          title="Gaps to address"
+          items={m.suggestedSkills}
+        />
+        <AnalysisColumn
+          icon={Lightbulb}
+          tone="info"
+          title="Recommendations"
+          items={m.bulletOptimizations.slice(0, 5).map((b) => b.enhanced)}
+        />
       </div>
     </div>
   );
+}
+
+function MatchRing({ score }: { score: number }) {
+  const color =
+    score >= 70 ? "stroke-success" : score >= 50 ? "stroke-warning" : "stroke-destructive";
+  const textColor =
+    score >= 70 ? "text-success" : score >= 50 ? "text-warning-foreground" : "text-destructive";
+  return (
+    <div className="relative flex size-24 shrink-0 items-center justify-center">
+      <svg className="size-24 -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" className="fill-none stroke-muted" strokeWidth="8" />
+        <circle
+          cx="50"
+          cy="50"
+          r="42"
+          className={cn("fill-none", color)}
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${(score / 100) * 264} 264`}
+        />
+      </svg>
+      <div className="absolute text-center">
+        <span className={cn("text-xl font-semibold", textColor)}>{score}%</span>
+        <span className="block text-[0.65rem] text-muted-foreground">match</span>
+      </div>
+    </div>
+  );
+}
+
+const toneStyles = {
+  success: "bg-success-soft text-success",
+  warning: "bg-warning-soft text-warning-foreground",
+  info: "bg-info-soft text-info",
+};
+
+function AnalysisColumn({
+  icon: Icon,
+  tone,
+  title,
+  items,
+}: {
+  icon: typeof Check;
+  tone: keyof typeof toneStyles;
+  title: string;
+  items: string[];
+}) {
+  return (
+    <Panel>
+      <div className="flex items-center gap-2.5 px-5 py-4">
+        <span
+          className={cn("flex size-7 items-center justify-center rounded-lg", toneStyles[tone])}
+        >
+          <Icon className="size-4" />
+        </span>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      </div>
+      <ul className="space-y-3 border-t border-border px-5 py-4">
+        {items.length > 0 ? (
+          items.map((item, i) => (
+            <li key={i} className="flex gap-2.5 text-sm text-muted-foreground">
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-border" />
+              {item}
+            </li>
+          ))
+        ) : (
+          <li className="text-sm text-muted-foreground">No items yet.</li>
+        )}
+      </ul>
+    </Panel>
+  );
+}
+
+function DocumentsTab({
+  app,
+  isGenerating,
+  downloadingId,
+  onGenerate,
+  onDownload,
+}: {
+  app: JobApplication;
+  isGenerating: boolean;
+  downloadingId: string | null;
+  onGenerate: () => void;
+  onDownload: (id: string) => void;
+}) {
+  const docs = app.generatedDocuments ?? [];
+  const cvDoc = docs.find((d) => d.kind === "cv");
+  const coverDoc = docs.find((d) => d.kind === "cover_letter");
+  return (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <DocCard
+        title="Tailored CV"
+        desc="Profile-aware resume optimized for this role"
+        ready={!!cvDoc}
+        doc={cvDoc}
+        isGenerating={isGenerating}
+        downloadingId={downloadingId}
+        onGenerate={onGenerate}
+        onDownload={onDownload}
+      />
+      <DocCard
+        title="Cover letter"
+        desc="Personalized letter referencing the job requirements"
+        ready={!!coverDoc}
+        doc={coverDoc}
+        isGenerating={isGenerating}
+        downloadingId={downloadingId}
+        onGenerate={onGenerate}
+        onDownload={onDownload}
+      />
+    </div>
+  );
+}
+
+function DocCard({
+  title,
+  desc,
+  ready,
+  doc,
+  isGenerating,
+  downloadingId,
+  onGenerate,
+  onDownload,
+}: {
+  title: string;
+  desc: string;
+  ready: boolean;
+  doc?: { id: string; name: string; createdAt: string };
+  isGenerating: boolean;
+  downloadingId: string | null;
+  onGenerate: () => void;
+  onDownload: (id: string) => void;
+}) {
+  return (
+    <Panel className="p-5">
+      <div className="flex items-start gap-3">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+          <FileText className="size-5" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
+        </div>
+      </div>
+      {ready && doc ? (
+        <>
+          <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+            Generated and ready. {doc.name}
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button variant="outline" size="sm">
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+            <Button variant="outline" size="sm" onClick={onGenerate} disabled={isGenerating}>
+              <RefreshCw className="size-3.5" />
+              Regenerate
+            </Button>
+            <Button
+              size="sm"
+              className="ml-auto"
+              onClick={() => onDownload(doc.id)}
+              disabled={downloadingId === doc.id}
+            >
+              <Download className="size-3.5" />
+              {downloadingId === doc.id ? "..." : "Download"}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="mt-4 rounded-lg border border-dashed border-border p-5 text-center">
+          <p className="text-sm text-muted-foreground">Not generated yet</p>
+          <Button size="sm" className="mt-3" onClick={onGenerate} disabled={isGenerating}>
+            <Sparkles className="size-3.5" />
+            Generate {title.toLowerCase()}
+          </Button>
+        </div>
+      )}
+    </Panel>
+  );
+}
+function TimelineTab({
+  app,
+  interviewForm,
+  showInterviewForm,
+  isAddingInterview,
+  isSavingNotes,
+  contactForm,
+  showContactForm,
+  isAddingContact,
+  notes,
+  onSetInterviewForm,
+  onToggleInterviewForm,
+  onAddInterview,
+  onSetContactForm,
+  onToggleContactForm,
+  onAddContact,
+  onNotesChange,
+  onSaveNotes,
+}: {
+  app: JobApplication;
+  interviewForm: { title: string; scheduledAt: string; type: string };
+  showInterviewForm: boolean;
+  isAddingInterview: boolean;
+  isSavingNotes: boolean;
+  contactForm: { name: string; role: string; email: string };
+  showContactForm: boolean;
+  isAddingContact: boolean;
+  notes: string;
+  onSetInterviewForm: (f: { title: string; scheduledAt: string; type: string }) => void;
+  onToggleInterviewForm: () => void;
+  onAddInterview: (e: React.FormEvent) => void;
+  onSetContactForm: (f: { name: string; role: string; email: string }) => void;
+  onToggleContactForm: () => void;
+  onAddContact: (e: React.FormEvent) => void;
+  onNotesChange: (v: string) => void;
+  onSaveNotes: () => void;
+}) {
+  const eventTone: Record<string, string> = {
+    system: "bg-muted text-muted-foreground",
+    note: "bg-accent text-accent-foreground",
+    interview: "bg-warning-soft text-warning-foreground",
+    status: "bg-info-soft text-info",
+  };
+  const events = (app.timeline ?? []).map((t) => ({
+    id: t.id,
+    label: t.title,
+    detail: t.description,
+    date: t.date,
+    type: "interview" as const,
+  }));
+
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <Panel className="lg:col-span-2">
+        <PanelHeader
+          title="Timeline"
+          action={
+            <Button variant="ghost" size="sm" onClick={onToggleInterviewForm}>
+              + Add follow-up
+            </Button>
+          }
+        />
+        {showInterviewForm && (
+          <form onSubmit={onAddInterview} className="border-t border-border px-5 py-4 space-y-3">
+            <input
+              placeholder="Title (e.g., Phone screen)"
+              value={interviewForm.title}
+              onChange={(e) => onSetInterviewForm({ ...interviewForm, title: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+              required
+            />
+            <div className="flex gap-3">
+              <input
+                type="datetime-local"
+                value={interviewForm.scheduledAt}
+                onChange={(e) => onSetInterviewForm({ ...interviewForm, scheduledAt: e.target.value })}
+                className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+                required
+              />
+              <input
+                placeholder="Type (optional)"
+                value={interviewForm.type}
+                onChange={(e) => onSetInterviewForm({ ...interviewForm, type: e.target.value })}
+                className="w-32 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" type="button" onClick={onToggleInterviewForm}>
+                Cancel
+              </Button>
+              <Button size="sm" type="submit" disabled={isAddingInterview}>
+                {isAddingInterview ? "Saving..." : "Add"}
+              </Button>
+            </div>
+          </form>
+        )}
+        <ol className="border-t border-border px-5 py-4">
+          {events.length > 0 ? (
+            events.map((e, i) => (
+              <li key={e.id} className="flex gap-3.5 pb-5 last:pb-0">
+                <div className="flex flex-col items-center">
+                  <span
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-full text-[0.65rem]",
+                      eventTone[e.type] ?? eventTone.system,
+                    )}
+                  >
+                    {e.type === "interview" ? (
+                      <CalendarClock className="size-3.5" />
+                    ) : (
+                      <Check className="size-3.5" />
+                    )}
+                  </span>
+                  {i < events.length - 1 && <span className="my-1 w-px flex-1 bg-border" />}
+                </div>
+                <div className="pb-1">
+                  <p className="text-sm font-medium text-foreground">{e.label}</p>
+                  {e.detail && <p className="text-xs text-muted-foreground">{e.detail}</p>}
+                  <p className="mt-0.5 text-xs text-muted-foreground">{e.date}</p>
+                </div>
+              </li>
+            ))
+          ) : (
+            <li className="py-4 text-sm text-muted-foreground">No timeline events yet.</li>
+          )}
+        </ol>
+      </Panel>
+
+      <div className="space-y-6">
+        <Panel>
+          <PanelHeader
+            title="Notes"
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void onSaveNotes()}
+                disabled={isSavingNotes}
+              >
+                {isSavingNotes ? "Saving..." : "Save"}
+              </Button>
+            }
+          />
+          <div className="border-t border-border px-5 py-4">
+            <textarea
+              value={notes}
+              onChange={(e) => onNotesChange(e.target.value)}
+              placeholder="Add context, reminders, or recruiter details..."
+              rows={5}
+              className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none focus:border-ring"
+            />
+          </div>
+        </Panel>
+
+        <Panel>
+          <PanelHeader
+            title="Contacts"
+            action={
+              <Button variant="ghost" size="sm" onClick={onToggleContactForm}>
+                + Add
+              </Button>
+            }
+          />
+          {showContactForm && (
+            <form onSubmit={onAddContact} className="border-t border-border px-5 py-4 space-y-3">
+              <input
+                placeholder="Name"
+                value={contactForm.name}
+                onChange={(e) => onSetContactForm({ ...contactForm, name: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+                required
+              />
+              <input
+                placeholder="Role"
+                value={contactForm.role}
+                onChange={(e) => onSetContactForm({ ...contactForm, role: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+              />
+              <input
+                placeholder="Email"
+                type="email"
+                value={contactForm.email}
+                onChange={(e) => onSetContactForm({ ...contactForm, email: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" type="button" onClick={onToggleContactForm}>
+                  Cancel
+                </Button>
+                <Button size="sm" type="submit" disabled={isAddingContact}>
+                  {isAddingContact ? "Saving..." : "Add"}
+                </Button>
+              </div>
+            </form>
+          )}
+          <div className="divide-y divide-border border-t border-border">
+            {app.contacts && app.contacts.length > 0 ? (
+              app.contacts.map((c, i) => (
+                <div key={i} className="flex items-center gap-3 px-5 py-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+                    {c.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{c.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{c.role}</p>
+                  </div>
+                  {c.email && (
+                    <a
+                      href={`mailto:${c.email}`}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Mail className="size-3.5" />
+                    </a>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="px-5 py-4 text-sm text-muted-foreground">No contacts added yet.</p>
+            )}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+// --- helpers ---
+
+function mapStatus(app: JobApplication): DisplayStatus {
+  const ps = app.processingStatus;
+  if (ps && ["queued", "scraping", "analyzing", "generating_documents"].includes(ps))
+    return "processing";
+  if (ps === "review_ready") return "ready";
+  switch (app.status) {
+    case "Applied":
+      return "applied";
+    case "Interviewing":
+      return "interview";
+    case "Offer":
+      return "offer";
+    case "Rejected":
+      return "rejected";
+    default:
+      return "saved";
+  }
+}
+
+function getProcessingLabel(app: JobApplication): string {
+  switch (app.processingStatus) {
+    case "queued":
+      return "Queued";
+    case "scraping":
+      return "Extracting details";
+    case "analyzing":
+      return "Running AI analysis";
+    case "generating_documents":
+      return "Generating documents";
+    default:
+      return app.processingStatusLabel ?? "Processing";
+  }
+}
+
+function stepDone(app: JobApplication, step: number): boolean {
+  const stages = ["scraping", "analyzing", "generating_documents"];
+  return step <= stages.indexOf(app.processingStatus ?? "");
 }

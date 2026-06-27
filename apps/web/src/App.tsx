@@ -6,6 +6,9 @@ import AppDetail from "./pages/AppDetail";
 import ProfileManager from "./pages/ProfileManager";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import TemplateManager from "./pages/TemplateManager";
+import LinkedInSession from "./pages/LinkedInSession";
+import Settings from "./pages/Settings";
 
 export default function App() {
   return (
@@ -17,6 +20,9 @@ export default function App() {
         <Route path="/applications" element={<ApplicationsLog />} />
         <Route path="/applications/:id" element={<AppDetail />} />
         <Route path="/profile" element={<ProfileManager />} />
+        <Route path="/templates" element={<TemplateManager />} />
+        <Route path="/linkedin" element={<LinkedInSession />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   );

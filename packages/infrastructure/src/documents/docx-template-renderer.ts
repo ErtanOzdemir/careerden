@@ -98,6 +98,7 @@ export function buildDocxAliasData(
     data.selected_education,
     template.variableAliases.selectedEducation,
   );
+  addFieldMappings(aliases, data, template.fieldMappings);
 
   return aliases;
 }
@@ -184,6 +185,24 @@ function addSelectedEducationAliases(
       }
     }
   });
+}
+
+function addFieldMappings(
+  aliases: Record<string, unknown>,
+  data: Record<string, unknown>,
+  fieldMappings: Record<string, string> | undefined,
+) {
+  if (!fieldMappings) {
+    return;
+  }
+
+  for (const [placeholder, field] of Object.entries(fieldMappings)) {
+    if (aliases[placeholder] !== undefined) {
+      continue;
+    }
+
+    aliases[placeholder] = toDocxValue(data[field]);
+  }
 }
 
 function toDocxValue(value: unknown): unknown {

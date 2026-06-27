@@ -76,6 +76,41 @@ describe("buildDocxAliasData", () => {
       school_name: "University",
     });
   });
+
+  it("falls back to direct field mappings when no alias is configured", () => {
+    const template = {
+      fieldMappings: {
+        summary: "summary",
+      },
+      placeholders: ["summary"],
+      variableAliases: {
+        fields: {},
+      },
+    } as unknown as DocumentTemplate;
+
+    const aliases = buildDocxAliasData(template, {
+      raw_summary: "Old user summary",
+      summary: {
+        version: 1,
+        blocks: [
+          {
+            type: "paragraph",
+            children: [{ type: "text", text: "AI summary" }],
+          },
+        ],
+      },
+    });
+
+    expect(aliases.summary).toEqual({
+      version: 1,
+      blocks: [
+        {
+          type: "paragraph",
+          children: [{ type: "text", text: "AI summary" }],
+        },
+      ],
+    });
+  });
 });
 
 describe("DocxtemplaterTemplateRenderer", () => {
@@ -156,9 +191,7 @@ describe("DocxtemplaterTemplateRenderer", () => {
   it("renders mapped template variables and leaves unknown placeholders untouched", async () => {
     const renderer = new DocxtemplaterTemplateRenderer();
     const template: DocumentTemplate = {
-      fieldMappings: {
-        leave_me: "email",
-      },
+      fieldMappings: {},
       fileId: "templates/cv.docx",
       fileName: "cv.docx",
       format: "docx",
@@ -193,6 +226,36 @@ describe("DocxtemplaterTemplateRenderer", () => {
 
     expect(documentXml).toContain("Ada Lovelace");
     expect(documentXml).toContain("{{leave_me}}");
+  });
+
+  it("renders an AI summary through a direct summary field mapping", async () => {
+    const renderer = new DocxtemplaterTemplateRenderer();
+    const template = createTemplate({
+      fieldMappings: { summary: "summary" },
+      placeholders: ["summary"],
+    });
+    const rendered = await renderer.render({
+      data: {
+        summary: {
+          version: 1,
+          blocks: [
+            {
+              type: "paragraph",
+              children: [{ type: "text", text: "Tailored AI summary" }],
+            },
+          ],
+        },
+        raw_summary: "Old user summary",
+      },
+      template,
+      templateBody: createMinimalDocx("{{summary}}"),
+    });
+
+    const zip = new PizZip(rendered);
+    const documentXml = zip.file("word/document.xml")?.asText() ?? "";
+
+    expect(documentXml).toContain("Tailored AI summary");
+    expect(documentXml).not.toContain("Old user summary");
   });
 });
 

@@ -20,6 +20,7 @@ import type {
   JobApplicationQueue,
   JobApplicationRepository,
   MatchAnalysisResult,
+  RemoteImageFetcher,
   ScrapeBundle,
   UserProfile,
 } from "@link2cv/domain";
@@ -67,6 +68,7 @@ export function createJobApplicationRouter(dependencies: {
   jobApplicationChanges: JobApplicationChangeSubscriber;
   queue: JobApplicationQueue;
   storage: FileStorage;
+  remoteImages: RemoteImageFetcher;
   getProfileForUser: (user: AuthenticatedRequest["user"]) => Promise<UserProfile>;
   canAccessProfile: (profileId: string, userId: string) => Promise<boolean>;
   canAccessJobApplication: (jobApplicationId: string, userId: string) => Promise<boolean>;
@@ -143,6 +145,8 @@ export function createJobApplicationRouter(dependencies: {
 
         const scrape = request.body.scrapeBundle as ScrapeBundle;
         await dependencies.jobApplications.saveScrapeBundle(request.params.id, scrape);
+
+        await storeCompanyLogo(request.params.id, scrape, dependencies.remoteImages, dependencies.storage, dependencies.jobApplications);
 
         await dependencies.jobApplications.updateTracking(request.params.id, {
           companyName: scrape.job.companyName,
@@ -833,6 +837,66 @@ async function getCompanyLogoUrl(
     return fileId ? await storage.getSignedUrl(fileId) : undefined;
   } catch {
     return undefined;
+  }
+}
+
+async function storeCompanyLogo(
+  jobApplicationId: string,
+  scrape: ScrapeBundle,
+  remoteImages: RemoteImageFetcher,
+  storage: FileStorage,
+  jobApplications: JobApplicationRepository,
+): Promise<void> {
+  const companyWithLogo = scrape.companyLinkedIn?.logoUrl
+    ? scrape.companyLinkedIn
+    : scrape.companyWebsite?.logoUrl
+      ? scrape.companyWebsite
+      : scrape.careerPage?.logoUrl
+        ? scrape.careerPage
+        : undefined;
+
+  const logoUrl = companyWithLogo?.logoUrl;
+
+  if (!logoUrl) {
+    return;
+  }
+
+  try {
+    const image = await remoteImages.fetch(logoUrl);
+    const stored = await storage.put({
+      fileName: `company-logo.${extensionForContentType(image.contentType)}`,
+      contentType: image.contentType,
+      body: image.body,
+      metadata: {
+        jobApplicationId,
+        kind: "company_logo",
+        companyName: companyWithLogo.name,
+      },
+    });
+
+    const updatedCompany = { ...companyWithLogo, logoFileId: stored.id };
+    const updatedScrape: ScrapeBundle = {
+      ...scrape,
+      companyLinkedIn: scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
+      companyWebsite: scrape.companyWebsite === companyWithLogo ? updatedCompany : scrape.companyWebsite,
+      careerPage: scrape.careerPage === companyWithLogo ? updatedCompany : scrape.careerPage,
+    };
+    await jobApplications.saveScrapeBundle(jobApplicationId, updatedScrape);
+  } catch {
+    // Logo download is optional
+  }
+}
+
+function extensionForContentType(contentType: string): string {
+  switch (contentType) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    default:
+      return "png";
   }
 }
 

@@ -46,7 +46,8 @@ export type ApiDocumentTemplateField =
   | "selected_education"
   | "selected_experiences"
   | "skills"
-  | "strong_skills";
+  | "strong_skills"
+  | "summary";
 
 export type ApiSelectedExperienceTemplateField =
   | "achievements"

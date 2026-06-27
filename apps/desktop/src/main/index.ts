@@ -16,7 +16,7 @@ async function createWindow(): Promise<void> {
     title: "Link2CV",
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, "..", "preload", "index.js"),
+      preload: join(__dirname, "..", "preload", "index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,

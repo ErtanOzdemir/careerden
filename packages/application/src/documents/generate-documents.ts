@@ -150,6 +150,7 @@ function toTemplateData(
   scrape: ScrapeBundle | null,
 ): Record<string, unknown> {
   const scrapedJob = scrape?.job;
+  const enhancedExperiences = toSelectedExperiences(profile.experience, documentContent);
 
   return {
     company_name: jobApplication.tracking.companyName ?? scrapedJob?.companyName ?? "",
@@ -162,12 +163,14 @@ function toTemplateData(
     location: profile.location ?? "",
     links: profile.links,
     role_title: jobApplication.tracking.roleTitle ?? scrapedJob?.title ?? "",
-    summary: profile.summary ?? "",
+    summary: documentContent.customizedSummary,
+    raw_summary: profile.summary ?? "",
     skills: profile.skills,
     education_list: profile.education,
     selected_education: toSelectedEducation(profile.education),
-    experience_list: profile.experience,
-    selected_experiences: toSelectedExperiences(profile.experience, documentContent),
+    experience_list: enhancedExperiences,
+    raw_experience_list: profile.experience,
+    selected_experiences: enhancedExperiences,
     match_score: analysis.matchScore,
     missing_skills: analysis.missingSkills,
     strong_skills: analysis.strongSkills,

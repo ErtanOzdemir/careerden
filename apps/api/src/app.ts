@@ -17,6 +17,7 @@ import {
   BullMqJobApplicationQueue,
   DocxtemplaterTemplateRenderer,
   HtmlTemplateRenderer,
+  HttpRemoteImageFetcher,
   InMemoryJobApplicationChangeBus,
   PlaywrightPdfRenderer,
   PostgresJobApplicationRepository,
@@ -65,6 +66,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     region: env.RUSTFS_REGION,
     secretAccessKey: env.RUSTFS_SECRET_ACCESS_KEY,
   });
+  const remoteImageFetcher = new HttpRemoteImageFetcher();
   const docxTemplates = new DocxtemplaterTemplateRenderer();
   const generateDocumentsUseCase = new GenerateDocumentsUseCase(
     new HtmlTemplateRenderer(),
@@ -167,6 +169,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       jobApplicationChanges: changeBus,
       queue,
       storage,
+      remoteImages: remoteImageFetcher,
       getProfileForUser,
       canAccessProfile,
       canAccessJobApplication,

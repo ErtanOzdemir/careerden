@@ -112,6 +112,18 @@ describe("GenerateDocumentsUseCase", () => {
         skills: [],
       },
     ]);
+    expect(capturedDocxData[0]?.summary).toEqual(richDocumentFromText("User-edited summary."));
+    expect(capturedDocxData[0]?.experience_list).toEqual(capturedDocxData[0]?.selected_experiences);
+    expect(capturedDocxData[0]?.raw_experience_list).toEqual([
+      {
+        company: "Analytical Engines",
+        title: "Engineer",
+        startDate: "2022",
+        description: "Built automation.",
+        achievements: ["Improved reliability."],
+      },
+    ]);
+    expect(capturedDocxData[0]?.raw_summary).toBe("");
     expect(generated.map(({ format, kind }) => ({ format, kind }))).toEqual([
       { format: "docx", kind: "cv" },
       { format: "pdf", kind: "cover_letter" },

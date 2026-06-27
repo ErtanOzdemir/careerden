@@ -49,6 +49,7 @@ interface ProfileDetailsDraft {
   links: string[];
   location: string;
   profession: string;
+  summary: string;
 }
 
 const tabs: { key: Tab; label: string }[] = [
@@ -89,6 +90,7 @@ const emptyProfileDetailsDraft: ProfileDetailsDraft = {
   links: [],
   location: "",
   profession: "",
+  summary: "",
 };
 
 export default function ProfileManager() {
@@ -418,6 +420,7 @@ export default function ProfileManager() {
       links: [...(profile.links ?? [])],
       location: profile.location ?? "",
       profession: profile.profession ?? "",
+      summary: profile.summary ?? "",
     });
     setIsEditingProfileDetails(true);
     setSaveError(null);
@@ -433,13 +436,7 @@ export default function ProfileManager() {
     event.preventDefault();
 
     const updatedProfile = await saveProfile(
-      {
-        email: profileDetailsDraft.email.trim(),
-        fullName: profileDetailsDraft.fullName.trim(),
-        links: profileDetailsDraft.links.map((link) => link.trim()).filter(Boolean),
-        location: optionalString(profileDetailsDraft.location),
-        profession: optionalString(profileDetailsDraft.profession),
-      },
+      toProfileDetailsPayload(profileDetailsDraft),
       "Profile details saved.",
     );
 
@@ -1499,6 +1496,17 @@ function toApiEducation(draft: EducationDraft): ApiProfileEducation {
   };
 }
 
+export function toProfileDetailsPayload(draft: ProfileDetailsDraft): ApiUpdateProfilePayload {
+  return {
+    email: draft.email.trim(),
+    fullName: draft.fullName.trim(),
+    links: draft.links.map((link) => link.trim()).filter(Boolean),
+    location: optionalString(draft.location),
+    profession: optionalString(draft.profession),
+    summary: optionalString(draft.summary),
+  };
+}
+
 function ProfileDetailsForm(props: {
   draft: ProfileDetailsDraft;
   isSaving: boolean;
@@ -1579,6 +1587,15 @@ function ProfileDetailsForm(props: {
             className="mt-sm w-full rounded-lg border border-outline-variant bg-white px-md py-sm text-on-surface"
             onChange={(event) => onChange({ ...draft, location: event.target.value })}
             value={draft.location}
+          />
+        </label>
+        <label className="block md:col-span-2">
+          <FieldLabel label="Description" variableControl={variableControl("summary")} />
+          <textarea
+            className="mt-sm w-full rounded-lg border border-outline-variant bg-white px-md py-sm text-on-surface"
+            onChange={(event) => onChange({ ...draft, summary: event.target.value })}
+            rows={4}
+            value={draft.summary}
           />
         </label>
         <div className="md:col-span-2 space-y-sm">

@@ -20,6 +20,7 @@ export const documentTemplateFieldSchema = z.enum([
   "selected_experiences",
   "skills",
   "strong_skills",
+  "summary",
 ]);
 
 export const updateDocumentTemplateMappingsSchema = z.object({

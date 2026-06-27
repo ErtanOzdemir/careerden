@@ -20,6 +20,7 @@ export type DocumentTemplateField =
   | "selected_experiences"
   | "skills"
   | "strong_skills"
+  | "summary"
   | "location";
 
 export type SelectedExperienceTemplateField =

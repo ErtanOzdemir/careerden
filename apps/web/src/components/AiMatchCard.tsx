@@ -65,6 +65,10 @@ export default function AiMatchCard({
       return;
     }
 
+    if (JSON.stringify(draftContent) !== JSON.stringify(documentContent)) {
+      await handleSaveContent(draftContent);
+    }
+
     await onCreateCv();
     setIsOpen(false);
   }

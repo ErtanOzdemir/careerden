@@ -205,15 +205,13 @@ export function createProfileRouter(dependencies: {
         }
 
         const fieldMappings = request.body.fieldMappings;
-        const missing = template.placeholders.filter((placeholder) => !fieldMappings[placeholder]);
         const unknown = Object.keys(fieldMappings).filter(
           (placeholder) => !template.placeholders.includes(placeholder),
         );
 
-        if (missing.length > 0 || unknown.length > 0) {
+        if (unknown.length > 0) {
           response.status(400).json({
-            error: "Template mappings must cover every detected placeholder and no unknown fields",
-            missing,
+            error: "Template mappings contain unknown placeholder keys",
             unknown,
           });
           return;

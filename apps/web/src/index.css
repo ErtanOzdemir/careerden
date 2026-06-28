@@ -173,6 +173,11 @@
 }
 
 @layer base {
+  html,
+  #root {
+    background-color: #ffffff;
+  }
+
   * {
     border-color: var(--border);
     outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
@@ -213,4 +218,55 @@
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
+}
+
+@keyframes auth-wave-drift {
+  0% {
+    transform: translate3d(-8%, -4%, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 6%, 0) rotate(9deg) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-8%, -4%, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes auth-wave-drift-alt {
+  0% {
+    transform: translate3d(10%, 5%, 0) rotate(14deg) scale(1.04);
+  }
+  50% {
+    transform: translate3d(-7%, -6%, 0) rotate(-8deg) scale(1.12);
+  }
+  100% {
+    transform: translate3d(10%, 5%, 0) rotate(14deg) scale(1.04);
+  }
+}
+
+.auth-wave-panel::before,
+.auth-wave-panel::after {
+  border-radius: 40% 60% 65% 35% / 45% 35% 65% 55%;
+  content: "";
+  filter: blur(1px);
+  inset: -18%;
+  opacity: 0.92;
+  position: absolute;
+}
+
+.auth-wave-panel::before {
+  animation: auth-wave-drift 14s ease-in-out infinite;
+  background:
+    radial-gradient(circle at 20% 12%, rgb(255 255 255 / 18%), transparent 25%),
+    radial-gradient(circle at 74% 80%, rgb(255 255 255 / 13%), transparent 29%),
+    linear-gradient(130deg, #050505 8%, #151515 35%, #343434 56%, #090909 82%);
+}
+
+.auth-wave-panel::after {
+  animation: auth-wave-drift-alt 17s ease-in-out infinite;
+  background:
+    radial-gradient(circle at 72% 18%, rgb(255 255 255 / 20%), transparent 24%),
+    radial-gradient(circle at 28% 78%, rgb(255 255 255 / 10%), transparent 26%),
+    linear-gradient(38deg, transparent 8%, rgb(255 255 255 / 18%) 42%, transparent 68%);
+  mix-blend-mode: screen;
 }

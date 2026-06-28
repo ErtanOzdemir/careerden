@@ -57,7 +57,7 @@ export default function Sidebar() {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex h-16 items-center gap-2.5 px-5">
+      <div data-testid="sidebar-brand" className="flex h-24 items-end gap-2.5 px-5 pb-4">
         <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Link2 className="size-4" />
         </div>

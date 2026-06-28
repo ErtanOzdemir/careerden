@@ -2,26 +2,16 @@ import { app, BrowserWindow, shell } from "electron";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerIpcHandlers } from "./ipc-handlers.js";
+import { getMainWindowOptions } from "./main-window-options.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
 
 async function createWindow(): Promise<void> {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
-    title: "Link2CV",
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: join(__dirname, "..", "preload", "index.cjs"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-    },
-  });
+  mainWindow = new BrowserWindow(
+    getMainWindowOptions(join(__dirname, "..", "preload", "index.cjs")),
+  );
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);

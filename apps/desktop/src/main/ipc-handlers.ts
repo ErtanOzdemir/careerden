@@ -1,5 +1,6 @@
-import { app, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { getLinkedInSessionManager, scrapeLinkedInJob } from "./linkedin-scraping.js";
+import { applyWindowControl, type WindowControlAction } from "./window-controls.js";
 
 export function registerIpcHandlers(): void {
   ipcMain.handle("open-external", (_event, url: string) => {
@@ -24,5 +25,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle("linkedin-scrape-job", async (_event, sourceUrl: string) => {
     return scrapeLinkedInJob(sourceUrl);
+  });
+
+  ipcMain.handle("window-control", (event, action: WindowControlAction) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) {
+      return;
+    }
+
+    applyWindowControl(window, action);
   });
 }

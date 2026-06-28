@@ -67,7 +67,7 @@ export default function Signup() {
           </div>
         )}
         <Button
-          className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90"
+          className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
           size="lg"
           type="submit"
           disabled={isSubmitting}

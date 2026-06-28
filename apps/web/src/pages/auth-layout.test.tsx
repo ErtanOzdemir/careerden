@@ -15,19 +15,23 @@ describe("AuthShell", () => {
     expect(screen.getAllByText("Link2CV")).toHaveLength(2);
     expect(screen.getByTestId("auth-wave-panel")).toHaveClass(
       "bg-black",
+      "dark:bg-white",
+      "dark:text-black",
       "md:mt-10",
       "md:min-h-[calc(100vh-4rem)]",
+      "md:rounded-l-2xl",
       "md:rounded-tl-2xl",
       "md:rounded-r-2xl",
     );
     expect(screen.getByTestId("auth-wave-brand")).toHaveClass("h-24", "items-end", "pb-4");
     expect(screen.getByTestId("auth-form-shell")).toHaveClass("[-webkit-app-region:no-drag]");
     expect(screen.getByTestId("auth-page-shell")).toHaveClass(
-      "bg-white",
+      "bg-background",
       "p-2",
       "[-webkit-app-region:drag]",
     );
     expect(screen.getByTestId("auth-card-shell")).toHaveClass(
+      "bg-background",
       "max-w-none",
       "min-h-[calc(100vh-1rem)]",
       "rounded-none",

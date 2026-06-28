@@ -58,7 +58,7 @@ export default function Login() {
           </div>
         )}
         <Button
-          className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90"
+          className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
           size="lg"
           type="submit"
           disabled={isSubmitting}
@@ -89,35 +89,35 @@ export function AuthShell({
   return (
     <main
       data-testid="auth-page-shell"
-      className="flex min-h-screen bg-white p-2 text-foreground [-webkit-app-region:drag] sm:p-3"
+      className="flex min-h-screen bg-background p-2 text-foreground [-webkit-app-region:drag] sm:p-3"
     >
       <section
         data-testid="auth-card-shell"
-        className="grid min-h-[calc(100vh-1rem)] w-full max-w-none overflow-hidden rounded-none bg-white shadow-none sm:min-h-[calc(100vh-1.5rem)] md:grid-cols-[1.08fr_1fr]"
+        className="grid min-h-[calc(100vh-1rem)] w-full max-w-none overflow-hidden rounded-none bg-background shadow-none sm:min-h-[calc(100vh-1.5rem)] md:grid-cols-[1.08fr_1fr]"
       >
         <div
           data-testid="auth-wave-panel"
-          className="auth-wave-panel relative hidden overflow-hidden bg-black px-8 pt-0 pb-8 text-white md:mt-10 md:block md:min-h-[calc(100vh-4rem)] md:rounded-tl-2xl md:rounded-r-2xl"
+          className="auth-wave-panel relative hidden overflow-hidden bg-black px-8 pt-0 pb-8 text-white dark:bg-white dark:text-black md:mt-10 md:block md:min-h-[calc(100vh-4rem)] md:rounded-l-2xl md:rounded-r-2xl md:rounded-tl-2xl"
         >
           <div className="relative z-10 flex h-full flex-col">
             <div
               data-testid="auth-wave-brand"
-              className="flex h-24 items-end gap-2 pb-4 text-sm text-white/70"
+              className="flex h-24 items-end gap-2 pb-4 text-sm text-white/70 dark:text-black/65"
             >
-              <span className="flex size-9 items-center justify-center rounded-lg border border-white/15 bg-white/10">
+              <span className="flex size-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 dark:border-black/15 dark:bg-black/5">
                 <Link2 className="size-4" />
               </span>
               Link2CV
             </div>
             <div className="mt-12 max-w-sm">
-              <p className="text-sm text-white/65">You can easily</p>
-              <h2 className="mt-3 text-4xl font-semibold leading-tight text-white">
+              <p className="text-sm text-white/65 dark:text-black/60">You can easily</p>
+              <h2 className="mt-3 text-4xl font-semibold leading-tight text-white dark:text-black">
                 Speed up your work with smart CV tools
               </h2>
             </div>
             <div className="mt-auto">
-              <p className="text-center text-xs text-white/45">Your workspace</p>
-              <div className="mt-5 grid grid-cols-3 gap-3 text-xs font-medium text-white/55">
+              <p className="text-center text-xs text-white/45 dark:text-black/45">Your workspace</p>
+              <div className="mt-5 grid grid-cols-3 gap-3 text-xs font-medium text-white/55 dark:text-black/55">
                 <span className="flex items-center gap-2">
                   <BriefcaseBusiness className="size-4" />
                   Applications
@@ -142,14 +142,16 @@ export function AuthShell({
           >
             <div className="mb-8 pt-10 md:hidden">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-black text-white">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black">
                   <Link2 className="size-4" />
                 </span>
                 Link2CV
               </div>
             </div>
             <div className="mb-7">
-              <h1 className="text-3xl font-semibold tracking-normal text-foreground">{title}</h1>
+              <h1 className="text-3xl font-semibold tracking-normal text-foreground dark:text-white">
+                {title}
+              </h1>
               <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
             </div>
             {children}
@@ -180,7 +182,7 @@ export function AuthInput({
       <span className="mb-1.5 block text-xs font-semibold text-foreground">{label}</span>
       <span className="relative block">
         <input
-          className="h-11 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-black focus:ring-3 focus:ring-black/10"
+          className="h-11 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-black focus:ring-3 focus:ring-black/10 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white dark:focus:ring-white/10"
           onChange={(event) => onChange(event.target.value)}
           required
           type={type}

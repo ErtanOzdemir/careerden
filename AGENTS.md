@@ -65,7 +65,10 @@ documents for review or download.
 - The current desktop runtime starts an Electron app and, in development, loads the Vite
   web app with `?apiBaseUrl=...` pointing at the standalone API server.
 - The API runtime uses PostgreSQL for state, RustFS-compatible object storage for
-  generated files, and Redis/BullMQ for job application processing.
+  generated files, and Redis/BullMQ for enqueueing job application processing.
+- The `apps/llm-worker` runtime consumes BullMQ job-application events and runs LLM
+  match analysis independently from the API process. Future workers should use a
+  descriptive `*-worker` app name, for example `notifications-worker`.
 - PostgreSQL migrations are run through Knex during API startup.
 
 ## Runtime Validation Commands
@@ -73,6 +76,10 @@ documents for review or download.
 - Start all development targets:
   ```bash
   pnpm dev
+  ```
+- Start only the LLM worker:
+  ```bash
+  pnpm dev:llm-worker
   ```
 - Start the desktop app with the web dev server:
   ```bash

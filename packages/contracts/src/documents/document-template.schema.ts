@@ -56,13 +56,7 @@ const selectedEducationFieldSchema = z.enum([
   "start_date",
 ]);
 
-const selectedProjectFieldSchema = z.enum([
-  "achievements",
-  "description",
-  "name",
-  "skills",
-  "url",
-]);
+const selectedProjectFieldSchema = z.enum(["achievements", "description", "name", "skills", "url"]);
 
 export const documentTemplateVariableAliasesSchema = z.object({
   fields: z.record(documentTemplateFieldSchema, templateVariableNameSchema.optional()).default({}),

@@ -39,9 +39,10 @@ Link2CV is a TypeScript monorepo using clean architecture with clear separation 
 link2cv/
 ├── apps/
 │   ├── desktop/      Electron desktop shell
+│   ├── llm-worker/   BullMQ worker for LLM analysis jobs
+│   ├── api/          Express HTTP API app
 │   └── web/          Frontend (vanilla TypeScript + Vite)
 ├── packages/
-│   ├── api/          Express HTTP routes, middleware, and request mapping
 │   ├── domain/       Entities, workflow state, provider interfaces
 │   ├── application/  Use cases and orchestration
 │   ├── infrastructure/  DB, scrapers, AI, PDF, queue, storage adapters
@@ -73,9 +74,11 @@ Backend source is organized by bounded context inside those packages. Common con
 ### Data Flow
 
 ```
-LinkedIn URL → Scrape Job → AI Match Analysis → Generate Documents → PDF Output
-                    ↓              ↓                    ↓
-              Save to DB     Score + Gaps        CV + Cover Letter
+LinkedIn URL → API creates application → Desktop scrape → BullMQ → LLM worker analysis
+                       ↓                       ↓             ↓
+                 Save to DB              Save scrape   Score + CV guidance
+                                                            ↓
+                                                   Generate Documents → PDF Output
 ```
 
 ## Environment Variables
@@ -90,6 +93,7 @@ Copy `.env.example` to `.env` and configure:
 | `OPENAI_API_KEY`               | OpenAI API key                                      | —                            |
 | `GEMINI_API_KEY`               | Google Gemini API key                               | —                            |
 | `DEEPSEEK_API_KEY`             | DeepSeek API key                                    | —                            |
+| `LLM_WORKER_CONCURRENCY`       | Concurrent BullMQ jobs processed by the LLM worker  | `1`                          |
 | `LINKEDIN_SESSION_STORAGE_DIR` | LinkedIn session storage                            | `./storage/linkedin-session` |
 | `LINKEDIN_SESSION_SECRET`      | Secret for LinkedIn session encryption              | —                            |
 
@@ -140,6 +144,10 @@ pnpm format
 
 # Run all tests
 pnpm test
+
+# Run the API or LLM worker directly
+pnpm dev:api
+pnpm dev:llm-worker
 
 # Build all packages
 pnpm build

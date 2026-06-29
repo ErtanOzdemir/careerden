@@ -1,5 +1,6 @@
 export * from "./profiles/create-profile.js";
 export * from "./job-applications/submit-job-application.js";
+export * from "./job-applications/analyze-scraped-job.js";
 export * from "./job-applications/process-job-application.js";
 export * from "./job-applications/generate-job-application-documents.js";
 export * from "./job-applications/delete-job-application.js";

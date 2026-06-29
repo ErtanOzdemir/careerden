@@ -80,7 +80,13 @@ export type ApiSelectedProjectTemplateField =
 
 export interface ApiDocumentTemplateVariableAliases {
   fields: Partial<
-    Record<Exclude<ApiDocumentTemplateField, "selected_education" | "selected_experiences" | "selected_projects">, string>
+    Record<
+      Exclude<
+        ApiDocumentTemplateField,
+        "selected_education" | "selected_experiences" | "selected_projects"
+      >,
+      string
+    >
   >;
   certificationItems?: Array<{
     variableName?: string;

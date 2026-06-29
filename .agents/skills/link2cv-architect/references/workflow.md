@@ -11,16 +11,18 @@ For source placement and bounded-context rules, read `architecture.md` first.
 5. Scrape the company LinkedIn page.
 6. Discover and scrape the company website and career page when available.
 7. Normalize the collected data.
-8. Run AI matching against the user profile.
-9. Render the CV and cover letter from templates.
-10. Convert outputs to PDF.
-11. Store artifacts and update status.
+8. Enqueue LLM analysis on BullMQ.
+9. Run AI matching against the user profile in `apps/llm-worker`.
+10. Render the CV and cover letter from templates.
+11. Convert outputs to PDF.
+12. Store artifacts and update status.
 
 ## Status Model
 
 - Use explicit states such as `queued`, `scraping`, `analyzing`, `generating_documents`, `completed`, and `failed`.
 - Persist a failure reason when a run stops.
 - Emit events or processing logs for each major transition.
+- API routes enqueue work but do not consume LLM jobs. LLM status transitions are owned by the LLM worker.
 
 ## AI Output
 

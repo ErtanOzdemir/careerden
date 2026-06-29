@@ -1,14 +1,8 @@
-import type {
-  FileStorage,
-  JobApplication,
-  JobApplicationQueue,
-  JobApplicationRepository,
-} from "@link2cv/domain";
+import type { FileStorage, JobApplication, JobApplicationRepository } from "@link2cv/domain";
 
 export class RetryJobApplicationUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
-    private readonly queue: JobApplicationQueue,
     private readonly storage: FileStorage,
   ) {}
 
@@ -45,19 +39,6 @@ export class RetryJobApplicationUseCase {
     });
     await Promise.allSettled([...fileIds].map((fileId) => this.storage.delete(fileId)));
 
-    try {
-      await this.queue.restart({ jobApplicationId });
-      return reset;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to enqueue retry";
-      await this.jobApplications.updateStatus(jobApplicationId, "failed", message);
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Retry enqueue failed",
-        body: message,
-      });
-      throw error;
-    }
+    return reset;
   }
 }

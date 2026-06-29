@@ -54,7 +54,13 @@ export type SelectedProjectTemplateField =
 
 export interface DocumentTemplateVariableAliases {
   fields: Partial<
-    Record<Exclude<DocumentTemplateField, "selected_education" | "selected_experiences" | "selected_projects">, string>
+    Record<
+      Exclude<
+        DocumentTemplateField,
+        "selected_education" | "selected_experiences" | "selected_projects"
+      >,
+      string
+    >
   >;
   certificationItems?: Array<{
     variableName?: string;

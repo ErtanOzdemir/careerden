@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FileStorage, JobApplicationQueue } from "@link2cv/domain";
+import type { FileStorage } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
 import { RetryJobApplicationUseCase } from "./retry-job-application.js";
 
 describe("RetryJobApplicationUseCase", () => {
-  it("clears failed processing data and restarts the queue job", async () => {
+  it("clears failed processing data and returns the job to the desktop scraping queue", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({
       profileId: "profile-1",
@@ -19,16 +19,15 @@ describe("RetryJobApplicationUseCase", () => {
       fileName: "cv.pdf",
       contentType: "application/pdf",
     });
-    const queue = createQueue();
     const storage = createStorage();
-    const useCase = new RetryJobApplicationUseCase(repository, queue, storage);
+    const useCase = new RetryJobApplicationUseCase(repository, storage);
 
     const retried = await useCase.execute(job.id);
 
     expect(retried?.status).toBe("queued");
     expect(retried?.failureReason).toBeUndefined();
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
-    expect(queue.restart).toHaveBeenCalledWith({ jobApplicationId: job.id });
+    expect(await repository.getScrapeBundle(job.id)).toBeNull();
     expect(storage.delete).toHaveBeenCalledWith("files/cv.pdf");
     expect((await repository.listEvents(job.id))[0]?.title).toBe("Retry requested");
   });
@@ -39,38 +38,13 @@ describe("RetryJobApplicationUseCase", () => {
       profileId: "profile-1",
       sourceUrl: "https://www.linkedin.com/jobs/view/123",
     });
-    const useCase = new RetryJobApplicationUseCase(repository, createQueue(), createStorage());
+    const useCase = new RetryJobApplicationUseCase(repository, createStorage());
 
     await expect(useCase.execute(job.id)).rejects.toThrow(
       "Only failed job applications can be retried",
     );
   });
-
-  it("returns the job to failed when queue restart fails", async () => {
-    const repository = new InMemoryJobApplicationRepository();
-    const job = await repository.create({
-      profileId: "profile-1",
-      sourceUrl: "https://www.linkedin.com/jobs/view/123",
-    });
-    await repository.updateStatus(job.id, "failed", "Scraping failed");
-    const queue = createQueue();
-    vi.mocked(queue.restart).mockRejectedValue(new Error("Queue unavailable"));
-    const useCase = new RetryJobApplicationUseCase(repository, queue, createStorage());
-
-    await expect(useCase.execute(job.id)).rejects.toThrow("Queue unavailable");
-
-    const failed = await repository.findById(job.id);
-    expect(failed?.status).toBe("failed");
-    expect(failed?.failureReason).toBe("Queue unavailable");
-  });
 });
-
-function createQueue(): JobApplicationQueue {
-  return {
-    enqueue: vi.fn(),
-    restart: vi.fn(),
-  };
-}
 
 function createStorage(): FileStorage {
   return {

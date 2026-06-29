@@ -13,16 +13,15 @@ import {
   UpdateProfileUseCase,
 } from "@link2cv/application";
 import {
-  AiProviderFactory,
   BullMqJobApplicationQueue,
   DocxtemplaterTemplateRenderer,
   HtmlTemplateRenderer,
   HttpRemoteImageFetcher,
-  InMemoryJobApplicationChangeBus,
   PlaywrightPdfRenderer,
   PostgresJobApplicationRepository,
   PostgresUserProfileRepository,
   PublishingJobApplicationRepository,
+  RedisJobApplicationChangeBus,
   RustFsStorage,
   createPostgresDb,
   runPostgresMigrations,
@@ -35,7 +34,6 @@ import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { createProfileRouter } from "./profiles/profiles.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
-import { createAnalyzeScrapedJobWorker } from "./job-applications/analyze-scraped-job.worker.js";
 
 export interface ApiRuntime {
   app: Express;
@@ -53,7 +51,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
   });
-  const changeBus = new InMemoryJobApplicationChangeBus();
+  const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const innerJobApplications = new PostgresJobApplicationRepository(db);
   const jobApplications = new PublishingJobApplicationRepository(innerJobApplications, changeBus);
   const profiles = new PostgresUserProfileRepository(db);
@@ -76,19 +74,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     profiles,
     docxTemplates,
   );
-  const aiProviderFactory = new AiProviderFactory({
-    aiProvider: env.AI_PROVIDER,
-    openaiApiKey: env.OPENAI_API_KEY,
-    geminiApiKey: env.GEMINI_API_KEY,
-    deepseekApiKey: env.DEEPSEEK_API_KEY,
-  });
-  const worker = createAnalyzeScrapedJobWorker({
-    aiProviderFactory,
-    jobApplications,
-    profiles,
-    redisUrl: env.REDIS_URL,
-  });
-
   async function getProfileForUser(user: AuthenticatedUser) {
     const existing = await profiles.findByUserId(user.id);
 
@@ -163,7 +148,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         profiles,
         generateDocumentsUseCase,
       ),
-      retryJobApplication: new RetryJobApplicationUseCase(jobApplications, queue, storage),
+      retryJobApplication: new RetryJobApplicationUseCase(jobApplications, storage),
       updateDocumentContent: new UpdateDocumentContentUseCase(jobApplications),
       jobApplications,
       jobApplicationChanges: changeBus,
@@ -181,8 +166,8 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     app,
     db,
     close: async () => {
-      await worker.close();
       await queue.close();
+      await changeBus.close();
       await db.destroy();
     },
   };

@@ -14,7 +14,7 @@
 - `application`: use cases such as job submission, scraping orchestration, AI matching, and document generation.
 - `domain`: entities, value objects, workflow state, and provider interfaces.
 - `infrastructure`: DB repositories, scrapers, AI clients, template rendering, PDF conversion, file storage.
-- `workers`: BullMQ processors and retry/recovery orchestration.
+- `workers`: separately runnable `apps/*-worker` packages for BullMQ processors and retry/recovery orchestration.
 
 ## Bounded Context Layout
 
@@ -31,6 +31,8 @@ Keep source organized by business context inside each package instead of by gene
 
 Use the same context name across layers when a feature crosses packages. For example, a new job-application capability should place domain types under `packages/domain/src/job-applications`, use cases under `packages/application/src/job-applications`, schemas under `packages/contracts/src/job-applications`, and API routes under `apps/api/src/job-applications`.
 
+Worker apps should be named for their responsibility and include the `worker` suffix. For example, `apps/llm-worker` owns LLM analysis jobs, while a future notification processor should use a name such as `apps/notifications-worker`.
+
 Do not reintroduce broad folders like `entities`, `interfaces`, `schemas`, `routes`, or `use-cases` for backend source. Package barrels should keep public `@link2cv/*` imports stable while internals stay context-oriented.
 
 ## Patterns
@@ -40,6 +42,7 @@ Do not reintroduce broad folders like `entities`, `interfaces`, `schemas`, `rout
 - Use Adapter for AI providers, storage, and PDF rendering.
 - Use Repository for database access.
 - Use a queue-driven pipeline for all long-running processing.
+- Keep API runtimes as producers/controllers only; BullMQ consumers belong in worker apps.
 
 ## Tooling
 

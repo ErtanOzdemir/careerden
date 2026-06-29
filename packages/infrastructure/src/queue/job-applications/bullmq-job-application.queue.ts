@@ -26,20 +26,30 @@ export class BullMqJobApplicationQueue implements JobApplicationQueue {
   }
 
   async enqueue(payload: JobApplicationQueuePayload): Promise<void> {
+    const existingJob = await this.queue.getJob(payload.jobApplicationId);
+    const existingJobState = await existingJob?.getState();
+
     await this.queue.add("process", payload, {
       ...this.options,
-      jobId: payload.jobApplicationId,
+      jobId:
+        existingJobState === "failed"
+          ? retryJobId(payload.jobApplicationId)
+          : payload.jobApplicationId,
     });
   }
 
   async restart(payload: JobApplicationQueuePayload): Promise<void> {
     await this.queue.add("process", payload, {
       ...this.options,
-      jobId: `${payload.jobApplicationId}:${Date.now()}`,
+      jobId: retryJobId(payload.jobApplicationId),
     });
   }
 
   async close(): Promise<void> {
     await this.queue.close();
   }
+}
+
+function retryJobId(jobApplicationId: string): string {
+  return `${jobApplicationId}-retry-${Date.now()}`;
 }

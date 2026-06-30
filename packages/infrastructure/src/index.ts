@@ -20,8 +20,6 @@ export * from "./documents/libreoffice-docx-pdf-renderer.js";
 export * from "./documents/playwright-pdf-renderer.js";
 export * from "./queue/job-applications/bullmq-job-application.queue.js";
 export * from "./queue/job-applications/self-processing-job-application.queue.js";
-export * from "./scraping/adapters/career-page.scraper.js";
-export * from "./scraping/adapters/company-website.scraper.js";
 export * from "./scraping/adapters/linkedin-company.scraper.js";
 export * from "./scraping/adapters/linkedin-job.scraper.js";
 export * from "./scraping/linkedin-session.manager.js";

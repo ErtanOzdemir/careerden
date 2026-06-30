@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
 import { StatusBadge, PriorityTag } from "../components/link2cv/status-badge.js";
@@ -12,7 +12,7 @@ import {
 } from "../api/jobApplicationChanges.js";
 import { useScrapingQueuePoller } from "../api/useScrapingQueuePoller.js";
 import { cn } from "../lib/utils.js";
-import { Search, ArrowUpDown, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Search, ArrowUpDown, EllipsisVertical, SlidersHorizontal, Trash2 } from "lucide-react";
 import type { JobApplication } from "../types.js";
 import type { ApiApplicationStatus } from "../api/types.js";
 
@@ -124,6 +124,36 @@ export default function ApplicationsLog() {
 
   useScrapingQueuePoller(profileId);
 
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    }
+    if (openMenuId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId]);
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await jobApplicationsApi.delete(id);
+        setOpenMenuId(null);
+        setApplications((c) => c.filter((a) => a.id !== id));
+      } catch {
+        // keep row visible on error
+      }
+    },
+    [],
+  );
+
   const rows = useMemo(() => {
     let list = applications.filter((a) => {
       const q = query.toLowerCase();
@@ -198,8 +228,9 @@ export default function ApplicationsLog() {
           <div className="col-span-2">Status</div>
           <div className="col-span-2">Match</div>
           <div className="col-span-1">Priority</div>
-          <div className="col-span-2">Follow-up</div>
+          <div className="col-span-1">Follow-up</div>
           <div className="col-span-1 text-right">Added</div>
+          <div className="col-span-1 text-center">Actions</div>
         </div>
 
         <div className="divide-y divide-border">
@@ -282,12 +313,41 @@ export default function ApplicationsLog() {
                 <div className="col-span-1">
                   <PriorityTag priority={mapUiPriorityToDisplay(app.priority)} />
                 </div>
-                <div className="col-span-2 text-xs text-muted-foreground">
+                <div className="col-span-1 text-xs text-muted-foreground">
                   {app.dateLabel || "—"}
                 </div>
                 <div className="col-span-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
                   {app.dateApplied.replace(/, \d{4}$/, "")}
-                  <ChevronRight className="size-4 text-muted-foreground/60" />
+                </div>
+                <div
+                  className="col-span-1 flex items-center justify-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="relative">
+                    <button
+                      onClick={() =>
+                        setOpenMenuId(openMenuId === app.id ? null : app.id)
+                      }
+                      className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                      aria-label="Actions"
+                    >
+                      <EllipsisVertical className="size-4" />
+                    </button>
+                    {openMenuId === app.id && (
+                      <div
+                        ref={menuRef}
+                        className="absolute top-full right-0 z-50 min-w-[120px] overflow-hidden rounded-lg border border-border bg-popover p-1 shadow-lg"
+                      >
+                        <button
+                          onClick={() => handleDelete(app.id)}
+                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-danger-soft"
+                        >
+                          <Trash2 className="size-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </button>
             );

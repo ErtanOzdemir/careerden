@@ -10,7 +10,6 @@ import {
   useJobApplicationChanges,
   type JobApplicationChange,
 } from "../api/jobApplicationChanges.js";
-import { useScrapingQueuePoller } from "../api/useScrapingQueuePoller.js";
 import { cn } from "../lib/utils.js";
 import { Search, ArrowUpDown, EllipsisVertical, SlidersHorizontal, Trash2 } from "lucide-react";
 import type { JobApplication } from "../types.js";
@@ -122,8 +121,6 @@ export default function ApplicationsLog() {
     onOpen: () => {},
   });
 
-  useScrapingQueuePoller(profileId);
-
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -141,18 +138,15 @@ export default function ApplicationsLog() {
     };
   }, [openMenuId]);
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await jobApplicationsApi.delete(id);
-        setOpenMenuId(null);
-        setApplications((c) => c.filter((a) => a.id !== id));
-      } catch {
-        // keep row visible on error
-      }
-    },
-    [],
-  );
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await jobApplicationsApi.delete(id);
+      setOpenMenuId(null);
+      setApplications((c) => c.filter((a) => a.id !== id));
+    } catch {
+      // keep row visible on error
+    }
+  }, []);
 
   const rows = useMemo(() => {
     let list = applications.filter((a) => {
@@ -325,9 +319,7 @@ export default function ApplicationsLog() {
                 >
                   <div className="relative">
                     <button
-                      onClick={() =>
-                        setOpenMenuId(openMenuId === app.id ? null : app.id)
-                      }
+                      onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)}
                       className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                       aria-label="Actions"
                     >

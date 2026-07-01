@@ -210,8 +210,22 @@ export const updateStatusSchema = z.object({
 });
 
 export const submitScrapeDataSchema = z.object({
+  claimedBy: z.string().min(1).optional(),
   scrapeBundle: scrapeBundleSchema,
   sourceUrl: z.string().url().optional(),
+});
+
+export const claimScrapeJobSchema = z.object({
+  claimedBy: z.string().min(1),
+});
+
+export const failScrapeJobSchema = z.object({
+  claimedBy: z.string().min(1),
+  reason: z.string().min(1),
+});
+
+export const heartbeatScrapeJobSchema = z.object({
+  claimedBy: z.string().min(1),
 });
 
 export const jobApplicationAnalyticsQuerySchema = z.object({
@@ -229,3 +243,6 @@ export type UpdateJobApplicationContactDto = z.infer<typeof updateJobApplication
 export type CreateJobApplicationInterviewDto = z.infer<typeof createJobApplicationInterviewSchema>;
 export type UpdateJobApplicationInterviewDto = z.infer<typeof updateJobApplicationInterviewSchema>;
 export type ListJobApplicationsQueryDto = z.infer<typeof listJobApplicationsQuerySchema>;
+export type ClaimScrapeJobDto = z.infer<typeof claimScrapeJobSchema>;
+export type FailScrapeJobDto = z.infer<typeof failScrapeJobSchema>;
+export type HeartbeatScrapeJobDto = z.infer<typeof heartbeatScrapeJobSchema>;

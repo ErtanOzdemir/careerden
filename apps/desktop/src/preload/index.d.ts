@@ -5,7 +5,7 @@ export interface ElectronAPI {
   getLinkedInSessionStatus: () => Promise<unknown>;
   startLinkedInSession: () => Promise<unknown>;
   saveLinkedInSession: () => Promise<unknown>;
-  scrapeLinkedInJob: (sourceUrl: string) => Promise<unknown>;
+  notifyJobApplicationQueued: () => Promise<void>;
   minimizeWindow: () => Promise<void>;
   maximizeWindow: () => Promise<void>;
   closeWindow: () => Promise<void>;

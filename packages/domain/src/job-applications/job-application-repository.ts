@@ -54,8 +54,32 @@ export interface ListJobApplicationsFilter {
   sortDirection?: "asc" | "desc";
 }
 
+export interface ClaimNextScrapeJobInput {
+  profileId: string;
+  claimedBy: string;
+  claimDurationMs: number;
+  now?: Date;
+}
+
+export interface RenewScrapeClaimInput {
+  claimedBy: string;
+  claimDurationMs: number;
+  now?: Date;
+}
+
+export interface RecordScrapeFailureInput {
+  claimedBy: string;
+  reason: string;
+  maxAttempts: number;
+  backoffMs: number;
+  now?: Date;
+}
+
 export interface JobApplicationRepository {
   create(input: CreateJobApplicationInput): Promise<JobApplication>;
+  claimNextScrapeJob(input: ClaimNextScrapeJobInput): Promise<JobApplication | null>;
+  renewScrapeClaim(id: string, input: RenewScrapeClaimInput): Promise<JobApplication | null>;
+  recordScrapeFailure(id: string, input: RecordScrapeFailureInput): Promise<JobApplication | null>;
   deleteById(id: string): Promise<void>;
   findById(id: string): Promise<JobApplication | null>;
   listByProfileId(profileId: string, filter?: ListJobApplicationsFilter): Promise<JobApplication[]>;

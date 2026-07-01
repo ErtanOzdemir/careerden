@@ -1,25 +1,26 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, session, shell } from "electron";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { getMainWindowOptions } from "./main-window-options.js";
+import { DesktopApiClient } from "./scraping/desktop-api-client.js";
+import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
+import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
+import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
 import { applyWindowControl, type WindowControlAction } from "./window-controls.js";
 import {
   CheckLinkedInSessionUseCase,
   GetAppPathUseCase,
   SaveLinkedInSessionUseCase,
-  ScrapeLinkedInJobUseCase,
   StartLinkedInSessionUseCase,
 } from "@link2cv/application";
-import {
-  LinkedInCompanyScraper,
-  LinkedInJobScraper,
-  LinkedInSessionManager,
-} from "@link2cv/infrastructure";
+import { LinkedInSessionManager } from "@link2cv/infrastructure";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
+let localScrapingWorker: LocalScrapingWorker | null = null;
+let utilityScrapingRunner: UtilityProcessLinkedInScrapingRunner | null = null;
 
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow(
@@ -46,13 +47,9 @@ async function createWindow(): Promise<void> {
 }
 
 void app.whenReady().then(async () => {
-  const sessionManager = new LinkedInSessionManager(
-    join(app.getPath("userData"), "linkedin-session"),
-    process.env.LINKEDIN_SESSION_SECRET ?? "dev-local-linkedin-session-secret",
-  );
-
-  const jobScraper = new LinkedInJobScraper(sessionManager);
-  const companyLinkedInScraper = new LinkedInCompanyScraper(sessionManager);
+  const sessionDirectory = join(app.getPath("userData"), "linkedin-session");
+  const sessionSecret = process.env.LINKEDIN_SESSION_SECRET ?? "dev-local-linkedin-session-secret";
+  const sessionManager = new LinkedInSessionManager(sessionDirectory, sessionSecret);
 
   const getAppPath = new GetAppPathUseCase({
     getPath: (name: string) => app.getPath(name as Parameters<typeof app.getPath>[0]),
@@ -60,7 +57,23 @@ void app.whenReady().then(async () => {
   const checkLinkedInSession = new CheckLinkedInSessionUseCase(sessionManager);
   const startLinkedInSession = new StartLinkedInSessionUseCase(sessionManager);
   const saveLinkedInSession = new SaveLinkedInSessionUseCase(sessionManager);
-  const scrapeLinkedInJob = new ScrapeLinkedInJobUseCase(jobScraper, companyLinkedInScraper);
+  const apiBaseUrl = process.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+  const claimedBy = getDesktopScrapingClaimOwner();
+  utilityScrapingRunner = new UtilityProcessLinkedInScrapingRunner({
+    modulePath: join(__dirname, "scraping", "scraping-utility-process.js"),
+    sessionDirectory,
+    sessionSecret,
+  });
+
+  localScrapingWorker = new LocalScrapingWorker({
+    api: new DesktopApiClient({
+      apiBaseUrl,
+      claimedBy,
+      getCookies: () => session.defaultSession.cookies.get({ url: apiBaseUrl }),
+    }),
+    runner: utilityScrapingRunner,
+  });
+  localScrapingWorker.start();
 
   new IpcHandlerRegistry()
     .register("open-external", (_event, url: string) => {
@@ -70,9 +83,7 @@ void app.whenReady().then(async () => {
     .register("linkedin-session-status", async () => checkLinkedInSession.execute())
     .register("linkedin-session-start", async () => startLinkedInSession.execute())
     .register("linkedin-session-save", async () => saveLinkedInSession.execute())
-    .register("linkedin-scrape-job", async (_event, sourceUrl: string) =>
-      scrapeLinkedInJob.execute(sourceUrl),
-    )
+    .register("job-application-queued", () => localScrapingWorker?.wake())
     .register("window-control", (event, action: WindowControlAction) => {
       const window = BrowserWindow.fromWebContents(event.sender);
       if (!window) {
@@ -94,4 +105,9 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("before-quit", () => {
+  localScrapingWorker?.stop();
+  utilityScrapingRunner?.dispose();
 });

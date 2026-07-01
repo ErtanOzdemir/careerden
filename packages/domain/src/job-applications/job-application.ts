@@ -24,6 +24,10 @@ export interface JobApplication {
   sourceUrl?: string;
   status: JobApplicationStatus;
   failureReason?: string;
+  scrapeClaimedBy?: string;
+  scrapeClaimExpiresAt?: Date;
+  scrapeAttemptCount: number;
+  nextScrapeAttemptAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   tracking: JobApplicationTrackingFields;

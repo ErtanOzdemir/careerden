@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  claimScrapeJobSchema,
   createJobApplicationContactSchema,
   createJobApplicationInterviewSchema,
   createJobApplicationSchema,
@@ -19,6 +20,14 @@ describe("job application schemas", () => {
     expect(result.priority).toBe("medium");
     expect(result.tags).toEqual([]);
     expect(result.metadata).toEqual({});
+  });
+
+  it("accepts desktop scrape claims without a profile id", () => {
+    const result = claimScrapeJobSchema.parse({
+      claimedBy: "desktop-installation:runtime",
+    });
+
+    expect(result).toEqual({ claimedBy: "desktop-installation:runtime" });
   });
 
   it("requires company and role for manual submissions", () => {

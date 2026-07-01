@@ -11,9 +11,12 @@ import type {
 } from "@link2cv/domain";
 import {
   calculateJobApplicationAnalytics,
+  claimNextScrapeJob,
+  failScrapeJob,
   getGeneratedDocumentDownloadUrl,
   getJobApplicationDetail,
   listJobApplicationsWithDocuments,
+  renewScrapeClaim,
 } from "./job-applications.routes.js";
 
 describe("job applications route behavior", () => {
@@ -193,6 +196,122 @@ describe("job applications route behavior", () => {
     expect(detail.scrapeBundle?.companyLinkedIn).toEqual({ name: "Acme", raw: {} });
     expect(detail.documentContent?.customizedSummary.blocks).toHaveLength(1);
   });
+
+  it("claims a queued scrape job through the desktop worker endpoint", async () => {
+    const job = createJobApplication({ status: "scraping" });
+    const jobApplications = createJobApplicationRepository({
+      claimNextScrapeJob: vi.fn(async () => job),
+    });
+
+    const claimed = await claimNextScrapeJob(jobApplications, {
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+    });
+
+    expect(claimed).toEqual(job);
+    expect(jobApplications.claimNextScrapeJob).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+    });
+  });
+
+  it("renews a scrape claim through the desktop worker heartbeat endpoint", async () => {
+    const job = createJobApplication({ status: "scraping", scrapeClaimedBy: "desktop-a" });
+    const jobApplications = createJobApplicationRepository({
+      renewScrapeClaim: vi.fn(async () => job),
+    });
+
+    await expect(
+      renewScrapeClaim(jobApplications, job.id, { claimedBy: "desktop-a" }),
+    ).resolves.toEqual(job);
+
+    expect(jobApplications.renewScrapeClaim).toHaveBeenCalledWith(job.id, {
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+    });
+  });
+
+  it("schedules a retry for a claimed scrape job failure before max attempts", async () => {
+    const job = createJobApplication({
+      id: "job-1",
+      status: "scraping",
+      scrapeClaimedBy: "desktop-a",
+      scrapeAttemptCount: 1,
+    });
+    const retryScheduled = createJobApplication({
+      ...job,
+      status: "queued",
+      failureReason: "LinkedIn session expired",
+      scrapeAttemptCount: 1,
+      nextScrapeAttemptAt: new Date("2026-06-30T10:01:00.000Z"),
+    });
+    const jobApplications = createJobApplicationRepository({
+      findById: vi.fn(async () => job),
+      recordScrapeFailure: vi.fn(async () => retryScheduled),
+      addEvent: vi.fn(async () => createEvent({ jobApplicationId: job.id, title: "failed" })),
+    });
+
+    const result = await failScrapeJob(
+      jobApplications,
+      job.id,
+      {
+        claimedBy: "desktop-a",
+        reason: "LinkedIn session expired",
+      },
+      new Date("2026-06-30T10:00:00.000Z"),
+    );
+
+    expect(result).toBe("retry_scheduled");
+    expect(jobApplications.recordScrapeFailure).toHaveBeenCalledWith(job.id, {
+      claimedBy: "desktop-a",
+      reason: "LinkedIn session expired",
+      maxAttempts: 3,
+      backoffMs: 60_000,
+      now: new Date("2026-06-30T10:00:00.000Z"),
+    });
+    expect(jobApplications.addEvent).toHaveBeenCalledWith({
+      jobApplicationId: job.id,
+      type: "processing",
+      title: "Scraping retry scheduled",
+      body: "LinkedIn session expired",
+      metadata: { attempt: 1, maxAttempts: 3, nextAttemptAt: "2026-06-30T10:01:00.000Z" },
+    });
+  });
+
+  it("marks a claimed scrape job failed on the final scrape attempt", async () => {
+    const job = createJobApplication({
+      id: "job-1",
+      status: "scraping",
+      scrapeClaimedBy: "desktop-a",
+      scrapeAttemptCount: 3,
+    });
+    const failed = createJobApplication({
+      ...job,
+      status: "failed",
+      failureReason: "LinkedIn selector changed",
+    });
+    const jobApplications = createJobApplicationRepository({
+      findById: vi.fn(async () => job),
+      recordScrapeFailure: vi.fn(async () => failed),
+      addEvent: vi.fn(async () => createEvent({ jobApplicationId: job.id, title: "failed" })),
+    });
+
+    await expect(
+      failScrapeJob(jobApplications, job.id, {
+        claimedBy: "desktop-a",
+        reason: "LinkedIn selector changed",
+      }),
+    ).resolves.toBe("failed");
+
+    expect(jobApplications.addEvent).toHaveBeenCalledWith({
+      jobApplicationId: job.id,
+      type: "processing",
+      title: "Scraping failed",
+      body: "LinkedIn selector changed",
+      metadata: { attempt: 3, maxAttempts: 3 },
+    });
+  });
 });
 
 function createJobApplicationRepository(
@@ -200,11 +319,14 @@ function createJobApplicationRepository(
 ): JobApplicationRepository {
   return {
     create: vi.fn(),
+    claimNextScrapeJob: vi.fn(async () => null),
     deleteById: vi.fn(),
     findById: vi.fn(),
     listByProfileId: vi.fn(async () => []),
     listByStatus: vi.fn(async () => []),
     resetProcessing: vi.fn(),
+    renewScrapeClaim: vi.fn(async () => null),
+    recordScrapeFailure: vi.fn(async () => null),
     updateStatus: vi.fn(),
     updateTracking: vi.fn(),
     saveScrapeBundle: vi.fn(),
@@ -250,6 +372,7 @@ function createJobApplication(overrides: Partial<JobApplication> = {}): JobAppli
     profileId: "profile-1",
     sourceUrl: "https://www.linkedin.com/jobs/view/1",
     status: "completed",
+    scrapeAttemptCount: 0,
     tracking: createTracking(),
     createdAt: now,
     updatedAt: now,

@@ -33,6 +33,7 @@ export interface CreateJobApplicationFromScrapeInput {
 }
 
 export interface SubmitScrapeDataInput {
+  claimedBy?: string;
   sourceUrl: string;
   scrapeBundle: ApiScrapeBundle;
 }

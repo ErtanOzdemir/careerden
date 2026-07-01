@@ -18,7 +18,7 @@ describe("Topbar", () => {
       maximizeWindow,
       minimizeWindow,
       saveLinkedInSession: vi.fn(),
-      scrapeLinkedInJob: vi.fn(),
+      notifyJobApplicationQueued: vi.fn(),
       startLinkedInSession: vi.fn(),
       getLinkedInSessionStatus: vi.fn(),
     };
@@ -45,7 +45,7 @@ describe("Topbar", () => {
       maximizeWindow: vi.fn(),
       minimizeWindow: vi.fn(),
       saveLinkedInSession: vi.fn(),
-      scrapeLinkedInJob: vi.fn(),
+      notifyJobApplicationQueued: vi.fn(),
       startLinkedInSession: vi.fn(),
       getLinkedInSessionStatus: vi.fn(),
     };

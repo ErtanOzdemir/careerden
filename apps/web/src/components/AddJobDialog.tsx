@@ -4,7 +4,6 @@ import { Button } from "./ui/button.js";
 import { Link2, Sparkles } from "lucide-react";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
-import { jobApplicationQueuedEvent } from "../api/useScrapingQueuePoller.js";
 
 export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [url, setUrl] = useState("");
@@ -30,15 +29,11 @@ export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => 
       const trimmedUrl = url.trim();
 
       if (window.electronAPI) {
-        const created = await jobApplicationsApi.create({
+        await jobApplicationsApi.create({
           profileId: profile.id,
           sourceUrl: trimmedUrl,
         });
-        window.dispatchEvent(
-          new CustomEvent(jobApplicationQueuedEvent, {
-            detail: { applicationId: created.id },
-          }),
-        );
+        void window.electronAPI.notifyJobApplicationQueued();
       } else {
         await jobApplicationsApi.create({
           profileId: profile.id,

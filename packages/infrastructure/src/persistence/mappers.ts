@@ -21,6 +21,10 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
     sourceUrl: nullableString(row.source_url),
     status: row.status as JobApplicationStatus,
     failureReason: nullableString(row.failure_reason),
+    scrapeClaimedBy: nullableString(row.scrape_claimed_by),
+    scrapeClaimExpiresAt: nullableDate(row.scrape_claim_expires_at),
+    scrapeAttemptCount: Number(row.scrape_attempt_count ?? 0),
+    nextScrapeAttemptAt: nullableDate(row.next_scrape_attempt_at),
     createdAt: new Date(String(row.created_at)),
     updatedAt: new Date(String(row.updated_at)),
     tracking: {

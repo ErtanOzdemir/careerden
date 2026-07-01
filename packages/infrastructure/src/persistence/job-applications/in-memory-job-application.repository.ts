@@ -1,5 +1,6 @@
 import type {
   AttachGeneratedDocumentInput,
+  ClaimNextScrapeJobInput,
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
   CreateJobApplicationInterviewInput,
@@ -38,6 +39,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       profileId: input.profileId,
       sourceUrl: input.sourceUrl,
       status: input.sourceUrl ? "queued" : "completed",
+      scrapeAttemptCount: 0,
       tracking: {
         companyName: input.companyName,
         roleTitle: input.roleTitle,
@@ -67,6 +69,91 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
 
   async findById(id: string): Promise<JobApplication | null> {
     return this.jobApplications.get(id) ?? null;
+  }
+
+  async claimNextScrapeJob(input: ClaimNextScrapeJobInput): Promise<JobApplication | null> {
+    const now = input.now ?? new Date();
+    const claimExpiresAt = new Date(now.getTime() + input.claimDurationMs);
+    const claimable = [...this.jobApplications.values()]
+      .filter((job) => job.profileId === input.profileId)
+      .filter((job) => Boolean(job.sourceUrl))
+      .filter((job) => isClaimable(job, now))
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())[0];
+
+    if (!claimable) {
+      return null;
+    }
+
+    const updated: JobApplication = {
+      ...claimable,
+      status: "scraping",
+      failureReason: undefined,
+      scrapeClaimedBy: input.claimedBy,
+      scrapeClaimExpiresAt: claimExpiresAt,
+      scrapeAttemptCount: claimable.scrapeAttemptCount + 1,
+      nextScrapeAttemptAt: undefined,
+      updatedAt: now,
+    };
+
+    this.jobApplications.set(updated.id, updated);
+    return updated;
+  }
+
+  async renewScrapeClaim(
+    id: string,
+    input: {
+      claimedBy: string;
+      claimDurationMs: number;
+      now?: Date;
+    },
+  ): Promise<JobApplication | null> {
+    const existing = this.jobApplications.get(id);
+
+    if (!existing || existing.scrapeClaimedBy !== input.claimedBy) {
+      return null;
+    }
+
+    const now = input.now ?? new Date();
+    const updated: JobApplication = {
+      ...existing,
+      scrapeClaimExpiresAt: new Date(now.getTime() + input.claimDurationMs),
+      updatedAt: now,
+    };
+
+    this.jobApplications.set(id, updated);
+    return updated;
+  }
+
+  async recordScrapeFailure(
+    id: string,
+    input: {
+      claimedBy: string;
+      reason: string;
+      maxAttempts: number;
+      backoffMs: number;
+      now?: Date;
+    },
+  ): Promise<JobApplication | null> {
+    const existing = this.jobApplications.get(id);
+
+    if (!existing || existing.scrapeClaimedBy !== input.claimedBy) {
+      return null;
+    }
+
+    const now = input.now ?? new Date();
+    const isFinalFailure = existing.scrapeAttemptCount >= input.maxAttempts;
+    const updated: JobApplication = {
+      ...existing,
+      status: isFinalFailure ? "failed" : "queued",
+      failureReason: input.reason,
+      scrapeClaimedBy: undefined,
+      scrapeClaimExpiresAt: undefined,
+      nextScrapeAttemptAt: isFinalFailure ? undefined : new Date(now.getTime() + input.backoffMs),
+      updatedAt: now,
+    };
+
+    this.jobApplications.set(id, updated);
+    return updated;
   }
 
   async deleteById(id: string): Promise<void> {
@@ -105,6 +192,10 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status: "queued",
       failureReason: undefined,
+      scrapeClaimedBy: undefined,
+      scrapeClaimExpiresAt: undefined,
+      scrapeAttemptCount: 0,
+      nextScrapeAttemptAt: undefined,
       updatedAt: new Date(),
     };
 
@@ -131,6 +222,9 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status,
       failureReason,
+      scrapeClaimedBy: status === "failed" ? undefined : existing.scrapeClaimedBy,
+      scrapeClaimExpiresAt: status === "failed" ? undefined : existing.scrapeClaimExpiresAt,
+      nextScrapeAttemptAt: status === "failed" ? undefined : existing.nextScrapeAttemptAt,
       updatedAt: new Date(),
     });
   }
@@ -171,6 +265,14 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const existing = this.jobApplications.get(id);
 
     if (existing) {
+      this.jobApplications.set(id, {
+        ...existing,
+        scrapeClaimedBy: undefined,
+        scrapeClaimExpiresAt: undefined,
+        scrapeAttemptCount: 0,
+        nextScrapeAttemptAt: undefined,
+        updatedAt: new Date(),
+      });
       await this.updateTracking(id, {
         companyName: existing.tracking.companyName ?? scrape.job.companyName,
         roleTitle: existing.tracking.roleTitle ?? scrape.job.title,
@@ -392,6 +494,20 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   async listGeneratedDocuments(jobApplicationId: string): Promise<GeneratedDocument[]> {
     return this.documents.get(jobApplicationId) ?? [];
   }
+}
+
+function isClaimable(job: JobApplication, now: Date): boolean {
+  if (job.status === "queued") {
+    return (
+      job.nextScrapeAttemptAt === undefined || job.nextScrapeAttemptAt.getTime() <= now.getTime()
+    );
+  }
+
+  return (
+    job.status === "scraping" &&
+    job.scrapeClaimExpiresAt !== undefined &&
+    job.scrapeClaimExpiresAt.getTime() <= now.getTime()
+  );
 }
 
 function matchesFilter(job: JobApplication, filter: ListJobApplicationsFilter): boolean {

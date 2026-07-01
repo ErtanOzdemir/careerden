@@ -1,6 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jobApplicationQueuedEvent } from "../api/useScrapingQueuePoller";
 import { AddJobDialog } from "./AddJobDialog";
 
 vi.mock("../api/profiles.js", () => ({
@@ -35,9 +34,7 @@ describe("AddJobDialog", () => {
 
   it("queues an Electron job and allows another URL without waiting for scraping", async () => {
     const create = deferred<{ id: string }>();
-    const scrapeLinkedInJob = vi.fn(() => new Promise<unknown>(() => {}));
-    const queuedEvents: Event[] = [];
-    const onQueued = (event: Event) => queuedEvents.push(event);
+    const notifyJobApplicationQueued = vi.fn(async () => undefined);
 
     window.electronAPI = {
       closeWindow: vi.fn(),
@@ -46,13 +43,12 @@ describe("AddJobDialog", () => {
       minimizeWindow: vi.fn(),
       platform: "darwin",
       saveLinkedInSession: vi.fn(),
-      scrapeLinkedInJob,
+      notifyJobApplicationQueued,
       startLinkedInSession: vi.fn(),
     };
     vi.mocked(profilesApi.me).mockResolvedValue({ id: "profile-1" } as never);
     vi.mocked(jobApplicationsApi.create).mockReturnValue(create.promise as never);
 
-    window.addEventListener(jobApplicationQueuedEvent, onQueued);
     render(<AddJobDialog open onClose={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Job posting URL"), {
@@ -73,9 +69,6 @@ describe("AddJobDialog", () => {
       target: { value: "https://www.linkedin.com/jobs/view/456" },
     });
     expect(screen.getByRole("button", { name: "Add & process" })).toBeEnabled();
-    expect(scrapeLinkedInJob).not.toHaveBeenCalled();
-    expect(queuedEvents).toHaveLength(1);
-
-    window.removeEventListener(jobApplicationQueuedEvent, onQueued);
+    expect(notifyJobApplicationQueued).toHaveBeenCalledOnce();
   });
 });

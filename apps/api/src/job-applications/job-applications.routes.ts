@@ -27,9 +27,12 @@ import type {
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import {
   createJobApplicationFromScrapeSchema,
+  claimScrapeJobSchema,
   createJobApplicationContactSchema,
   createJobApplicationEventSchema,
   createJobApplicationInterviewSchema,
+  failScrapeJobSchema,
+  heartbeatScrapeJobSchema,
   createJobApplicationSchema,
   jobApplicationAnalyticsQuerySchema,
   listJobApplicationsQuerySchema,
@@ -57,6 +60,10 @@ export type JobApplicationDetail = JobApplicationWithDocuments & {
   matchAnalysis: MatchAnalysisResult | null;
   documentContent: DocumentContent | null;
 };
+
+const scrapeClaimDurationMs = 600_000;
+const maxScrapeAttempts = 3;
+const scrapeRetryBackoffMs = [60_000, 300_000];
 
 export function createJobApplicationRouter(dependencies: {
   submitJobApplication: SubmitJobApplicationUseCase;
@@ -140,6 +147,14 @@ export function createJobApplicationRouter(dependencies: {
 
         if (!canTransitionJobApplicationStatus(jobApplication.status, "scraped")) {
           response.status(400).json({ error: "Invalid status transition" });
+          return;
+        }
+
+        if (
+          jobApplication.scrapeClaimedBy &&
+          jobApplication.scrapeClaimedBy !== request.body.claimedBy
+        ) {
+          response.status(409).json({ error: "Scrape claim is owned by another desktop client" });
           return;
         }
 
@@ -252,6 +267,29 @@ export function createJobApplicationRouter(dependencies: {
       next(error);
     }
   });
+
+  router.post(
+    "/scraping/claim",
+    validateBody(claimScrapeJobSchema),
+    async (request, response, next) => {
+      try {
+        const profile = await dependencies.getProfileForUser(currentUser(request));
+        const claimed = await claimNextScrapeJob(dependencies.jobApplications, {
+          profileId: profile.id,
+          claimedBy: request.body.claimedBy,
+        });
+
+        if (!claimed) {
+          response.status(204).send();
+          return;
+        }
+
+        response.json(claimed);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.post(
     "/from-scrape",
@@ -430,6 +468,67 @@ export function createJobApplicationRouter(dependencies: {
       next(error);
     }
   });
+
+  router.post("/:id/scraping/retry", async (request, response, next) => {
+    try {
+      const retried = await dependencies.retryJobApplication.execute(request.params.id);
+
+      if (!retried) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      response.status(202).json(retried);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post(
+    "/:id/scraping/heartbeat",
+    validateBody(heartbeatScrapeJobSchema),
+    async (request, response, next) => {
+      try {
+        const renewed = await renewScrapeClaim(
+          dependencies.jobApplications,
+          request.params.id,
+          request.body,
+        );
+
+        if (!renewed) {
+          response.status(404).json({ error: "Job application not found" });
+          return;
+        }
+
+        response.status(202).json(renewed);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    "/:id/scraping/fail",
+    validateBody(failScrapeJobSchema),
+    async (request, response, next) => {
+      try {
+        const failed = await failScrapeJob(
+          dependencies.jobApplications,
+          request.params.id,
+          request.body,
+        );
+
+        if (!failed) {
+          response.status(404).json({ error: "Job application not found" });
+          return;
+        }
+
+        response.status(202).json({ status: failed });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.post(
     "/:id/events",
@@ -779,6 +878,102 @@ export async function getJobApplicationDetail(input: {
     documentContent,
     ...(companyLogoUrl ? { companyLogoUrl } : {}),
   };
+}
+
+export function claimNextScrapeJob(
+  jobApplications: JobApplicationRepository,
+  input: { claimedBy: string; profileId: string },
+): Promise<JobApplication | null> {
+  return claimNextScrapeJobWithEvent(jobApplications, input);
+}
+
+async function claimNextScrapeJobWithEvent(
+  jobApplications: JobApplicationRepository,
+  input: { claimedBy: string; profileId: string },
+): Promise<JobApplication | null> {
+  const claimed = await jobApplications.claimNextScrapeJob({
+    profileId: input.profileId,
+    claimedBy: input.claimedBy,
+    claimDurationMs: scrapeClaimDurationMs,
+  });
+
+  if (claimed) {
+    await jobApplications.addEvent({
+      jobApplicationId: claimed.id,
+      type: "processing",
+      title: "Scraping started",
+    });
+  }
+
+  return claimed;
+}
+
+export function renewScrapeClaim(
+  jobApplications: JobApplicationRepository,
+  jobApplicationId: string,
+  input: { claimedBy: string },
+): Promise<JobApplication | null> {
+  return jobApplications.renewScrapeClaim(jobApplicationId, {
+    claimedBy: input.claimedBy,
+    claimDurationMs: scrapeClaimDurationMs,
+  });
+}
+
+export async function failScrapeJob(
+  jobApplications: JobApplicationRepository,
+  jobApplicationId: string,
+  input: { claimedBy: string; reason: string },
+  now = new Date(),
+): Promise<"failed" | "retry_scheduled" | false> {
+  const jobApplication = await jobApplications.findById(jobApplicationId);
+
+  if (!jobApplication) {
+    return false;
+  }
+
+  if (jobApplication.scrapeClaimedBy && jobApplication.scrapeClaimedBy !== input.claimedBy) {
+    throw new Error("Job application scrape claim is owned by another desktop client");
+  }
+
+  const backoffMs = scrapeRetryBackoffMs[jobApplication.scrapeAttemptCount - 1] ?? 0;
+  const updated = await jobApplications.recordScrapeFailure(jobApplicationId, {
+    claimedBy: input.claimedBy,
+    reason: input.reason,
+    maxAttempts: maxScrapeAttempts,
+    backoffMs,
+    now,
+  });
+
+  if (!updated) {
+    return false;
+  }
+
+  if (updated.status === "failed") {
+    await jobApplications.addEvent({
+      jobApplicationId,
+      type: "processing",
+      title: "Scraping failed",
+      body: input.reason,
+      metadata: { attempt: updated.scrapeAttemptCount, maxAttempts: maxScrapeAttempts },
+    });
+    return "failed";
+  }
+
+  await jobApplications.addEvent({
+    jobApplicationId,
+    type: "processing",
+    title: "Scraping retry scheduled",
+    body: input.reason,
+    metadata: {
+      attempt: updated.scrapeAttemptCount,
+      maxAttempts: maxScrapeAttempts,
+      ...(updated.nextScrapeAttemptAt
+        ? { nextAttemptAt: updated.nextScrapeAttemptAt.toISOString() }
+        : {}),
+    },
+  });
+
+  return "retry_scheduled";
 }
 
 export async function listJobApplicationsWithDocuments(

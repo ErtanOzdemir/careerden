@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 import type {
   AttachGeneratedDocumentInput,
+  ClaimNextScrapeJobInput,
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
   CreateJobApplicationInterviewInput,
@@ -50,6 +51,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         next_follow_up_at: input.nextFollowUpAt ?? null,
         last_response_at: input.lastResponseAt ?? null,
         metadata: JSON.stringify(input.metadata ?? {}),
+        scrape_attempt_count: 0,
       })
       .returning("*");
 
@@ -68,6 +70,116 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async findById(id: string): Promise<JobApplication | null> {
     const row = await this.db("job_applications").where({ id }).first();
     return row ? toJobApplication(row) : null;
+  }
+
+  async claimNextScrapeJob(input: ClaimNextScrapeJobInput): Promise<JobApplication | null> {
+    const now = input.now ?? new Date();
+    const claimExpiresAt = new Date(now.getTime() + input.claimDurationMs);
+
+    return this.db.transaction(async (transaction) => {
+      const row = await transaction("job_applications")
+        .where({ profile_id: input.profileId })
+        .whereNotNull("source_url")
+        .andWhere((builder) => {
+          builder
+            .where((queued) => {
+              queued.where("status", "queued").andWhere((retry) => {
+                retry
+                  .whereNull("next_scrape_attempt_at")
+                  .orWhere("next_scrape_attempt_at", "<=", now);
+              });
+            })
+            .orWhere((expired) => {
+              expired
+                .where("status", "scraping")
+                .whereNotNull("scrape_claim_expires_at")
+                .where("scrape_claim_expires_at", "<=", now);
+            });
+        })
+        .orderBy("created_at", "asc")
+        .forUpdate()
+        .skipLocked()
+        .first();
+
+      if (!row) {
+        return null;
+      }
+
+      const [updated] = await transaction("job_applications")
+        .where({ id: row.id })
+        .update({
+          status: "scraping",
+          failure_reason: null,
+          scrape_claimed_by: input.claimedBy,
+          scrape_claim_expires_at: claimExpiresAt,
+          scrape_attempt_count: this.db.raw("scrape_attempt_count + 1"),
+          next_scrape_attempt_at: null,
+          updated_at: now,
+        })
+        .returning("*");
+
+      return toJobApplication(updated);
+    });
+  }
+
+  async renewScrapeClaim(
+    id: string,
+    input: {
+      claimedBy: string;
+      claimDurationMs: number;
+      now?: Date;
+    },
+  ): Promise<JobApplication | null> {
+    const now = input.now ?? new Date();
+    const [row] = await this.db("job_applications")
+      .where({ id, scrape_claimed_by: input.claimedBy })
+      .update({
+        scrape_claim_expires_at: new Date(now.getTime() + input.claimDurationMs),
+        updated_at: now,
+      })
+      .returning("*");
+
+    return row ? toJobApplication(row) : null;
+  }
+
+  async recordScrapeFailure(
+    id: string,
+    input: {
+      claimedBy: string;
+      reason: string;
+      maxAttempts: number;
+      backoffMs: number;
+      now?: Date;
+    },
+  ): Promise<JobApplication | null> {
+    const now = input.now ?? new Date();
+
+    return this.db.transaction(async (transaction) => {
+      const row = await transaction("job_applications")
+        .where({ id, scrape_claimed_by: input.claimedBy })
+        .forUpdate()
+        .first();
+
+      if (!row) {
+        return null;
+      }
+
+      const attemptCount = Number(row.scrape_attempt_count ?? 0);
+      const isFinalFailure = attemptCount >= input.maxAttempts;
+      const [updated] = await transaction("job_applications")
+        .where({ id })
+        .update({
+          status: isFinalFailure ? "failed" : "queued",
+          failure_reason: input.reason,
+          scrape_claimed_by: null,
+          scrape_claim_expires_at: null,
+          next_scrape_attempt_at: isFinalFailure ? null : new Date(now.getTime() + input.backoffMs),
+          updated_at: now,
+        })
+        .returning("*");
+
+      return toJobApplication(updated);
+    });
   }
 
   async deleteById(id: string): Promise<void> {
@@ -107,6 +219,10 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         .update({
           status: "queued",
           failure_reason: null,
+          scrape_claimed_by: null,
+          scrape_claim_expires_at: null,
+          scrape_attempt_count: 0,
+          next_scrape_attempt_at: null,
           scrape_bundle: null,
           company_logo_file_id: null,
           match_analysis: null,
@@ -133,6 +249,8 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
       .update({
         status,
         failure_reason: failureReason ?? null,
+        ...(status === "failed" ? { scrape_claimed_by: null, scrape_claim_expires_at: null } : {}),
+        ...(status === "failed" ? { next_scrape_attempt_at: null } : {}),
         updated_at: this.db.fn.now(),
       });
   }
@@ -169,6 +287,10 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void> {
     const update: Record<string, unknown> = {
       scrape_bundle: JSON.stringify(scrape),
+      scrape_claimed_by: null,
+      scrape_claim_expires_at: null,
+      scrape_attempt_count: 0,
+      next_scrape_attempt_at: null,
       company_name: this.db.raw("coalesce(company_name, ?)", [scrape.job.companyName]),
       role_title: this.db.raw("coalesce(role_title, ?)", [scrape.job.title]),
       job_url: this.db.raw("coalesce(job_url, source_url)"),

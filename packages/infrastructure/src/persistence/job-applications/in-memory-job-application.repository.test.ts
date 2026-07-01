@@ -50,6 +50,119 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
   });
 
+  it("claims one queued scrape job and prevents concurrent claims until the lease expires", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const first = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    });
+    await repository.create({
+      profileId: "profile-2",
+      sourceUrl: "https://www.linkedin.com/jobs/view/2",
+    });
+
+    const claimed = await repository.claimNextScrapeJob({
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+      claimDurationMs: 60_000,
+      now: new Date("2026-06-30T10:00:00.000Z"),
+    });
+
+    expect(claimed?.id).toBe(first.id);
+    expect(claimed?.status).toBe("scraping");
+    expect(claimed?.scrapeClaimedBy).toBe("desktop-a");
+    expect(claimed?.scrapeClaimExpiresAt?.toISOString()).toBe("2026-06-30T10:01:00.000Z");
+
+    await expect(
+      repository.claimNextScrapeJob({
+        profileId: "profile-1",
+        claimedBy: "desktop-b",
+        claimDurationMs: 60_000,
+        now: new Date("2026-06-30T10:00:30.000Z"),
+      }),
+    ).resolves.toBeNull();
+
+    const reclaimed = await repository.claimNextScrapeJob({
+      profileId: "profile-1",
+      claimedBy: "desktop-b",
+      claimDurationMs: 60_000,
+      now: new Date("2026-06-30T10:01:01.000Z"),
+    });
+
+    expect(reclaimed?.id).toBe(first.id);
+    expect(reclaimed?.scrapeClaimedBy).toBe("desktop-b");
+  });
+
+  it("skips queued scrape jobs until their retry backoff has elapsed", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    });
+    await repository.claimNextScrapeJob({
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+      now: new Date("2026-06-30T10:00:00.000Z"),
+    });
+    await repository.recordScrapeFailure(job.id, {
+      claimedBy: "desktop-a",
+      reason: "LinkedIn session expired",
+      maxAttempts: 3,
+      backoffMs: 60_000,
+      now: new Date("2026-06-30T10:00:10.000Z"),
+    });
+
+    await expect(
+      repository.claimNextScrapeJob({
+        profileId: "profile-1",
+        claimedBy: "desktop-b",
+        claimDurationMs: 600_000,
+        now: new Date("2026-06-30T10:00:30.000Z"),
+      }),
+    ).resolves.toBeNull();
+
+    const reclaimed = await repository.claimNextScrapeJob({
+      profileId: "profile-1",
+      claimedBy: "desktop-b",
+      claimDurationMs: 600_000,
+      now: new Date("2026-06-30T10:01:11.000Z"),
+    });
+
+    expect(reclaimed?.id).toBe(job.id);
+    expect(reclaimed?.scrapeAttemptCount).toBe(2);
+  });
+
+  it("renews a scrape claim only for the owning desktop instance", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    });
+    await repository.claimNextScrapeJob({
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+      now: new Date("2026-06-30T10:00:00.000Z"),
+    });
+
+    await expect(
+      repository.renewScrapeClaim(job.id, {
+        claimedBy: "desktop-b",
+        claimDurationMs: 600_000,
+        now: new Date("2026-06-30T10:01:00.000Z"),
+      }),
+    ).resolves.toBeNull();
+
+    const renewed = await repository.renewScrapeClaim(job.id, {
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+      now: new Date("2026-06-30T10:01:00.000Z"),
+    });
+
+    expect(renewed?.scrapeClaimExpiresAt?.toISOString()).toBe("2026-06-30T10:11:00.000Z");
+  });
+
   it("deletes a job application and all related records", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({

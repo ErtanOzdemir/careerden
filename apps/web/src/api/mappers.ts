@@ -97,7 +97,7 @@ export function mapApiJobApplicationToUi(
     requirements: scrapeJob?.requirements,
     timeline: detail ? mapTimeline(detail.interviews) : undefined,
     processingStatus: application.status,
-    processingStatusLabel: formatProcessingStatus(application.status),
+    processingStatusLabel: formatProcessingStatus(application.status, application.failureReason),
     processingFailureReason: application.failureReason,
     processingLog: detail ? mapProcessingLog(detail.events) : undefined,
     sourceUrl: application.sourceUrl,
@@ -462,7 +462,15 @@ function formatShortDate(value: string): string {
   });
 }
 
-function formatProcessingStatus(status: string): string {
+function formatProcessingStatus(status: string, failureReason?: string): string {
+  if (status === "queued") {
+    return failureReason ? "Retry scheduled" : "Scraping waiting";
+  }
+
+  if (status === "scraping") {
+    return "Extracting LinkedIn details";
+  }
+
   return status
     .split("_")
     .filter(Boolean)

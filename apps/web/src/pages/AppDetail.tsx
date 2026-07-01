@@ -881,9 +881,9 @@ function mapStatus(app: JobApplication): DisplayStatus {
 function getProcessingLabel(app: JobApplication): string {
   switch (app.processingStatus) {
     case "queued":
-      return "Queued";
+      return app.processingFailureReason ? "Retry scheduled" : "Scraping waiting";
     case "scraping":
-      return "Extracting details";
+      return "Extracting LinkedIn details";
     case "analyzing":
       return "Running AI analysis";
     case "generating_documents":

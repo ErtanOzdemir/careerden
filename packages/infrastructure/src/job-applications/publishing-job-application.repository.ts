@@ -28,6 +28,42 @@ export class PublishingJobApplicationRepository implements JobApplicationReposit
     return application;
   }
 
+  async claimNextScrapeJob(input: Parameters<JobApplicationRepository["claimNextScrapeJob"]>[0]) {
+    const application = await this.repository.claimNextScrapeJob(input);
+
+    if (application) {
+      await this.publishChanged(application.id, application.profileId);
+    }
+
+    return application;
+  }
+
+  async renewScrapeClaim(
+    inputId: string,
+    input: Parameters<JobApplicationRepository["renewScrapeClaim"]>[1],
+  ) {
+    const application = await this.repository.renewScrapeClaim(inputId, input);
+
+    if (application) {
+      await this.publishChanged(application.id, application.profileId);
+    }
+
+    return application;
+  }
+
+  async recordScrapeFailure(
+    inputId: string,
+    input: Parameters<JobApplicationRepository["recordScrapeFailure"]>[1],
+  ) {
+    const application = await this.repository.recordScrapeFailure(inputId, input);
+
+    if (application) {
+      await this.publishChanged(application.id, application.profileId);
+    }
+
+    return application;
+  }
+
   async deleteById(id: string): Promise<void> {
     const application = await this.repository.findById(id);
     await this.repository.deleteById(id);

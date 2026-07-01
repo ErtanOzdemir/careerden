@@ -3,8 +3,6 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import Sidebar from "./Sidebar.js";
 import { Topbar } from "./Topbar.js";
 import { AddJobDialog } from "./AddJobDialog.js";
-import { profilesApi } from "../api/profiles.js";
-import { useScrapingQueuePoller } from "../api/useScrapingQueuePoller.js";
 
 const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
   "/": {
@@ -35,7 +33,6 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
 
 export default function AppShell() {
   const [addJobOpen, setAddJobOpen] = useState(false);
-  const [profileId, setProfileId] = useState<string | null>(null);
   const location = useLocation();
   const params = useParams();
 
@@ -46,25 +43,6 @@ export default function AppShell() {
     window.addEventListener("link2cv:open-add-job", handleOpenAddJob);
     return () => window.removeEventListener("link2cv:open-add-job", handleOpenAddJob);
   }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    profilesApi
-      .me()
-      .then((profile) => {
-        if (isMounted) setProfileId(profile.id);
-      })
-      .catch(() => {
-        if (isMounted) setProfileId(null);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useScrapingQueuePoller(profileId);
 
   const header = useMemo(() => {
     if (routeHeaders[location.pathname]) {

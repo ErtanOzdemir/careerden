@@ -64,6 +64,7 @@ export const scrapedJobSchema = z.object({
   companyName: z.string().min(1),
   location: z.string().optional(),
   description: z.string().min(1),
+  descriptionHtml: z.string().min(1).max(250_000).optional(),
   requirements: z.array(z.string()).default([]),
   companyLinkedInUrl: z.string().url().optional(),
   raw: z.unknown(),

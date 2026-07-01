@@ -94,6 +94,7 @@ export function mapApiJobApplicationToUi(
     priority: mapApiPriorityToUi(application.tracking.priority),
     tags: application.tracking.tags,
     description: scrapeJob?.description,
+    descriptionHtml: scrapeJob?.descriptionHtml,
     requirements: scrapeJob?.requirements,
     timeline: detail ? mapTimeline(detail.interviews) : undefined,
     processingStatus: application.status,

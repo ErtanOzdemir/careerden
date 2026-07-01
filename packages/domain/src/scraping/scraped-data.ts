@@ -3,6 +3,7 @@ export interface ScrapedJob {
   companyName: string;
   location?: string;
   description: string;
+  descriptionHtml?: string;
   requirements: string[];
   companyLinkedInUrl?: string;
   raw: unknown;

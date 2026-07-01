@@ -7,6 +7,7 @@ import {
   updateJobApplicationContactSchema,
   updateJobApplicationInterviewSchema,
   updateJobApplicationSchema,
+  scrapeBundleSchema,
 } from "./job-application.schema.js";
 
 describe("job application schemas", () => {
@@ -86,5 +87,20 @@ describe("job application schemas", () => {
     expect(created.status).toBe("upcoming");
     expect(created.scheduledAt).toEqual(new Date("2026-06-24T12:00:00.000Z"));
     expect(updated.status).toBe("completed");
+  });
+
+  it("accepts sanitized scraped job description HTML as optional display data", () => {
+    const result = scrapeBundleSchema.parse({
+      job: {
+        title: "Frontend Engineer",
+        companyName: "Acme",
+        description: "Build TypeScript services.",
+        descriptionHtml: "<p>Build <strong>TypeScript</strong> services.</p>",
+        requirements: [],
+        raw: {},
+      },
+    });
+
+    expect(result.job.descriptionHtml).toBe("<p>Build <strong>TypeScript</strong> services.</p>");
   });
 });

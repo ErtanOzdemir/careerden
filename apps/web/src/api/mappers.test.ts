@@ -29,6 +29,7 @@ describe("API mappers", () => {
     expect(mapped.logo).toBe("http://localhost:9000/signed-logo");
     expect(mapped.matchScore).toBe(82);
     expect(mapped.role).toBe("Frontend Engineer");
+    expect(mapped.descriptionHtml).toBe("<p>Build <strong>product</strong> UI.</p>");
     expect(mapped.domain).toBe("linkedin.com");
     expect(mapped.status).toBe("Interviewing");
     expect(mapped.priority).toBe("High");
@@ -215,6 +216,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
       job: {
         companyName: "Acme",
         description: "Build product UI.",
+        descriptionHtml: "<p>Build <strong>product</strong> UI.</p>",
         location: "Remote",
         raw: {},
         requirements: ["React"],

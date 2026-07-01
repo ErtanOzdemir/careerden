@@ -190,6 +190,7 @@ export interface ApiScrapeBundle {
     companyLinkedInUrl?: string;
     companyName: string;
     description: string;
+    descriptionHtml?: string;
     location?: string;
     raw: unknown;
     requirements: string[];

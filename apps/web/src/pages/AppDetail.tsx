@@ -15,6 +15,7 @@ import type { JobApplication, Profile } from "../types.js";
 import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import AiMatchCard from "../components/AiMatchCard.js";
+import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
 import type { ApiDocumentContent } from "../api/types.js";
 import {
   ArrowLeft,
@@ -484,7 +485,11 @@ function OverviewTab({ app }: { app: JobApplication }) {
         <div className="border-t border-border px-5 py-4">
           {app.description ? (
             <div>
-              <p className="text-sm leading-relaxed text-muted-foreground">{app.description}</p>
+              {app.descriptionHtml ? (
+                <ScrapedHtmlDescription html={app.descriptionHtml} />
+              ) : (
+                <p className="text-sm leading-relaxed text-muted-foreground">{app.description}</p>
+              )}
               {app.requirements && app.requirements.length > 0 && (
                 <ul className="mt-4 space-y-2">
                   {app.requirements.map((r, i) => (

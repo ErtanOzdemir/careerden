@@ -382,7 +382,8 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async listEvents(jobApplicationId: string): Promise<JobApplicationEvent[]> {
     const rows = await this.db("job_application_events")
       .where({ job_application_id: jobApplicationId })
-      .orderBy("occurred_at", "desc");
+      .orderBy("occurred_at", "desc")
+      .orderBy("created_at", "desc");
 
     return rows.map(toJobApplicationEvent);
   }

@@ -203,6 +203,41 @@
     background-color: var(--border);
     border-radius: 9999px;
   }
+  .scraped-description {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .scraped-description h1,
+  .scraped-description h2,
+  .scraped-description h3 {
+    color: var(--foreground);
+    font-weight: 650;
+    line-height: 1.3;
+  }
+  .scraped-description h1 {
+    font-size: 1rem;
+  }
+  .scraped-description h2,
+  .scraped-description h3 {
+    font-size: 0.95rem;
+  }
+  .scraped-description ul,
+  .scraped-description ol {
+    display: grid;
+    gap: 0.4rem;
+    padding-left: 1.25rem;
+  }
+  .scraped-description ul {
+    list-style: disc;
+  }
+  .scraped-description ol {
+    list-style: decimal;
+  }
+  .scraped-description a {
+    color: var(--foreground);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 }
 
 @keyframes fade-in {

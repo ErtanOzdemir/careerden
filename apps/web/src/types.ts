@@ -74,6 +74,7 @@ export interface JobApplication {
   priority: Priority;
   tags: string[];
   description?: string;
+  descriptionHtml?: string;
   requirements?: string[];
   timeline?: TimelineMilestone[];
   processingStatus?: string;

@@ -324,9 +324,15 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   }
 
   async listEvents(jobApplicationId: string): Promise<JobApplicationEvent[]> {
-    return (this.events.get(jobApplicationId) ?? []).sort(
-      (left, right) => right.occurredAt.getTime() - left.occurredAt.getTime(),
-    );
+    return (this.events.get(jobApplicationId) ?? [])
+      .map((event, index) => ({ event, index }))
+      .sort(
+        (left, right) =>
+          right.event.occurredAt.getTime() - left.event.occurredAt.getTime() ||
+          right.event.createdAt.getTime() - left.event.createdAt.getTime() ||
+          right.index - left.index,
+      )
+      .map(({ event }) => event);
   }
 
   async createContact(input: CreateJobApplicationContactInput): Promise<JobApplicationContact> {

@@ -30,7 +30,7 @@ export class LinkedInJobScraper implements JobSiteScraper {
           error instanceof Error ? error.message : "LinkedIn session is not connected";
         throw new Error(`linkedin_session_required: ${message}`);
       });
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: true });
 
     try {
       const context = await browser.newContext({ storageState });

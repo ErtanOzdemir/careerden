@@ -48,6 +48,32 @@ describe("API mappers", () => {
     expect(mapped.aiMatch?.score).toBe(82);
     expect(mapped.aiMatch?.keywords).toContainEqual({ keyword: "React", match: true });
     expect(mapped.aiMatch?.keywords).toContainEqual({ keyword: "Node.js", match: false });
+    expect(mapped.aiMatch?.requirements).toEqual([
+      {
+        requirement: "Build React product UI",
+        status: "matched",
+        evidence: ["Built accessible UI with React."],
+      },
+      {
+        requirement: "Work with backend APIs",
+        status: "partial",
+        evidence: ["Frontend API integration experience."],
+      },
+      {
+        requirement: "Ship Node.js services",
+        status: "missing",
+        evidence: [],
+      },
+    ]);
+    expect(mapped.aiMatch?.missingSkillResources).toEqual([
+      {
+        skill: "Node.js",
+        title: "Node.js Learn",
+        type: "documentation",
+        url: "https://nodejs.org/en/learn",
+        reason: "Covers Node.js fundamentals for backend JavaScript work.",
+      },
+    ]);
   });
 
   it("maps analytics and details into dashboard stats", () => {
@@ -69,6 +95,29 @@ describe("API mappers", () => {
     expect(stats.rejectionRate).toBe(25);
     expect(stats.weeklyTrend).toEqual([1, 2]);
     expect(stats.upcomingInterviews).toHaveLength(1);
+  });
+
+  it("falls back to legacy skill buckets when requirement evaluations are absent", () => {
+    const application = createApplicationDetail();
+    application.matchAnalysis = {
+      ...application.matchAnalysis,
+      requirementEvaluations: undefined,
+    };
+
+    const mapped = mapApiJobApplicationToUi(application);
+
+    expect(mapped.aiMatch?.requirements).toEqual([
+      {
+        requirement: "React",
+        status: "matched",
+        evidence: [],
+      },
+      {
+        requirement: "Node.js",
+        status: "missing",
+        evidence: [],
+      },
+    ]);
   });
 
   it("maps profile data without requiring mock-only fields", () => {
@@ -188,6 +237,32 @@ function createApplicationDetail(): ApiJobApplicationDetail {
       interviewTips: ["Prepare React examples."],
       matchScore: 82,
       missingSkills: ["Node.js"],
+      missingSkillResources: [
+        {
+          skill: "Node.js",
+          title: "Node.js Learn",
+          type: "documentation",
+          url: "https://nodejs.org/en/learn",
+          reason: "Covers Node.js fundamentals for backend JavaScript work.",
+        },
+      ],
+      requirementEvaluations: [
+        {
+          requirement: "Build React product UI",
+          status: "matched",
+          evidence: ["Built accessible UI with React."],
+        },
+        {
+          requirement: "Work with backend APIs",
+          status: "partial",
+          evidence: ["Frontend API integration experience."],
+        },
+        {
+          requirement: "Ship Node.js services",
+          status: "missing",
+          evidence: [],
+        },
+      ],
       recommendedAchievements: ["Built accessible UI with React."],
       strongSkills: ["React"],
     },

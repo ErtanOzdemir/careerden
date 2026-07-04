@@ -2,7 +2,27 @@ import { z } from "zod";
 
 export const aiMatchResultSchema = z.object({
   matchScore: z.number().int().min(0).max(100),
+  requirementEvaluations: z
+    .array(
+      z.object({
+        requirement: z.string().min(1),
+        status: z.enum(["matched", "partial", "missing"]),
+        evidence: z.array(z.string().min(1)),
+      }),
+    )
+    .optional(),
   missingSkills: z.array(z.string().min(1)),
+  missingSkillResources: z
+    .array(
+      z.object({
+        skill: z.string().min(1),
+        title: z.string().min(1),
+        url: z.string().url(),
+        type: z.enum(["documentation", "tutorial", "article", "video", "other"]),
+        reason: z.string().min(1),
+      }),
+    )
+    .optional(),
   strongSkills: z.array(z.string().min(1)),
   recommendedAchievements: z.array(z.string().min(1)),
   customizedSummary: z.string().min(1),

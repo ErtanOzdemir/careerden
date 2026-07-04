@@ -1,12 +1,26 @@
 import type { FileStorage, JobApplication, JobApplicationRepository } from "@link2cv/domain";
 
+export type JobApplicationRetryMode = "analysis" | "scraping";
+
+export interface RetryJobApplicationResult {
+  jobApplication: JobApplication;
+  mode: JobApplicationRetryMode;
+}
+
+export interface RetryJobApplicationOptions {
+  mode?: "auto" | "scraping";
+}
+
 export class RetryJobApplicationUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly storage: FileStorage,
   ) {}
 
-  async execute(jobApplicationId: string): Promise<JobApplication | null> {
+  async execute(
+    jobApplicationId: string,
+    options: RetryJobApplicationOptions = {},
+  ): Promise<RetryJobApplicationResult | null> {
     const jobApplication = await this.jobApplications.findById(jobApplicationId);
 
     if (!jobApplication) {
@@ -17,13 +31,19 @@ export class RetryJobApplicationUseCase {
       throw new Error("Only failed job applications can be retried");
     }
 
-    if (!jobApplication.sourceUrl) {
+    const scrape = await this.jobApplications.getScrapeBundle(jobApplicationId);
+    const mode: JobApplicationRetryMode =
+      options.mode === "scraping" || !scrape ? "scraping" : "analysis";
+
+    if (mode === "scraping" && !jobApplication.sourceUrl) {
       throw new Error("Job application does not have a source URL to retry");
     }
 
     const [documents, companyLogoFileId] = await Promise.all([
       this.jobApplications.listGeneratedDocuments(jobApplicationId),
-      this.jobApplications.getCompanyLogoFileId(jobApplicationId),
+      mode === "scraping"
+        ? this.jobApplications.getCompanyLogoFileId(jobApplicationId)
+        : Promise.resolve(null),
     ]);
     const fileIds = new Set(documents.map((document) => document.fileId));
 
@@ -31,14 +51,20 @@ export class RetryJobApplicationUseCase {
       fileIds.add(companyLogoFileId);
     }
 
-    const reset = await this.jobApplications.resetProcessing(jobApplicationId);
+    const reset =
+      mode === "analysis"
+        ? await this.jobApplications.resetAnalysis(jobApplicationId)
+        : await this.jobApplications.resetProcessing(jobApplicationId);
     await this.jobApplications.addEvent({
       jobApplicationId,
       type: "processing",
-      title: "Retry requested",
+      title: mode === "analysis" ? "AI analysis retry requested" : "Retry requested",
     });
     await Promise.allSettled([...fileIds].map((fileId) => this.storage.delete(fileId)));
 
-    return reset;
+    return {
+      jobApplication: reset,
+      mode,
+    };
   }
 }

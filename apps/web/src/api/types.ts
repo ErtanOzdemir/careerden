@@ -210,7 +210,19 @@ export interface ApiMatchAnalysis {
   interviewTips: string[];
   matchScore: number;
   missingSkills: string[];
+  missingSkillResources?: {
+    reason: string;
+    skill: string;
+    title: string;
+    type: "article" | "documentation" | "other" | "tutorial" | "video";
+    url: string;
+  }[];
   recommendedAchievements: string[];
+  requirementEvaluations?: {
+    evidence: string[];
+    requirement: string;
+    status: "matched" | "missing" | "partial";
+  }[];
   strongSkills: string[];
   skillSuggestions?: string[];
   educationEnhancements?: {

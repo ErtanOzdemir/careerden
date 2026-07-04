@@ -5,6 +5,7 @@ import type {
   GenerateDocumentsWithAiUseCase,
   GenerateJobApplicationDocumentsUseCase,
   RetryJobApplicationUseCase,
+  RetryJobApplicationOptions,
   SubmitJobApplicationUseCase,
   UpdateDocumentContentUseCase,
 } from "@link2cv/application";
@@ -456,7 +457,11 @@ export function createJobApplicationRouter(dependencies: {
 
   router.post("/:id/retry", async (request, response, next) => {
     try {
-      const retried = await dependencies.retryJobApplication.execute(request.params.id);
+      const retried = await retryFailedJobApplication({
+        retryJobApplication: dependencies.retryJobApplication,
+        queue: dependencies.queue,
+        jobApplicationId: request.params.id,
+      });
 
       if (!retried) {
         response.status(404).json({ error: "Job application not found" });
@@ -471,7 +476,12 @@ export function createJobApplicationRouter(dependencies: {
 
   router.post("/:id/scraping/retry", async (request, response, next) => {
     try {
-      const retried = await dependencies.retryJobApplication.execute(request.params.id);
+      const retried = await retryFailedJobApplication({
+        retryJobApplication: dependencies.retryJobApplication,
+        queue: dependencies.queue,
+        jobApplicationId: request.params.id,
+        retryOptions: { mode: "scraping" },
+      });
 
       if (!retried) {
         response.status(404).json({ error: "Job application not found" });
@@ -847,6 +857,28 @@ export function createJobApplicationRouter(dependencies: {
   });
 
   return router;
+}
+
+export async function retryFailedJobApplication(input: {
+  retryJobApplication: Pick<RetryJobApplicationUseCase, "execute">;
+  queue: JobApplicationQueue;
+  jobApplicationId: string;
+  retryOptions?: RetryJobApplicationOptions;
+}): Promise<JobApplication | null> {
+  const retried = await input.retryJobApplication.execute(
+    input.jobApplicationId,
+    input.retryOptions,
+  );
+
+  if (!retried) {
+    return null;
+  }
+
+  if (retried.mode === "analysis") {
+    await input.queue.restart({ jobApplicationId: input.jobApplicationId });
+  }
+
+  return retried.jobApplication;
 }
 
 export async function getJobApplicationDetail(input: {

@@ -6,12 +6,13 @@ import EnhancedFieldRow from "./EnhancedFieldRow";
 import { SelectionToggle } from "./link2cv/selection-toggle";
 import {
   Award,
+  AlertTriangle,
   BadgeCheck,
   BarChart3,
   Brain,
   BriefcaseBusiness,
-  Check,
   CheckCircle,
+  ExternalLink,
   FileText,
   GraduationCap,
   Package,
@@ -530,8 +531,35 @@ function ScoreRing({
 }
 
 function MatchStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]> }) {
-  const matchedKeywords = aiMatch.keywords.filter((keyword) => keyword.match);
-  const missingKeywords = aiMatch.keywords.filter((keyword) => !keyword.match);
+  const requirements =
+    aiMatch.requirements && aiMatch.requirements.length > 0
+      ? aiMatch.requirements
+      : [
+          ...aiMatch.keywords
+            .filter((keyword) => keyword.match)
+            .map((keyword) => ({
+              requirement: keyword.keyword,
+              status: "matched" as const,
+              evidence: [],
+            })),
+          ...aiMatch.keywords
+            .filter((keyword) => !keyword.match)
+            .map((keyword) => ({
+              requirement: keyword.keyword,
+              status: "missing" as const,
+              evidence: [],
+            })),
+        ];
+  const matchedRequirements = requirements.filter(
+    (requirement) => requirement.status === "matched",
+  );
+  const missingRequirements = requirements.filter(
+    (requirement) => requirement.status === "partial",
+  );
+  const notMentionedRequirements = requirements.filter(
+    (requirement) => requirement.status === "missing",
+  );
+  const missingSkillResources = aiMatch.missingSkillResources ?? [];
 
   return (
     <div className="space-y-6">
@@ -541,68 +569,117 @@ function MatchStep({ aiMatch }: { aiMatch: NonNullable<JobApplication["aiMatch"]
         <Metric label="Suggested Skills" value={String(aiMatch.suggestedSkills.length)} />
       </div>
       <section className="space-y-4">
-        <h4 className="text-sm font-semibold uppercase text-muted-foreground">Keyword Analysis</h4>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <KeywordGroup
-            emptyMessage="No matched keywords"
+        <h4 className="text-sm font-semibold uppercase text-muted-foreground">
+          Requirement Analysis
+        </h4>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <RequirementGroup
+            emptyMessage="No matched requirements"
             Icon={CheckCircle}
-            keywords={matchedKeywords.map((keyword) => keyword.keyword)}
-            label="Matched Keywords"
+            label="Matched Requirements"
+            requirements={matchedRequirements}
             tone="matched"
           />
-          <KeywordGroup
-            emptyMessage="No missing keywords"
+          <RequirementGroup
+            emptyMessage="No partially matched requirements"
+            Icon={AlertTriangle}
+            label="Partially Matched Requirements"
+            requirements={missingRequirements}
+            tone="partial"
+          />
+          <RequirementGroup
+            emptyMessage="No unmatched requirements"
             Icon={XCircle}
-            keywords={missingKeywords.map((keyword) => keyword.keyword)}
-            label="Missing Keywords"
+            label="Unmatched Requirements"
+            requirements={notMentionedRequirements}
             tone="missing"
           />
         </div>
       </section>
+      {missingSkillResources.length > 0 && (
+        <section className="space-y-4">
+          <h4 className="text-sm font-semibold uppercase text-muted-foreground">
+            Useful links for missing skills
+          </h4>
+          <div className="grid gap-3">
+            {missingSkillResources.map((resource) => (
+              <a
+                key={`${resource.skill}-${resource.url}`}
+                className="rounded-lg border border-border bg-card p-4 text-sm transition-colors hover:border-primary/50 hover:bg-muted/40"
+                href={resource.url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <span className="mb-2 flex items-start justify-between gap-3">
+                  <span>
+                    <span className="block text-xs font-semibold uppercase text-muted-foreground">
+                      {resource.skill} · {resource.type}
+                    </span>
+                    <span className="mt-1 block font-semibold text-foreground">
+                      {resource.title}
+                    </span>
+                  </span>
+                  <ExternalLink className="mt-1 size-4 shrink-0 text-muted-foreground" />
+                </span>
+                <span className="block text-muted-foreground">{resource.reason}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-function KeywordGroup(props: {
+function RequirementGroup(props: {
   emptyMessage: string;
   Icon: React.FC<{ className?: string }>;
-  keywords: string[];
   label: string;
-  tone: "matched" | "missing";
+  requirements: NonNullable<NonNullable<JobApplication["aiMatch"]>["requirements"]>;
+  tone: "matched" | "partial" | "missing";
 }) {
   const isMatched = props.tone === "matched";
+  const isPartial = props.tone === "partial";
   const Icon = props.Icon;
+  const toneClasses = isMatched
+    ? "border-success bg-success-soft text-success"
+    : isPartial
+      ? "border-warning/40 bg-warning/10 text-warning"
+      : "border-destructive/30 bg-danger-soft text-destructive";
 
   return (
-    <div
-      className={`min-h-36 rounded-lg border p-4 ${
-        isMatched ? "border-success bg-success-soft" : "border-destructive/30 bg-danger-soft"
-      }`}
-    >
-      <div
-        className={`mb-4 flex items-center justify-between gap-2 ${
-          isMatched ? "text-success" : "text-destructive"
-        }`}
-      >
+    <div className={`min-h-36 rounded-lg border p-4 ${toneClasses}`}>
+      <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <Icon className="size-[18px]" />
-          <h5 className="text-sm font-semibold">{props.label}</h5>
+          <Icon className="size-[18px] shrink-0" />
+          <h5 className="text-sm font-semibold leading-tight">{props.label}</h5>
         </div>
-        <span className="text-sm font-semibold">{props.keywords.length}</span>
+        <span className="text-sm font-semibold">{props.requirements.length}</span>
       </div>
 
-      {props.keywords.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {props.keywords.map((keyword) => (
-            <span
-              key={keyword}
-              className={`flex items-center gap-1 rounded-lg border bg-card px-3 py-1 text-sm ${
-                isMatched ? "border-success text-success" : "border-destructive/30 text-destructive"
-              }`}
+      {props.requirements.length > 0 ? (
+        <div className="space-y-2">
+          {props.requirements.map((requirement) => (
+            <div
+              key={`${requirement.status}-${requirement.requirement}`}
+              className="rounded-lg border border-current/20 bg-card px-3 py-2"
             >
-              <Check className="size-[16px]" />
-              {keyword}
-            </span>
+              <p className="break-words text-sm font-semibold text-foreground">
+                {requirement.requirement}
+              </p>
+              {requirement.evidence.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {requirement.evidence.map((evidence) => (
+                    <p
+                      key={evidence}
+                      className="break-words text-xs leading-relaxed text-muted-foreground"
+                    >
+                      {evidence}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       ) : (

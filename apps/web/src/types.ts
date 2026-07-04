@@ -40,6 +40,14 @@ export interface KeywordMatch {
   match: boolean;
 }
 
+export type RequirementMatchStatus = "matched" | "partial" | "missing";
+
+export interface RequirementMatch {
+  requirement: string;
+  status: RequirementMatchStatus;
+  evidence: string[];
+}
+
 export interface BulletOptimization {
   original: string;
   enhanced: string;
@@ -92,6 +100,7 @@ export interface JobApplication {
     score: number;
     summary: string;
     keywords: KeywordMatch[];
+    requirements?: RequirementMatch[];
     recommendation: string;
     currentSummary: string;
     enhancedSummary: string;
@@ -103,6 +112,13 @@ export interface JobApplication {
     }[];
     yourSkills: string[];
     suggestedSkills: string[];
+    missingSkillResources?: {
+      reason: string;
+      skill: string;
+      title: string;
+      type: "article" | "documentation" | "other" | "tutorial" | "video";
+      url: string;
+    }[];
     educationOptimizations?: {
       institution: string;
       degree: string;

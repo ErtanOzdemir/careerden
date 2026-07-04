@@ -11,6 +11,27 @@ describe("aiMatchResultSchema", () => {
         recommendedAchievements: ["Reduced processing time by 30%"],
         customizedSummary: "A short profile-aware summary.",
         interviewTips: ["Prepare a system design example."],
+        requirementEvaluations: [
+          {
+            requirement: "Production TypeScript experience",
+            status: "matched",
+            evidence: ["Built production TypeScript automation"],
+          },
+          {
+            requirement: "Kubernetes",
+            status: "missing",
+            evidence: [],
+          },
+        ],
+        missingSkillResources: [
+          {
+            skill: "Kubernetes",
+            title: "Kubernetes Basics",
+            url: "https://kubernetes.io/docs/tutorials/kubernetes-basics/",
+            type: "tutorial",
+            reason: "Introduces the core Kubernetes concepts required by the role.",
+          },
+        ],
         experienceEnhancements: [
           {
             experienceIndex: 0,
@@ -31,6 +52,48 @@ describe("aiMatchResultSchema", () => {
         recommendedAchievements: [],
         customizedSummary: "Invalid score.",
         interviewTips: [],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects unknown requirement evaluation statuses", () => {
+    expect(() =>
+      aiMatchResultSchema.parse({
+        matchScore: 82,
+        missingSkills: [],
+        strongSkills: ["TypeScript"],
+        recommendedAchievements: [],
+        customizedSummary: "A short profile-aware summary.",
+        interviewTips: [],
+        requirementEvaluations: [
+          {
+            requirement: "Production TypeScript experience",
+            status: "likely",
+            evidence: ["Built production TypeScript automation"],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects invalid missing skill resource links", () => {
+    expect(() =>
+      aiMatchResultSchema.parse({
+        matchScore: 82,
+        missingSkills: ["Kubernetes"],
+        strongSkills: ["TypeScript"],
+        recommendedAchievements: [],
+        customizedSummary: "A short profile-aware summary.",
+        interviewTips: [],
+        missingSkillResources: [
+          {
+            skill: "Kubernetes",
+            title: "Kubernetes Basics",
+            url: "not-a-url",
+            type: "tutorial",
+            reason: "Introduces Kubernetes concepts.",
+          },
+        ],
       }),
     ).toThrow();
   });

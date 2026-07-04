@@ -239,6 +239,31 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     });
   }
 
+  async resetAnalysis(id: string): Promise<JobApplication> {
+    return this.db.transaction(async (transaction) => {
+      await transaction("generated_documents").where({ job_application_id: id }).delete();
+      const [row] = await transaction("job_applications")
+        .where({ id })
+        .update({
+          status: "scraped",
+          failure_reason: null,
+          scrape_claimed_by: null,
+          scrape_claim_expires_at: null,
+          next_scrape_attempt_at: null,
+          match_analysis: null,
+          document_content: null,
+          updated_at: transaction.fn.now(),
+        })
+        .returning("*");
+
+      if (!row) {
+        throw new Error(`Job application ${id} was not found`);
+      }
+
+      return toJobApplication(row);
+    });
+  }
+
   async updateStatus(
     id: string,
     status: JobApplicationStatus,

@@ -207,6 +207,30 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     return updated;
   }
 
+  async resetAnalysis(id: string): Promise<JobApplication> {
+    const existing = this.jobApplications.get(id);
+
+    if (!existing) {
+      throw new Error(`Job application ${id} was not found`);
+    }
+
+    const updated: JobApplication = {
+      ...existing,
+      status: "scraped",
+      failureReason: undefined,
+      scrapeClaimedBy: undefined,
+      scrapeClaimExpiresAt: undefined,
+      nextScrapeAttemptAt: undefined,
+      updatedAt: new Date(),
+    };
+
+    this.jobApplications.set(id, updated);
+    this.matchAnalyses.delete(id);
+    this.documentContents.delete(id);
+    this.documents.delete(id);
+    return updated;
+  }
+
   async updateStatus(
     id: string,
     status: JobApplicationStatus,

@@ -96,6 +96,12 @@ export class PublishingJobApplicationRepository implements JobApplicationReposit
     return application;
   }
 
+  async resetAnalysis(id: string) {
+    const application = await this.repository.resetAnalysis(id);
+    await this.publishChanged(id, application.profileId);
+    return application;
+  }
+
   async updateStatus(id: string, status: JobApplicationStatus, failureReason?: string) {
     await this.repository.updateStatus(id, status, failureReason);
     await this.publishForApplication(id);

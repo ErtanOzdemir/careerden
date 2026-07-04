@@ -8,7 +8,9 @@ export interface MatchAnalysisInput {
 
 export interface MatchAnalysisResult {
   matchScore: number;
+  requirementEvaluations?: RequirementEvaluation[];
   missingSkills: string[];
+  missingSkillResources?: MissingSkillResource[];
   strongSkills: string[];
   recommendedAchievements: string[];
   customizedSummary: string;
@@ -19,6 +21,20 @@ export interface MatchAnalysisResult {
   educationEnhancements?: EducationEnhancement[];
   projectEnhancements?: ProjectEnhancement[];
   certificationSuggestions?: string[];
+}
+
+export interface MissingSkillResource {
+  skill: string;
+  title: string;
+  url: string;
+  type: "documentation" | "tutorial" | "article" | "video" | "other";
+  reason: string;
+}
+
+export interface RequirementEvaluation {
+  requirement: string;
+  status: "matched" | "partial" | "missing";
+  evidence: string[];
 }
 
 export interface ExperienceEnhancement {

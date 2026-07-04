@@ -7,6 +7,7 @@ import type {
   JobApplicationContact,
   JobApplicationEvent,
   JobApplicationInterview,
+  JobApplicationQueue,
   JobApplicationRepository,
 } from "@link2cv/domain";
 import {
@@ -17,6 +18,7 @@ import {
   getJobApplicationDetail,
   listJobApplicationsWithDocuments,
   renewScrapeClaim,
+  retryFailedJobApplication,
 } from "./job-applications.routes.js";
 
 describe("job applications route behavior", () => {
@@ -105,6 +107,42 @@ describe("job applications route behavior", () => {
 
     expect(url).toBeUndefined();
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it("restarts the LLM queue when retrying a failed job from saved scrape data", async () => {
+    const job = createJobApplication({ id: "job-1", status: "scraped" });
+    const retryJobApplication = {
+      execute: vi.fn(async () => ({ jobApplication: job, mode: "analysis" as const })),
+    };
+    const queue = createJobApplicationQueue();
+
+    const retried = await retryFailedJobApplication({
+      retryJobApplication,
+      queue,
+      jobApplicationId: job.id,
+    });
+
+    expect(retried).toBe(job);
+    expect(queue.restart).toHaveBeenCalledWith({ jobApplicationId: job.id });
+  });
+
+  it("does not restart the LLM queue when forcing a scraping retry", async () => {
+    const job = createJobApplication({ id: "job-1", status: "queued" });
+    const retryJobApplication = {
+      execute: vi.fn(async () => ({ jobApplication: job, mode: "scraping" as const })),
+    };
+    const queue = createJobApplicationQueue();
+
+    const retried = await retryFailedJobApplication({
+      retryJobApplication,
+      queue,
+      jobApplicationId: job.id,
+      retryOptions: { mode: "scraping" },
+    });
+
+    expect(retried).toBe(job);
+    expect(retryJobApplication.execute).toHaveBeenCalledWith(job.id, { mode: "scraping" });
+    expect(queue.restart).not.toHaveBeenCalled();
   });
 
   it("calculates tracker analytics from application status and response dates", () => {
@@ -325,6 +363,7 @@ function createJobApplicationRepository(
     listByProfileId: vi.fn(async () => []),
     listByStatus: vi.fn(async () => []),
     resetProcessing: vi.fn(),
+    resetAnalysis: vi.fn(),
     renewScrapeClaim: vi.fn(async () => null),
     recordScrapeFailure: vi.fn(async () => null),
     updateStatus: vi.fn(),
@@ -352,6 +391,13 @@ function createJobApplicationRepository(
     listGeneratedDocuments: vi.fn(async () => []),
     ...overrides,
   } as JobApplicationRepository;
+}
+
+function createJobApplicationQueue(): JobApplicationQueue {
+  return {
+    enqueue: vi.fn(),
+    restart: vi.fn(),
+  };
 }
 
 function createFileStorage(overrides: Partial<FileStorage> = {}): FileStorage {

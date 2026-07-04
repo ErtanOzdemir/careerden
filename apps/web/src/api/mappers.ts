@@ -354,9 +354,13 @@ function mapMatchAnalysis(
       ...match.strongSkills.map((skill) => ({ keyword: skill, match: true })),
       ...match.missingSkills.map((skill) => ({ keyword: skill, match: false })),
     ],
+    requirements: mapRequirementMatches(match),
     recommendation: match.matchScore >= 70 ? "Apply to CV" : "Review before applying",
     currentSummary,
     enhancedSummary: match.customizedSummary,
+    missingSkillResources: (match.missingSkillResources ?? []).filter((resource) =>
+      isHttpUrl(resource.url),
+    ),
     bulletOptimizations: match.recommendedAchievements.map((achievement, index) => ({
       original: originalHighlights[index] ?? "No matching profile highlight",
       enhanced: achievement,
@@ -425,6 +429,31 @@ function mapMatchAnalysis(
       };
     }),
   };
+}
+
+function mapRequirementMatches(
+  match: ApiMatchAnalysis,
+): NonNullable<JobApplication["aiMatch"]>["requirements"] {
+  if (match.requirementEvaluations && match.requirementEvaluations.length > 0) {
+    return match.requirementEvaluations.map((evaluation) => ({
+      requirement: evaluation.requirement,
+      status: evaluation.status,
+      evidence: evaluation.evidence,
+    }));
+  }
+
+  return [
+    ...match.strongSkills.map((skill) => ({
+      requirement: skill,
+      status: "matched" as const,
+      evidence: [],
+    })),
+    ...match.missingSkills.map((skill) => ({
+      requirement: skill,
+      status: "missing" as const,
+      evidence: [],
+    })),
+  ];
 }
 
 function isJobApplicationDetail(
@@ -510,6 +539,15 @@ function getDomain(value?: string): string {
     return new URL(value).hostname.replace(/^www\./, "");
   } catch {
     return "No source";
+  }
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
   }
 }
 

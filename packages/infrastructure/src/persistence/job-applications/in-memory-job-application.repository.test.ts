@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { richDocumentFromText } from "@link2cv/domain";
+import { richDocumentFromText, type ScrapeBundle } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {
@@ -47,6 +47,46 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(reset.status).toBe("queued");
     expect(reset.failureReason).toBeUndefined();
     expect(reset.tracking.companyName).toBe("Stripe");
+    expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
+  });
+
+  it("resets AI analysis artifacts while preserving the scrape bundle", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/123",
+    });
+    const scrape = createScrapeBundle();
+    await repository.saveScrapeBundle(job.id, scrape);
+    await repository.saveMatchAnalysis(job.id, {
+      matchScore: 77,
+      missingSkills: ["GraphQL"],
+      strongSkills: ["TypeScript"],
+      recommendedAchievements: [],
+      customizedSummary: "Backend engineer",
+      interviewTips: [],
+    });
+    await repository.saveDocumentContent(job.id, {
+      customizedSummary: richDocumentFromText("Backend engineer"),
+      experienceEnhancements: [],
+    });
+    await repository.attachGeneratedDocument({
+      jobApplicationId: job.id,
+      kind: "cv",
+      format: "pdf",
+      fileId: "files/cv.pdf",
+      fileName: "cv.pdf",
+      contentType: "application/pdf",
+    });
+    await repository.updateStatus(job.id, "failed", "AI failed");
+
+    const reset = await repository.resetAnalysis(job.id);
+
+    expect(reset.status).toBe("scraped");
+    expect(reset.failureReason).toBeUndefined();
+    expect(await repository.getScrapeBundle(job.id)).toEqual(scrape);
+    expect(await repository.getMatchAnalysis(job.id)).toBeNull();
+    expect(await repository.getDocumentContent(job.id)).toBeNull();
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
   });
 
@@ -307,3 +347,15 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(second.fileId).toBe("files/regenerated-cv.pdf");
   });
 });
+
+function createScrapeBundle(): ScrapeBundle {
+  return {
+    job: {
+      title: "Backend Engineer",
+      companyName: "Example Inc",
+      description: "Build TypeScript services",
+      requirements: ["TypeScript"],
+      raw: {},
+    },
+  };
+}

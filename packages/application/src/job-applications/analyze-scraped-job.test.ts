@@ -15,7 +15,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
       fullName: "Ada Lovelace",
       email: "ada@example.com",
       skills: ["TypeScript"],
-      experience: [{ company: "Engines", title: "Engineer", achievements: ["Built tools"] }],
+      experience: [{ company: "Engines", title: "Engineer", description: "Built tools" }],
     });
     const jobApplication = await jobApplications.create({
       profileId: profile.id,

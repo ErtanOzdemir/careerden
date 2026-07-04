@@ -208,22 +208,6 @@ function toSelectedEducation(
         ? enhancement.description
         : undefined;
 
-    const achievements =
-      selection?.achievements && enhancement?.achievements
-        ? item.achievements.map((achievement, achievementIndex) => {
-            const achievementSelection = selection.achievements[String(achievementIndex)];
-            if (
-              achievementSelection === "original" ||
-              !enhancement.achievements[achievementIndex]
-            ) {
-              return documentContentFromText(achievement);
-            }
-            return enhancement.achievements[achievementIndex];
-          })
-        : enhancement?.achievements && enhancement.achievements.length > 0
-          ? enhancement.achievements
-          : item.achievements.map(documentContentFromText);
-
     return {
       institution: item.institution,
       degree: item.degree ?? "",
@@ -231,7 +215,6 @@ function toSelectedEducation(
       start_date: startDate,
       end_date: endDate || "Present",
       period: formatPeriod(startDate, endDate),
-      achievements,
       ...(description ? { description } : {}),
     };
   });
@@ -257,21 +240,6 @@ function toSelectedExperiences(
         : (enhancement?.description ??
           (experience.description ? documentContentFromText(experience.description) : undefined));
 
-    const achievements = selection?.achievements
-      ? experience.achievements.map((achievement, achievementIndex) => {
-          const achievementSelection = selection.achievements[String(achievementIndex)];
-          if (
-            achievementSelection === "original" ||
-            !enhancement?.achievements?.[achievementIndex]
-          ) {
-            return documentContentFromText(achievement);
-          }
-          return enhancement.achievements[achievementIndex];
-        })
-      : enhancement?.achievements && enhancement.achievements.length > 0
-        ? enhancement.achievements
-        : experience.achievements.map(documentContentFromText);
-
     return {
       title: experience.title,
       company: experience.company,
@@ -279,8 +247,6 @@ function toSelectedExperiences(
       end_date: endDate || "Present",
       period: formatPeriod(startDate, endDate),
       description,
-      achievements,
-      skills: experience.skills ?? [],
     };
   });
 }

@@ -27,8 +27,6 @@ const mockProfile: ApiProfile = {
       startDate: "2022-01",
       endDate: "2025-01",
       description: "Led frontend team",
-      skills: ["React", "TypeScript"],
-      achievements: ["Shipped v2", "Reduced load time 40%"],
     },
     {
       title: "Junior Developer",
@@ -36,8 +34,6 @@ const mockProfile: ApiProfile = {
       startDate: "2019-01",
       endDate: "2021-12",
       description: "Built internal tools",
-      skills: ["JavaScript", "Python"],
-      achievements: ["Automated reporting"],
     },
   ],
   education: [
@@ -47,12 +43,19 @@ const mockProfile: ApiProfile = {
       field: "Computer Science",
       startDate: "2015-09",
       endDate: "2019-06",
-      achievements: ["Dean's List"],
     },
   ],
   links: ["https://github.com/john", "https://linkedin.com/in/john"],
   certifications: ["AWS Certified"],
-  projects: [],
+  projects: [
+    {
+      name: "Portfolio",
+      description: "Personal site",
+      url: "https://example.com",
+      skills: ["React"],
+      achievements: ["Launched redesign"],
+    },
+  ],
   createdAt: "2024-01-01T00:00:00.000Z",
   updatedAt: "2024-01-01T00:00:00.000Z",
 };
@@ -233,6 +236,155 @@ describe("TemplateVariableMapping", () => {
     await waitFor(() => {
       expect(screen.queryByText("Experience 1")).toBeNull();
     });
+  });
+
+  it("shows selected experience date and period previews", async () => {
+    render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Selected Experiences/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("2022-01")).toBeDefined();
+      expect(screen.getByText("2025-01")).toBeDefined();
+      expect(screen.getByText("2022-01 - 2025-01")).toBeDefined();
+    });
+  });
+
+  it("does not expose selected experience skills or achievements mappings", async () => {
+    render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Selected Experiences/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Experience 1")).toBeDefined();
+    });
+
+    expect(screen.queryByText("Achievements")).toBeNull();
+    expect(screen.queryByText("React, TypeScript")).toBeNull();
+  });
+
+  it("shows selected education date and period previews", async () => {
+    render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Selected Education/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("2015-09")).toBeDefined();
+      expect(screen.getByText("2019-06")).toBeDefined();
+      expect(screen.getByText("2015-09 - 2019-06")).toBeDefined();
+    });
+  });
+
+  it("does not expose selected education achievements mappings", async () => {
+    render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Selected Education/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Education 1")).toBeDefined();
+    });
+
+    expect(screen.queryByText("Achievements")).toBeNull();
+  });
+
+  it("does not expose selected project skills or achievements mappings", async () => {
+    render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Selected Projects/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Project 1")).toBeDefined();
+    });
+
+    expect(screen.queryByText("React")).toBeNull();
+    expect(screen.queryByText("Launched redesign")).toBeNull();
+  });
+
+  it("drops stale selected experience, education, and project aliases before saving", async () => {
+    const mappedTemplate = {
+      ...mockTemplate,
+      variableAliases: {
+        fields: {},
+        selectedExperiences: {
+          fields: {},
+          items: [
+            {
+              fields: {
+                achievements: "exp_achievements",
+                skills: "exp_skills",
+                title: "exp_title",
+              },
+            },
+          ],
+        },
+        selectedEducation: {
+          fields: {},
+          items: [
+            {
+              fields: {
+                achievements: "education_achievements",
+                institution: "school_name",
+              },
+            },
+          ],
+        },
+        selectedProjects: {
+          fields: {},
+          items: [
+            {
+              fields: {
+                achievements: "project_achievements",
+                skills: "project_skills",
+                name: "project_name",
+              },
+            },
+          ],
+        },
+      },
+    } satisfies ApiDocumentTemplate;
+
+    (profilesApi.updateDocumentTemplateMappings as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mappedTemplate,
+    );
+    (
+      profilesApi.updateDocumentTemplateVariableAliases as ReturnType<typeof vi.fn>
+    ).mockResolvedValue(mappedTemplate);
+
+    render(<TemplateVariableMapping template={mappedTemplate} profile={mockProfile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Selected Experiences/ }));
+    await waitFor(() => {
+      expect(screen.getByText("Experience 1")).toBeDefined();
+    });
+
+    const expTitleDropdown = screen.getByRole("button", { name: "{{exp_title}}" });
+    fireEvent.click(expTitleDropdown);
+    fireEvent.click(screen.getByRole("button", { name: "{{full_name}}" }));
+
+    fireEvent.click(screen.getByText("Save Mapping").closest("button")!);
+
+    await waitFor(() => {
+      expect(profilesApi.updateDocumentTemplateVariableAliases).toHaveBeenCalled();
+    });
+
+    expect(profilesApi.updateDocumentTemplateVariableAliases).toHaveBeenCalledWith(
+      mappedTemplate.profileId,
+      mappedTemplate.id,
+      expect.objectContaining({
+        selectedExperiences: {
+          fields: {},
+          items: [{ fields: { title: "full_name" } }],
+        },
+        selectedEducation: {
+          fields: {},
+          items: [{ fields: { institution: "school_name" } }],
+        },
+        selectedProjects: {
+          fields: {},
+          items: [{ fields: { name: "project_name" } }],
+        },
+      }),
+    );
   });
 
   it("shows 0 items badge when profile has no experiences", () => {

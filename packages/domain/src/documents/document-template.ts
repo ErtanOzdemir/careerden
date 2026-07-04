@@ -27,17 +27,14 @@ export type DocumentTemplateField =
   | "summary";
 
 export type SelectedExperienceTemplateField =
-  | "achievements"
   | "company"
   | "description"
   | "end_date"
   | "period"
-  | "skills"
   | "start_date"
   | "title";
 
 export type SelectedEducationTemplateField =
-  | "achievements"
   | "degree"
   | "end_date"
   | "field"
@@ -45,12 +42,7 @@ export type SelectedEducationTemplateField =
   | "period"
   | "start_date";
 
-export type SelectedProjectTemplateField =
-  | "achievements"
-  | "description"
-  | "name"
-  | "skills"
-  | "url";
+export type SelectedProjectTemplateField = "description" | "name" | "url";
 
 export interface DocumentTemplateVariableAliases {
   fields: Partial<

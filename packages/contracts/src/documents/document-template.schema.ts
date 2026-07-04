@@ -35,28 +35,35 @@ const templateVariableNameSchema = z
   .trim()
   .regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/, "Use letters, numbers, and underscores; start with a letter");
 
-const selectedExperienceFieldSchema = z.enum([
-  "achievements",
-  "company",
-  "description",
-  "end_date",
-  "period",
-  "skills",
-  "start_date",
-  "title",
-]);
+const selectedExperienceFieldsSchema = z
+  .object({
+    company: templateVariableNameSchema.optional(),
+    description: templateVariableNameSchema.optional(),
+    end_date: templateVariableNameSchema.optional(),
+    period: templateVariableNameSchema.optional(),
+    start_date: templateVariableNameSchema.optional(),
+    title: templateVariableNameSchema.optional(),
+  })
+  .strict();
 
-const selectedEducationFieldSchema = z.enum([
-  "achievements",
-  "degree",
-  "end_date",
-  "field",
-  "institution",
-  "period",
-  "start_date",
-]);
+const selectedEducationFieldsSchema = z
+  .object({
+    degree: templateVariableNameSchema.optional(),
+    end_date: templateVariableNameSchema.optional(),
+    field: templateVariableNameSchema.optional(),
+    institution: templateVariableNameSchema.optional(),
+    period: templateVariableNameSchema.optional(),
+    start_date: templateVariableNameSchema.optional(),
+  })
+  .strict();
 
-const selectedProjectFieldSchema = z.enum(["achievements", "description", "name", "skills", "url"]);
+const selectedProjectFieldsSchema = z
+  .object({
+    description: templateVariableNameSchema.optional(),
+    name: templateVariableNameSchema.optional(),
+    url: templateVariableNameSchema.optional(),
+  })
+  .strict();
 
 export const documentTemplateVariableAliasesSchema = z.object({
   fields: z.record(documentTemplateFieldSchema, templateVariableNameSchema.optional()).default({}),
@@ -76,15 +83,11 @@ export const documentTemplateVariableAliasesSchema = z.object({
     .optional(),
   selectedEducation: z
     .object({
-      fields: z
-        .record(selectedEducationFieldSchema, templateVariableNameSchema.optional())
-        .default({}),
+      fields: selectedEducationFieldsSchema.default({}),
       items: z
         .array(
           z.object({
-            fields: z
-              .record(selectedEducationFieldSchema, templateVariableNameSchema.optional())
-              .default({}),
+            fields: selectedEducationFieldsSchema.default({}),
           }),
         )
         .optional(),
@@ -92,15 +95,11 @@ export const documentTemplateVariableAliasesSchema = z.object({
     .optional(),
   selectedExperiences: z
     .object({
-      fields: z
-        .record(selectedExperienceFieldSchema, templateVariableNameSchema.optional())
-        .default({}),
+      fields: selectedExperienceFieldsSchema.default({}),
       items: z
         .array(
           z.object({
-            fields: z
-              .record(selectedExperienceFieldSchema, templateVariableNameSchema.optional())
-              .default({}),
+            fields: selectedExperienceFieldsSchema.default({}),
           }),
         )
         .optional(),
@@ -108,15 +107,11 @@ export const documentTemplateVariableAliasesSchema = z.object({
     .optional(),
   selectedProjects: z
     .object({
-      fields: z
-        .record(selectedProjectFieldSchema, templateVariableNameSchema.optional())
-        .default({}),
+      fields: selectedProjectFieldsSchema.default({}),
       items: z
         .array(
           z.object({
-            fields: z
-              .record(selectedProjectFieldSchema, templateVariableNameSchema.optional())
-              .default({}),
+            fields: selectedProjectFieldsSchema.default({}),
           }),
         )
         .optional(),

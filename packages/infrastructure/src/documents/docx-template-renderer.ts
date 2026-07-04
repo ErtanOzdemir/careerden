@@ -13,6 +13,23 @@ import type {
 
 const placeholderPattern = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 const sectionPattern = /\{\{\s*#([a-zA-Z0-9_]+)\s*\}\}([\s\S]*?)\{\{\s*\/\1\s*\}\}/g;
+const selectedExperienceAliasFields = new Set<string>([
+  "company",
+  "description",
+  "end_date",
+  "period",
+  "start_date",
+  "title",
+]);
+const selectedEducationAliasFields = new Set<string>([
+  "degree",
+  "end_date",
+  "field",
+  "institution",
+  "period",
+  "start_date",
+]);
+const selectedProjectAliasFields = new Set<string>(["description", "name", "url"]);
 
 export class DocxtemplaterTemplateRenderer implements DocxTemplateRenderer {
   async extractPlaceholders(template: Buffer): Promise<string[]> {
@@ -153,7 +170,7 @@ function addSelectedExperienceAliases(
       typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
 
     for (const [field, variableName] of Object.entries(configuredItem.fields)) {
-      if (variableName) {
+      if (variableName && selectedExperienceAliasFields.has(field)) {
         aliases[variableName] = toDocxValue(experience[field]);
       }
     }
@@ -187,7 +204,7 @@ function addSelectedEducationAliases(
       typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
 
     for (const [field, variableName] of Object.entries(configuredItem.fields)) {
-      if (variableName) {
+      if (variableName && selectedEducationAliasFields.has(field)) {
         aliases[variableName] = toDocxValue(education[field]);
       }
     }
@@ -221,7 +238,7 @@ function addSelectedProjectAliases(
       typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
 
     for (const [field, variableName] of Object.entries(configuredItem.fields)) {
-      if (variableName) {
+      if (variableName && selectedProjectAliasFields.has(field)) {
         aliases[variableName] = toDocxValue(project[field]);
       }
     }

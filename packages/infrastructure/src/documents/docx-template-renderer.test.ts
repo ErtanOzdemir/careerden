@@ -111,6 +111,80 @@ describe("buildDocxAliasData", () => {
       ],
     });
   });
+
+  it("ignores stale selected experience, education, and project aliases for removed fields", () => {
+    const template = {
+      fieldMappings: {},
+      placeholders: [],
+      variableAliases: {
+        fields: {},
+        selectedEducation: {
+          fields: {},
+          items: [
+            {
+              fields: {
+                achievements: "education_achievements",
+                institution: "education_institution",
+              },
+            },
+          ],
+        },
+        selectedExperiences: {
+          fields: {},
+          items: [
+            {
+              fields: {
+                achievements: "experience_achievements",
+                company: "experience_company",
+                skills: "experience_skills",
+              },
+            },
+          ],
+        },
+        selectedProjects: {
+          fields: {},
+          items: [
+            {
+              fields: {
+                achievements: "project_achievements",
+                name: "project_name",
+                skills: "project_skills",
+              },
+            },
+          ],
+        },
+      },
+    } as unknown as DocumentTemplate;
+
+    const aliases = buildDocxAliasData(template, {
+      selected_education: [
+        {
+          achievements: ["Honours"],
+          institution: "University",
+        },
+      ],
+      selected_experiences: [
+        {
+          achievements: ["Built profile tooling"],
+          company: "Link2CV",
+          skills: ["TypeScript"],
+        },
+      ],
+      selected_projects: [
+        {
+          achievements: ["Launched redesign"],
+          name: "Portfolio",
+          skills: ["React"],
+        },
+      ],
+    });
+
+    expect(aliases).toEqual({
+      education_institution: "University",
+      experience_company: "Link2CV",
+      project_name: "Portfolio",
+    });
+  });
 });
 
 describe("DocxtemplaterTemplateRenderer", () => {

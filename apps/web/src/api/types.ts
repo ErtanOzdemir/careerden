@@ -53,17 +53,14 @@ export type ApiDocumentTemplateField =
   | "summary";
 
 export type ApiSelectedExperienceTemplateField =
-  | "achievements"
   | "company"
   | "description"
   | "end_date"
   | "period"
-  | "skills"
   | "start_date"
   | "title";
 
 export type ApiSelectedEducationTemplateField =
-  | "achievements"
   | "degree"
   | "end_date"
   | "field"
@@ -71,12 +68,7 @@ export type ApiSelectedEducationTemplateField =
   | "period"
   | "start_date";
 
-export type ApiSelectedProjectTemplateField =
-  | "achievements"
-  | "description"
-  | "name"
-  | "skills"
-  | "url";
+export type ApiSelectedProjectTemplateField = "description" | "name" | "url";
 
 export interface ApiDocumentTemplateVariableAliases {
   fields: Partial<
@@ -342,17 +334,14 @@ export interface ApiJobApplicationAnalytics {
 }
 
 export interface ApiProfileExperience {
-  achievements: string[];
   company: string;
   description?: string;
   endDate?: string;
-  skills?: string[];
   startDate?: string;
   title: string;
 }
 
 export interface ApiProfileEducation {
-  achievements: string[];
   degree?: string;
   endDate?: string;
   field?: string;

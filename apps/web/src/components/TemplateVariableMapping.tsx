@@ -5,6 +5,9 @@ import type {
   ApiDocumentTemplate,
   ApiDocumentTemplateField,
   ApiDocumentTemplateVariableAliases,
+  ApiSelectedEducationTemplateField,
+  ApiSelectedExperienceTemplateField,
+  ApiSelectedProjectTemplateField,
   ApiProfile,
 } from "../api/types.js";
 import { cn } from "../lib/utils.js";
@@ -21,34 +24,43 @@ const FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
   { field: "links", label: "Links" },
 ];
 
-const EXPERIENCE_SUB_FIELDS: { key: string; label: string }[] = [
+const EXPERIENCE_SUB_FIELDS: { key: ApiSelectedExperienceTemplateField; label: string }[] = [
   { key: "title", label: "Title" },
   { key: "company", label: "Company" },
   { key: "start_date", label: "Start Date" },
   { key: "end_date", label: "End Date" },
   { key: "period", label: "Period" },
   { key: "description", label: "Description" },
-  { key: "skills", label: "Skills" },
-  { key: "achievements", label: "Achievements" },
 ];
 
-const EDUCATION_SUB_FIELDS: { key: string; label: string }[] = [
+const EDUCATION_SUB_FIELDS: { key: ApiSelectedEducationTemplateField; label: string }[] = [
   { key: "institution", label: "Institution" },
   { key: "degree", label: "Degree" },
   { key: "field", label: "Field" },
   { key: "start_date", label: "Start Date" },
   { key: "end_date", label: "End Date" },
   { key: "period", label: "Period" },
-  { key: "achievements", label: "Achievements" },
 ];
 
-const PROJECT_SUB_FIELDS: { key: string; label: string }[] = [
+const PROJECT_SUB_FIELDS: { key: ApiSelectedProjectTemplateField; label: string }[] = [
   { key: "name", label: "Name" },
   { key: "description", label: "Description" },
   { key: "url", label: "URL" },
-  { key: "skills", label: "Skills" },
-  { key: "achievements", label: "Achievements" },
 ];
+
+const EXPERIENCE_SUB_FIELD_KEYS = new Set<string>(EXPERIENCE_SUB_FIELDS.map(({ key }) => key));
+const EDUCATION_SUB_FIELD_KEYS = new Set<string>(EDUCATION_SUB_FIELDS.map(({ key }) => key));
+const PROJECT_SUB_FIELD_KEYS = new Set<string>(PROJECT_SUB_FIELDS.map(({ key }) => key));
+
+type SelectedEducationAliasFields = NonNullable<
+  ApiDocumentTemplateVariableAliases["selectedEducation"]
+>["fields"];
+type SelectedExperienceAliasFields = NonNullable<
+  ApiDocumentTemplateVariableAliases["selectedExperiences"]
+>["fields"];
+type SelectedProjectAliasFields = NonNullable<
+  ApiDocumentTemplateVariableAliases["selectedProjects"]
+>["fields"];
 
 function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): string {
   switch (field) {
@@ -99,6 +111,19 @@ function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): 
 function getExperienceSubPreview(expIndex: number, subField: string, profile: ApiProfile): string {
   const exp = profile.experience[expIndex];
   if (!exp) return "--";
+
+  if (subField === "start_date") {
+    return exp.startDate || "--";
+  }
+
+  if (subField === "end_date") {
+    return exp.endDate || "--";
+  }
+
+  if (subField === "period") {
+    return formatPeriod(exp.startDate, exp.endDate) || "--";
+  }
+
   const key = subField as keyof typeof exp;
   const value = exp[key];
   if (Array.isArray(value)) return value.join(", ").slice(0, 60) || "--";
@@ -108,6 +133,19 @@ function getExperienceSubPreview(expIndex: number, subField: string, profile: Ap
 function getEducationSubPreview(eduIndex: number, subField: string, profile: ApiProfile): string {
   const edu = profile.education[eduIndex];
   if (!edu) return "--";
+
+  if (subField === "start_date") {
+    return edu.startDate || "--";
+  }
+
+  if (subField === "end_date") {
+    return edu.endDate || "--";
+  }
+
+  if (subField === "period") {
+    return formatPeriod(edu.startDate, edu.endDate) || "--";
+  }
+
   const key = subField as keyof typeof edu;
   const value = edu[key];
   if (Array.isArray(value)) return value.join(", ").slice(0, 60) || "--";
@@ -121,6 +159,76 @@ function getProjectSubPreview(projIndex: number, subField: string, profile: ApiP
   const value = proj[key];
   if (Array.isArray(value)) return value.join(", ").slice(0, 60) || "--";
   return String(value ?? "--").slice(0, 60);
+}
+
+function formatPeriod(startDate?: string, endDate?: string): string {
+  if (!startDate && !endDate) {
+    return "";
+  }
+
+  return `${startDate || "Start not set"} - ${endDate || "Present"}`;
+}
+
+function pruneFields(
+  fields: Record<string, string | undefined> | undefined,
+  allowedFields: Set<string>,
+): Record<string, string> {
+  const pruned: Record<string, string> = {};
+
+  for (const [field, variableName] of Object.entries(fields ?? {})) {
+    if (allowedFields.has(field) && variableName) {
+      pruned[field] = variableName;
+    }
+  }
+
+  return pruned;
+}
+
+function sanitizeVariableAliases(
+  aliases: ApiDocumentTemplateVariableAliases,
+): ApiDocumentTemplateVariableAliases {
+  const next = structuredClone(aliases);
+
+  if (next.selectedExperiences) {
+    next.selectedExperiences.fields = pruneFields(
+      next.selectedExperiences.fields as Record<string, string | undefined>,
+      EXPERIENCE_SUB_FIELD_KEYS,
+    ) as SelectedExperienceAliasFields;
+    next.selectedExperiences.items = next.selectedExperiences.items?.map((item) => ({
+      fields: pruneFields(
+        item.fields as Record<string, string | undefined>,
+        EXPERIENCE_SUB_FIELD_KEYS,
+      ) as SelectedExperienceAliasFields,
+    }));
+  }
+
+  if (next.selectedEducation) {
+    next.selectedEducation.fields = pruneFields(
+      next.selectedEducation.fields as Record<string, string | undefined>,
+      EDUCATION_SUB_FIELD_KEYS,
+    ) as SelectedEducationAliasFields;
+    next.selectedEducation.items = next.selectedEducation.items?.map((item) => ({
+      fields: pruneFields(
+        item.fields as Record<string, string | undefined>,
+        EDUCATION_SUB_FIELD_KEYS,
+      ) as SelectedEducationAliasFields,
+    }));
+  }
+
+  if (next.selectedProjects) {
+    next.selectedProjects.fields = pruneFields(
+      next.selectedProjects.fields as Record<string, string | undefined>,
+      PROJECT_SUB_FIELD_KEYS,
+    ) as SelectedProjectAliasFields;
+    next.selectedProjects.items = next.selectedProjects.items?.map((item) => ({
+      fields: pruneFields(
+        item.fields as Record<string, string | undefined>,
+        PROJECT_SUB_FIELD_KEYS,
+      ) as SelectedProjectAliasFields,
+    }));
+  }
+
+  return next;
 }
 
 function invertFieldMappings(
@@ -671,7 +779,7 @@ export default function TemplateVariableMapping({
   });
 
   const [variableAliases, setVariableAliases] = useState<ApiDocumentTemplateVariableAliases>(() =>
-    structuredClone(template.variableAliases),
+    sanitizeVariableAliases(template.variableAliases),
   );
 
   const [saving, setSaving] = useState(false);
@@ -755,11 +863,13 @@ export default function TemplateVariableMapping({
       return;
     }
 
+    const sanitizedVariableAliases = sanitizeVariableAliases(variableAliases);
+
     try {
       await profilesApi.updateDocumentTemplateVariableAliases(
         template.profileId,
         template.id,
-        variableAliases,
+        sanitizedVariableAliases,
       );
     } catch (e) {
       setSaveError(

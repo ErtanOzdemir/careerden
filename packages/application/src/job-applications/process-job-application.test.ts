@@ -24,7 +24,7 @@ describe("ProcessJobApplicationUseCase", () => {
         {
           company: "Analytical Engines",
           title: "Engineer",
-          achievements: ["Built reliable automation"],
+          description: "Built reliable automation",
         },
       ],
     });

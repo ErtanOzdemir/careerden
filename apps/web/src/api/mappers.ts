@@ -189,10 +189,7 @@ export function mapApiProfileToUi(profile: ApiProfile): Profile {
       title: experience.title,
       company: experience.company,
       period: formatPeriod(experience.startDate, experience.endDate),
-      achievements:
-        experience.achievements.length > 0
-          ? experience.achievements
-          : [experience.description ?? "No achievements added yet."],
+      achievements: [experience.description ?? "No description added yet."],
       icon: "work",
     })),
     skills: [
@@ -342,8 +339,10 @@ function mapMatchAnalysis(
   profile?: ApiProfile,
 ): NonNullable<JobApplication["aiMatch"]> {
   const recommendationQueue = [...match.recommendedAchievements];
-  const profileAchievements = profile?.experience.flatMap((experience) => experience.achievements);
-  const originalAchievements = profileAchievements?.filter(Boolean) ?? [];
+  const profileHighlights = profile?.experience
+    .map((experience) => experience.description)
+    .filter(Boolean);
+  const originalHighlights = profileHighlights ?? [];
   const currentSummary = profile?.summary ?? profile?.headline ?? "Current profile summary";
   const yourSkills =
     profile?.skills && profile.skills.length > 0 ? profile.skills : match.strongSkills;
@@ -359,7 +358,7 @@ function mapMatchAnalysis(
     currentSummary,
     enhancedSummary: match.customizedSummary,
     bulletOptimizations: match.recommendedAchievements.map((achievement, index) => ({
-      original: originalAchievements[index] ?? "No matching profile achievement",
+      original: originalHighlights[index] ?? "No matching profile highlight",
       enhanced: achievement,
     })),
     experienceOptimizations: profile?.experience.map((experience, index) => {
@@ -380,12 +379,6 @@ function mapMatchAnalysis(
                 },
               ]
             : []),
-          ...experience.achievements.map((achievement, achievementIndex) => ({
-            actual: achievement,
-            enhanced:
-              enhancement?.enhancedAchievements?.[achievementIndex] ?? recommendationQueue.shift(),
-            kind: "achievement" as const,
-          })),
         ],
       };
     }),
@@ -398,11 +391,15 @@ function mapMatchAnalysis(
       return {
         institution: education.institution,
         degree: [education.degree, education.field].filter(Boolean).join(", ") || "Education",
-        items: education.achievements.map((achievement, achievementIndex) => ({
-          actual: achievement,
-          enhanced: enhancement?.enhancedAchievements?.[achievementIndex],
-          kind: "achievement" as const,
-        })),
+        items: enhancement?.enhancedDescription
+          ? [
+              {
+                actual: [education.degree, education.field].filter(Boolean).join(", "),
+                enhanced: enhancement.enhancedDescription,
+                kind: "description" as const,
+              },
+            ]
+          : [],
       };
     }),
     projectOptimizations: profile?.projects.map((project, index) => {

@@ -41,13 +41,11 @@ function emptyExperience(): ApiProfileExperience {
     startDate: "",
     endDate: "",
     description: "",
-    achievements: [],
-    skills: [],
   };
 }
 
 function emptyEducation(): ApiProfileEducation {
-  return { institution: "", degree: "", field: "", startDate: "", endDate: "", achievements: [] };
+  return { institution: "", degree: "", field: "", startDate: "", endDate: "" };
 }
 
 function emptyProject(): ApiProfileProject {

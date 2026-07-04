@@ -79,8 +79,8 @@ describe("API mappers", () => {
       email: "person@example.com",
       experience: [
         {
-          achievements: ["Built product UI"],
           company: "Acme",
+          description: "Built product UI",
           startDate: "2024",
           title: "Designer",
         },
@@ -104,16 +104,12 @@ describe("API mappers", () => {
     expect(mapped.skills[0]?.skills).toEqual(["Figma"]);
   });
 
-  it("maps every profile experience description and achievement into AI comparisons", () => {
+  it("maps profile experience descriptions into AI comparisons", () => {
     const application = createApplicationDetail();
     const profile = createProfile();
     application.matchAnalysis = {
       ...application.matchAnalysis,
-      recommendedAchievements: [
-        "Enhanced role description.",
-        "Enhanced first achievement.",
-        "Enhanced second achievement.",
-      ],
+      recommendedAchievements: ["Enhanced role description."],
     };
 
     const mapped = mapApiJobApplicationToUi(application, profile);
@@ -128,28 +124,12 @@ describe("API mappers", () => {
           enhanced: "Enhanced role description.",
           kind: "description",
         },
-        {
-          actual: "Built product UI.",
-          enhanced: "Enhanced first achievement.",
-          kind: "achievement",
-        },
-        {
-          actual: "Improved accessibility.",
-          enhanced: "Enhanced second achievement.",
-          kind: "achievement",
-        },
       ],
     });
     expect(mapped.aiMatch?.experienceOptimizations?.[1]).toEqual({
       title: "UI Engineer",
       company: "Beta",
-      items: [
-        {
-          actual: "Delivered dashboards.",
-          enhanced: undefined,
-          kind: "achievement",
-        },
-      ],
+      items: [],
     });
   });
 });
@@ -246,14 +226,12 @@ function createProfile(): ApiProfile {
     email: "person@example.com",
     experience: [
       {
-        achievements: ["Built product UI.", "Improved accessibility."],
         company: "Acme",
         description: "Built product experiences for SaaS teams.",
         startDate: "2024",
         title: "Frontend Engineer",
       },
       {
-        achievements: ["Delivered dashboards."],
         company: "Beta",
         startDate: "2022",
         title: "UI Engineer",

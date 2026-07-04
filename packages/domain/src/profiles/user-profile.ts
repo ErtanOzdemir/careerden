@@ -4,8 +4,6 @@ export interface ProfileExperience {
   startDate?: string;
   endDate?: string;
   description?: string;
-  skills?: string[];
-  achievements: string[];
 }
 
 export interface ProfileEducation {
@@ -14,7 +12,6 @@ export interface ProfileEducation {
   field?: string;
   startDate?: string;
   endDate?: string;
-  achievements: string[];
 }
 
 export interface ProfileProject {

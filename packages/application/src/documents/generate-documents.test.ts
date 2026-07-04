@@ -26,7 +26,6 @@ describe("GenerateDocumentsUseCase", () => {
           title: "Engineer",
           startDate: "2022",
           description: "Built automation.",
-          achievements: ["Improved reliability."],
         },
       ],
     });
@@ -108,8 +107,6 @@ describe("GenerateDocumentsUseCase", () => {
         end_date: "Present",
         period: "2022 - Present",
         description: richDocumentFromText("User-edited TypeScript automation for backend systems."),
-        achievements: [richDocumentFromText("User-edited backend reliability achievement.")],
-        skills: [],
       },
     ]);
     expect(capturedDocxData[0]?.summary).toEqual(richDocumentFromText("User-edited summary."));
@@ -120,7 +117,6 @@ describe("GenerateDocumentsUseCase", () => {
         title: "Engineer",
         startDate: "2022",
         description: "Built automation.",
-        achievements: ["Improved reliability."],
       },
     ]);
     expect(capturedDocxData[0]?.raw_summary).toBe("");

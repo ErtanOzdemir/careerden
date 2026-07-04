@@ -6,8 +6,6 @@ export const profileExperienceSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   description: z.string().optional(),
-  skills: z.array(z.string().min(1)).default([]),
-  achievements: z.array(z.string().min(1)).default([]),
 });
 
 export const profileEducationSchema = z.object({
@@ -16,7 +14,6 @@ export const profileEducationSchema = z.object({
   field: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  achievements: z.array(z.string().min(1)).default([]),
 });
 
 export const profileProjectSchema = z.object({

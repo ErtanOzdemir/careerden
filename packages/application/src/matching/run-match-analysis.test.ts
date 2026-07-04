@@ -280,6 +280,7 @@ function createProfile(
     id: "profile-1",
     fullName: "Ada Lovelace",
     email: "ada@example.com",
+    autoRunMatchAnalysis: true,
     links: [],
     summary: overrides.summary,
     skills: ["TypeScript"],

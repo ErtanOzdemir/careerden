@@ -19,6 +19,7 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
     const profile: UserProfile = {
       id: randomUUID(),
       ...input,
+      autoRunMatchAnalysis: input.autoRunMatchAnalysis ?? true,
       links: input.links ?? [],
       education: input.education ?? [],
       certifications: input.certifications ?? [],

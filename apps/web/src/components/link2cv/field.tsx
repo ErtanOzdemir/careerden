@@ -9,6 +9,7 @@ export function Field({
   value,
   onChange,
   placeholder,
+  readOnly,
   type = "text",
   className,
 }: {
@@ -17,6 +18,7 @@ export function Field({
   value?: string;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
   placeholder?: string;
+  readOnly?: boolean;
   type?: string;
   className?: string;
 }) {
@@ -25,10 +27,11 @@ export function Field({
       <label className="text-sm font-medium text-foreground">{label}</label>
       <input
         type={type}
-        defaultValue={onChange ? undefined : defaultValue}
-        value={onChange ? value : undefined}
+        defaultValue={value !== undefined || onChange ? undefined : defaultValue}
+        value={value !== undefined || onChange ? value : undefined}
         onChange={onChange}
         placeholder={placeholder}
+        readOnly={readOnly}
         className={inputClass}
       />
     </div>

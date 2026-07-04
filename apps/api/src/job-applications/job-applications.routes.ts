@@ -24,6 +24,7 @@ import type {
   RemoteImageFetcher,
   ScrapeBundle,
   UserProfile,
+  UserProfileRepository,
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import {
@@ -73,6 +74,7 @@ export function createJobApplicationRouter(dependencies: {
   retryJobApplication: RetryJobApplicationUseCase;
   updateDocumentContent: UpdateDocumentContentUseCase;
   jobApplications: JobApplicationRepository;
+  profiles: UserProfileRepository;
   jobApplicationChanges: JobApplicationChangeSubscriber;
   queue: JobApplicationQueue;
   storage: FileStorage;
@@ -187,7 +189,19 @@ export function createJobApplicationRouter(dependencies: {
           },
         });
 
-        await dependencies.queue.enqueue({ jobApplicationId: request.params.id });
+        const profile = await dependencies.profiles.findById(jobApplication.profileId);
+
+        if (!profile) {
+          response.status(404).json({ error: "Profile not found" });
+          return;
+        }
+
+        await enqueueMatchAnalysisIfEnabled({
+          jobApplications: dependencies.jobApplications,
+          queue: dependencies.queue,
+          jobApplicationId: request.params.id,
+          autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
+        });
 
         const updated = await dependencies.jobApplications.findById(request.params.id);
 
@@ -324,7 +338,12 @@ export function createJobApplicationRouter(dependencies: {
             roleTitle: scrape.job.title,
           },
         });
-        await dependencies.queue.enqueue({ jobApplicationId: jobApplication.id });
+        await enqueueMatchAnalysisIfEnabled({
+          jobApplications: dependencies.jobApplications,
+          queue: dependencies.queue,
+          jobApplicationId: jobApplication.id,
+          autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
+        });
 
         response.status(201).json(jobApplication);
       } catch (error) {
@@ -471,6 +490,26 @@ export function createJobApplicationRouter(dependencies: {
       response.status(202).json(retried);
     } catch (error) {
       next(error);
+    }
+  });
+
+  router.post("/:id/analysis", async (request, response) => {
+    try {
+      const requested = await requestJobApplicationAnalysis({
+        jobApplications: dependencies.jobApplications,
+        queue: dependencies.queue,
+        jobApplicationId: request.params.id,
+      });
+
+      if (!requested) {
+        response.status(404).json({ error: "Job application not found" });
+        return;
+      }
+
+      response.status(202).json(requested);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to start analysis";
+      response.status(400).json({ error: message });
     }
   });
 
@@ -879,6 +918,57 @@ export async function retryFailedJobApplication(input: {
   }
 
   return retried.jobApplication;
+}
+
+export async function enqueueMatchAnalysisIfEnabled(input: {
+  jobApplications: Pick<JobApplicationRepository, "addEvent">;
+  queue: JobApplicationQueue;
+  jobApplicationId: string;
+  autoRunMatchAnalysis: boolean;
+}): Promise<boolean> {
+  if (input.autoRunMatchAnalysis) {
+    await input.queue.enqueue({ jobApplicationId: input.jobApplicationId });
+    return true;
+  }
+
+  await input.jobApplications.addEvent({
+    jobApplicationId: input.jobApplicationId,
+    type: "processing",
+    title: "AI analysis skipped",
+    body: "Auto-run match analysis is disabled for this profile.",
+  });
+  return false;
+}
+
+export async function requestJobApplicationAnalysis(input: {
+  jobApplications: Pick<JobApplicationRepository, "addEvent" | "findById" | "getScrapeBundle">;
+  queue: JobApplicationQueue;
+  jobApplicationId: string;
+}): Promise<JobApplication | null> {
+  const jobApplication = await input.jobApplications.findById(input.jobApplicationId);
+
+  if (!jobApplication) {
+    return null;
+  }
+
+  if (jobApplication.status !== "scraped") {
+    throw new Error("AI analysis can only be started after scraping completes");
+  }
+
+  const scrape = await input.jobApplications.getScrapeBundle(input.jobApplicationId);
+
+  if (!scrape) {
+    throw new Error("AI analysis requires saved scrape data");
+  }
+
+  await input.jobApplications.addEvent({
+    jobApplicationId: input.jobApplicationId,
+    type: "processing",
+    title: "AI analysis requested",
+  });
+  await input.queue.enqueue({ jobApplicationId: input.jobApplicationId });
+
+  return jobApplication;
 }
 
 export async function getJobApplicationDetail(input: {

@@ -22,6 +22,7 @@ export class PostgresUserProfileRepository extends KnexUserProfileRepository {
         user_id: userId,
         full_name: input.fullName,
         email: input.email,
+        auto_run_match_analysis: input.autoRunMatchAnalysis ?? true,
         profession: input.profession ?? null,
         headline: input.headline ?? null,
         location: input.location ?? null,

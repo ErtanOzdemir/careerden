@@ -370,6 +370,7 @@ export interface ApiProfileProject {
 }
 
 export interface ApiProfile {
+  autoRunMatchAnalysis: boolean;
   certifications: string[];
   createdAt: string;
   education: ApiProfileEducation[];
@@ -390,6 +391,7 @@ export interface ApiProfile {
 export type ApiUpdateProfilePayload = Partial<
   Pick<
     ApiProfile,
+    | "autoRunMatchAnalysis"
     | "certifications"
     | "education"
     | "email"

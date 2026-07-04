@@ -230,7 +230,11 @@ export default function AppDetail() {
     try {
       setIsRetrying(true);
       setError(null);
-      await jobApplicationsApi.retry(id);
+      if (app?.processingStatus === "scraped") {
+        await jobApplicationsApi.startAnalysis(id);
+      } else {
+        await jobApplicationsApi.retry(id);
+      }
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed.");
@@ -266,7 +270,9 @@ export default function AppDetail() {
       </div>
     );
 
-  const isProcessing = !["completed", "review_ready"].includes(app.processingStatus ?? "");
+  const isProcessing = ["queued", "scraping", "analyzing", "generating_documents"].includes(
+    app.processingStatus ?? "",
+  );
   const processingLabel = getProcessingLabel(app);
 
   return (
@@ -506,7 +512,7 @@ function OverviewTab({ app }: { app: JobApplication }) {
           )}
         </div>
       </Panel>
-      <Panel>
+      <Panel className="self-start">
         <PanelHeader title="At a glance" />
         <dl className="divide-y divide-border border-t border-border text-sm">
           {[

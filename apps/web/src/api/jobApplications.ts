@@ -129,6 +129,12 @@ export const jobApplicationsApi = {
     });
   },
 
+  startAnalysis(id: string): Promise<ApiJobApplication> {
+    return requestJson<ApiJobApplication>(`/job-applications/${id}/analysis`, {
+      method: "POST",
+    });
+  },
+
   generateDocuments(id: string): Promise<ApiJobApplicationDetail> {
     return requestJson<ApiJobApplicationDetail>(`/job-applications/${id}/documents/generate`, {
       method: "POST",

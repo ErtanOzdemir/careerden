@@ -153,42 +153,20 @@ export default function AiMatchCard({
           {activeStep === 0 && <MatchStep aiMatch={aiMatch} />}
           {activeStep === 1 && (
             <div className="space-y-6">
-              <div className="flex items-center gap-2 mb-4">
-                <SelectionToggle
-                  value={
-                    draftContent.selections?.customizedSummary === "original" ? "original" : "ai"
-                  }
-                  onChange={(value) =>
-                    setDraftContent(updateSelection(draftContent, ["customizedSummary"], value))
-                  }
-                  options={[
-                    { value: "ai", label: "AI Enhanced" },
-                    { value: "original", label: "Original" },
-                  ]}
-                />
-              </div>
-              <div className="grid md:grid-cols-2 md:divide-x gap-6">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold">Original Profile Summary</h3>
-                  <TextPanel
-                    label="Your Input"
-                    title="Current Profile Summary"
-                    tone="neutral"
-                    value={aiMatch.currentSummary}
-                  />
-                </div>
-                <div className="space-y-2 md:pl-4">
-                  <h3 className="text-sm font-semibold">Tailored CV Summary</h3>
-                  <EditableRichDocumentField
-                    ariaLabel="Tailored CV summary"
-                    document={draftContent.customizedSummary}
-                    isSaving={isSavingContent}
-                    onSave={(value) =>
-                      handleSaveContent({ ...draftContent, customizedSummary: value })
-                    }
-                  />
-                </div>
-              </div>
+              <ComparisonRow
+                actual={aiMatch.currentSummary}
+                document={draftContent.customizedSummary}
+                icon="summary"
+                isSaving={isSavingContent}
+                label="Profile Summary"
+                onSave={(value) => handleSaveContent({ ...draftContent, customizedSummary: value })}
+                onSelectionChange={(value) =>
+                  setDraftContent(updateSelection(draftContent, ["customizedSummary"], value))
+                }
+                selection={
+                  draftContent.selections?.customizedSummary === "original" ? "original" : "ai"
+                }
+              />
             </div>
           )}
           {activeStep === 2 && (
@@ -196,6 +174,7 @@ export default function AiMatchCard({
               aiMatch={aiMatch}
               documentContent={draftContent}
               isSaving={isSavingContent}
+              onContentChange={setDraftContent}
               onSave={handleSaveContent}
             />
           )}
@@ -693,11 +672,13 @@ function ExperienceStep({
   aiMatch,
   documentContent,
   isSaving,
+  onContentChange,
   onSave,
 }: {
   aiMatch: NonNullable<JobApplication["aiMatch"]>;
   documentContent: ApiDocumentContent;
   isSaving: boolean;
+  onContentChange: (content: ApiDocumentContent) => void;
   onSave: (content: ApiDocumentContent) => Promise<void>;
 }) {
   const optimizations =
@@ -739,14 +720,20 @@ function ExperienceStep({
                   item.kind === "description"
                     ? enhancement?.description
                     : enhancement?.achievements[achievementIndex];
+                const selection =
+                  item.kind === "description"
+                    ? documentContent.selections?.experience?.[String(experienceIndex)]?.description
+                    : documentContent.selections?.experience?.[String(experienceIndex)]
+                        ?.achievements?.[String(achievementIndex)];
 
                 return (
-                  <ExperienceComparisonRow
+                  <ComparisonRow
                     key={`${item.kind}-${item.actual}-${index}`}
                     actual={item.actual}
                     document={document}
+                    icon={item.kind}
                     isSaving={isSaving}
-                    kind={item.kind}
+                    label={item.kind === "description" ? "Role Description" : "Achievement"}
                     onSave={(updatedDocument) =>
                       onSave(
                         updateExperienceDocument(
@@ -758,6 +745,23 @@ function ExperienceStep({
                         ),
                       )
                     }
+                    onSelectionChange={(value) =>
+                      onContentChange(
+                        updateSelection(
+                          documentContent,
+                          item.kind === "description"
+                            ? ["experience", String(experienceIndex), "description"]
+                            : [
+                                "experience",
+                                String(experienceIndex),
+                                "achievements",
+                                String(achievementIndex),
+                              ],
+                          value,
+                        ),
+                      )
+                    }
+                    selection={selection === "original" ? "original" : "ai"}
                   />
                 );
               })}
@@ -837,63 +841,45 @@ function ApprovalStep({
   );
 }
 
-function TextPanel({
-  label,
-  title,
-  tone,
-  value,
-}: {
-  label: string;
-  title: string;
-  tone: "neutral" | "primary";
-  value: string;
-}) {
-  return (
-    <section
-      className={`rounded-lg border p-4 ${
-        tone === "primary" ? "border-primary/40 bg-primary/10" : "border-border bg-muted/40"
-      }`}
-    >
-      <span
-        className={`inline-flex px-2 py-1 rounded text-xs font-semibold mb-2 ${
-          tone === "primary" ? "bg-primary/20 text-primary" : "bg-muted"
-        }`}
-      >
-        {label}
-      </span>
-      <h4 className="text-base font-semibold mb-2">{title}</h4>
-      <p className="text-sm text-muted-foreground">{value}</p>
-    </section>
-  );
-}
-
-function ExperienceComparisonRow({
+function ComparisonRow({
   actual,
   document,
+  icon,
   isSaving,
-  kind,
+  label,
   onSave,
+  onSelectionChange,
+  selection,
 }: {
   actual: string;
   document?: RichDocument;
+  icon: "achievement" | "description" | "summary";
   isSaving: boolean;
-  kind: "achievement" | "description";
+  label: string;
   onSave: (document: RichDocument) => Promise<void>;
+  onSelectionChange: (selection: "ai" | "original") => void;
+  selection: "ai" | "original";
 }) {
+  const Icon = icon === "achievement" ? Award : FileText;
+
   return (
     <section className="rounded-lg bg-card p-4">
-      <div className="mb-2 flex items-center gap-2">
-        {kind === "description" ? (
-          <FileText className="size-[18px] text-primary" />
-        ) : (
-          <Award className="size-[18px] text-primary" />
-        )}
-        <span className="text-sm font-semibold uppercase text-muted-foreground">
-          {kind === "description" ? "Role Description" : "Achievement"}
-        </span>
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className="size-[18px] text-primary" />
+          <span className="text-sm font-semibold uppercase text-muted-foreground">{label}</span>
+        </div>
+        <SelectionToggle
+          value={selection}
+          onChange={onSelectionChange}
+          options={[
+            { value: "ai", label: "AI Enhanced" },
+            { value: "original", label: "Original" },
+          ]}
+        />
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:divide-x md:divide-border">
-        <div className="space-y-1">
+        <div className="space-y-1 md:pr-4">
           <span className="text-xs font-semibold uppercase text-muted-foreground">
             Actual Version
           </span>
@@ -903,7 +889,7 @@ function ExperienceComparisonRow({
           <span className="text-xs font-semibold uppercase text-primary">AI Enhanced Version</span>
           {document ? (
             <EditableRichDocumentField
-              ariaLabel={`Enhanced ${kind}`}
+              ariaLabel={`Enhanced ${label}`}
               document={document}
               isSaving={isSaving}
               onSave={onSave}
@@ -1020,9 +1006,7 @@ function updateExperienceDocument(
       ? { ...existing, description: document }
       : {
           ...existing,
-          achievements: existing.achievements.map((achievement, index) =>
-            index === achievementIndex ? document : achievement,
-          ),
+          achievements: replaceAt(existing.achievements, achievementIndex, document),
         };
 
   return {
@@ -1050,7 +1034,38 @@ function updateSelection(
     current = current[path[i]] as Record<string, unknown>;
   }
   current[path[path.length - 1]] = value;
-  return { ...documentContent, selections: selections as ApiDocumentContentSelections };
+  return {
+    ...documentContent,
+    selections: normalizeSelections(selections as ApiDocumentContentSelections),
+  };
+}
+
+function normalizeSelections(
+  selections: ApiDocumentContentSelections,
+): ApiDocumentContentSelections {
+  return {
+    ...selections,
+    experience: normalizeIndexSelections(selections.experience),
+    education: normalizeIndexSelections(selections.education),
+    projects: normalizeIndexSelections(selections.projects),
+  };
+}
+
+function normalizeIndexSelections(
+  selections: ApiDocumentContentSelections["experience"],
+): ApiDocumentContentSelections["experience"] {
+  return Object.fromEntries(
+    Object.entries(selections ?? {}).map(([index, selection]) => [
+      index,
+      { ...selection, achievements: selection.achievements ?? {} },
+    ]),
+  );
+}
+
+function replaceAt<T>(items: T[], index: number, item: T): T[] {
+  const next = [...items];
+  next[index] = item;
+  return next;
 }
 
 function updateEducationAchievement(

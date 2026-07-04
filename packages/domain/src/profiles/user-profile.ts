@@ -26,6 +26,7 @@ export interface UserProfile {
   id: string;
   fullName: string;
   email: string;
+  autoRunMatchAnalysis: boolean;
   profession?: string;
   headline?: string;
   location?: string;
@@ -42,8 +43,20 @@ export interface UserProfile {
 
 export type CreateUserProfileInput = Omit<
   UserProfile,
-  "id" | "createdAt" | "updatedAt" | "education" | "certifications" | "projects" | "links"
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "autoRunMatchAnalysis"
+  | "education"
+  | "certifications"
+  | "projects"
+  | "links"
 > &
-  Partial<Pick<UserProfile, "education" | "certifications" | "projects" | "links">>;
+  Partial<
+    Pick<
+      UserProfile,
+      "autoRunMatchAnalysis" | "education" | "certifications" | "projects" | "links"
+    >
+  >;
 
 export type UpdateUserProfileInput = Partial<CreateUserProfileInput>;

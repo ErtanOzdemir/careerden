@@ -122,6 +122,7 @@ describe("API mappers", () => {
 
   it("maps profile data without requiring mock-only fields", () => {
     const profile: ApiProfile = {
+      autoRunMatchAnalysis: true,
       certifications: [],
       createdAt: "2026-06-01T00:00:00.000Z",
       education: [],
@@ -295,6 +296,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
 
 function createProfile(): ApiProfile {
   return {
+    autoRunMatchAnalysis: true,
     certifications: [],
     createdAt: "2026-06-01T00:00:00.000Z",
     education: [],

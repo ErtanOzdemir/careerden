@@ -41,6 +41,22 @@ describe("InMemoryUserProfileRepository", () => {
     await expect(repository.update("missing", { skills: ["React"] })).resolves.toBeNull();
   });
 
+  it("defaults and updates auto-run match analysis", async () => {
+    const repository = new InMemoryUserProfileRepository();
+    const profile = await repository.create({
+      email: "ada@example.com",
+      experience: [],
+      fullName: "Ada Lovelace",
+      skills: [],
+    });
+
+    expect(profile.autoRunMatchAnalysis).toBe(true);
+
+    const updated = await repository.update(profile.id, { autoRunMatchAnalysis: false });
+
+    expect(updated?.autoRunMatchAnalysis).toBe(false);
+  });
+
   it("manages profile document templates and default selection", async () => {
     const repository = new InMemoryUserProfileRepository();
     const profile = await repository.create({

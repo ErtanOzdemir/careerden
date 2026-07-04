@@ -15,6 +15,7 @@ const mockProfile: ApiProfile = {
   id: "profile-1",
   fullName: "John Doe",
   email: "john@example.com",
+  autoRunMatchAnalysis: true,
   profession: "Software Engineer",
   headline: "Senior Developer",
   location: "New York",

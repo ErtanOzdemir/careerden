@@ -106,6 +106,7 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     id: String(row.id),
     fullName: String(row.full_name),
     email: String(row.email),
+    autoRunMatchAnalysis: Boolean(row.auto_run_match_analysis ?? true),
     profession: nullableString(row.profession),
     headline: nullableString(row.headline),
     location: nullableString(row.location),

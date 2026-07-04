@@ -4,6 +4,8 @@ import { Panel, PanelHeader } from "../components/link2cv/panel.js";
 import { Modal } from "../components/link2cv/modal.js";
 import { Field } from "../components/link2cv/field.js";
 import { cn } from "../lib/utils.js";
+import { profilesApi } from "../api/profiles.js";
+import type { ApiProfile } from "../api/types.js";
 import {
   Download,
   Sparkles,
@@ -19,6 +21,10 @@ import {
 type Theme = "light" | "system" | "dark";
 
 function getStoredTheme(): Theme {
+  if (typeof localStorage === "undefined") {
+    return "system";
+  }
+
   return (localStorage.getItem("link2cv-theme") as Theme | null) ?? "system";
 }
 
@@ -27,19 +33,37 @@ function applyTheme(theme: Theme) {
   root.classList.remove("light", "dark");
   if (theme === "dark") root.classList.add("dark");
   else if (theme === "light") root.classList.add("light");
-  localStorage.setItem("link2cv-theme", theme);
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem("link2cv-theme", theme);
+  }
 }
 
 function Toggle({
+  checked,
   defaultOn = false,
+  disabled = false,
   label,
   desc,
+  onChange,
 }: {
+  checked?: boolean;
   defaultOn?: boolean;
+  disabled?: boolean;
   label: string;
   desc: string;
+  onChange?: (checked: boolean) => void;
 }) {
   const [on, setOn] = useState(defaultOn);
+  const isOn = checked ?? on;
+
+  function handleClick() {
+    const next = !isOn;
+    if (checked === undefined) {
+      setOn(next);
+    }
+    onChange?.(next);
+  }
+
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-3.5">
       <div className="min-w-0">
@@ -48,18 +72,20 @@ function Toggle({
       </div>
       <button
         role="switch"
-        aria-checked={on}
+        aria-checked={isOn}
         aria-label={label}
-        onClick={() => setOn(!on)}
+        disabled={disabled}
+        onClick={handleClick}
         className={cn(
           "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-          on ? "bg-primary" : "bg-muted",
+          isOn ? "bg-primary" : "bg-muted",
+          disabled && "cursor-not-allowed opacity-60",
         )}
       >
         <span
           className={cn(
             "absolute top-0.5 left-0.5 size-4 rounded-full bg-card transition-transform",
-            on && "translate-x-4",
+            isOn && "translate-x-4",
           )}
         />
       </button>
@@ -76,6 +102,37 @@ const themeOptions: { id: Theme; label: string; icon: typeof Sun }[] = [
 export default function Settings() {
   const [updateOpen, setUpdateOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>(getStoredTheme);
+  const [profile, setProfile] = useState<ApiProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSavingPreference, setIsSavingPreference] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    profilesApi
+      .me()
+      .then((p) => {
+        if (isMounted) {
+          setProfile(p);
+          setProfileError(null);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setProfileError(error instanceof Error ? error.message : "Failed to load profile.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingProfile(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     function handleStorage(event: StorageEvent) {
@@ -90,6 +147,25 @@ export default function Settings() {
   function handleThemeChange(next: Theme) {
     setTheme(next);
     applyTheme(next);
+  }
+
+  async function handleAutoRunMatchAnalysisChange(next: boolean) {
+    if (!profile) return;
+
+    const previous = profile;
+    setProfile({ ...profile, autoRunMatchAnalysis: next });
+    setIsSavingPreference(true);
+    setProfileError(null);
+
+    try {
+      const updated = await profilesApi.update(profile.id, { autoRunMatchAnalysis: next });
+      setProfile(updated);
+    } catch (error) {
+      setProfile(previous);
+      setProfileError(error instanceof Error ? error.message : "Failed to save preference.");
+    } finally {
+      setIsSavingPreference(false);
+    }
   }
 
   return (
@@ -117,9 +193,23 @@ export default function Settings() {
           <h2 className="text-sm font-semibold text-foreground">Account</h2>
         </div>
         <div className="grid grid-cols-1 gap-4 border-t border-border px-5 py-4 sm:grid-cols-2">
-          <Field label="Display name" defaultValue="User" />
-          <Field label="Email" type="email" defaultValue="user@email.com" />
+          <Field
+            label="Display name"
+            value={profile?.fullName ?? (isLoadingProfile ? "Loading..." : "")}
+            readOnly
+          />
+          <Field
+            label="Email"
+            type="email"
+            value={profile?.email ?? (isLoadingProfile ? "Loading..." : "")}
+            readOnly
+          />
         </div>
+        {profileError && (
+          <p className="border-t border-border px-5 py-3 text-sm text-destructive">
+            {profileError}
+          </p>
+        )}
       </Panel>
 
       <Panel>
@@ -129,18 +219,11 @@ export default function Settings() {
         </div>
         <div className="divide-y divide-border border-t border-border">
           <Toggle
-            defaultOn
+            checked={profile?.autoRunMatchAnalysis ?? true}
+            disabled={!profile || isSavingPreference}
             label="Auto-run match analysis"
             desc="Analyze every job posting as soon as it's added."
-          />
-          <Toggle
-            defaultOn
-            label="Auto-generate documents"
-            desc="Draft a CV and cover letter once analysis completes."
-          />
-          <Toggle
-            label="Save drafts before applying"
-            desc="Keep an editable copy of every generated document."
+            onChange={(checked) => void handleAutoRunMatchAnalysisChange(checked)}
           />
         </div>
       </Panel>

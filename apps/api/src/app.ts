@@ -84,6 +84,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     return profiles.createForUserId(user.id, {
       fullName: user.name || user.email,
       email: user.email,
+      autoRunMatchAnalysis: true,
       skills: [],
       experience: [],
       links: [],
@@ -151,6 +152,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       retryJobApplication: new RetryJobApplicationUseCase(jobApplications, storage),
       updateDocumentContent: new UpdateDocumentContentUseCase(jobApplications),
       jobApplications,
+      profiles,
       jobApplicationChanges: changeBus,
       queue,
       storage,

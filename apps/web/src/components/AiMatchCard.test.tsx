@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiDocumentContent } from "../api/types";
 import type { JobApplication } from "../types";
@@ -72,6 +72,99 @@ describe("AiMatchCard", () => {
     );
 
     expect(screen.queryByText("Useful links for missing skills")).not.toBeInTheDocument();
+  });
+
+  it("renders summary with the same actual and AI enhanced comparison labels as experience", () => {
+    render(
+      <AiMatchCard
+        aiMatch={createAiMatch()}
+        canCreateCv
+        documentContent={createDocumentContent()}
+        hasGeneratedDocuments={false}
+        isCreatingCv={false}
+        isSavingContent={false}
+        onCreateCv={vi.fn()}
+        onSaveContent={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Summary/ }));
+
+    expect(screen.getByText("Profile Summary")).toBeInTheDocument();
+    expect(screen.getByText("Actual Version")).toBeInTheDocument();
+    expect(screen.getByText("AI Enhanced Version")).toBeInTheDocument();
+    expect(screen.queryByText("Original Profile Summary")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tailored CV Summary")).not.toBeInTheDocument();
+  });
+
+  it("stores experience description selection for document generation", async () => {
+    const onSaveContent = vi.fn(async () => undefined);
+
+    render(
+      <AiMatchCard
+        aiMatch={{
+          ...createAiMatch(),
+          experienceOptimizations: [
+            {
+              title: "Frontend Engineer",
+              company: "Acme",
+              items: [
+                {
+                  actual: "Built accessible UI.",
+                  enhanced: "Built accessible React UI for product teams.",
+                  kind: "description",
+                },
+              ],
+            },
+          ],
+        }}
+        canCreateCv
+        documentContent={{
+          ...createDocumentContent(),
+          experienceEnhancements: [
+            {
+              experienceIndex: 0,
+              description: {
+                version: 1,
+                blocks: [
+                  {
+                    type: "paragraph",
+                    children: [{ type: "text", text: "Built accessible React UI." }],
+                  },
+                ],
+              },
+              achievements: [],
+            },
+          ],
+        }}
+        hasGeneratedDocuments={false}
+        isCreatingCv={false}
+        isSavingContent={false}
+        onCreateCv={vi.fn()}
+        onSaveContent={onSaveContent}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Experience/ }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Original" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: /Approval/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /I approve these CV changes./ }));
+    fireEvent.click(screen.getByRole("button", { name: "Create CV" }));
+
+    await waitFor(() => {
+      expect(onSaveContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          selections: expect.objectContaining({
+            experience: {
+              "0": {
+                description: "original",
+                achievements: {},
+              },
+            },
+          }),
+        }),
+      );
+    });
   });
 });
 

@@ -498,6 +498,10 @@ function formatProcessingStatus(status: string, failureReason?: string): string 
     return "Extracting LinkedIn details";
   }
 
+  if (status === "scraped") {
+    return "Ready for analysis";
+  }
+
   return status
     .split("_")
     .filter(Boolean)

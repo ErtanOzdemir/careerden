@@ -13,11 +13,13 @@ import type {
 import {
   calculateJobApplicationAnalytics,
   claimNextScrapeJob,
+  enqueueMatchAnalysisIfEnabled,
   failScrapeJob,
   getGeneratedDocumentDownloadUrl,
   getJobApplicationDetail,
   listJobApplicationsWithDocuments,
   renewScrapeClaim,
+  requestJobApplicationAnalysis,
   retryFailedJobApplication,
 } from "./job-applications.routes.js";
 
@@ -124,6 +126,80 @@ describe("job applications route behavior", () => {
 
     expect(retried).toBe(job);
     expect(queue.restart).toHaveBeenCalledWith({ jobApplicationId: job.id });
+  });
+
+  it("enqueues match analysis when the profile preference is enabled", async () => {
+    const queue = createJobApplicationQueue();
+    const jobApplications = createJobApplicationRepository();
+
+    await expect(
+      enqueueMatchAnalysisIfEnabled({
+        jobApplications,
+        queue,
+        jobApplicationId: "job-1",
+        autoRunMatchAnalysis: true,
+      }),
+    ).resolves.toBe(true);
+
+    expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: "job-1" });
+    expect(jobApplications.addEvent).not.toHaveBeenCalled();
+  });
+
+  it("leaves scraped jobs ready for manual analysis when the profile preference is disabled", async () => {
+    const queue = createJobApplicationQueue();
+    const jobApplications = createJobApplicationRepository({
+      addEvent: vi.fn(async () => createEvent({ jobApplicationId: "job-1" })),
+    });
+
+    await expect(
+      enqueueMatchAnalysisIfEnabled({
+        jobApplications,
+        queue,
+        jobApplicationId: "job-1",
+        autoRunMatchAnalysis: false,
+      }),
+    ).resolves.toBe(false);
+
+    expect(queue.enqueue).not.toHaveBeenCalled();
+    expect(jobApplications.addEvent).toHaveBeenCalledWith({
+      jobApplicationId: "job-1",
+      type: "processing",
+      title: "AI analysis skipped",
+      body: "Auto-run match analysis is disabled for this profile.",
+    });
+  });
+
+  it("queues manual analysis for a scraped job", async () => {
+    const job = createJobApplication({ id: "job-1", status: "scraped" });
+    const queue = createJobApplicationQueue();
+    const jobApplications = createJobApplicationRepository({
+      findById: vi.fn(async () => job),
+      getScrapeBundle: vi.fn(async () => ({
+        job: {
+          title: "Engineer",
+          companyName: "Acme",
+          description: "Build software",
+          requirements: [],
+          raw: {},
+        },
+      })),
+      addEvent: vi.fn(async () => createEvent({ jobApplicationId: job.id })),
+    });
+
+    await expect(
+      requestJobApplicationAnalysis({
+        jobApplications,
+        queue,
+        jobApplicationId: job.id,
+      }),
+    ).resolves.toBe(job);
+
+    expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: job.id });
+    expect(jobApplications.addEvent).toHaveBeenCalledWith({
+      jobApplicationId: job.id,
+      type: "processing",
+      title: "AI analysis requested",
+    });
   });
 
   it("does not restart the LLM queue when forcing a scraping retry", async () => {

@@ -101,6 +101,9 @@ importers:
       express:
         specifier: ^4.21.2
         version: 4.22.2
+      import-in-the-middle:
+        specifier: ^3.3.0
+        version: 3.3.0
       knex:
         specifier: ^3.1.0
         version: 3.2.10(pg@8.22.0)

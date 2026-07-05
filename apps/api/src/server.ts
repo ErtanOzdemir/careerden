@@ -1,8 +1,6 @@
 import { loadApiEnv } from "./env.js";
-import { setupTracing } from "./tracing.js";
-const env = loadApiEnv();
 
-setupTracing(env);
+const env = loadApiEnv();
 const { createApiRuntime } = await import("./app.js");
 const runtime = await createApiRuntime(env);
 

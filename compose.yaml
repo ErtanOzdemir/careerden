@@ -34,8 +34,23 @@ services:
     volumes:
       - rustfs-data:/data
       - rustfs-logs:/app/logs
+  openobserve:
+    image: openobserve/openobserve:latest
+    container_name: openobserve
+    restart: unless-stopped
+    ports:
+      - "5080:5080"
+    environment:
+      - ZO_ROOT_USER_EMAIL=admin@yopmail.com
+      - ZO_ROOT_USER_PASSWORD=StrongPassword123.
+      - ZO_DATA_DIR=/data
+      - ZO_COMPACT_DATA_RETENTION_DAYS=14
+      - ZO_COMPACT_INTERVAL=600
+    volumes:
+      - openobserve_data:/data
 
 volumes:
+  openobserve_data:
   postgres-data:
   redis-data:
   rustfs-data:

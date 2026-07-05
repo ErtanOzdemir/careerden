@@ -21,6 +21,8 @@ export const apiEnvSchema = z.object({
   RUSTFS_SECRET_ACCESS_KEY: z.string().min(1).default("rustfsadmin"),
   RUSTFS_REGION: z.string().min(1).default("us-east-1"),
   RUSTFS_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+  OPEN_OBSERVE_URL: z.string().url().default("http://localhost:5080"),
+  OPEN_OBSERVE_KEY: z.string().min(1),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

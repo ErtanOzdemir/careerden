@@ -1,12 +1,12 @@
 import { loadApiEnv } from "./env.js";
-import { createApiRuntime } from "./app.js";
-
+import { setupTracing } from "./tracing.js";
 const env = loadApiEnv();
+
+setupTracing(env);
+const { createApiRuntime } = await import("./app.js");
 const runtime = await createApiRuntime(env);
 
-const server = runtime.app.listen(env.PORT, () => {
-  console.log(`Link2CV API listening on http://localhost:${env.PORT}`);
-});
+const server = runtime.app.listen(env.PORT);
 
 async function shutdown() {
   server.close();

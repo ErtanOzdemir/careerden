@@ -32,8 +32,9 @@ import { requireSession } from "./auth/session.middleware.js";
 import type { AuthenticatedUser } from "./auth/session.middleware.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
-import { createProfileRouter } from "./profiles/profiles.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { traceIdMiddleware } from "./middleware/trace-id.middleware.js";
+import { createProfileRouter } from "./profiles/profiles.routes.js";
 
 export interface ApiRuntime {
   app: Express;
@@ -113,6 +114,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
 
   const app = express();
 
+  app.use(traceIdMiddleware);
   app.use(
     cors({
       credentials: true,

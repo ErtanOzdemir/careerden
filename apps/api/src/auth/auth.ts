@@ -1,14 +1,38 @@
 import { betterAuth } from "better-auth";
+import { emailOTP } from "better-auth/plugins";
 import { Pool } from "pg";
+import type { OtpEmailSender } from "./email-otp-mailer.js";
+
+type VerificationOtpType = "sign-in" | "email-verification" | "forget-password" | "change-email";
+
+interface VerificationOtpInput {
+  email: string;
+  otp: string;
+  type: VerificationOtpType;
+}
 
 export interface AuthConfig {
   baseUrl: string;
   databaseUrl: string;
+  otpEmailSender: OtpEmailSender;
   secret: string;
   trustedOrigins: string[];
 }
 
-export function createAuth(config: AuthConfig) {
+export interface Link2CvAuth {
+  handler: (request: Request) => Promise<Response>;
+  api: {
+    getSession(input: { headers: Headers }): Promise<{
+      user: {
+        id: string;
+        email: string;
+        name: string;
+      };
+    } | null>;
+  };
+}
+
+export function createAuth(config: AuthConfig): Link2CvAuth {
   return betterAuth({
     baseURL: config.baseUrl,
     basePath: "/auth",
@@ -19,9 +43,27 @@ export function createAuth(config: AuthConfig) {
     }),
     emailAndPassword: {
       enabled: true,
-      autoSignIn: true,
+      requireEmailVerification: true,
     },
+    emailVerification: {
+      autoSignInAfterVerification: true,
+      sendOnSignIn: true,
+    },
+    plugins: [
+      emailOTP({
+        overrideDefaultEmailVerification: true,
+        sendVerificationOTP: createRegistrationOtpHandler(config.otpEmailSender),
+      }),
+    ],
   });
 }
 
-export type Link2CvAuth = ReturnType<typeof createAuth>;
+export function createRegistrationOtpHandler(otpEmailSender: OtpEmailSender) {
+  return async function sendVerificationOTP({ email, otp, type }: VerificationOtpInput) {
+    if (type !== "email-verification") {
+      return;
+    }
+
+    await otpEmailSender.sendRegistrationOtp({ email, otp });
+  };
+}

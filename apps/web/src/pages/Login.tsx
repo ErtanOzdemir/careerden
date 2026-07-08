@@ -3,21 +3,34 @@ import type { FormEvent, ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authClient } from "../api/auth";
 import { Button } from "../components/ui/button.js";
-import { ArrowRight, BriefcaseBusiness, Eye, Link2, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BriefcaseBusiness,
+  Eye,
+  Link2,
+  RotateCw,
+  Sparkles,
+} from "lucide-react";
+
+type LoginStep = "credentials" | "otp";
 
 export default function Login() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
+  const [step, setStep] = useState<LoginStep>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   if (!isPending && session) {
     return <Navigate to="/" replace />;
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleCredentialsSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
     setError(null);
@@ -27,6 +40,11 @@ export default function Login() {
     setIsSubmitting(false);
 
     if (result.error) {
+      if (isEmailNotVerifiedError(result.error)) {
+        setStep("otp");
+        return;
+      }
+
       setError(result.error.message ?? "Could not sign in.");
       return;
     }
@@ -34,55 +52,160 @@ export default function Login() {
     navigate("/", { replace: true });
   }
 
+  async function handleOtpSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    const result = await authClient.emailOtp.verifyEmail({ email, otp });
+
+    setIsSubmitting(false);
+
+    if (result.error) {
+      setError(result.error.message ?? "Could not verify code.");
+      return;
+    }
+
+    navigate("/", { replace: true });
+  }
+
+  async function handleResendOtp() {
+    setIsResending(true);
+    setError(null);
+
+    const result = await authClient.emailOtp.sendVerificationOtp({
+      email,
+      type: "email-verification",
+    });
+
+    setIsResending(false);
+
+    if (result.error) {
+      setError(result.error.message ?? "Could not send a new code.");
+    }
+  }
+
+  function handleBackToCredentials() {
+    setStep("credentials");
+    setOtp("");
+    setError(null);
+  }
+
   return (
-    <AuthShell title="Get Started Now" subtitle="Sign in to your Link2CV workspace.">
-      <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
-        <AuthInput
-          label="Email address"
-          onChange={setEmail}
-          type="email"
-          value={email}
-          placeholder="workmail@gmail.com"
-        />
-        <AuthInput
-          label="Password"
-          onChange={setPassword}
-          type="password"
-          value={password}
-          placeholder="Enter your password"
-          trailing={<Eye className="size-4 text-muted-foreground" aria-hidden="true" />}
-        />
-        {error && (
-          <div className="rounded-lg border border-destructive/20 bg-danger-soft px-4 py-2.5 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-        <Button
-          className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-          size="lg"
-          type="submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Signing in..." : "Log in"}
-          <ArrowRight className="size-4" />
-        </Button>
-      </form>
-      <p className="mt-5 text-center text-sm text-muted-foreground">
-        No account?{" "}
-        <Link className="font-medium text-primary hover:underline" to="/signup">
-          Signup
-        </Link>
-      </p>
+    <AuthShell
+      headerAction={
+        step === "otp" ? (
+          <Button
+            aria-label="Change email"
+            className="mb-4 rounded-full"
+            size="icon"
+            type="button"
+            variant="ghost"
+            onClick={handleBackToCredentials}
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+        ) : undefined
+      }
+      title={step === "credentials" ? "Get Started Now" : "Verify Email"}
+      subtitle={
+        step === "credentials"
+          ? "Sign in to your Link2CV workspace."
+          : `Enter the code sent to ${email}.`
+      }
+    >
+      {step === "credentials" ? (
+        <form className="space-y-4" onSubmit={(event) => void handleCredentialsSubmit(event)}>
+          <AuthInput
+            label="Email address"
+            onChange={setEmail}
+            type="email"
+            value={email}
+            placeholder="workmail@gmail.com"
+          />
+          <AuthInput
+            label="Password"
+            onChange={setPassword}
+            type="password"
+            value={password}
+            placeholder="Enter your password"
+            trailing={<Eye className="size-4 text-muted-foreground" aria-hidden="true" />}
+          />
+          {error && (
+            <div className="rounded-lg border border-destructive/20 bg-danger-soft px-4 py-2.5 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          <Button
+            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            size="lg"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Signing in..." : "Log in"}
+            <ArrowRight className="size-4" />
+          </Button>
+        </form>
+      ) : (
+        <form className="space-y-4" onSubmit={(event) => void handleOtpSubmit(event)}>
+          <AuthInput
+            label="Verification code"
+            onChange={setOtp}
+            type="text"
+            value={otp}
+            placeholder="123456"
+          />
+          {error && (
+            <div className="rounded-lg border border-destructive/20 bg-danger-soft px-4 py-2.5 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          <Button
+            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            size="lg"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Verifying..." : "Verify email"}
+            <ArrowRight className="size-4" />
+          </Button>
+          <Button
+            className="w-full rounded-lg"
+            size="lg"
+            type="button"
+            variant="outline"
+            disabled={isResending}
+            onClick={() => void handleResendOtp()}
+          >
+            <RotateCw className="size-4" />
+            {isResending ? "Sending..." : "Send new code"}
+          </Button>
+        </form>
+      )}
+      {step === "credentials" && (
+        <p className="mt-5 text-center text-sm text-muted-foreground">
+          No account?{" "}
+          <Link className="font-medium text-primary hover:underline" to="/signup">
+            Signup
+          </Link>
+        </p>
+      )}
     </AuthShell>
   );
 }
 
+function isEmailNotVerifiedError(error: { code?: string; message?: string }) {
+  return error.code === "EMAIL_NOT_VERIFIED" || error.message === "Email not verified";
+}
+
 export function AuthShell({
   children,
+  headerAction,
   subtitle,
   title,
 }: {
   children: ReactNode;
+  headerAction?: ReactNode;
   subtitle: string;
   title: string;
 }) {
@@ -149,6 +272,7 @@ export function AuthShell({
               </div>
             </div>
             <div className="mb-7">
+              {headerAction}
               <h1 className="text-3xl font-semibold tracking-normal text-foreground dark:text-white">
                 {title}
               </h1>

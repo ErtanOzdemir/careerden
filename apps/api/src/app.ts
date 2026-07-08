@@ -30,6 +30,7 @@ import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";
 import type { AuthenticatedUser } from "./auth/session.middleware.js";
+import { createSmtpOtpEmailSender } from "./auth/email-otp-mailer.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -49,6 +50,11 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const auth = createAuth({
     baseUrl: env.BETTER_AUTH_URL,
     databaseUrl: env.DATABASE_URL,
+    otpEmailSender: createSmtpOtpEmailSender({
+      from: env.SMTP_FROM,
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+    }),
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
   });

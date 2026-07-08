@@ -31,7 +31,6 @@ describe("errorHandler", () => {
       error: "Something failed",
     });
   });
-
 });
 
 function createResponse(): Response {

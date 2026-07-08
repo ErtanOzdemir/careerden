@@ -43,6 +43,11 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
     };
   }
 
+  async isAuthenticated(): Promise<boolean> {
+    const cookies = await this.options.getCookies();
+    return cookies.some((cookie) => isSessionCookie(cookie.name));
+  }
+
   async submitScrapeData(
     jobApplicationId: string,
     input: { sourceUrl: string; scrapeBundle: ScrapeBundle },
@@ -108,4 +113,9 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
     const cookies = await this.options.getCookies();
     return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
   }
+}
+
+function isSessionCookie(name: string): boolean {
+  const normalized = name.replace(/^__(Secure|Host)-/, "");
+  return normalized === "session_token" || /(^|[.-])session_token$/.test(normalized);
 }

@@ -24,7 +24,7 @@ describe("DesktopApiClient", () => {
       apiBaseUrl: "http://127.0.0.1:3000",
       claimedBy: "desktop-a",
       getCookies: vi.fn(async () => [
-        { name: "link2cv.session", value: "api-cookie" },
+        { name: "better-auth.session_token", value: "api-cookie" },
         { name: "other", value: "other-cookie" },
       ]),
     });
@@ -37,10 +37,33 @@ describe("DesktopApiClient", () => {
       body: JSON.stringify({ claimedBy: "desktop-a" }),
       headers: {
         "Content-Type": "application/json",
-        Cookie: "link2cv.session=api-cookie; other=other-cookie",
+        Cookie: "better-auth.session_token=api-cookie; other=other-cookie",
       },
       method: "POST",
     });
+  });
+
+  it("detects Better Auth session cookies for authenticated desktop polling", async () => {
+    const client = new DesktopApiClient({
+      apiBaseUrl: "http://127.0.0.1:3000",
+      claimedBy: "desktop-a",
+      getCookies: vi.fn(async () => [
+        { name: "__Secure-better-auth.session_token", value: "api-cookie" },
+        { name: "other", value: "other-cookie" },
+      ]),
+    });
+
+    await expect(client.isAuthenticated()).resolves.toBe(true);
+  });
+
+  it("treats missing Better Auth session cookies as unauthenticated", async () => {
+    const client = new DesktopApiClient({
+      apiBaseUrl: "http://127.0.0.1:3000",
+      claimedBy: "desktop-a",
+      getCookies: vi.fn(async () => [{ name: "other", value: "other-cookie" }]),
+    });
+
+    await expect(client.isAuthenticated()).resolves.toBe(false);
   });
 
   it("submits scrape data with the desktop claim owner", async () => {

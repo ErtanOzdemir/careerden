@@ -4,6 +4,20 @@ import { LocalScrapingWorker } from "./local-scraping-worker.js";
 import type { DesktopScrapingApiClient, LinkedInScrapingRunner } from "./local-scraping-worker.js";
 
 describe("LocalScrapingWorker", () => {
+  it("waits without claiming scrape tasks when the desktop app is unauthenticated", async () => {
+    const api = createApiClient({
+      isAuthenticated: vi.fn(async () => false),
+    });
+    const runner = createRunner();
+    const worker = new LocalScrapingWorker({ api, runner });
+
+    await worker.runOnce();
+
+    expect(api.isAuthenticated).toHaveBeenCalledOnce();
+    expect(api.claimNextScrapeJob).not.toHaveBeenCalled();
+    expect(runner.scrape).not.toHaveBeenCalled();
+  });
+
   it("does nothing when there is no claimed scrape task", async () => {
     const api = createApiClient({
       claimNextScrapeJob: vi.fn(async () => null),
@@ -166,10 +180,45 @@ describe("LocalScrapingWorker", () => {
 
     const first = worker.runOnce();
     const second = worker.runOnce();
+    await vi.waitFor(() => expect(api.claimNextScrapeJob).toHaveBeenCalledOnce());
     resolveClaim(null);
     await Promise.all([first, second]);
 
     expect(api.claimNextScrapeJob).toHaveBeenCalledOnce();
+  });
+
+  it("does not log expected unauthenticated scheduler failures", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const api = createApiClient({
+      claimNextScrapeJob: vi.fn(async () => {
+        throw new Error("API request failed with status 401");
+      }),
+    });
+    const worker = new LocalScrapingWorker({ api, runner: createRunner(), intervalMs: 1 });
+
+    worker.start();
+    await delay(5);
+    worker.stop();
+
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("does not log expected API startup connection failures", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const api = createApiClient({
+      claimNextScrapeJob: vi.fn(async () => {
+        throw new TypeError("fetch failed");
+      }),
+    });
+    const worker = new LocalScrapingWorker({ api, runner: createRunner(), intervalMs: 1 });
+
+    worker.start();
+    await delay(5);
+    worker.stop();
+
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it("logs claim failures instead of rejecting from the scheduler", async () => {
@@ -196,6 +245,7 @@ function createApiClient(
   return {
     claimNextScrapeJob: vi.fn(async () => null),
     failScrapeJob: vi.fn(async () => undefined),
+    isAuthenticated: vi.fn(async () => true),
     renewScrapeClaim: vi.fn(async () => undefined),
     submitScrapeData: vi.fn(async () => undefined),
     ...overrides,

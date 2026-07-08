@@ -8,6 +8,7 @@ export interface ClaimedScrapeJob {
 export interface DesktopScrapingApiClient {
   claimNextScrapeJob(): Promise<ClaimedScrapeJob | null>;
   failScrapeJob(jobApplicationId: string, reason: string): Promise<void>;
+  isAuthenticated(): Promise<boolean>;
   renewScrapeClaim(jobApplicationId: string): Promise<void>;
   submitScrapeData(
     jobApplicationId: string,
@@ -60,6 +61,10 @@ export class LocalScrapingWorker {
     this.isRunning = true;
 
     try {
+      if (!(await this.dependencies.api.isAuthenticated())) {
+        return;
+      }
+
       await this.drainQueue();
     } finally {
       this.isRunning = false;
@@ -80,6 +85,10 @@ export class LocalScrapingWorker {
 
   private runWithCatch(): void {
     void this.runOnce().catch((error) => {
+      if (isExpectedStartupError(error)) {
+        return;
+      }
+
       console.error("Local scraping worker failed", error);
     });
   }
@@ -122,4 +131,16 @@ export class LocalScrapingWorker {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown LinkedIn scraping error";
+}
+
+function isExpectedStartupError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message === "fetch failed" ||
+    error.message === "API request failed with status 401" ||
+    error.message === "API request failed with status 503"
+  );
 }

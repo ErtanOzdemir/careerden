@@ -26,12 +26,12 @@ describe("AuthShell", () => {
     expect(screen.getByTestId("auth-wave-brand")).toHaveClass("h-24", "items-end", "pb-4");
     expect(screen.getByTestId("auth-form-shell")).toHaveClass("[-webkit-app-region:no-drag]");
     expect(screen.getByTestId("auth-page-shell")).toHaveClass(
-      "bg-background",
+      "bg-sidebar",
       "p-2",
       "[-webkit-app-region:drag]",
     );
     expect(screen.getByTestId("auth-card-shell")).toHaveClass(
-      "bg-background",
+      "bg-sidebar",
       "max-w-none",
       "min-h-[calc(100vh-1rem)]",
       "rounded-none",

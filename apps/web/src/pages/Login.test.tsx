@@ -103,6 +103,20 @@ describe("Login", () => {
     });
   });
 
+  it("toggles the password visibility control", () => {
+    authMocks.useSession.mockReturnValue({ data: null, isPending: false });
+
+    renderLogin();
+
+    fillLoginForm();
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByRole("button", { name: /show password/i }));
+
+    expect(screen.getByLabelText("Password")).toHaveAttribute("type", "text");
+    expect(screen.getByRole("button", { name: /hide password/i })).toBeInTheDocument();
+  });
+
   it("returns from the OTP step so the user can correct the email address", async () => {
     authMocks.useSession.mockReturnValue({ data: null, isPending: false });
     authMocks.signInEmail.mockResolvedValue({

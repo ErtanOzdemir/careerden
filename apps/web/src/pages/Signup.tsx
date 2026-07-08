@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authClient } from "../api/auth";
 import { AuthInput, AuthShell } from "./Login";
 import { Button } from "../components/ui/button.js";
-import { ArrowLeft, ArrowRight, Eye, RotateCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, RotateCw } from "lucide-react";
 
 type SignupStep = "details" | "otp";
 
@@ -15,6 +15,7 @@ export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,6 +81,10 @@ export default function Signup() {
     setError(null);
   }
 
+  function togglePasswordVisibility() {
+    setIsPasswordVisible((value) => !value);
+  }
+
   return (
     <AuthShell
       headerAction={
@@ -120,10 +125,25 @@ export default function Signup() {
           <AuthInput
             label="Password"
             onChange={setPassword}
-            type="password"
+            type={isPasswordVisible ? "text" : "password"}
             value={password}
             placeholder="Create a password"
-            trailing={<Eye className="size-4 text-muted-foreground" aria-hidden="true" />}
+            trailing={
+              <Button
+                aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                className="size-8 rounded-full"
+                size="icon"
+                type="button"
+                variant="ghost"
+                onClick={togglePasswordVisibility}
+              >
+                {isPasswordVisible ? (
+                  <EyeOff className="size-4 text-muted-foreground" aria-hidden="true" />
+                ) : (
+                  <Eye className="size-4 text-muted-foreground" aria-hidden="true" />
+                )}
+              </Button>
+            }
           />
           {error && (
             <div className="rounded-lg border border-destructive/20 bg-danger-soft px-4 py-2.5 text-sm text-destructive">
@@ -131,7 +151,7 @@ export default function Signup() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -155,7 +175,7 @@ export default function Signup() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -164,7 +184,7 @@ export default function Signup() {
             <ArrowRight className="size-4" />
           </Button>
           <Button
-            className="w-full rounded-lg"
+            className="w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="button"
             variant="outline"

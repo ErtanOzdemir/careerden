@@ -2,12 +2,14 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authClient } from "../api/auth";
+import { cn } from "../lib/utils.js";
 import { Button } from "../components/ui/button.js";
 import {
   ArrowLeft,
   ArrowRight,
   BriefcaseBusiness,
   Eye,
+  EyeOff,
   Link2,
   RotateCw,
   Sparkles,
@@ -21,6 +23,7 @@ export default function Login() {
   const [step, setStep] = useState<LoginStep>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,6 +94,10 @@ export default function Login() {
     setError(null);
   }
 
+  function togglePasswordVisibility() {
+    setIsPasswordVisible((value) => !value);
+  }
+
   return (
     <AuthShell
       headerAction={
@@ -126,10 +133,25 @@ export default function Login() {
           <AuthInput
             label="Password"
             onChange={setPassword}
-            type="password"
+            type={isPasswordVisible ? "text" : "password"}
             value={password}
             placeholder="Enter your password"
-            trailing={<Eye className="size-4 text-muted-foreground" aria-hidden="true" />}
+            trailing={
+              <Button
+                aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                className="size-8 rounded-full"
+                size="icon"
+                type="button"
+                variant="ghost"
+                onClick={togglePasswordVisibility}
+              >
+                {isPasswordVisible ? (
+                  <EyeOff className="size-4 text-muted-foreground" aria-hidden="true" />
+                ) : (
+                  <Eye className="size-4 text-muted-foreground" aria-hidden="true" />
+                )}
+              </Button>
+            }
           />
           {error && (
             <div className="rounded-lg border border-destructive/20 bg-danger-soft px-4 py-2.5 text-sm text-destructive">
@@ -137,7 +159,7 @@ export default function Login() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -161,7 +183,7 @@ export default function Login() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -170,7 +192,7 @@ export default function Login() {
             <ArrowRight className="size-4" />
           </Button>
           <Button
-            className="w-full rounded-lg"
+            className="w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="button"
             variant="outline"
@@ -212,11 +234,11 @@ export function AuthShell({
   return (
     <main
       data-testid="auth-page-shell"
-      className="flex min-h-screen bg-background p-2 text-foreground [-webkit-app-region:drag] sm:p-3"
+      className="flex min-h-screen bg-sidebar p-2 text-foreground [-webkit-app-region:drag] sm:p-3"
     >
       <section
         data-testid="auth-card-shell"
-        className="grid min-h-[calc(100vh-1rem)] w-full max-w-none overflow-hidden rounded-none bg-background shadow-none sm:min-h-[calc(100vh-1.5rem)] md:grid-cols-[1.08fr_1fr]"
+        className="grid min-h-[calc(100vh-1rem)] w-full max-w-none overflow-hidden rounded-none bg-sidebar shadow-none sm:min-h-[calc(100vh-1.5rem)] md:grid-cols-[1.08fr_1fr]"
       >
         <div
           data-testid="auth-wave-panel"
@@ -301,12 +323,15 @@ export function AuthInput({
   placeholder?: string;
   trailing?: ReactNode;
 }) {
+  const inputClass =
+    "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20";
+
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-foreground">{label}</span>
       <span className="relative block">
         <input
-          className="h-11 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-black focus:ring-3 focus:ring-black/10 dark:border-white/15 dark:bg-black dark:text-white dark:focus:border-white dark:focus:ring-white/10"
+          className={cn(inputClass, trailing ? "pr-12" : undefined)}
           onChange={(event) => onChange(event.target.value)}
           required
           type={type}
@@ -314,9 +339,7 @@ export function AuthInput({
           placeholder={placeholder}
         />
         {trailing && (
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            {trailing}
-          </span>
+          <span className="absolute inset-y-0 right-3 flex items-center">{trailing}</span>
         )}
       </span>
     </label>

@@ -14,11 +14,14 @@ import {
 } from "@link2cv/application";
 import {
   BullMqJobApplicationQueue,
+  BullMqFollowUpReminderQueue,
   DocxtemplaterTemplateRenderer,
   HtmlTemplateRenderer,
   HttpRemoteImageFetcher,
   PlaywrightPdfRenderer,
+  PostgresFollowUpReminderRepository,
   PostgresJobApplicationRepository,
+  PostgresNotificationRepository,
   PostgresUserProfileRepository,
   PublishingJobApplicationRepository,
   RedisJobApplicationChangeBus,
@@ -35,6 +38,7 @@ import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { traceIdMiddleware } from "./middleware/trace-id.middleware.js";
+import { createNotificationRouter } from "./notifications/notifications.routes.js";
 import { createProfileRouter } from "./profiles/profiles.routes.js";
 
 export interface ApiRuntime {
@@ -61,8 +65,11 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const innerJobApplications = new PostgresJobApplicationRepository(db);
   const jobApplications = new PublishingJobApplicationRepository(innerJobApplications, changeBus);
+  const notifications = new PostgresNotificationRepository(db);
+  const followUpReminders = new PostgresFollowUpReminderRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
   const queue = BullMqJobApplicationQueue.create(env.REDIS_URL);
+  const followUpReminderQueue = BullMqFollowUpReminderQueue.create(env.REDIS_URL);
   const storage = new RustFsStorage({
     accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
     bucket: env.RUSTFS_BUCKET,
@@ -92,6 +99,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       fullName: user.name || user.email,
       email: user.email,
       autoRunMatchAnalysis: true,
+      followUpRemindersEnabled: true,
       skills: [],
       experience: [],
       links: [],
@@ -163,11 +171,20 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       profiles,
       jobApplicationChanges: changeBus,
       queue,
+      followUpReminderQueue,
+      followUpReminders,
       storage,
       remoteImages: remoteImageFetcher,
       getProfileForUser,
       canAccessProfile,
       canAccessJobApplication,
+    }),
+  );
+  app.use(
+    "/notifications",
+    createNotificationRouter({
+      notifications,
+      getProfileForUser,
     }),
   );
   app.use(errorHandler);
@@ -177,6 +194,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     db,
     close: async () => {
       await queue.close();
+      await followUpReminderQueue.close();
       await changeBus.close();
       await db.destroy();
     },

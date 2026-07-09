@@ -5,13 +5,14 @@ import type {
   ApiJobApplicationAnalytics,
   ApiJobApplicationDetail,
   ApiJobApplicationEvent,
-  ApiJobApplicationInterview,
+  ApiJobApplicationFollowUp,
   ApiMatchAnalysis,
   ApiProfile,
 } from "./types";
 import type {
   ApplicationStatus,
   DashboardStats,
+  FollowUp,
   JobApplication,
   Priority,
   ProcessingLogItem,
@@ -96,15 +97,15 @@ export function mapApiJobApplicationToUi(
     description: scrapeJob?.description,
     descriptionHtml: scrapeJob?.descriptionHtml,
     requirements: scrapeJob?.requirements,
-    timeline: detail ? mapTimeline(detail.interviews) : undefined,
+    timeline: mapTimeline(application),
     processingStatus: application.status,
     processingStatusLabel: formatProcessingStatus(application.status, application.failureReason),
     processingFailureReason: application.failureReason,
     processingLog: detail ? mapProcessingLog(detail.events) : undefined,
     sourceUrl: application.sourceUrl,
+    followUps: detail?.followUps.map(mapFollowUp),
     matchScore: application.matchScore ?? detail?.matchAnalysis?.matchScore,
     metadata: application.tracking.metadata,
-    interviewNotes: stringFromMetadata(application.tracking.metadata, "interviewNotes"),
     contacts: detail?.contacts.map((contact) => ({
       email: contact.email,
       initials: getInitials(contact.name),
@@ -268,22 +269,10 @@ export function mapApiDashboardStats(
   };
 }
 
-function mapTimeline(interviews: ApiJobApplicationInterview[]): TimelineMilestone[] {
-  const interviewMilestones = interviews.map((interview) => ({
-    milestone: {
-      id: interview.id,
-      title: interview.title,
-      description: interview.prepNotes ?? interview.notes ?? interview.type ?? "Interview",
-      date: formatShortDate(interview.scheduledAt),
-      status: interview.status,
-      type: interview.type,
-    } satisfies TimelineMilestone,
-    timestamp: Date.parse(interview.scheduledAt),
-  }));
-
-  return interviewMilestones
-    .sort((left, right) => left.timestamp - right.timestamp)
-    .map((item) => item.milestone);
+function mapTimeline(
+  _application: ApiJobApplication | ApiJobApplicationDetail,
+): TimelineMilestone[] {
+  return [];
 }
 
 function mapProcessingLog(events: ApiJobApplicationEvent[]): ProcessingLogItem[] {
@@ -306,18 +295,22 @@ function mapProcessingLog(events: ApiJobApplicationEvent[]): ProcessingLogItem[]
 function mapUpcomingInterviews(details: ApiJobApplicationDetail[]): UpcomingInterview[] {
   return details
     .flatMap((application) =>
-      application.interviews
-        .filter((interview) => interview.status === "upcoming")
-        .map((interview) => ({
-          interview,
+      (application.followUps ?? [])
+        .filter((followUp) => !followUp.reminderSentAt)
+        .map((followUp) => ({
+          followUp,
           application,
-          scheduledAt: new Date(interview.scheduledAt),
         })),
     )
+    .map(({ followUp, application }) => ({
+      scheduledAt: new Date(followUp.scheduledAt),
+      followUp,
+      application,
+    }))
     .filter((item) => !Number.isNaN(item.scheduledAt.getTime()))
     .sort((left, right) => left.scheduledAt.getTime() - right.scheduledAt.getTime())
     .slice(0, 5)
-    .map(({ application, interview, scheduledAt }) => ({
+    .map(({ scheduledAt, followUp, application }) => ({
       month: scheduledAt.toLocaleString(undefined, { month: "short" }),
       day: scheduledAt.getDate(),
       time: scheduledAt.toLocaleTimeString(undefined, {
@@ -328,10 +321,21 @@ function mapUpcomingInterviews(details: ApiJobApplicationDetail[]): UpcomingInte
         application.tracking.companyName ??
         application.scrapeBundle?.job.companyName ??
         "Unknown company",
-      role: interview.title,
-      meetType: "video_call",
-      meetLabel: interview.type ?? "Interview",
+      role: followUp.title,
+      meetType: "follow_up",
+      meetLabel: "Follow-up",
     }));
+}
+
+function mapFollowUp(followUp: ApiJobApplicationFollowUp): FollowUp {
+  return {
+    id: followUp.id,
+    title: followUp.title,
+    description: followUp.description,
+    scheduledAt: followUp.scheduledAt,
+    reminderSentAt: followUp.reminderSentAt,
+    createdAt: followUp.createdAt,
+  };
 }
 
 function mapMatchAnalysis(
@@ -459,7 +463,7 @@ function mapRequirementMatches(
 function isJobApplicationDetail(
   application: ApiJobApplication | ApiJobApplicationDetail,
 ): application is ApiJobApplicationDetail {
-  return "events" in application && "contacts" in application && "interviews" in application;
+  return "events" in application && "contacts" in application;
 }
 
 function formatDate(value: string): string {
@@ -507,11 +511,6 @@ function formatProcessingStatus(status: string, failureReason?: string): string 
     .filter(Boolean)
     .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
     .join(" ");
-}
-
-function stringFromMetadata(metadata: Record<string, unknown>, key: string): string | undefined {
-  const value = metadata[key];
-  return typeof value === "string" ? value : undefined;
 }
 
 function formatRelativeDate(value: string): string {

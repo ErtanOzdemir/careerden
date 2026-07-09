@@ -11,16 +11,18 @@ import type {
   ApplicationStatus,
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
-  CreateJobApplicationInterviewInput,
   CreateJobApplicationInput,
   JobApplication,
   JobApplicationContact,
   JobApplicationEvent,
-  JobApplicationInterview,
   UpdateJobApplicationContactInput,
-  UpdateJobApplicationInterviewInput,
   UpdateJobApplicationTrackingInput,
 } from "./job-application.js";
+import type {
+  CreateJobApplicationFollowUpInput,
+  JobApplicationFollowUp,
+  UpdateJobApplicationFollowUpInput,
+} from "./job-application-follow-up.js";
 import type { JobApplicationStatus } from "./workflow-status.js";
 
 export interface AttachGeneratedDocumentInput {
@@ -105,14 +107,14 @@ export interface JobApplicationRepository {
     input: UpdateJobApplicationContactInput,
   ): Promise<JobApplicationContact>;
   deleteContact(id: string): Promise<void>;
-  createInterview(input: CreateJobApplicationInterviewInput): Promise<JobApplicationInterview>;
-  findInterviewById(id: string): Promise<JobApplicationInterview | null>;
-  listInterviews(jobApplicationId: string): Promise<JobApplicationInterview[]>;
-  updateInterview(
+  createFollowUp(input: CreateJobApplicationFollowUpInput): Promise<JobApplicationFollowUp>;
+  findFollowUpById(id: string): Promise<JobApplicationFollowUp | null>;
+  listFollowUps(jobApplicationId: string): Promise<JobApplicationFollowUp[]>;
+  updateFollowUp(
     id: string,
-    input: UpdateJobApplicationInterviewInput,
-  ): Promise<JobApplicationInterview>;
-  deleteInterview(id: string): Promise<void>;
+    input: UpdateJobApplicationFollowUpInput,
+  ): Promise<JobApplicationFollowUp>;
+  deleteFollowUp(id: string): Promise<void>;
   attachGeneratedDocument(input: AttachGeneratedDocumentInput): Promise<GeneratedDocument>;
   listGeneratedDocuments(jobApplicationId: string): Promise<GeneratedDocument[]>;
 }

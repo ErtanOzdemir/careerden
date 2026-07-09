@@ -28,6 +28,7 @@ export const createProfileSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   autoRunMatchAnalysis: z.boolean().default(true),
+  followUpRemindersEnabled: z.boolean().default(true),
   profession: z.string().optional(),
   headline: z.string().optional(),
   location: z.string().optional(),

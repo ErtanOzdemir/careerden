@@ -3,19 +3,19 @@ import type {
   ClaimNextScrapeJobInput,
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
-  CreateJobApplicationInterviewInput,
+  CreateJobApplicationFollowUpInput,
   DocumentContent,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
   JobApplicationEvent,
-  JobApplicationInterview,
+  JobApplicationFollowUp,
   JobApplicationRepository,
   ListJobApplicationsFilter,
   MatchAnalysisResult,
   ScrapeBundle,
   UpdateJobApplicationContactInput,
-  UpdateJobApplicationInterviewInput,
+  UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
 } from "@link2cv/domain";
 import type { CreateJobApplicationInput } from "@link2cv/domain";
@@ -30,7 +30,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   private readonly documents = new Map<string, GeneratedDocument[]>();
   private readonly events = new Map<string, JobApplicationEvent[]>();
   private readonly contacts = new Map<string, JobApplicationContact[]>();
-  private readonly interviews = new Map<string, JobApplicationInterview[]>();
+  private readonly followUps = new Map<string, JobApplicationFollowUp[]>();
 
   async create(input: CreateJobApplicationInput): Promise<JobApplication> {
     const now = new Date();
@@ -49,7 +49,6 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
         applicationStatus: input.applicationStatus ?? "applied",
         priority: input.priority ?? "medium",
         tags: input.tags ?? [],
-        nextFollowUpAt: input.nextFollowUpAt,
         lastResponseAt: input.lastResponseAt,
         metadata: input.metadata ?? {},
       },
@@ -164,7 +163,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     this.documents.delete(id);
     this.events.delete(id);
     this.contacts.delete(id);
-    this.interviews.delete(id);
+    this.followUps.delete(id);
   }
 
   async listByProfileId(
@@ -268,10 +267,6 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       tracking: {
         ...existing.tracking,
         ...input,
-        nextFollowUpAt:
-          input.nextFollowUpAt === undefined
-            ? existing.tracking.nextFollowUpAt
-            : (input.nextFollowUpAt ?? undefined),
         lastResponseAt:
           input.lastResponseAt === undefined
             ? existing.tracking.lastResponseAt
@@ -426,79 +421,72 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     );
   }
 
-  async createInterview(
-    input: CreateJobApplicationInterviewInput,
-  ): Promise<JobApplicationInterview> {
-    const interview: JobApplicationInterview = {
+  async createFollowUp(input: CreateJobApplicationFollowUpInput): Promise<JobApplicationFollowUp> {
+    const followUp: JobApplicationFollowUp = {
       id: randomUUID(),
       jobApplicationId: input.jobApplicationId,
+      profileId: input.profileId,
       title: input.title,
-      type: input.type,
+      description: input.description,
       scheduledAt: input.scheduledAt,
-      status: input.status ?? "upcoming",
-      notes: input.notes,
-      prepNotes: input.prepNotes,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const current = this.interviews.get(input.jobApplicationId) ?? [];
+    const current = this.followUps.get(input.jobApplicationId) ?? [];
 
-    this.interviews.set(input.jobApplicationId, [...current, interview]);
-    return interview;
+    this.followUps.set(input.jobApplicationId, [...current, followUp]);
+    return followUp;
   }
 
-  async findInterviewById(id: string): Promise<JobApplicationInterview | null> {
-    return [...this.interviews.values()].flat().find((interview) => interview.id === id) ?? null;
+  async findFollowUpById(id: string): Promise<JobApplicationFollowUp | null> {
+    return [...this.followUps.values()].flat().find((followUp) => followUp.id === id) ?? null;
   }
 
-  async listInterviews(jobApplicationId: string): Promise<JobApplicationInterview[]> {
-    return [...(this.interviews.get(jobApplicationId) ?? [])].sort(
-      (left, right) =>
-        left.scheduledAt.getTime() - right.scheduledAt.getTime() ||
-        left.createdAt.getTime() - right.createdAt.getTime(),
+  async listFollowUps(jobApplicationId: string): Promise<JobApplicationFollowUp[]> {
+    return [...(this.followUps.get(jobApplicationId) ?? [])].sort(
+      (left, right) => left.scheduledAt.getTime() - right.scheduledAt.getTime(),
     );
   }
 
-  async updateInterview(
+  async updateFollowUp(
     id: string,
-    input: UpdateJobApplicationInterviewInput,
-  ): Promise<JobApplicationInterview> {
-    const existing = await this.findInterviewById(id);
+    input: UpdateJobApplicationFollowUpInput,
+  ): Promise<JobApplicationFollowUp> {
+    const existing = await this.findFollowUpById(id);
 
     if (!existing) {
-      throw new Error(`Job application interview ${id} was not found`);
+      throw new Error(`Job application follow-up ${id} was not found`);
     }
 
-    const updated: JobApplicationInterview = {
+    const updated: JobApplicationFollowUp = {
       ...existing,
-      ...input,
-      type: input.type === undefined ? existing.type : (input.type ?? undefined),
-      notes: input.notes === undefined ? existing.notes : (input.notes ?? undefined),
-      prepNotes:
-        input.prepNotes === undefined ? existing.prepNotes : (input.prepNotes ?? undefined),
+      title: input.title ?? existing.title,
+      description:
+        input.description === undefined ? existing.description : (input.description ?? undefined),
+      scheduledAt: input.scheduledAt ?? existing.scheduledAt,
       updatedAt: new Date(),
     };
 
-    this.interviews.set(
+    this.followUps.set(
       existing.jobApplicationId,
-      (this.interviews.get(existing.jobApplicationId) ?? []).map((interview) =>
-        interview.id === id ? updated : interview,
+      (this.followUps.get(existing.jobApplicationId) ?? []).map((followUp) =>
+        followUp.id === id ? updated : followUp,
       ),
     );
     return updated;
   }
 
-  async deleteInterview(id: string): Promise<void> {
-    const existing = await this.findInterviewById(id);
+  async deleteFollowUp(id: string): Promise<void> {
+    const existing = await this.findFollowUpById(id);
 
     if (!existing) {
       return;
     }
 
-    this.interviews.set(
+    this.followUps.set(
       existing.jobApplicationId,
-      (this.interviews.get(existing.jobApplicationId) ?? []).filter(
-        (interview) => interview.id !== id,
+      (this.followUps.get(existing.jobApplicationId) ?? []).filter(
+        (followUp) => followUp.id !== id,
       ),
     );
   }

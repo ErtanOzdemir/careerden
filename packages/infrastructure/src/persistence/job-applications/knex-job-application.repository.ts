@@ -4,19 +4,19 @@ import type {
   ClaimNextScrapeJobInput,
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
-  CreateJobApplicationInterviewInput,
+  CreateJobApplicationFollowUpInput,
   DocumentContent,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
   JobApplicationEvent,
-  JobApplicationInterview,
+  JobApplicationFollowUp,
   JobApplicationRepository,
   ListJobApplicationsFilter,
   MatchAnalysisResult,
   ScrapeBundle,
   UpdateJobApplicationContactInput,
-  UpdateJobApplicationInterviewInput,
+  UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
 } from "@link2cv/domain";
 import type { CreateJobApplicationInput, JobApplicationStatus } from "@link2cv/domain";
@@ -26,7 +26,7 @@ import {
   toJobApplication,
   toJobApplicationContact,
   toJobApplicationEvent,
-  toJobApplicationInterview,
+  toJobApplicationFollowUp,
 } from "../mappers.js";
 
 export class KnexJobApplicationRepository implements JobApplicationRepository {
@@ -48,7 +48,6 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         application_status: input.applicationStatus ?? "applied",
         priority: input.priority ?? "medium",
         tags: JSON.stringify(input.tags ?? []),
-        next_follow_up_at: input.nextFollowUpAt ?? null,
         last_response_at: input.lastResponseAt ?? null,
         metadata: JSON.stringify(input.metadata ?? {}),
         scrape_attempt_count: 0,
@@ -185,8 +184,8 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async deleteById(id: string): Promise<void> {
     await this.db.transaction(async (transaction) => {
       await transaction("generated_documents").where({ job_application_id: id }).delete();
-      await transaction("job_application_interviews").where({ job_application_id: id }).delete();
       await transaction("job_application_contacts").where({ job_application_id: id }).delete();
+      await transaction("job_application_follow_ups").where({ job_application_id: id }).delete();
       await transaction("job_application_events").where({ job_application_id: id }).delete();
       await transaction("job_applications").where({ id }).delete();
     });
@@ -296,7 +295,6 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     if ("applicationStatus" in input) update.application_status = input.applicationStatus;
     if ("priority" in input) update.priority = input.priority;
     if ("tags" in input) update.tags = JSON.stringify(input.tags ?? []);
-    if ("nextFollowUpAt" in input) update.next_follow_up_at = input.nextFollowUpAt ?? null;
     if ("lastResponseAt" in input) update.last_response_at = input.lastResponseAt ?? null;
     if ("metadata" in input) update.metadata = JSON.stringify(input.metadata ?? {});
 
@@ -475,69 +473,61 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     await this.db("job_application_contacts").where({ id }).delete();
   }
 
-  async createInterview(
-    input: CreateJobApplicationInterviewInput,
-  ): Promise<JobApplicationInterview> {
+  async createFollowUp(input: CreateJobApplicationFollowUpInput): Promise<JobApplicationFollowUp> {
     const id = randomUUID();
-    const [row] = await this.db("job_application_interviews")
+    const [row] = await this.db("job_application_follow_ups")
       .insert({
         id,
         job_application_id: input.jobApplicationId,
+        profile_id: input.profileId,
         title: input.title,
-        type: input.type ?? null,
+        description: input.description ?? null,
         scheduled_at: input.scheduledAt,
-        status: input.status ?? "upcoming",
-        notes: input.notes ?? null,
-        prep_notes: input.prepNotes ?? null,
       })
       .returning("*");
 
-    return toJobApplicationInterview(row);
+    return toJobApplicationFollowUp(row);
   }
 
-  async findInterviewById(id: string): Promise<JobApplicationInterview | null> {
-    const row = await this.db("job_application_interviews").where({ id }).first();
-    return row ? toJobApplicationInterview(row) : null;
+  async findFollowUpById(id: string): Promise<JobApplicationFollowUp | null> {
+    const row = await this.db("job_application_follow_ups").where({ id }).first();
+    return row ? toJobApplicationFollowUp(row) : null;
   }
 
-  async listInterviews(jobApplicationId: string): Promise<JobApplicationInterview[]> {
-    const rows = await this.db("job_application_interviews")
+  async listFollowUps(jobApplicationId: string): Promise<JobApplicationFollowUp[]> {
+    const rows = await this.db("job_application_follow_ups")
       .where({ job_application_id: jobApplicationId })
-      .orderBy("scheduled_at", "asc")
-      .orderBy("created_at", "asc");
+      .orderBy("scheduled_at", "asc");
 
-    return rows.map(toJobApplicationInterview);
+    return rows.map(toJobApplicationFollowUp);
   }
 
-  async updateInterview(
+  async updateFollowUp(
     id: string,
-    input: UpdateJobApplicationInterviewInput,
-  ): Promise<JobApplicationInterview> {
+    input: UpdateJobApplicationFollowUpInput,
+  ): Promise<JobApplicationFollowUp> {
     const update: Record<string, unknown> = {
       updated_at: this.db.fn.now(),
     };
 
     if ("title" in input) update.title = input.title;
-    if ("type" in input) update.type = input.type ?? null;
+    if ("description" in input) update.description = input.description ?? null;
     if ("scheduledAt" in input) update.scheduled_at = input.scheduledAt;
-    if ("status" in input) update.status = input.status;
-    if ("notes" in input) update.notes = input.notes ?? null;
-    if ("prepNotes" in input) update.prep_notes = input.prepNotes ?? null;
 
-    const [row] = await this.db("job_application_interviews")
+    const [row] = await this.db("job_application_follow_ups")
       .where({ id })
       .update(update)
       .returning("*");
 
     if (!row) {
-      throw new Error(`Job application interview ${id} was not found`);
+      throw new Error(`Job application follow-up ${id} was not found`);
     }
 
-    return toJobApplicationInterview(row);
+    return toJobApplicationFollowUp(row);
   }
 
-  async deleteInterview(id: string): Promise<void> {
-    await this.db("job_application_interviews").where({ id }).delete();
+  async deleteFollowUp(id: string): Promise<void> {
+    await this.db("job_application_follow_ups").where({ id }).delete();
   }
 
   async attachGeneratedDocument(input: AttachGeneratedDocumentInput): Promise<GeneratedDocument> {

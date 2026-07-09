@@ -73,4 +73,16 @@ describe("Topbar", () => {
       "[-webkit-app-region:no-drag]",
     );
   });
+
+  it("closes the notifications dropdown when clicking outside it", () => {
+    render(<Topbar title="Dashboard" subtitle="Overview" onAddJob={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Notifications" }));
+
+    expect(screen.getByText("Notifications")).toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+
+    expect(screen.queryByText("Notifications")).not.toBeInTheDocument();
+  });
 });

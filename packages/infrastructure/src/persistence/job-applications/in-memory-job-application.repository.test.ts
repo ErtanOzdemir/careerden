@@ -215,10 +215,11 @@ describe("InMemoryJobApplicationRepository", () => {
       jobApplicationId: job.id,
       name: "Sarah Hughes",
     });
-    await repository.createInterview({
+    await repository.createFollowUp({
       jobApplicationId: job.id,
-      title: "Recruiter Call",
-      scheduledAt: new Date("2026-06-20T12:00:00.000Z"),
+      profileId: "profile-1",
+      title: "Follow up next week",
+      scheduledAt: new Date("2026-07-15T09:00:00.000Z"),
     });
     await repository.attachGeneratedDocument({
       jobApplicationId: job.id,
@@ -234,7 +235,7 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(await repository.findById(job.id)).toBeNull();
     expect(await repository.listEvents(job.id)).toEqual([]);
     expect(await repository.listContacts(job.id)).toEqual([]);
-    expect(await repository.listInterviews(job.id)).toEqual([]);
+    expect(await repository.listFollowUps(job.id)).toEqual([]);
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
   });
 
@@ -264,49 +265,6 @@ describe("InMemoryJobApplicationRepository", () => {
     await repository.deleteContact(contact.id);
 
     expect(await repository.listContacts(job.id)).toEqual([]);
-  });
-
-  it("manages interviews sorted by scheduled time", async () => {
-    const repository = new InMemoryJobApplicationRepository();
-    const job = await repository.create({
-      profileId: "profile-1",
-      companyName: "Stripe",
-      roleTitle: "Senior Product Designer",
-    });
-
-    const later = await repository.createInterview({
-      jobApplicationId: job.id,
-      title: "Portfolio Review",
-      scheduledAt: new Date("2026-06-24T12:00:00.000Z"),
-      type: "Technical",
-      prepNotes: "Review checkout flow redesign",
-    });
-    const earlier = await repository.createInterview({
-      jobApplicationId: job.id,
-      title: "Recruiter Call",
-      scheduledAt: new Date("2026-06-20T12:00:00.000Z"),
-      status: "completed",
-      notes: "Discussed salary expectations",
-    });
-
-    expect((await repository.listInterviews(job.id)).map((interview) => interview.id)).toEqual([
-      earlier.id,
-      later.id,
-    ]);
-
-    const updated = await repository.updateInterview(later.id, {
-      status: "cancelled",
-      prepNotes: null,
-    });
-
-    expect(updated.status).toBe("cancelled");
-    expect(updated.prepNotes).toBeUndefined();
-
-    await repository.deleteInterview(earlier.id);
-
-    expect((await repository.listInterviews(job.id)).map((interview) => interview.id)).toEqual([
-      later.id,
-    ]);
   });
 
   it("overwrites generated documents of the same kind and format per job application", async () => {
@@ -345,6 +303,35 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(second.id).toBe(first.id);
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([second, docx]);
     expect(second.fileId).toBe("files/regenerated-cv.pdf");
+  });
+
+  it("manages follow-ups for a job application", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      companyName: "Stripe",
+      roleTitle: "Senior Product Designer",
+    });
+
+    const followUp = await repository.createFollowUp({
+      jobApplicationId: job.id,
+      profileId: "profile-1",
+      title: "Send thank-you email",
+      description: "Follow up after the phone screen.",
+      scheduledAt: new Date("2026-07-15T09:00:00.000Z"),
+    });
+    const updated = await repository.updateFollowUp(followUp.id, {
+      title: "Check on application status",
+      description: null,
+    });
+
+    expect(updated.title).toBe("Check on application status");
+    expect(updated.description).toBeUndefined();
+    expect(await repository.listFollowUps(job.id)).toEqual([updated]);
+
+    await repository.deleteFollowUp(followUp.id);
+
+    expect(await repository.listFollowUps(job.id)).toEqual([]);
   });
 });
 

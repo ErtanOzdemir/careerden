@@ -168,6 +168,25 @@ export default function Settings() {
     }
   }
 
+  async function handleFollowUpRemindersChange(next: boolean) {
+    if (!profile) return;
+
+    const previous = profile;
+    setProfile({ ...profile, followUpRemindersEnabled: next });
+    setIsSavingPreference(true);
+    setProfileError(null);
+
+    try {
+      const updated = await profilesApi.update(profile.id, { followUpRemindersEnabled: next });
+      setProfile(updated);
+    } catch (error) {
+      setProfile(previous);
+      setProfileError(error instanceof Error ? error.message : "Failed to save preference.");
+    } finally {
+      setIsSavingPreference(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Panel className="flex flex-col gap-4 border-info/20 bg-info-soft/40 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -235,9 +254,11 @@ export default function Settings() {
         </div>
         <div className="divide-y divide-border border-t border-border">
           <Toggle
-            defaultOn
+            checked={profile?.followUpRemindersEnabled ?? true}
+            disabled={!profile || isSavingPreference}
             label="Follow-up reminders"
-            desc="Gentle nudges before each scheduled follow-up."
+            desc="Automatically notify you 10 minutes before each scheduled follow-up."
+            onChange={(checked) => void handleFollowUpRemindersChange(checked)}
           />
           <Toggle label="Weekly summary" desc="A calm recap of your job search every Monday." />
         </div>

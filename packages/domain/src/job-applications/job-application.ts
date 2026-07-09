@@ -13,7 +13,6 @@ export interface JobApplicationTrackingFields {
   applicationStatus: ApplicationStatus;
   priority: ApplicationPriority;
   tags: string[];
-  nextFollowUpAt?: Date;
   lastResponseAt?: Date;
   metadata: Record<string, unknown>;
 }
@@ -43,7 +42,6 @@ export interface CreateJobApplicationInput extends Partial<
     | "applicationStatus"
     | "priority"
     | "tags"
-    | "nextFollowUpAt"
     | "lastResponseAt"
     | "metadata"
   >
@@ -62,7 +60,6 @@ export interface UpdateJobApplicationTrackingInput {
   applicationStatus?: ApplicationStatus;
   priority?: ApplicationPriority;
   tags?: string[];
-  nextFollowUpAt?: Date | null;
   lastResponseAt?: Date | null;
   metadata?: Record<string, unknown>;
 }
@@ -73,7 +70,6 @@ export type JobApplicationEventType =
   | "note"
   | "comment"
   | "reminder"
-  | "interview"
   | "processing";
 
 export interface JobApplicationEvent {
@@ -126,38 +122,4 @@ export interface UpdateJobApplicationContactInput {
   phone?: string | null;
   linkedInUrl?: string | null;
   notes?: string | null;
-}
-
-export type JobApplicationInterviewStatus = "upcoming" | "completed" | "cancelled";
-
-export interface JobApplicationInterview {
-  id: string;
-  jobApplicationId: string;
-  title: string;
-  type?: string;
-  scheduledAt: Date;
-  status: JobApplicationInterviewStatus;
-  notes?: string;
-  prepNotes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateJobApplicationInterviewInput {
-  jobApplicationId: string;
-  title: string;
-  type?: string;
-  scheduledAt: Date;
-  status?: JobApplicationInterviewStatus;
-  notes?: string;
-  prepNotes?: string;
-}
-
-export interface UpdateJobApplicationInterviewInput {
-  title?: string;
-  type?: string | null;
-  scheduledAt?: Date;
-  status?: JobApplicationInterviewStatus;
-  notes?: string | null;
-  prepNotes?: string | null;
 }

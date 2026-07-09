@@ -6,7 +6,7 @@ import type {
   JobApplication,
   JobApplicationContact,
   JobApplicationEvent,
-  JobApplicationInterview,
+  JobApplicationFollowUp,
   JobApplicationQueue,
   JobApplicationRepository,
 } from "@link2cv/domain";
@@ -250,11 +250,11 @@ describe("job applications route behavior", () => {
     expect(result.averageTimeToResponseDays).toBe(3);
   });
 
-  it("includes contacts and interviews in the detail response", async () => {
+  it("includes contacts, events, and follow-ups in the detail response", async () => {
     const job = createJobApplication({ id: "job-1" });
     const contact = createContact({ jobApplicationId: job.id });
-    const interview = createInterview({ jobApplicationId: job.id });
-    const event = createEvent({ jobApplicationId: job.id, title: "Interview scheduled" });
+    const event = createEvent({ jobApplicationId: job.id, title: "Follow-up scheduled" });
+    const followUp = createFollowUp({ jobApplicationId: job.id });
     const jobApplications = createJobApplicationRepository({
       getDocumentContent: vi.fn(
         async () =>
@@ -272,8 +272,8 @@ describe("job applications route behavior", () => {
           }) satisfies DocumentContent,
       ),
       listContacts: vi.fn(async () => [contact]),
-      listInterviews: vi.fn(async () => [interview]),
       listEvents: vi.fn(async () => [event]),
+      listFollowUps: vi.fn(async () => [followUp]),
       listGeneratedDocuments: vi.fn(async () => []),
       getScrapeBundle: vi.fn(async () => ({
         job: {
@@ -304,8 +304,8 @@ describe("job applications route behavior", () => {
     });
 
     expect(detail.contacts).toEqual([contact]);
-    expect(detail.interviews).toEqual([interview]);
     expect(detail.events).toEqual([event]);
+    expect(detail.followUps).toEqual([followUp]);
     expect(detail.companyLogoUrl).toBe("http://localhost:9000/signed-logo");
     expect(detail.scrapeBundle?.companyLinkedIn).toEqual({ name: "Acme", raw: {} });
     expect(detail.documentContent?.customizedSummary.blocks).toHaveLength(1);
@@ -458,11 +458,11 @@ function createJobApplicationRepository(
     listContacts: vi.fn(async () => []),
     updateContact: vi.fn(),
     deleteContact: vi.fn(),
-    createInterview: vi.fn(),
-    findInterviewById: vi.fn(),
-    listInterviews: vi.fn(async () => []),
-    updateInterview: vi.fn(),
-    deleteInterview: vi.fn(),
+    listFollowUps: vi.fn(async () => []),
+    createFollowUp: vi.fn(),
+    findFollowUpById: vi.fn(),
+    updateFollowUp: vi.fn(),
+    deleteFollowUp: vi.fn(),
     attachGeneratedDocument: vi.fn(),
     listGeneratedDocuments: vi.fn(async () => []),
     ...overrides,
@@ -532,7 +532,7 @@ function createEvent(overrides: Partial<JobApplicationEvent> = {}): JobApplicati
   return {
     id: "event-1",
     jobApplicationId: "job-1",
-    type: "interview",
+    type: "reminder",
     title: "Event",
     occurredAt: new Date("2026-06-20T09:00:00.000Z"),
     metadata: {},
@@ -553,19 +553,16 @@ function createContact(overrides: Partial<JobApplicationContact> = {}): JobAppli
   };
 }
 
-function createInterview(
-  overrides: Partial<JobApplicationInterview> = {},
-): JobApplicationInterview {
+function createFollowUp(overrides: Partial<JobApplicationFollowUp> = {}): JobApplicationFollowUp {
   return {
-    id: "interview-1",
+    id: "follow-up-1",
     jobApplicationId: "job-1",
-    title: "Technical Portfolio Review",
-    type: "Technical",
-    scheduledAt: new Date("2026-06-24T12:00:00.000Z"),
-    status: "upcoming",
-    prepNotes: "Review checkout flow redesign",
-    createdAt: new Date("2026-06-20T09:00:00.000Z"),
-    updatedAt: new Date("2026-06-20T09:00:00.000Z"),
+    profileId: "profile-1",
+    title: "Send thank-you email",
+    description: "Follow up after the phone screen.",
+    scheduledAt: new Date("2026-07-15T09:00:00.000Z"),
+    createdAt: new Date("2026-07-08T09:00:00.000Z"),
+    updatedAt: new Date("2026-07-08T09:00:00.000Z"),
     ...overrides,
   };
 }

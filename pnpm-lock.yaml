@@ -234,6 +234,37 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@24.13.2)(jsdom@29.1.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)
 
+  apps/notifications-worker:
+    dependencies:
+      '@link2cv/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@link2cv/infrastructure':
+        specifier: workspace:*
+        version: link:../../packages/infrastructure
+      bullmq:
+        specifier: ^5.64.1
+        version: 5.79.1
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
+      knex:
+        specifier: ^3.1.0
+        version: 3.2.10(pg@8.22.0)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@24.13.2)(jsdom@29.1.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)
+
   apps/web:
     dependencies:
       '@base-ui/react':
@@ -427,6 +458,9 @@ importers:
       knex:
         specifier: ^3.1.0
         version: 3.2.10(pg@8.22.0)
+      nodemailer:
+        specifier: ^9.0.3
+        version: 9.0.3
       pg:
         specifier: ^8.16.3
         version: 8.22.0
@@ -440,6 +474,9 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
+      '@types/nodemailer':
+        specifier: ^8.0.1
+        version: 8.0.1
       '@types/pg':
         specifier: ^8.15.6
         version: 8.20.0
@@ -8350,14 +8387,6 @@ snapshots:
     optionalDependencies:
       vite: 5.4.21(@types/node@22.19.21)(lightningcss@1.32.0)
 
-  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@24.13.2)(lightningcss@1.32.0))':
-    dependencies:
-      '@vitest/spy': 2.1.9
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 5.4.21(@types/node@24.13.2)(lightningcss@1.32.0)
-
   '@vitest/pretty-format@2.1.9':
     dependencies:
       tinyrainbow: 1.2.0
@@ -11267,7 +11296,7 @@ snapshots:
   vitest@2.1.9(@types/node@24.13.2)(jsdom@29.1.1(@noble/hashes@2.2.0))(lightningcss@1.32.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@24.13.2)(lightningcss@1.32.0))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.21)(lightningcss@1.32.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

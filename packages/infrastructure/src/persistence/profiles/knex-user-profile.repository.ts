@@ -23,6 +23,7 @@ export class KnexUserProfileRepository implements UserProfileRepository {
         full_name: input.fullName,
         email: input.email,
         auto_run_match_analysis: input.autoRunMatchAnalysis ?? true,
+        follow_up_reminders_enabled: input.followUpRemindersEnabled ?? true,
         profession: input.profession ?? null,
         headline: input.headline ?? null,
         location: input.location ?? null,
@@ -53,6 +54,9 @@ export class KnexUserProfileRepository implements UserProfileRepository {
     if (input.email !== undefined) patch.email = input.email;
     if (input.autoRunMatchAnalysis !== undefined) {
       patch.auto_run_match_analysis = input.autoRunMatchAnalysis;
+    }
+    if (input.followUpRemindersEnabled !== undefined) {
+      patch.follow_up_reminders_enabled = input.followUpRemindersEnabled;
     }
     if (input.profession !== undefined) patch.profession = input.profession ?? null;
     if (input.headline !== undefined) patch.headline = input.headline ?? null;

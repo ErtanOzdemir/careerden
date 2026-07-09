@@ -41,10 +41,12 @@ describe("API mappers", () => {
         role: "Recruiter",
       },
     ]);
-    expect(mapped.timeline?.map((item) => item.title)).toEqual(["Technical screen"]);
+    expect(mapped.timeline).toEqual([]);
     expect(mapped.processingStatusLabel).toBe("Completed");
     expect(mapped.processingLog?.map((item) => item.title)).toEqual(["Scraping started"]);
-    expect(mapped.interviewNotes).toBe("Ask about the product roadmap.");
+    expect(mapped.followUps).toHaveLength(1);
+    expect(mapped.followUps?.[0]?.title).toBe("Send thank-you email");
+    expect(mapped.followUps?.[0]?.description).toBe("Ask about the product roadmap.");
     expect(mapped.aiMatch?.score).toBe(82);
     expect(mapped.aiMatch?.keywords).toContainEqual({ keyword: "React", match: true });
     expect(mapped.aiMatch?.keywords).toContainEqual({ keyword: "Node.js", match: false });
@@ -221,18 +223,6 @@ function createApplicationDetail(): ApiJobApplicationDetail {
     ],
     companyLogoUrl: "http://localhost:9000/signed-logo",
     id: "job-1",
-    interviews: [
-      {
-        createdAt: "2026-06-02T00:00:00.000Z",
-        id: "interview-1",
-        jobApplicationId: "job-1",
-        scheduledAt: "2026-06-03T13:30:00.000Z",
-        status: "upcoming",
-        title: "Technical screen",
-        type: "Video",
-        updatedAt: "2026-06-02T00:00:00.000Z",
-      },
-    ],
     matchAnalysis: {
       customizedSummary: "Frontend engineer focused on React.",
       interviewTips: ["Prepare React examples."],
@@ -285,11 +275,23 @@ function createApplicationDetail(): ApiJobApplicationDetail {
       applicationStatus: "interview",
       companyName: "Acme",
       dateApplied: "2026-06-01",
-      metadata: { interviewNotes: "Ask about the product roadmap." },
+      metadata: {},
       priority: "high",
       roleTitle: "Frontend Engineer",
       tags: ["Remote"],
     },
+    followUps: [
+      {
+        id: "follow-up-1",
+        jobApplicationId: "job-1",
+        profileId: "profile-1",
+        title: "Send thank-you email",
+        description: "Ask about the product roadmap.",
+        scheduledAt: "2026-06-03T13:30:00.000Z",
+        createdAt: "2026-06-01T00:00:00.000Z",
+        updatedAt: "2026-06-01T00:00:00.000Z",
+      },
+    ],
     updatedAt: "2026-06-02T00:00:00.000Z",
   };
 }

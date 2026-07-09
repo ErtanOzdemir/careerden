@@ -9,7 +9,6 @@ export interface ApiJobApplicationTracking {
   jobUrl?: string;
   lastResponseAt?: string;
   metadata: Record<string, unknown>;
-  nextFollowUpAt?: string;
   priority: ApiApplicationPriority;
   roleTitle?: string;
   roleType?: string;
@@ -161,16 +160,17 @@ export interface ApiJobApplicationContact {
   updatedAt: string;
 }
 
-export interface ApiJobApplicationInterview {
+export interface ApiJobApplicationFollowUp {
   createdAt: string;
+  description?: string;
   id: string;
   jobApplicationId: string;
-  notes?: string;
-  prepNotes?: string;
+  profileId: string;
+  reminderJobId?: string;
+  reminderScheduledFor?: string;
+  reminderSentAt?: string;
   scheduledAt: string;
-  status: "cancelled" | "completed" | "upcoming";
   title: string;
-  type?: string;
   updatedAt: string;
 }
 
@@ -328,7 +328,7 @@ export interface ApiDocumentContent {
 export interface ApiJobApplicationDetail extends ApiJobApplication {
   contacts: ApiJobApplicationContact[];
   events: ApiJobApplicationEvent[];
-  interviews: ApiJobApplicationInterview[];
+  followUps: ApiJobApplicationFollowUp[];
   matchAnalysis: ApiMatchAnalysis | null;
   documentContent: ApiDocumentContent | null;
   scrapeBundle: ApiScrapeBundle | null;
@@ -371,6 +371,7 @@ export interface ApiProfileProject {
 
 export interface ApiProfile {
   autoRunMatchAnalysis: boolean;
+  followUpRemindersEnabled: boolean;
   certifications: string[];
   createdAt: string;
   education: ApiProfileEducation[];
@@ -392,6 +393,7 @@ export type ApiUpdateProfilePayload = Partial<
   Pick<
     ApiProfile,
     | "autoRunMatchAnalysis"
+    | "followUpRemindersEnabled"
     | "certifications"
     | "education"
     | "email"
@@ -406,6 +408,17 @@ export type ApiUpdateProfilePayload = Partial<
     | "summary"
   >
 >;
+
+export interface ApiNotification {
+  body?: string;
+  createdAt: string;
+  id: string;
+  jobApplicationId?: string;
+  profileId: string;
+  readAt?: string;
+  title: string;
+  type: "follow_up_reminder";
+}
 
 export type ApiLinkedInSessionStatus = "connected" | "expired" | "login_in_progress" | "missing";
 

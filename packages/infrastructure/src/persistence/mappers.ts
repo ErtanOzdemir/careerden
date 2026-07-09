@@ -6,8 +6,9 @@ import type {
   JobApplication,
   JobApplicationContact,
   JobApplicationEvent,
-  JobApplicationInterview,
+  JobApplicationFollowUp,
   JobApplicationStatus,
+  Notification,
   ProfileEducation,
   ProfileExperience,
   ProfileProject,
@@ -38,7 +39,6 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
       priority: (nullableString(row.priority) ??
         "medium") as JobApplication["tracking"]["priority"],
       tags: stringArray(row.tags),
-      nextFollowUpAt: nullableDate(row.next_follow_up_at),
       lastResponseAt: nullableDate(row.last_response_at),
       metadata: record(row.metadata),
     },
@@ -86,16 +86,17 @@ export function toJobApplicationContact(row: Record<string, unknown>): JobApplic
   };
 }
 
-export function toJobApplicationInterview(row: Record<string, unknown>): JobApplicationInterview {
+export function toJobApplicationFollowUp(row: Record<string, unknown>): JobApplicationFollowUp {
   return {
     id: String(row.id),
     jobApplicationId: String(row.job_application_id),
+    profileId: String(row.profile_id),
     title: String(row.title),
-    type: nullableString(row.type),
+    description: nullableString(row.description),
     scheduledAt: new Date(String(row.scheduled_at)),
-    status: row.status as JobApplicationInterview["status"],
-    notes: nullableString(row.notes),
-    prepNotes: nullableString(row.prep_notes),
+    reminderJobId: nullableString(row.reminder_job_id),
+    reminderScheduledFor: nullableDate(row.reminder_scheduled_for),
+    reminderSentAt: nullableDate(row.reminder_sent_at),
     createdAt: new Date(String(row.created_at)),
     updatedAt: new Date(String(row.updated_at)),
   };
@@ -107,6 +108,7 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     fullName: String(row.full_name),
     email: String(row.email),
     autoRunMatchAnalysis: Boolean(row.auto_run_match_analysis ?? true),
+    followUpRemindersEnabled: Boolean(row.follow_up_reminders_enabled ?? true),
     profession: nullableString(row.profession),
     headline: nullableString(row.headline),
     location: nullableString(row.location),
@@ -119,6 +121,19 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     projects: jsonArray<ProfileProject>(row.projects),
     createdAt: new Date(String(row.created_at)),
     updatedAt: new Date(String(row.updated_at)),
+  };
+}
+
+export function toNotification(row: Record<string, unknown>): Notification {
+  return {
+    id: String(row.id),
+    profileId: String(row.profile_id),
+    jobApplicationId: nullableString(row.job_application_id),
+    type: row.type as Notification["type"],
+    title: String(row.title),
+    body: nullableString(row.body),
+    readAt: nullableDate(row.read_at),
+    createdAt: new Date(String(row.created_at)),
   };
 }
 

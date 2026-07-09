@@ -20,6 +20,7 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
       id: randomUUID(),
       ...input,
       autoRunMatchAnalysis: input.autoRunMatchAnalysis ?? true,
+      followUpRemindersEnabled: input.followUpRemindersEnabled ?? true,
       links: input.links ?? [],
       education: input.education ?? [],
       certifications: input.certifications ?? [],

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   claimScrapeJobSchema,
   createJobApplicationContactSchema,
-  createJobApplicationInterviewSchema,
+  createJobApplicationFollowUpSchema,
   createJobApplicationSchema,
   updateJobApplicationContactSchema,
-  updateJobApplicationInterviewSchema,
+  updateJobApplicationFollowUpSchema,
   updateJobApplicationSchema,
   scrapeBundleSchema,
 } from "./job-application.schema.js";
@@ -48,11 +48,9 @@ describe("job application schemas", () => {
       applicationStatus: "interview",
       priority: "high",
       tags: ["Remote", "Dream Job"],
-      nextFollowUpAt: "2026-06-20T09:00:00.000Z",
     });
 
     expect(result.applicationStatus).toBe("interview");
-    expect(result.nextFollowUpAt).toEqual(new Date("2026-06-20T09:00:00.000Z"));
   });
 
   it("accepts contact payloads for key contacts", () => {
@@ -72,23 +70,6 @@ describe("job application schemas", () => {
     expect(updated.role).toBeNull();
   });
 
-  it("accepts interview timeline payloads and defaults status to upcoming", () => {
-    const created = createJobApplicationInterviewSchema.parse({
-      title: "Technical Portfolio Review",
-      type: "Technical",
-      scheduledAt: "2026-06-24T12:00:00.000Z",
-      prepNotes: "Review checkout flow redesign",
-    });
-    const updated = updateJobApplicationInterviewSchema.parse({
-      status: "completed",
-      notes: "Focused on design systems",
-    });
-
-    expect(created.status).toBe("upcoming");
-    expect(created.scheduledAt).toEqual(new Date("2026-06-24T12:00:00.000Z"));
-    expect(updated.status).toBe("completed");
-  });
-
   it("accepts sanitized scraped job description HTML as optional display data", () => {
     const result = scrapeBundleSchema.parse({
       job: {
@@ -102,5 +83,23 @@ describe("job application schemas", () => {
     });
 
     expect(result.job.descriptionHtml).toBe("<p>Build <strong>TypeScript</strong> services.</p>");
+  });
+
+  it("accepts follow-up payloads with title, description, and scheduled date", () => {
+    const created = createJobApplicationFollowUpSchema.parse({
+      title: "Send thank-you email",
+      description: "Follow up after the phone screen.",
+      scheduledAt: "2026-07-15T09:00:00.000Z",
+    });
+    const updated = updateJobApplicationFollowUpSchema.parse({
+      title: "Check on application status",
+      description: null,
+      scheduledAt: "2026-07-20T14:00:00.000Z",
+    });
+
+    expect(created.title).toBe("Send thank-you email");
+    expect(created.scheduledAt).toEqual(new Date("2026-07-15T09:00:00.000Z"));
+    expect(updated.description).toBeNull();
+    expect(updated.scheduledAt).toEqual(new Date("2026-07-20T14:00:00.000Z"));
   });
 });

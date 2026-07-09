@@ -27,6 +27,7 @@ export interface UserProfile {
   fullName: string;
   email: string;
   autoRunMatchAnalysis: boolean;
+  followUpRemindersEnabled: boolean;
   profession?: string;
   headline?: string;
   location?: string;
@@ -47,6 +48,7 @@ export type CreateUserProfileInput = Omit<
   | "createdAt"
   | "updatedAt"
   | "autoRunMatchAnalysis"
+  | "followUpRemindersEnabled"
   | "education"
   | "certifications"
   | "projects"
@@ -55,7 +57,12 @@ export type CreateUserProfileInput = Omit<
   Partial<
     Pick<
       UserProfile,
-      "autoRunMatchAnalysis" | "education" | "certifications" | "projects" | "links"
+      | "autoRunMatchAnalysis"
+      | "followUpRemindersEnabled"
+      | "education"
+      | "certifications"
+      | "projects"
+      | "links"
     >
   >;
 

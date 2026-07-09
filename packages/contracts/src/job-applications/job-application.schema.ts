@@ -33,7 +33,6 @@ export const createJobApplicationSchema = z
     applicationStatus: applicationStatusSchema.default("applied"),
     priority: applicationPrioritySchema.default("medium"),
     tags: tagsSchema,
-    nextFollowUpAt: z.coerce.date().optional(),
     lastResponseAt: z.coerce.date().optional(),
     metadata: metadataSchema,
   })
@@ -107,9 +106,20 @@ export const updateJobApplicationSchema = z.object({
   applicationStatus: applicationStatusSchema.optional(),
   priority: applicationPrioritySchema.optional(),
   tags: z.array(z.string().min(1)).optional(),
-  nextFollowUpAt: z.coerce.date().nullable().optional(),
   lastResponseAt: z.coerce.date().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const createJobApplicationFollowUpSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1).optional(),
+  scheduledAt: z.coerce.date(),
+});
+
+export const updateJobApplicationFollowUpSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().min(1).nullable().optional(),
+  scheduledAt: z.coerce.date().optional(),
 });
 
 export const jobApplicationEventTypeSchema = z.enum([
@@ -118,7 +128,6 @@ export const jobApplicationEventTypeSchema = z.enum([
   "note",
   "comment",
   "reminder",
-  "interview",
   "processing",
 ]);
 
@@ -146,26 +155,6 @@ export const updateJobApplicationContactSchema = z.object({
   phone: z.string().min(1).nullable().optional(),
   linkedInUrl: z.string().url().nullable().optional(),
   notes: z.string().min(1).nullable().optional(),
-});
-
-export const jobApplicationInterviewStatusSchema = z.enum(["upcoming", "completed", "cancelled"]);
-
-export const createJobApplicationInterviewSchema = z.object({
-  title: z.string().min(1),
-  type: z.string().min(1).optional(),
-  scheduledAt: z.coerce.date(),
-  status: jobApplicationInterviewStatusSchema.default("upcoming"),
-  notes: z.string().min(1).optional(),
-  prepNotes: z.string().min(1).optional(),
-});
-
-export const updateJobApplicationInterviewSchema = z.object({
-  title: z.string().min(1).optional(),
-  type: z.string().min(1).nullable().optional(),
-  scheduledAt: z.coerce.date().optional(),
-  status: jobApplicationInterviewStatusSchema.optional(),
-  notes: z.string().min(1).nullable().optional(),
-  prepNotes: z.string().min(1).nullable().optional(),
 });
 
 export const listJobApplicationsQuerySchema = z.object({
@@ -238,11 +227,11 @@ export type CreateJobApplicationFromScrapeDto = z.infer<
   typeof createJobApplicationFromScrapeSchema
 >;
 export type UpdateJobApplicationDto = z.infer<typeof updateJobApplicationSchema>;
+export type CreateJobApplicationFollowUpDto = z.infer<typeof createJobApplicationFollowUpSchema>;
+export type UpdateJobApplicationFollowUpDto = z.infer<typeof updateJobApplicationFollowUpSchema>;
 export type CreateJobApplicationEventDto = z.infer<typeof createJobApplicationEventSchema>;
 export type CreateJobApplicationContactDto = z.infer<typeof createJobApplicationContactSchema>;
 export type UpdateJobApplicationContactDto = z.infer<typeof updateJobApplicationContactSchema>;
-export type CreateJobApplicationInterviewDto = z.infer<typeof createJobApplicationInterviewSchema>;
-export type UpdateJobApplicationInterviewDto = z.infer<typeof updateJobApplicationInterviewSchema>;
 export type ListJobApplicationsQueryDto = z.infer<typeof listJobApplicationsQuerySchema>;
 export type ClaimScrapeJobDto = z.infer<typeof claimScrapeJobSchema>;
 export type FailScrapeJobDto = z.infer<typeof failScrapeJobSchema>;

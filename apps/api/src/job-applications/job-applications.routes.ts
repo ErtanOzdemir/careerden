@@ -11,12 +11,14 @@ import type {
 } from "@link2cv/application";
 import type {
   FileStorage,
+  FollowUpReminderQueue,
+  FollowUpReminderRepository,
   DocumentContent,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
   JobApplicationEvent,
-  JobApplicationInterview,
+  JobApplicationFollowUp,
   JobApplicationChangeSubscriber,
   JobApplicationQueue,
   JobApplicationRepository,
@@ -27,12 +29,13 @@ import type {
   UserProfileRepository,
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
+import { getFollowUpReminderScheduledFor } from "@link2cv/infrastructure";
 import {
   createJobApplicationFromScrapeSchema,
   claimScrapeJobSchema,
   createJobApplicationContactSchema,
   createJobApplicationEventSchema,
-  createJobApplicationInterviewSchema,
+  createJobApplicationFollowUpSchema,
   failScrapeJobSchema,
   heartbeatScrapeJobSchema,
   createJobApplicationSchema,
@@ -40,7 +43,7 @@ import {
   listJobApplicationsQuerySchema,
   submitScrapeDataSchema,
   updateJobApplicationContactSchema,
-  updateJobApplicationInterviewSchema,
+  updateJobApplicationFollowUpSchema,
   updateJobApplicationSchema,
   updateStatusSchema,
   updateDocumentContentSchema,
@@ -57,7 +60,7 @@ export type JobApplicationWithDocuments = JobApplication & {
 export type JobApplicationDetail = JobApplicationWithDocuments & {
   events: JobApplicationEvent[];
   contacts: JobApplicationContact[];
-  interviews: JobApplicationInterview[];
+  followUps: JobApplicationFollowUp[];
   scrapeBundle: ScrapeBundle | null;
   matchAnalysis: MatchAnalysisResult | null;
   documentContent: DocumentContent | null;
@@ -77,6 +80,8 @@ export function createJobApplicationRouter(dependencies: {
   profiles: UserProfileRepository;
   jobApplicationChanges: JobApplicationChangeSubscriber;
   queue: JobApplicationQueue;
+  followUpReminderQueue: FollowUpReminderQueue;
+  followUpReminders: FollowUpReminderRepository;
   storage: FileStorage;
   remoteImages: RemoteImageFetcher;
   getProfileForUser: (user: AuthenticatedRequest["user"]) => Promise<UserProfile>;
@@ -697,8 +702,8 @@ export function createJobApplicationRouter(dependencies: {
   });
 
   router.post(
-    "/:id/interviews",
-    validateBody(createJobApplicationInterviewSchema),
+    "/:id/follow-ups",
+    validateBody(createJobApplicationFollowUpSchema),
     async (request, response, next) => {
       try {
         const jobApplication = await dependencies.jobApplications.findById(request.params.id);
@@ -708,20 +713,35 @@ export function createJobApplicationRouter(dependencies: {
           return;
         }
 
-        const interview = await dependencies.jobApplications.createInterview({
+        const followUp = await dependencies.jobApplications.createFollowUp({
           jobApplicationId: request.params.id,
-          ...request.body,
+          profileId: jobApplication.profileId,
+          title: request.body.title,
+          description: request.body.description,
+          scheduledAt: request.body.scheduledAt,
         });
 
-        await recordInterviewCreated(dependencies.jobApplications, jobApplication, interview);
-        response.status(201).json(interview);
+        await scheduleFollowUpReminder({
+          followUp,
+          followUpReminderQueue: dependencies.followUpReminderQueue,
+          followUpReminders: dependencies.followUpReminders,
+        });
+
+        await dependencies.jobApplications.addEvent({
+          jobApplicationId: request.params.id,
+          type: "reminder",
+          title: `Follow-up scheduled: ${followUp.title}`,
+          occurredAt: followUp.scheduledAt,
+        });
+
+        response.status(201).json(followUp);
       } catch (error) {
         next(error);
       }
     },
   );
 
-  router.get("/:id/interviews", async (request, response, next) => {
+  router.get("/:id/follow-ups", async (request, response, next) => {
     try {
       const jobApplication = await dependencies.jobApplications.findById(request.params.id);
 
@@ -730,32 +750,50 @@ export function createJobApplicationRouter(dependencies: {
         return;
       }
 
-      response.json(await dependencies.jobApplications.listInterviews(request.params.id));
+      response.json(await dependencies.jobApplications.listFollowUps(request.params.id));
     } catch (error) {
       next(error);
     }
   });
 
   router.patch(
-    "/:id/interviews/:interviewId",
-    validateBody(updateJobApplicationInterviewSchema),
+    "/:id/follow-ups/:followUpId",
+    validateBody(updateJobApplicationFollowUpSchema),
     async (request, response, next) => {
       try {
-        const interview = await dependencies.jobApplications.findInterviewById(
-          request.params.interviewId,
+        const existing = await dependencies.jobApplications.findFollowUpById(
+          request.params.followUpId,
         );
 
-        if (!interview || interview.jobApplicationId !== request.params.id) {
-          response.status(404).json({ error: "Interview not found" });
+        if (!existing || existing.jobApplicationId !== request.params.id) {
+          response.status(404).json({ error: "Follow-up not found" });
           return;
         }
 
-        const updated = await dependencies.jobApplications.updateInterview(
-          request.params.interviewId,
+        const updated = await dependencies.jobApplications.updateFollowUp(
+          request.params.followUpId,
           request.body,
         );
 
-        await recordInterviewUpdated(dependencies.jobApplications, interview, updated);
+        if ("scheduledAt" in request.body && existing.reminderJobId) {
+          await dependencies.followUpReminderQueue.remove(existing.reminderJobId);
+        }
+
+        if ("scheduledAt" in request.body) {
+          await scheduleFollowUpReminder({
+            followUp: updated,
+            followUpReminderQueue: dependencies.followUpReminderQueue,
+            followUpReminders: dependencies.followUpReminders,
+          });
+
+          await dependencies.jobApplications.addEvent({
+            jobApplicationId: request.params.id,
+            type: "reminder",
+            title: `Follow-up rescheduled: ${updated.title}`,
+            occurredAt: updated.scheduledAt,
+          });
+        }
+
         response.json(updated);
       } catch (error) {
         next(error);
@@ -763,18 +801,22 @@ export function createJobApplicationRouter(dependencies: {
     },
   );
 
-  router.delete("/:id/interviews/:interviewId", async (request, response, next) => {
+  router.delete("/:id/follow-ups/:followUpId", async (request, response, next) => {
     try {
-      const interview = await dependencies.jobApplications.findInterviewById(
-        request.params.interviewId,
+      const followUp = await dependencies.jobApplications.findFollowUpById(
+        request.params.followUpId,
       );
 
-      if (!interview || interview.jobApplicationId !== request.params.id) {
-        response.status(404).json({ error: "Interview not found" });
+      if (!followUp || followUp.jobApplicationId !== request.params.id) {
+        response.status(404).json({ error: "Follow-up not found" });
         return;
       }
 
-      await dependencies.jobApplications.deleteInterview(request.params.interviewId);
+      if (followUp.reminderJobId) {
+        await dependencies.followUpReminderQueue.remove(followUp.reminderJobId);
+      }
+
+      await dependencies.jobApplications.deleteFollowUp(request.params.followUpId);
       response.status(204).send();
     } catch (error) {
       next(error);
@@ -898,6 +940,26 @@ export function createJobApplicationRouter(dependencies: {
   return router;
 }
 
+async function scheduleFollowUpReminder(input: {
+  followUp: JobApplicationFollowUp;
+  followUpReminderQueue: FollowUpReminderQueue;
+  followUpReminders: FollowUpReminderRepository;
+}): Promise<void> {
+  const scheduledFor = getFollowUpReminderScheduledFor(input.followUp.scheduledAt);
+  const scheduled = await input.followUpReminderQueue.enqueue({
+    followUpId: input.followUp.id,
+    jobApplicationId: input.followUp.jobApplicationId,
+    profileId: input.followUp.profileId,
+    followUpAt: input.followUp.scheduledAt,
+    scheduledFor,
+  });
+
+  await input.followUpReminders.setSchedule(input.followUp.id, {
+    jobId: scheduled.jobId,
+    scheduledFor,
+  });
+}
+
 export async function retryFailedJobApplication(input: {
   retryJobApplication: Pick<RetryJobApplicationUseCase, "execute">;
   queue: JobApplicationQueue;
@@ -979,7 +1041,7 @@ export async function getJobApplicationDetail(input: {
   const documents = await input.jobApplications.listGeneratedDocuments(input.jobApplication.id);
   const events = await input.jobApplications.listEvents(input.jobApplication.id);
   const contacts = await input.jobApplications.listContacts(input.jobApplication.id);
-  const interviews = await input.jobApplications.listInterviews(input.jobApplication.id);
+  const followUps = await input.jobApplications.listFollowUps(input.jobApplication.id);
   const scrapeBundle = await input.jobApplications.getScrapeBundle(input.jobApplication.id);
   const matchAnalysis = await input.jobApplications.getMatchAnalysis(input.jobApplication.id);
   const documentContent = await input.jobApplications.getDocumentContent(input.jobApplication.id);
@@ -994,7 +1056,7 @@ export async function getJobApplicationDetail(input: {
     documents,
     events,
     contacts,
-    interviews,
+    followUps,
     scrapeBundle: toPublicScrapeBundle(scrapeBundle),
     matchAnalysis,
     documentContent,
@@ -1282,70 +1344,6 @@ export async function getGeneratedDocumentDownloadUrl(input: {
   }
 
   return input.storage.getSignedUrl(document.fileId);
-}
-
-async function recordInterviewCreated(
-  jobApplications: JobApplicationRepository,
-  jobApplication: JobApplication,
-  interview: JobApplicationInterview,
-): Promise<void> {
-  await jobApplications.addEvent({
-    jobApplicationId: interview.jobApplicationId,
-    type: "interview",
-    title: `Interview scheduled: ${interview.title}`,
-    occurredAt: interview.scheduledAt,
-    metadata: { interviewId: interview.id, status: interview.status, type: interview.type },
-  });
-
-  if (interview.status === "upcoming" && !jobApplication.tracking.nextFollowUpAt) {
-    await jobApplications.updateTracking(interview.jobApplicationId, {
-      nextFollowUpAt: interview.scheduledAt,
-    });
-  }
-
-  if (interview.status === "completed" && !jobApplication.tracking.lastResponseAt) {
-    await jobApplications.updateTracking(interview.jobApplicationId, {
-      lastResponseAt: interview.scheduledAt,
-    });
-  }
-}
-
-async function recordInterviewUpdated(
-  jobApplications: JobApplicationRepository,
-  previous: JobApplicationInterview,
-  updated: JobApplicationInterview,
-): Promise<void> {
-  if (updated.scheduledAt.getTime() !== previous.scheduledAt.getTime()) {
-    await jobApplications.addEvent({
-      jobApplicationId: updated.jobApplicationId,
-      type: "interview",
-      title: `Interview rescheduled: ${updated.title}`,
-      occurredAt: updated.scheduledAt,
-      metadata: { interviewId: updated.id, from: previous.scheduledAt, to: updated.scheduledAt },
-    });
-  }
-
-  if (updated.status !== previous.status) {
-    await jobApplications.addEvent({
-      jobApplicationId: updated.jobApplicationId,
-      type: "interview",
-      title: `Interview marked ${updated.status}: ${updated.title}`,
-      occurredAt: updated.scheduledAt,
-      metadata: { interviewId: updated.id, from: previous.status, to: updated.status },
-    });
-  }
-
-  if (updated.status !== "completed") {
-    return;
-  }
-
-  const jobApplication = await jobApplications.findById(updated.jobApplicationId);
-
-  if (jobApplication && !jobApplication.tracking.lastResponseAt) {
-    await jobApplications.updateTracking(updated.jobApplicationId, {
-      lastResponseAt: updated.scheduledAt,
-    });
-  }
 }
 
 function currentUser(request: Request): AuthenticatedRequest["user"] {

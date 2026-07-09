@@ -35,6 +35,15 @@ export interface Contact {
   color?: string;
 }
 
+export interface FollowUp {
+  id: string;
+  title: string;
+  description?: string;
+  scheduledAt: string;
+  reminderSentAt?: string;
+  createdAt: string;
+}
+
 export interface KeywordMatch {
   keyword: string;
   match: boolean;
@@ -91,8 +100,8 @@ export interface JobApplication {
   processingLog?: ProcessingLogItem[];
   sourceUrl?: string;
   metadata?: Record<string, unknown>;
-  interviewNotes?: string;
   contacts?: Contact[];
+  followUps?: FollowUp[];
   generatedDocuments?: GeneratedApplicationDocument[];
   matchScore?: number;
   documentContent?: ApiDocumentContent;

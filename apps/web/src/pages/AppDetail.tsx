@@ -31,6 +31,7 @@ import {
   CalendarClock,
   Mail,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 type Tab = "overview" | "analysis" | "documents" | "timeline";
@@ -54,11 +55,17 @@ export default function AppDetail() {
   const [isRetrying, setIsRetrying] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [isAddingInterview, setIsAddingInterview] = useState(false);
+  const [isSavingFollowUp, setIsSavingFollowUp] = useState(false);
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
-  const [interviewForm, setInterviewForm] = useState({ title: "", scheduledAt: "", type: "" });
-  const [showInterviewForm, setShowInterviewForm] = useState(false);
+  const [followUpForm, setFollowUpForm] = useState({
+    id: "",
+    title: "",
+    description: "",
+    nextFollowUpAt: "",
+  });
+  const [showFollowUpForm, setShowFollowUpForm] = useState(false);
+  const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
   const [showContactForm, setShowContactForm] = useState(false);
   const [notes, setNotes] = useState("");
@@ -118,7 +125,8 @@ export default function AppDetail() {
     const mapped = mapApiJobApplicationToUi(detail, profileData);
     setApp(mapped);
     setProfile(mapApiProfileToUi(profileData));
-    setNotes(mapped.interviewNotes ?? "");
+    const notesValue = mapped.metadata?.notes;
+    setNotes(typeof notesValue === "string" ? notesValue : "");
   }
 
   async function handleStatusChange(newStatus: string) {
@@ -139,25 +147,65 @@ export default function AppDetail() {
     }
   }
 
-  async function handleAddInterview(e: React.FormEvent) {
+  async function handleSaveFollowUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!id || !interviewForm.title.trim() || !interviewForm.scheduledAt) return;
+    if (!id || !followUpForm.nextFollowUpAt || !followUpForm.title.trim()) return;
     try {
-      setIsAddingInterview(true);
+      setIsSavingFollowUp(true);
       setError(null);
-      await jobApplicationsApi.createInterview(id, {
-        title: interviewForm.title.trim(),
-        scheduledAt: interviewForm.scheduledAt,
-        type: interviewForm.type.trim() || undefined,
-      });
-      setInterviewForm({ title: "", scheduledAt: "", type: "" });
-      setShowInterviewForm(false);
+      const payload = {
+        title: followUpForm.title.trim(),
+        description: followUpForm.description.trim() || undefined,
+        scheduledAt: new Date(followUpForm.nextFollowUpAt).toISOString(),
+      };
+      if (editingFollowUpId) {
+        await jobApplicationsApi.updateFollowUp(id, editingFollowUpId, payload);
+      } else {
+        await jobApplicationsApi.createFollowUp(id, payload);
+      }
+      setFollowUpForm({ id: "", title: "", description: "", nextFollowUpAt: "" });
+      setEditingFollowUpId(null);
+      setShowFollowUpForm(false);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add interview.");
+      setError(e instanceof Error ? e.message : "Failed to save follow-up.");
     } finally {
-      setIsAddingInterview(false);
+      setIsSavingFollowUp(false);
     }
+  }
+
+  function handleEditFollowUp(followUpId: string) {
+    if (!app?.followUps) return;
+    const followUp = app.followUps.find((f) => f.id === followUpId);
+    if (!followUp) return;
+    setFollowUpForm({
+      id: followUp.id,
+      title: followUp.title,
+      description: followUp.description ?? "",
+      nextFollowUpAt: toDateTimeLocalValue(followUp.scheduledAt),
+    });
+    setEditingFollowUpId(followUp.id);
+    setShowFollowUpForm(true);
+  }
+
+  async function handleDeleteFollowUp(followUpId: string) {
+    if (!id) return;
+    try {
+      setIsSavingFollowUp(true);
+      setError(null);
+      await jobApplicationsApi.deleteFollowUp(id, followUpId);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete follow-up.");
+    } finally {
+      setIsSavingFollowUp(false);
+    }
+  }
+
+  function handleToggleFollowUpForm() {
+    setFollowUpForm({ id: "", title: "", description: "", nextFollowUpAt: "" });
+    setEditingFollowUpId(null);
+    setShowFollowUpForm((v) => !v);
   }
 
   async function handleAddContact(e: React.FormEvent) {
@@ -187,7 +235,7 @@ export default function AppDetail() {
       setIsSavingNotes(true);
       setError(null);
       await jobApplicationsApi.update(id, {
-        metadata: { ...(app.metadata ?? {}), interviewNotes: notes.trim() },
+        metadata: { ...(app.metadata ?? {}), notes: notes.trim() },
       });
       await refresh();
     } catch (e) {
@@ -459,17 +507,19 @@ export default function AppDetail() {
       {tab === "timeline" && (
         <TimelineTab
           app={app}
-          interviewForm={interviewForm}
-          showInterviewForm={showInterviewForm}
-          isAddingInterview={isAddingInterview}
+          followUpForm={followUpForm}
+          showFollowUpForm={showFollowUpForm}
+          isSavingFollowUp={isSavingFollowUp}
           isSavingNotes={isSavingNotes}
           contactForm={contactForm}
           showContactForm={showContactForm}
           isAddingContact={isAddingContact}
           notes={notes}
-          onSetInterviewForm={setInterviewForm}
-          onToggleInterviewForm={() => setShowInterviewForm((v) => !v)}
-          onAddInterview={handleAddInterview}
+          onSetFollowUpForm={setFollowUpForm}
+          onToggleFollowUpForm={handleToggleFollowUpForm}
+          onSaveFollowUp={handleSaveFollowUp}
+          onEditFollowUp={handleEditFollowUp}
+          onDeleteFollowUp={handleDeleteFollowUp}
           onSetContactForm={setContactForm}
           onToggleContactForm={() => setShowContactForm((v) => !v)}
           onAddContact={handleAddContact}
@@ -643,17 +693,19 @@ function DocCard({
 }
 function TimelineTab({
   app,
-  interviewForm,
-  showInterviewForm,
-  isAddingInterview,
+  followUpForm,
+  showFollowUpForm,
+  isSavingFollowUp,
   isSavingNotes,
   contactForm,
   showContactForm,
   isAddingContact,
   notes,
-  onSetInterviewForm,
-  onToggleInterviewForm,
-  onAddInterview,
+  onSetFollowUpForm,
+  onToggleFollowUpForm,
+  onSaveFollowUp,
+  onEditFollowUp,
+  onDeleteFollowUp,
   onSetContactForm,
   onToggleContactForm,
   onAddContact,
@@ -661,114 +713,150 @@ function TimelineTab({
   onSaveNotes,
 }: {
   app: JobApplication;
-  interviewForm: { title: string; scheduledAt: string; type: string };
-  showInterviewForm: boolean;
-  isAddingInterview: boolean;
+  followUpForm: { id: string; title: string; description: string; nextFollowUpAt: string };
+  showFollowUpForm: boolean;
+  isSavingFollowUp: boolean;
   isSavingNotes: boolean;
   contactForm: { name: string; role: string; email: string };
   showContactForm: boolean;
   isAddingContact: boolean;
   notes: string;
-  onSetInterviewForm: (f: { title: string; scheduledAt: string; type: string }) => void;
-  onToggleInterviewForm: () => void;
-  onAddInterview: (e: React.FormEvent) => void;
+  onSetFollowUpForm: (f: {
+    id: string;
+    title: string;
+    description: string;
+    nextFollowUpAt: string;
+  }) => void;
+  onToggleFollowUpForm: () => void;
+  onSaveFollowUp: (e: React.FormEvent) => void;
+  onEditFollowUp: (followUpId: string) => void;
+  onDeleteFollowUp: (followUpId: string) => void;
   onSetContactForm: (f: { name: string; role: string; email: string }) => void;
   onToggleContactForm: () => void;
   onAddContact: (e: React.FormEvent) => void;
   onNotesChange: (v: string) => void;
   onSaveNotes: () => void;
 }) {
-  const eventTone: Record<string, string> = {
-    system: "bg-muted text-muted-foreground",
-    note: "bg-accent text-accent-foreground",
-    interview: "bg-warning-soft text-warning-foreground",
-    status: "bg-info-soft text-info",
-  };
-  const events = (app.timeline ?? []).map((t) => ({
-    id: t.id,
-    label: t.title,
-    detail: t.description,
-    date: t.date,
-    type: "interview" as const,
-  }));
-
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <Panel className="lg:col-span-2">
         <PanelHeader
-          title="Timeline"
+          title="Follow-ups"
           action={
-            <Button variant="ghost" size="sm" onClick={onToggleInterviewForm}>
+            <Button variant="ghost" size="sm" onClick={onToggleFollowUpForm}>
               + Add follow-up
             </Button>
           }
         />
-        {showInterviewForm && (
-          <form onSubmit={onAddInterview} className="border-t border-border px-5 py-4 space-y-3">
-            <input
-              placeholder="Title (e.g., Phone screen)"
-              value={interviewForm.title}
-              onChange={(e) => onSetInterviewForm({ ...interviewForm, title: e.target.value })}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
-              required
-            />
-            <div className="flex gap-3">
+        {showFollowUpForm && (
+          <form onSubmit={onSaveFollowUp} className="space-y-3 border-t border-border px-5 py-4">
+            <div>
+              <label
+                className="text-xs font-medium text-muted-foreground"
+                htmlFor="follow-up-title"
+              >
+                Title
+              </label>
               <input
-                type="datetime-local"
-                value={interviewForm.scheduledAt}
-                onChange={(e) =>
-                  onSetInterviewForm({ ...interviewForm, scheduledAt: e.target.value })
-                }
-                className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+                id="follow-up-title"
+                type="text"
+                value={followUpForm.title}
+                onChange={(e) => onSetFollowUpForm({ ...followUpForm, title: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+                placeholder="e.g. Send thank-you email"
                 required
               />
-              <input
-                placeholder="Type (optional)"
-                value={interviewForm.type}
-                onChange={(e) => onSetInterviewForm({ ...interviewForm, type: e.target.value })}
-                className="w-32 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+            </div>
+            <div>
+              <label
+                className="text-xs font-medium text-muted-foreground"
+                htmlFor="follow-up-description"
+              >
+                Description (optional)
+              </label>
+              <textarea
+                id="follow-up-description"
+                value={followUpForm.description}
+                onChange={(e) =>
+                  onSetFollowUpForm({ ...followUpForm, description: e.target.value })
+                }
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+                placeholder="Add context for this follow-up..."
+                rows={2}
               />
             </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground" htmlFor="follow-up-at">
+                Follow-up date and time
+              </label>
+              <input
+                id="follow-up-at"
+                type="datetime-local"
+                value={followUpForm.nextFollowUpAt}
+                onChange={(e) =>
+                  onSetFollowUpForm({ ...followUpForm, nextFollowUpAt: e.target.value })
+                }
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+                required
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Link2CV will notify you automatically 10 minutes before this time.
+              </p>
+            </div>
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" type="button" onClick={onToggleInterviewForm}>
+              <Button variant="ghost" size="sm" type="button" onClick={onToggleFollowUpForm}>
                 Cancel
               </Button>
-              <Button size="sm" type="submit" disabled={isAddingInterview}>
-                {isAddingInterview ? "Saving..." : "Add"}
+              <Button size="sm" type="submit" disabled={isSavingFollowUp}>
+                {isSavingFollowUp ? "Saving..." : "Save follow-up"}
               </Button>
             </div>
           </form>
         )}
-        <ol className="border-t border-border px-5 py-4">
-          {events.length > 0 ? (
-            events.map((e, i) => (
-              <li key={e.id} className="flex gap-3.5 pb-5 last:pb-0">
-                <div className="flex flex-col items-center">
-                  <span
-                    className={cn(
-                      "flex size-7 items-center justify-center rounded-full text-[0.65rem]",
-                      eventTone[e.type] ?? eventTone.system,
+        {app.followUps && app.followUps.length > 0 && (
+          <div className="divide-y divide-border border-t border-border">
+            {app.followUps.map((f) => (
+              <div key={f.id} className="flex items-start gap-3 px-5 py-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <CalendarClock className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">{f.title}</p>
+                  {f.description && (
+                    <p className="text-xs text-muted-foreground">{f.description}</p>
+                  )}
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {new Date(f.scheduledAt).toLocaleString()}
+                    {f.reminderSentAt && (
+                      <span className="ml-2 inline-flex items-center gap-1 text-success">
+                        <Check className="size-3" /> Reminder sent
+                      </span>
                     )}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEditFollowUp(f.id)}
+                    disabled={isSavingFollowUp}
                   >
-                    {e.type === "interview" ? (
-                      <CalendarClock className="size-3.5" />
-                    ) : (
-                      <Check className="size-3.5" />
-                    )}
-                  </span>
-                  {i < events.length - 1 && <span className="my-1 w-px flex-1 bg-border" />}
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void onDeleteFollowUp(f.id)}
+                    disabled={isSavingFollowUp}
+                    aria-label={`Delete ${f.title}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
                 </div>
-                <div className="pb-1">
-                  <p className="text-sm font-medium text-foreground">{e.label}</p>
-                  {e.detail && <p className="text-xs text-muted-foreground">{e.detail}</p>}
-                  <p className="mt-0.5 text-xs text-muted-foreground">{e.date}</p>
-                </div>
-              </li>
-            ))
-          ) : (
-            <li className="py-4 text-sm text-muted-foreground">No timeline events yet.</li>
-          )}
-        </ol>
+              </div>
+            ))}
+          </div>
+        )}
       </Panel>
 
       <div className="space-y-6">
@@ -887,6 +975,21 @@ function mapStatus(app: JobApplication): DisplayStatus {
     default:
       return "saved";
   }
+}
+
+function toDateTimeLocalValue(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
 function getProcessingLabel(app: JobApplication): string {

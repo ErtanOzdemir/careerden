@@ -3,10 +3,10 @@ import type {
   ApiApplicationPriority,
   ApiApplicationStatus,
   ApiJobApplicationContact,
-  ApiJobApplicationInterview,
   ApiJobApplication,
   ApiJobApplicationAnalytics,
   ApiJobApplicationDetail,
+  ApiJobApplicationFollowUp,
   ApiDocumentContent,
   ApiScrapeBundle,
 } from "./types";
@@ -52,13 +52,16 @@ export interface CreateJobApplicationContactInput {
   role?: string;
 }
 
-export interface CreateJobApplicationInterviewInput {
-  notes?: string;
-  prepNotes?: string;
-  scheduledAt: string;
-  status?: ApiJobApplicationInterview["status"];
+export interface CreateFollowUpInput {
   title: string;
-  type?: string;
+  description?: string;
+  scheduledAt: string;
+}
+
+export interface UpdateFollowUpInput {
+  title?: string;
+  description?: string | null;
+  scheduledAt?: string;
 }
 
 export const jobApplicationsApi = {
@@ -164,17 +167,35 @@ export const jobApplicationsApi = {
     });
   },
 
-  createInterview(
-    jobApplicationId: string,
-    input: CreateJobApplicationInterviewInput,
-  ): Promise<ApiJobApplicationInterview> {
-    return requestJson<ApiJobApplicationInterview>(
-      `/job-applications/${jobApplicationId}/interviews`,
+  listFollowUps(id: string): Promise<ApiJobApplicationFollowUp[]> {
+    return requestJson<ApiJobApplicationFollowUp[]>(`/job-applications/${id}/follow-ups`);
+  },
+
+  createFollowUp(id: string, input: CreateFollowUpInput): Promise<ApiJobApplicationFollowUp> {
+    return requestJson<ApiJobApplicationFollowUp>(`/job-applications/${id}/follow-ups`, {
+      method: "POST",
+      body: input,
+    });
+  },
+
+  updateFollowUp(
+    id: string,
+    followUpId: string,
+    input: UpdateFollowUpInput,
+  ): Promise<ApiJobApplicationFollowUp> {
+    return requestJson<ApiJobApplicationFollowUp>(
+      `/job-applications/${id}/follow-ups/${followUpId}`,
       {
-        method: "POST",
+        method: "PATCH",
         body: input,
       },
     );
+  },
+
+  deleteFollowUp(id: string, followUpId: string): Promise<void> {
+    return requestJson<void>(`/job-applications/${id}/follow-ups/${followUpId}`, {
+      method: "DELETE",
+    });
   },
 
   async getDocumentDownloadUrl(jobApplicationId: string, document: { id: string }) {

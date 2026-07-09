@@ -2,8 +2,8 @@ import type {
   AttachGeneratedDocumentInput,
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
+  CreateJobApplicationFollowUpInput,
   CreateJobApplicationInput,
-  CreateJobApplicationInterviewInput,
   DocumentContent,
   JobApplicationChangePublisher,
   JobApplicationRepository,
@@ -12,7 +12,7 @@ import type {
   MatchAnalysisResult,
   ScrapeBundle,
   UpdateJobApplicationContactInput,
-  UpdateJobApplicationInterviewInput,
+  UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
 } from "@link2cv/domain";
 
@@ -183,32 +183,32 @@ export class PublishingJobApplicationRepository implements JobApplicationReposit
     }
   }
 
-  async createInterview(input: CreateJobApplicationInterviewInput) {
-    const interview = await this.repository.createInterview(input);
+  async createFollowUp(input: CreateJobApplicationFollowUpInput) {
+    const followUp = await this.repository.createFollowUp(input);
     await this.publishForApplication(input.jobApplicationId);
-    return interview;
+    return followUp;
   }
 
-  findInterviewById(id: string) {
-    return this.repository.findInterviewById(id);
+  findFollowUpById(id: string) {
+    return this.repository.findFollowUpById(id);
   }
 
-  listInterviews(jobApplicationId: string) {
-    return this.repository.listInterviews(jobApplicationId);
+  listFollowUps(jobApplicationId: string) {
+    return this.repository.listFollowUps(jobApplicationId);
   }
 
-  async updateInterview(id: string, input: UpdateJobApplicationInterviewInput) {
-    const interview = await this.repository.updateInterview(id, input);
-    await this.publishForApplication(interview.jobApplicationId);
-    return interview;
+  async updateFollowUp(id: string, input: UpdateJobApplicationFollowUpInput) {
+    const followUp = await this.repository.updateFollowUp(id, input);
+    await this.publishForApplication(followUp.jobApplicationId);
+    return followUp;
   }
 
-  async deleteInterview(id: string) {
-    const interview = await this.repository.findInterviewById(id);
-    await this.repository.deleteInterview(id);
+  async deleteFollowUp(id: string) {
+    const followUp = await this.repository.findFollowUpById(id);
+    await this.repository.deleteFollowUp(id);
 
-    if (interview) {
-      await this.publishForApplication(interview.jobApplicationId);
+    if (followUp) {
+      await this.publishForApplication(followUp.jobApplicationId);
     }
   }
 

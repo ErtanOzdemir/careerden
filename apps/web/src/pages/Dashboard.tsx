@@ -95,7 +95,7 @@ export default function Dashboard() {
       id: app.id,
       text:
         app.status === "Interviewing"
-          ? "Interview scheduled"
+          ? "Status updated"
           : app.status === "Applied"
             ? "Application submitted"
             : app.status === "Rejected"
@@ -118,7 +118,7 @@ export default function Dashboard() {
     if (stats?.upcomingInterviews && stats.upcomingInterviews.length > 0) {
       return stats.upcomingInterviews.map((u) => ({
         company: u.company,
-        type: "Interview: " + u.role,
+        type: "Follow-up: " + u.role,
         date: `${u.month} ${u.day}`,
         relative: u.time,
       }));
@@ -128,7 +128,7 @@ export default function Dashboard() {
       .slice(0, 3)
       .map((a) => ({
         company: a.company,
-        type: "Interview follow-up",
+        type: "Follow-up",
         date: a.dateApplied,
         relative: a.dateLabel,
       }));

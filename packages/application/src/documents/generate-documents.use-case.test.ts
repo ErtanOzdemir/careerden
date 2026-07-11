@@ -135,6 +135,25 @@ describe("GenerateDocumentsUseCase", () => {
     );
     expect(htmlTemplates.render).toHaveBeenCalledOnce();
     expect(htmlToPdf).toHaveBeenCalledOnce();
+
+    const staged = await useCase.stage({
+      jobApplicationId: jobApplication.id,
+      generationAttemptId: "attempt-1",
+      jobApplication,
+      profile,
+      analysis: {
+        matchScore: 90,
+        missingSkills: [],
+        strongSkills: ["TypeScript"],
+        recommendedAchievements: [],
+        customizedSummary: "Summary",
+        interviewTips: [],
+      },
+    });
+    expect(staged.map((document) => document.fileId)).toEqual([
+      `job-applications/${jobApplication.id}/document-generations/attempt-1/cv.docx`,
+      `job-applications/${jobApplication.id}/document-generations/attempt-1/cover-letter.pdf`,
+    ]);
   });
 });
 
@@ -147,7 +166,7 @@ function createHtmlTemplates(): TemplateRenderer {
 function createStorage(): FileStorage {
   return {
     put: vi.fn(async (file: StoredFileInput) => ({
-      id: `files/${file.fileName}`,
+      id: file.key ?? `files/${file.fileName}`,
       fileName: file.fileName,
       contentType: file.contentType,
       size: file.body.byteLength,

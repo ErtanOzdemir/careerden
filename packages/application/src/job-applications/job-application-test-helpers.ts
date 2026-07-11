@@ -56,6 +56,9 @@ export function createJobApplicationRepository(
     beginAnalysis: vi.fn(async () => true),
     completeAnalysis: vi.fn(async () => true),
     failAnalysis: vi.fn(async () => true),
+    beginDocumentGeneration: vi.fn(async () => ({ started: true })),
+    completeDocumentGeneration: vi.fn(async () => true),
+    failDocumentGeneration: vi.fn(async () => true),
     addEvent: vi.fn(),
     ...overrides,
   } as JobApplicationRepository;

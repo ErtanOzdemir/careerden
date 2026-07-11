@@ -97,6 +97,12 @@ export interface JobApplicationRepository {
     content: DocumentContent,
   ): Promise<boolean>;
   failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean>;
+  beginDocumentGeneration(
+    id: string,
+    attemptId: string,
+  ): Promise<{ started: boolean; supersededAttemptId?: string }>;
+  completeDocumentGeneration(id: string, attemptId: string): Promise<boolean>;
+  failDocumentGeneration(id: string, attemptId: string, reason: string): Promise<boolean>;
   updateStatus(id: string, status: JobApplicationStatus, failureReason?: string): Promise<void>;
   updateTracking(id: string, input: UpdateJobApplicationTrackingInput): Promise<JobApplication>;
   saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void>;

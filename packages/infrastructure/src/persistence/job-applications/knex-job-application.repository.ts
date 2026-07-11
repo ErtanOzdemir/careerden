@@ -227,6 +227,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
           match_analysis: null,
           document_content: null,
           analysis_attempt_id: null,
+          document_generation_attempt_id: null,
           updated_at: transaction.fn.now(),
         })
         .returning("*");
@@ -253,6 +254,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
           match_analysis: null,
           document_content: null,
           analysis_attempt_id: null,
+          document_generation_attempt_id: null,
           updated_at: transaction.fn.now(),
         })
         .returning("*");
@@ -311,6 +313,47 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         failure_reason: reason,
         updated_at: this.db.fn.now(),
       });
+    return updated > 0;
+  }
+
+  async beginDocumentGeneration(
+    id: string,
+    attemptId: string,
+  ): Promise<{ started: boolean; supersededAttemptId?: string }> {
+    return this.db.transaction(async (transaction) => {
+      const row = await transaction("job_applications").where({ id }).forUpdate().first();
+      if (
+        !row ||
+        !["review_ready", "generating_documents", "completed"].includes(String(row.status))
+      ) {
+        return { started: false };
+      }
+      const supersededAttemptId =
+        row.status === "generating_documents" &&
+        typeof row.document_generation_attempt_id === "string"
+          ? row.document_generation_attempt_id
+          : undefined;
+      await transaction("job_applications").where({ id }).update({
+        status: "generating_documents",
+        document_generation_attempt_id: attemptId,
+        failure_reason: null,
+        updated_at: transaction.fn.now(),
+      });
+      return { started: true, ...(supersededAttemptId ? { supersededAttemptId } : {}) };
+    });
+  }
+
+  async completeDocumentGeneration(id: string, attemptId: string): Promise<boolean> {
+    const updated = await this.db("job_applications")
+      .where({ id, document_generation_attempt_id: attemptId, status: "generating_documents" })
+      .update({ status: "completed", failure_reason: null, updated_at: this.db.fn.now() });
+    return updated > 0;
+  }
+
+  async failDocumentGeneration(id: string, attemptId: string, reason: string): Promise<boolean> {
+    const updated = await this.db("job_applications")
+      .where({ id, document_generation_attempt_id: attemptId, status: "generating_documents" })
+      .update({ status: "failed", failure_reason: reason, updated_at: this.db.fn.now() });
     return updated > 0;
   }
 

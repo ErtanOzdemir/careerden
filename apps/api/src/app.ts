@@ -171,7 +171,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         jobApplications,
         profiles,
         generateDocumentsUseCase,
-        jobApplicationChanges,
+        unitOfWork,
       ),
       retryJobApplication: new RetryJobApplicationUseCase(unitOfWork),
       updateDocumentContent: new UpdateDocumentContentUseCase(

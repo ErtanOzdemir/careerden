@@ -16,6 +16,22 @@ import type {
 } from "@link2cv/domain";
 import { documentContentFromMatchAnalysis } from "@link2cv/domain";
 
+export interface GeneratedDocumentUpload {
+  kind: "cover_letter" | "cv";
+  format: "docx" | "pdf";
+  fileId: string;
+  fileName: string;
+  contentType: string;
+}
+
+interface GeneratedDocumentBody {
+  kind: GeneratedDocumentUpload["kind"];
+  format: GeneratedDocumentUpload["format"];
+  fileName: string;
+  contentType: string;
+  body: Buffer;
+}
+
 export class GenerateDocumentsUseCase {
   constructor(
     private readonly templates: TemplateRenderer,
@@ -33,6 +49,34 @@ export class GenerateDocumentsUseCase {
     analysis: MatchAnalysisResult;
     documentContent?: DocumentContent;
   }): Promise<GeneratedDocument[]> {
+    return this.generate(input, (document) =>
+      this.storeAndAttachGeneratedDocument(input.jobApplicationId, document),
+    );
+  }
+
+  async stage(input: {
+    jobApplicationId: string;
+    generationAttemptId: string;
+    jobApplication: JobApplication;
+    profile: UserProfile;
+    analysis: MatchAnalysisResult;
+    documentContent?: DocumentContent;
+  }): Promise<GeneratedDocumentUpload[]> {
+    return this.generate(input, (document) =>
+      this.storeStagedDocument(input.jobApplicationId, input.generationAttemptId, document),
+    );
+  }
+
+  private async generate<T>(
+    input: {
+      jobApplicationId: string;
+      jobApplication: JobApplication;
+      profile: UserProfile;
+      analysis: MatchAnalysisResult;
+      documentContent?: DocumentContent;
+    },
+    store: (document: GeneratedDocumentBody) => Promise<T>,
+  ): Promise<T[]> {
     const scrape = await this.jobApplications.getScrapeBundle(input.jobApplicationId);
     const documentContent =
       input.documentContent ?? documentContentFromMatchAnalysis(input.analysis);
@@ -43,7 +87,7 @@ export class GenerateDocumentsUseCase {
       input.jobApplication,
       scrape,
     );
-    const generated: GeneratedDocument[] = [];
+    const generated: T[] = [];
     const cvTemplate = await this.profiles.findDefaultDocumentTemplate(input.profile.id, "cv");
 
     if (cvTemplate) {
@@ -58,8 +102,7 @@ export class GenerateDocumentsUseCase {
         data,
       });
       generated.push(
-        await this.storeGeneratedDocument({
-          jobApplicationId: input.jobApplicationId,
+        await store({
           kind: "cv",
           format: "docx",
           fileName: "cv.docx",
@@ -69,41 +112,46 @@ export class GenerateDocumentsUseCase {
       );
     } else {
       generated.push(
-        await this.renderHtmlPdf({
-          jobApplicationId: input.jobApplicationId,
-          templateId: "cv.default",
-          kind: "cv",
-          fileName: "cv.pdf",
-          data,
-        }),
+        await this.renderHtmlPdf(
+          {
+            templateId: "cv.default",
+            kind: "cv",
+            fileName: "cv.pdf",
+            data,
+          },
+          store,
+        ),
       );
     }
 
     generated.push(
-      await this.renderHtmlPdf({
-        jobApplicationId: input.jobApplicationId,
-        templateId: "cover-letter.default",
-        kind: "cover_letter",
-        fileName: "cover-letter.pdf",
-        data,
-      }),
+      await this.renderHtmlPdf(
+        {
+          templateId: "cover-letter.default",
+          kind: "cover_letter",
+          fileName: "cover-letter.pdf",
+          data,
+        },
+        store,
+      ),
     );
 
     return generated;
   }
 
-  private async renderHtmlPdf(input: {
-    jobApplicationId: string;
-    templateId: string;
-    kind: "cover_letter" | "cv";
-    fileName: string;
-    data: Record<string, unknown>;
-  }): Promise<GeneratedDocument> {
+  private async renderHtmlPdf<T>(
+    input: {
+      templateId: string;
+      kind: "cover_letter" | "cv";
+      fileName: string;
+      data: Record<string, unknown>;
+    },
+    store: (document: GeneratedDocumentBody) => Promise<T>,
+  ): Promise<T> {
     const html = await this.templates.render(input.templateId, input.data);
     const pdf = await this.documents.htmlToPdf(html.toString());
 
-    return this.storeGeneratedDocument({
-      jobApplicationId: input.jobApplicationId,
+    return store({
       kind: input.kind,
       format: "pdf",
       fileName: input.fileName,
@@ -112,27 +160,23 @@ export class GenerateDocumentsUseCase {
     });
   }
 
-  private async storeGeneratedDocument(input: {
-    jobApplicationId: string;
-    kind: "cover_letter" | "cv";
-    format: "docx" | "pdf";
-    fileName: string;
-    contentType: string;
-    body: Buffer;
-  }): Promise<GeneratedDocument> {
+  private async storeAndAttachGeneratedDocument(
+    jobApplicationId: string,
+    input: GeneratedDocumentBody,
+  ): Promise<GeneratedDocument> {
     const stored = await this.storage.put({
       fileName: input.fileName,
       contentType: input.contentType,
       body: input.body,
       metadata: {
-        jobApplicationId: input.jobApplicationId,
+        jobApplicationId,
         kind: input.kind,
         format: input.format,
       },
     });
 
     return this.jobApplications.attachGeneratedDocument({
-      jobApplicationId: input.jobApplicationId,
+      jobApplicationId,
       kind: input.kind,
       format: input.format,
       fileId: stored.id,
@@ -140,6 +184,50 @@ export class GenerateDocumentsUseCase {
       contentType: input.contentType,
     });
   }
+
+  private async storeStagedDocument(
+    jobApplicationId: string,
+    generationAttemptId: string,
+    input: GeneratedDocumentBody,
+  ): Promise<GeneratedDocumentUpload> {
+    const fileId = generatedDocumentFileId(jobApplicationId, generationAttemptId, input.fileName);
+    const stored = await this.storage.put({
+      key: fileId,
+      fileName: input.fileName,
+      contentType: input.contentType,
+      body: input.body,
+      metadata: {
+        jobApplicationId,
+        generationAttemptId,
+        kind: input.kind,
+        format: input.format,
+      },
+    });
+    return {
+      kind: input.kind,
+      format: input.format,
+      fileId: stored.id,
+      fileName: input.fileName,
+      contentType: input.contentType,
+    };
+  }
+}
+
+export function generatedDocumentFileId(
+  jobApplicationId: string,
+  generationAttemptId: string,
+  fileName: string,
+): string {
+  return `job-applications/${jobApplicationId}/document-generations/${generationAttemptId}/${fileName}`;
+}
+
+export function generatedDocumentFileIds(
+  jobApplicationId: string,
+  generationAttemptId: string,
+): string[] {
+  return ["cv.docx", "cv.pdf", "cover-letter.pdf"].map((fileName) =>
+    generatedDocumentFileId(jobApplicationId, generationAttemptId, fileName),
+  );
 }
 
 function toTemplateData(

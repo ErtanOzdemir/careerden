@@ -11,9 +11,9 @@ export class LocalFileStorage implements FileStorage {
 
     await mkdir(rootDir, { recursive: true });
 
-    const id = `${randomUUID()}/${sanitizeFileName(file.fileName)}`;
+    const id = file.key ?? `${randomUUID()}/${sanitizeFileName(file.fileName)}`;
 
-    const path = join(rootDir, id);
+    const path = this.resolveStoredPath(rootDir, id);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, file.body);
 

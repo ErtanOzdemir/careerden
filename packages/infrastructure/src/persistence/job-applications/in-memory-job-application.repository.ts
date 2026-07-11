@@ -24,6 +24,7 @@ import { randomUUID } from "node:crypto";
 
 export class InMemoryJobApplicationRepository implements JobApplicationRepository {
   private readonly analysisAttempts = new Map<string, string>();
+  private readonly documentGenerationAttempts = new Map<string, string>();
   private readonly jobApplications = new Map<string, JobApplication>();
   private readonly scrapeBundles = new Map<string, ScrapeBundle>();
   private readonly matchAnalyses = new Map<string, MatchAnalysisResult>();
@@ -165,6 +166,8 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     this.events.delete(id);
     this.contacts.delete(id);
     this.followUps.delete(id);
+    this.analysisAttempts.delete(id);
+    this.documentGenerationAttempts.delete(id);
   }
 
   async listByProfileId(
@@ -204,6 +207,8 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     this.matchAnalyses.delete(id);
     this.documentContents.delete(id);
     this.documents.delete(id);
+    this.analysisAttempts.delete(id);
+    this.documentGenerationAttempts.delete(id);
     return updated;
   }
 
@@ -229,6 +234,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     this.documentContents.delete(id);
     this.documents.delete(id);
     this.analysisAttempts.delete(id);
+    this.documentGenerationAttempts.delete(id);
     return updated;
   }
 
@@ -280,6 +286,52 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       !jobApplication ||
       jobApplication.status !== "analyzing" ||
       this.analysisAttempts.get(id) !== attemptId
+    ) {
+      return false;
+    }
+    this.jobApplications.set(id, { ...jobApplication, status: "failed", failureReason: reason });
+    return true;
+  }
+
+  async beginDocumentGeneration(
+    id: string,
+    attemptId: string,
+  ): Promise<{ started: boolean; supersededAttemptId?: string }> {
+    const jobApplication = this.jobApplications.get(id);
+    if (
+      !jobApplication ||
+      !["review_ready", "generating_documents", "completed"].includes(jobApplication.status)
+    ) {
+      return { started: false };
+    }
+    const supersededAttemptId =
+      jobApplication.status === "generating_documents"
+        ? this.documentGenerationAttempts.get(id)
+        : undefined;
+    this.documentGenerationAttempts.set(id, attemptId);
+    this.jobApplications.set(id, { ...jobApplication, status: "generating_documents" });
+    return { started: true, ...(supersededAttemptId ? { supersededAttemptId } : {}) };
+  }
+
+  async completeDocumentGeneration(id: string, attemptId: string): Promise<boolean> {
+    const jobApplication = this.jobApplications.get(id);
+    if (
+      !jobApplication ||
+      jobApplication.status !== "generating_documents" ||
+      this.documentGenerationAttempts.get(id) !== attemptId
+    ) {
+      return false;
+    }
+    this.jobApplications.set(id, { ...jobApplication, status: "completed" });
+    return true;
+  }
+
+  async failDocumentGeneration(id: string, attemptId: string, reason: string): Promise<boolean> {
+    const jobApplication = this.jobApplications.get(id);
+    if (
+      !jobApplication ||
+      jobApplication.status !== "generating_documents" ||
+      this.documentGenerationAttempts.get(id) !== attemptId
     ) {
       return false;
     }

@@ -36,7 +36,7 @@ export class RustFsStorage implements FileStorage {
   }
 
   async put(file: StoredFileInput): Promise<StoredFile> {
-    const id = `${randomUUID()}/${sanitizeFileName(file.fileName)}`;
+    const id = file.key ?? `${randomUUID()}/${sanitizeFileName(file.fileName)}`;
 
     await this.putObject(id, file);
 

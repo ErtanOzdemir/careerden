@@ -12,6 +12,7 @@ import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
 } from "@link2cv/infrastructure";
+import { createUnitOfWork } from "./job-application-test-helpers.js";
 
 describe("ProcessJobApplicationUseCase", () => {
   it("moves a job application through the full pipeline", async () => {
@@ -125,7 +126,7 @@ describe("ProcessJobApplicationUseCase", () => {
       jobApplications,
       profiles,
       documents,
-      new JobApplicationChangeNotifier({ publish: vi.fn() }),
+      createUnitOfWork(jobApplications, profiles as never).unitOfWork,
     ).execute(jobApplication.id);
 
     const completed = await jobApplications.findById(jobApplication.id);
@@ -142,7 +143,7 @@ describe("ProcessJobApplicationUseCase", () => {
       jobApplications,
       profiles,
       documents,
-      new JobApplicationChangeNotifier({ publish: vi.fn() }),
+      createUnitOfWork(jobApplications, profiles as never).unitOfWork,
     ).execute(jobApplication.id);
 
     expect((await jobApplications.findById(jobApplication.id))?.status).toBe("completed");

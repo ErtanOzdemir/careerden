@@ -1,18 +1,23 @@
 import type {
   GeneratedDocument,
   JobApplicationRepository,
+  PersistenceUnitOfWork,
   UserProfileRepository,
 } from "@link2cv/domain";
-import { canTransitionJobApplicationStatus } from "@link2cv/domain";
-import type { GenerateDocumentsUseCase } from "../documents/generate-documents.use-case.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { randomUUID } from "node:crypto";
+import {
+  generatedDocumentFileIds,
+  type GenerateDocumentsUseCase,
+} from "../documents/generate-documents.use-case.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class GenerateJobApplicationDocumentsUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
     private readonly documentGeneration: GenerateDocumentsUseCase,
-    private readonly changes: JobApplicationChangeNotifier,
+    private readonly unitOfWork: PersistenceUnitOfWork,
   ) {}
 
   async execute(jobApplicationId: string): Promise<GeneratedDocument[]> {
@@ -36,47 +41,92 @@ export class GenerateJobApplicationDocumentsUseCase {
 
     const documentContent = await this.jobApplications.getDocumentContent(jobApplicationId);
 
-    if (!canTransitionJobApplicationStatus(jobApplication.status, "generating_documents")) {
+    const attemptId = randomUUID();
+    const previousDocuments = await this.jobApplications.listGeneratedDocuments(jobApplicationId);
+    const started = await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+      const result = await jobApplications.beginDocumentGeneration(jobApplicationId, attemptId);
+      if (!result.started) return false;
+      if (result.supersededAttemptId) {
+        await enqueueStorageDeletions(
+          outbox,
+          generatedDocumentFileIds(jobApplicationId, result.supersededAttemptId),
+        );
+      }
+      await jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "Document generation approved",
+        metadata: { attemptId },
+      });
+      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      return true;
+    });
+    if (!started) {
       throw new Error(
         `Invalid job application status transition: ${jobApplication.status} -> generating_documents`,
       );
     }
 
     try {
-      await this.jobApplications.updateStatus(jobApplicationId, "generating_documents");
-      await this.jobApplications.addEvent({
+      const uploads = await this.documentGeneration.stage({
         jobApplicationId,
-        type: "processing",
-        title: "Document generation approved",
-      });
-
-      const generated = await this.documentGeneration.execute({
-        jobApplicationId,
+        generationAttemptId: attemptId,
         jobApplication,
         profile,
         analysis,
         ...(documentContent ? { documentContent } : {}),
       });
 
-      await this.jobApplications.updateStatus(jobApplicationId, "completed");
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Document generation completed",
+      const generated = await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        if (!(await jobApplications.completeDocumentGeneration(jobApplicationId, attemptId))) {
+          await enqueueStorageDeletions(
+            outbox,
+            uploads.map((upload) => upload.fileId),
+          );
+          return null;
+        }
+        const attached = await Promise.all(
+          uploads.map((upload) =>
+            jobApplications.attachGeneratedDocument({ jobApplicationId, ...upload }),
+          ),
+        );
+        await enqueueStorageDeletions(
+          outbox,
+          previousDocuments
+            .map((document) => document.fileId)
+            .filter((fileId) => !uploads.some((upload) => upload.fileId === fileId)),
+        );
+        await jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "Document generation completed",
+          metadata: { attemptId },
+        });
+        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        return attached;
       });
-      await this.changes.changed(jobApplication.id, jobApplication.profileId);
+      if (!generated) throw new Error("Document generation was superseded by a newer attempt");
 
       return generated;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown document generation error";
-      await this.jobApplications.updateStatus(jobApplicationId, "failed", message);
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Document generation failed",
-        body: message,
+      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        await enqueueStorageDeletions(
+          outbox,
+          generatedDocumentFileIds(jobApplicationId, attemptId),
+        );
+        if (!(await jobApplications.failDocumentGeneration(jobApplicationId, attemptId, message))) {
+          return;
+        }
+        await jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "Document generation failed",
+          body: message,
+          metadata: { attemptId },
+        });
+        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
       });
-      await this.changes.changed(jobApplication.id, jobApplication.profileId);
       throw error;
     }
   }

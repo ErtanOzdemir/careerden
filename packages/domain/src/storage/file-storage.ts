@@ -1,4 +1,5 @@
 export interface StoredFileInput {
+  key?: string;
   fileName: string;
   contentType: string;
   body: Buffer;

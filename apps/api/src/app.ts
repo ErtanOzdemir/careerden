@@ -29,6 +29,11 @@ import {
   RequestJobApplicationAnalysisUseCase,
   UpdateJobApplicationStatusUseCase,
   UpdateJobApplicationTrackingUseCase,
+  ClaimNextScrapeJobUseCase,
+  CreateJobApplicationFromScrapeUseCase,
+  FailScrapeJobUseCase,
+  RenewScrapeClaimUseCase,
+  SubmitJobApplicationScrapeDataUseCase,
 } from "@link2cv/application";
 import {
   BullMqJobApplicationQueue,
@@ -50,7 +55,6 @@ import {
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";
-import type { AuthenticatedUser } from "./auth/session.middleware.js";
 import { createSmtpOtpEmailSender } from "./auth/email-otp-mailer.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
@@ -107,11 +111,12 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     docxTemplates,
   );
   const getCurrentProfile = new GetOrCreateCurrentProfileUseCase(profiles);
-  const getProfileForUser = (user: AuthenticatedUser) => getCurrentProfile.execute(user);
-
-  async function canAccessProfile(profileId: string, userId: string): Promise<boolean> {
-    return (await profiles.findUserIdByProfileId(profileId)) === userId;
-  }
+  const getProfile = new GetProfileUseCase(profiles);
+  const getJobApplicationDetail = new GetJobApplicationDetailUseCase(
+    jobApplications,
+    profiles,
+    storage,
+  );
 
   const app = express();
 
@@ -135,7 +140,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     createProfileRouter({
       createProfile: new CreateProfileUseCase(profiles),
       getCurrentProfile,
-      getProfile: new GetProfileUseCase(profiles),
+      getProfile,
       updateProfile: new UpdateProfileUseCase(profiles),
       listDocumentTemplates: new ListDocumentTemplatesUseCase(profiles),
       uploadDocumentTemplate: new UploadDocumentTemplateUseCase(profiles, storage, docxTemplates),
@@ -167,11 +172,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       updateJobApplicationStatus: new UpdateJobApplicationStatusUseCase(jobApplications, profiles),
       listJobApplications: new ListJobApplicationsUseCase(jobApplications, profiles, storage),
       getJobApplicationAnalytics: new GetJobApplicationAnalyticsUseCase(jobApplications, profiles),
-      getJobApplicationDetail: new GetJobApplicationDetailUseCase(
-        jobApplications,
-        profiles,
-        storage,
-      ),
+      getJobApplicationDetail,
       updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(
         jobApplications,
         profiles,
@@ -181,16 +182,28 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         profiles,
         queue,
       ),
+      claimNextScrapeJob: new ClaimNextScrapeJobUseCase(jobApplications, getCurrentProfile),
+      createJobApplicationFromScrape: new CreateJobApplicationFromScrapeUseCase(
+        jobApplications,
+        getCurrentProfile,
+        queue,
+      ),
+      renewScrapeClaim: new RenewScrapeClaimUseCase(jobApplications, profiles),
+      failScrapeJob: new FailScrapeJobUseCase(jobApplications, profiles),
+      submitJobApplicationScrapeData: new SubmitJobApplicationScrapeDataUseCase(
+        jobApplications,
+        profiles,
+        queue,
+        remoteImageFetcher,
+        storage,
+        getJobApplicationDetail,
+      ),
+      getProfile,
       jobApplications,
-      profiles,
       jobApplicationChanges: changeBus,
-      queue,
       followUpReminderQueue,
       followUpReminders,
       storage,
-      remoteImages: remoteImageFetcher,
-      getProfileForUser,
-      canAccessProfile,
     }),
   );
   app.use(

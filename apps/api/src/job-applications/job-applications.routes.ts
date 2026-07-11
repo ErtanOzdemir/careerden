@@ -14,22 +14,21 @@ import type {
   RequestJobApplicationAnalysisUseCase,
   UpdateJobApplicationStatusUseCase,
   UpdateJobApplicationTrackingUseCase,
+  ClaimNextScrapeJobUseCase,
+  CreateJobApplicationFromScrapeUseCase,
+  FailScrapeJobUseCase,
+  RenewScrapeClaimUseCase,
+  SubmitJobApplicationScrapeDataUseCase,
+  GetProfileUseCase,
 } from "@link2cv/application";
 import type {
   FileStorage,
   FollowUpReminderQueue,
   FollowUpReminderRepository,
-  JobApplication,
   JobApplicationFollowUp,
   JobApplicationChangeSubscriber,
-  JobApplicationQueue,
   JobApplicationRepository,
-  RemoteImageFetcher,
-  ScrapeBundle,
-  UserProfile,
-  UserProfileRepository,
 } from "@link2cv/domain";
-import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import { getFollowUpReminderScheduledFor } from "@link2cv/infrastructure";
 import {
   createJobApplicationFromScrapeSchema,
@@ -52,10 +51,6 @@ import {
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
-const scrapeClaimDurationMs = 600_000;
-const maxScrapeAttempts = 3;
-const scrapeRetryBackoffMs = [60_000, 300_000];
-
 export function createJobApplicationRouter(dependencies: {
   submitJobApplication: SubmitJobApplicationUseCase;
   deleteJobApplication: DeleteJobApplicationUseCase;
@@ -69,16 +64,17 @@ export function createJobApplicationRouter(dependencies: {
   getJobApplicationDetail: GetJobApplicationDetailUseCase;
   updateJobApplicationTracking: UpdateJobApplicationTrackingUseCase;
   requestJobApplicationAnalysis: RequestJobApplicationAnalysisUseCase;
+  claimNextScrapeJob: ClaimNextScrapeJobUseCase;
+  createJobApplicationFromScrape: CreateJobApplicationFromScrapeUseCase;
+  renewScrapeClaim: RenewScrapeClaimUseCase;
+  failScrapeJob: FailScrapeJobUseCase;
+  submitJobApplicationScrapeData: SubmitJobApplicationScrapeDataUseCase;
+  getProfile: GetProfileUseCase;
   jobApplications: JobApplicationRepository;
-  profiles: UserProfileRepository;
   jobApplicationChanges: JobApplicationChangeSubscriber;
-  queue: JobApplicationQueue;
   followUpReminderQueue: FollowUpReminderQueue;
   followUpReminders: FollowUpReminderRepository;
   storage: FileStorage;
-  remoteImages: RemoteImageFetcher;
-  getProfileForUser: (user: AuthenticatedRequest["user"]) => Promise<UserProfile>;
-  canAccessProfile: (profileId: string, userId: string) => Promise<boolean>;
   generateWithAi?: GenerateDocumentsWithAiUseCase;
 }): ExpressRouter {
   const router = Router();
@@ -111,72 +107,11 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(submitScrapeDataSchema),
     async (request, response, next) => {
       try {
-        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-        if (!jobApplication) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
-
-        if (!canTransitionJobApplicationStatus(jobApplication.status, "scraped")) {
-          response.status(400).json({ error: "Invalid status transition" });
-          return;
-        }
-
-        if (
-          jobApplication.scrapeClaimedBy &&
-          jobApplication.scrapeClaimedBy !== request.body.claimedBy
-        ) {
-          response.status(409).json({ error: "Scrape claim is owned by another desktop client" });
-          return;
-        }
-
-        const scrape = request.body.scrapeBundle as ScrapeBundle;
-        await dependencies.jobApplications.saveScrapeBundle(request.params.id, scrape);
-
-        await storeCompanyLogo(
-          request.params.id,
-          scrape,
-          dependencies.remoteImages,
-          dependencies.storage,
-          dependencies.jobApplications,
-        );
-
-        await dependencies.jobApplications.updateTracking(request.params.id, {
-          companyName: scrape.job.companyName,
-          roleTitle: scrape.job.title,
-        });
-
-        await dependencies.jobApplications.updateStatus(request.params.id, "scraped");
-
-        await dependencies.jobApplications.addEvent({
-          jobApplicationId: request.params.id,
-          type: "processing",
-          title: "Scraping complete",
-          metadata: {
-            companyName: scrape.job.companyName,
-            roleTitle: scrape.job.title,
-          },
-        });
-
-        const profile = await dependencies.profiles.findById(jobApplication.profileId);
-
-        if (!profile) {
-          response.status(404).json({ error: "Profile not found" });
-          return;
-        }
-
-        await enqueueMatchAnalysisIfEnabled({
-          jobApplications: dependencies.jobApplications,
-          queue: dependencies.queue,
-          jobApplicationId: request.params.id,
-          autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
-        });
-
         response.json(
-          await dependencies.getJobApplicationDetail.execute(
+          await dependencies.submitJobApplicationScrapeData.execute(
             request.params.id,
             currentUser(request).id,
+            request.body,
           ),
         );
       } catch (error) {
@@ -195,10 +130,7 @@ export function createJobApplicationRouter(dependencies: {
     }
 
     try {
-      if (!(await dependencies.canAccessProfile(profileId, currentUser(request).id))) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
+      await dependencies.getProfile.execute(profileId, currentUser(request).id);
 
       response.status(200);
       response.set({
@@ -248,11 +180,10 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(claimScrapeJobSchema),
     async (request, response, next) => {
       try {
-        const profile = await dependencies.getProfileForUser(currentUser(request));
-        const claimed = await claimNextScrapeJob(dependencies.jobApplications, {
-          profileId: profile.id,
-          claimedBy: request.body.claimedBy,
-        });
+        const claimed = await dependencies.claimNextScrapeJob.execute(
+          currentUser(request),
+          request.body.claimedBy,
+        );
 
         if (!claimed) {
           response.status(204).send();
@@ -271,39 +202,10 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(createJobApplicationFromScrapeSchema),
     async (request, response, next) => {
       try {
-        const profile = await dependencies.getProfileForUser(currentUser(request));
-        const scrape = request.body.scrapeBundle as ScrapeBundle;
-        const jobApplication = await dependencies.jobApplications.create({
-          profileId: profile.id,
-          sourceUrl: request.body.sourceUrl,
-          companyName: scrape.job.companyName,
-          roleTitle: scrape.job.title,
-          roleType: scrape.job.location,
-          jobUrl: request.body.sourceUrl,
-          dateApplied: request.body.dateApplied,
-          applicationStatus: request.body.applicationStatus,
-          priority: request.body.priority,
-          tags: request.body.tags,
-          metadata: request.body.metadata,
-        });
-
-        await dependencies.jobApplications.saveScrapeBundle(jobApplication.id, scrape);
-        await dependencies.jobApplications.updateStatus(jobApplication.id, "scraped");
-        await dependencies.jobApplications.addEvent({
-          jobApplicationId: jobApplication.id,
-          type: "processing",
-          title: "Desktop scrape received",
-          metadata: {
-            companyName: scrape.job.companyName,
-            roleTitle: scrape.job.title,
-          },
-        });
-        await enqueueMatchAnalysisIfEnabled({
-          jobApplications: dependencies.jobApplications,
-          queue: dependencies.queue,
-          jobApplicationId: jobApplication.id,
-          autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
-        });
+        const jobApplication = await dependencies.createJobApplicationFromScrape.execute(
+          currentUser(request),
+          request.body,
+        );
 
         response.status(201).json(jobApplication);
       } catch (error) {
@@ -439,16 +341,11 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(heartbeatScrapeJobSchema),
     async (request, response, next) => {
       try {
-        const renewed = await renewScrapeClaim(
-          dependencies.jobApplications,
+        const renewed = await dependencies.renewScrapeClaim.execute(
           request.params.id,
-          request.body,
+          currentUser(request).id,
+          request.body.claimedBy,
         );
-
-        if (!renewed) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
 
         response.status(202).json(renewed);
       } catch (error) {
@@ -462,16 +359,11 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(failScrapeJobSchema),
     async (request, response, next) => {
       try {
-        const failed = await failScrapeJob(
-          dependencies.jobApplications,
+        const failed = await dependencies.failScrapeJob.execute(
           request.params.id,
+          currentUser(request).id,
           request.body,
         );
-
-        if (!failed) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
 
         response.status(202).json({ status: failed });
       } catch (error) {
@@ -842,184 +734,6 @@ async function scheduleFollowUpReminder(input: {
     jobId: scheduled.jobId,
     scheduledFor,
   });
-}
-
-export async function enqueueMatchAnalysisIfEnabled(input: {
-  jobApplications: Pick<JobApplicationRepository, "addEvent">;
-  queue: JobApplicationQueue;
-  jobApplicationId: string;
-  autoRunMatchAnalysis: boolean;
-}): Promise<boolean> {
-  if (input.autoRunMatchAnalysis) {
-    await input.queue.enqueue({ jobApplicationId: input.jobApplicationId });
-    return true;
-  }
-
-  await input.jobApplications.addEvent({
-    jobApplicationId: input.jobApplicationId,
-    type: "processing",
-    title: "AI analysis skipped",
-    body: "Auto-run match analysis is disabled for this profile.",
-  });
-  return false;
-}
-
-export function claimNextScrapeJob(
-  jobApplications: JobApplicationRepository,
-  input: { claimedBy: string; profileId: string },
-): Promise<JobApplication | null> {
-  return claimNextScrapeJobWithEvent(jobApplications, input);
-}
-
-async function claimNextScrapeJobWithEvent(
-  jobApplications: JobApplicationRepository,
-  input: { claimedBy: string; profileId: string },
-): Promise<JobApplication | null> {
-  const claimed = await jobApplications.claimNextScrapeJob({
-    profileId: input.profileId,
-    claimedBy: input.claimedBy,
-    claimDurationMs: scrapeClaimDurationMs,
-  });
-
-  if (claimed) {
-    await jobApplications.addEvent({
-      jobApplicationId: claimed.id,
-      type: "processing",
-      title: "Scraping started",
-    });
-  }
-
-  return claimed;
-}
-
-export function renewScrapeClaim(
-  jobApplications: JobApplicationRepository,
-  jobApplicationId: string,
-  input: { claimedBy: string },
-): Promise<JobApplication | null> {
-  return jobApplications.renewScrapeClaim(jobApplicationId, {
-    claimedBy: input.claimedBy,
-    claimDurationMs: scrapeClaimDurationMs,
-  });
-}
-
-export async function failScrapeJob(
-  jobApplications: JobApplicationRepository,
-  jobApplicationId: string,
-  input: { claimedBy: string; reason: string },
-  now = new Date(),
-): Promise<"failed" | "retry_scheduled" | false> {
-  const jobApplication = await jobApplications.findById(jobApplicationId);
-
-  if (!jobApplication) {
-    return false;
-  }
-
-  if (jobApplication.scrapeClaimedBy && jobApplication.scrapeClaimedBy !== input.claimedBy) {
-    throw new Error("Job application scrape claim is owned by another desktop client");
-  }
-
-  const backoffMs = scrapeRetryBackoffMs[jobApplication.scrapeAttemptCount - 1] ?? 0;
-  const updated = await jobApplications.recordScrapeFailure(jobApplicationId, {
-    claimedBy: input.claimedBy,
-    reason: input.reason,
-    maxAttempts: maxScrapeAttempts,
-    backoffMs,
-    now,
-  });
-
-  if (!updated) {
-    return false;
-  }
-
-  if (updated.status === "failed") {
-    await jobApplications.addEvent({
-      jobApplicationId,
-      type: "processing",
-      title: "Scraping failed",
-      body: input.reason,
-      metadata: { attempt: updated.scrapeAttemptCount, maxAttempts: maxScrapeAttempts },
-    });
-    return "failed";
-  }
-
-  await jobApplications.addEvent({
-    jobApplicationId,
-    type: "processing",
-    title: "Scraping retry scheduled",
-    body: input.reason,
-    metadata: {
-      attempt: updated.scrapeAttemptCount,
-      maxAttempts: maxScrapeAttempts,
-      ...(updated.nextScrapeAttemptAt
-        ? { nextAttemptAt: updated.nextScrapeAttemptAt.toISOString() }
-        : {}),
-    },
-  });
-
-  return "retry_scheduled";
-}
-
-async function storeCompanyLogo(
-  jobApplicationId: string,
-  scrape: ScrapeBundle,
-  remoteImages: RemoteImageFetcher,
-  storage: FileStorage,
-  jobApplications: JobApplicationRepository,
-): Promise<void> {
-  const companyWithLogo = scrape.companyLinkedIn?.logoUrl
-    ? scrape.companyLinkedIn
-    : scrape.companyWebsite?.logoUrl
-      ? scrape.companyWebsite
-      : scrape.careerPage?.logoUrl
-        ? scrape.careerPage
-        : undefined;
-
-  const logoUrl = companyWithLogo?.logoUrl;
-
-  if (!logoUrl) {
-    return;
-  }
-
-  try {
-    const image = await remoteImages.fetch(logoUrl);
-    const stored = await storage.put({
-      fileName: `company-logo.${extensionForContentType(image.contentType)}`,
-      contentType: image.contentType,
-      body: image.body,
-      metadata: {
-        jobApplicationId,
-        kind: "company_logo",
-        companyName: companyWithLogo.name,
-      },
-    });
-
-    const updatedCompany = { ...companyWithLogo, logoFileId: stored.id };
-    const updatedScrape: ScrapeBundle = {
-      ...scrape,
-      companyLinkedIn:
-        scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
-      companyWebsite:
-        scrape.companyWebsite === companyWithLogo ? updatedCompany : scrape.companyWebsite,
-      careerPage: scrape.careerPage === companyWithLogo ? updatedCompany : scrape.careerPage,
-    };
-    await jobApplications.saveScrapeBundle(jobApplicationId, updatedScrape);
-  } catch {
-    // Logo download is optional
-  }
-}
-
-function extensionForContentType(contentType: string): string {
-  switch (contentType) {
-    case "image/jpeg":
-      return "jpg";
-    case "image/webp":
-      return "webp";
-    case "image/gif":
-      return "gif";
-    default:
-      return "png";
-  }
 }
 
 export async function getGeneratedDocumentDownloadUrl(input: {

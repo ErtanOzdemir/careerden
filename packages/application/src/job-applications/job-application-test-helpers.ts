@@ -4,6 +4,7 @@ import type {
   JobApplication,
   JobApplicationQueue,
   JobApplicationRepository,
+  ScrapeBundle,
   UserProfileAccessRepository,
 } from "@link2cv/domain";
 
@@ -31,6 +32,8 @@ export function createJobApplicationRepository(
   overrides: Partial<JobApplicationRepository> = {},
 ): JobApplicationRepository {
   return {
+    create: vi.fn(),
+    claimNextScrapeJob: vi.fn(async () => null),
     findById: vi.fn(),
     listByProfileId: vi.fn(async () => []),
     listGeneratedDocuments: vi.fn(async () => []),
@@ -43,6 +46,9 @@ export function createJobApplicationRepository(
     getCompanyLogoFileId: vi.fn(async () => null),
     updateStatus: vi.fn(),
     updateTracking: vi.fn(),
+    saveScrapeBundle: vi.fn(),
+    renewScrapeClaim: vi.fn(async () => null),
+    recordScrapeFailure: vi.fn(async () => null),
     addEvent: vi.fn(),
     ...overrides,
   } as JobApplicationRepository;
@@ -67,4 +73,16 @@ export function createStorage(overrides: Partial<FileStorage> = {}): FileStorage
 
 export function createQueue(): JobApplicationQueue {
   return { enqueue: vi.fn(), restart: vi.fn() };
+}
+
+export function createScrapeBundle(): ScrapeBundle {
+  return {
+    job: {
+      title: "Backend Engineer",
+      companyName: "Acme",
+      description: "Build TypeScript services",
+      requirements: ["TypeScript"],
+      raw: {},
+    },
+  };
 }

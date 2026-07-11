@@ -2,16 +2,18 @@ import type {
   FileStorage,
   JobApplicationRepository,
   JobSiteScraper,
+  PersistenceUnitOfWork,
   RemoteImageFetcher,
   ScrapedCompany,
   ScrapeBundle,
   UserProfileRepository,
 } from "@link2cv/domain";
 import { documentContentFromMatchAnalysis } from "@link2cv/domain";
-import { canTransitionJobApplicationStatus } from "@link2cv/domain";
+import { randomUUID } from "node:crypto";
 import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.use-case.js";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class ProcessJobApplicationUseCase {
   constructor(
@@ -23,7 +25,7 @@ export class ProcessJobApplicationUseCase {
       companyWebsite: JobSiteScraper;
       careerPage: JobSiteScraper;
     },
-    private readonly changes: JobApplicationChangeNotifier,
+    private readonly unitOfWork: PersistenceUnitOfWork,
     private readonly requirementExtraction?: ExtractJobRequirementsUseCase,
     private readonly matching?: RunMatchAnalysisUseCase,
     private readonly storage?: FileStorage,
@@ -47,12 +49,22 @@ export class ProcessJobApplicationUseCase {
       throw new Error(`Job application ${jobApplicationId} does not have a source URL to scrape`);
     }
 
+    let logoFileId: string | undefined;
+    let scrapePersisted = false;
     try {
-      await this.transition(jobApplicationId, jobApplication.status, "scraping");
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Scraping started",
+      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        if (jobApplication.status !== "queued" && jobApplication.status !== "scraped") {
+          throw new Error(
+            `Invalid job application status transition: ${jobApplication.status} -> scraping`,
+          );
+        }
+        await jobApplications.updateStatus(jobApplicationId, "scraping");
+        await jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "Scraping started",
+        });
+        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
       });
 
       const scrapedJob = await this.scrapers.job.scrapeJob(jobApplication.sourceUrl);
@@ -67,6 +79,7 @@ export class ProcessJobApplicationUseCase {
         linkedInUrl: job.companyLinkedInUrl,
       });
       const companyLinkedIn = await this.storeCompanyLogo(jobApplicationId, scrapedCompanyLinkedIn);
+      logoFileId = companyLinkedIn.logoFileId;
       const companyWebsite = companyLinkedIn.websiteUrl
         ? await this.scrapers.companyWebsite.scrapeCompany({
             companyName: job.companyName,
@@ -87,21 +100,33 @@ export class ProcessJobApplicationUseCase {
         careerPage,
       };
 
-      await this.jobApplications.saveScrapeBundle(jobApplicationId, scrape);
-      await this.transition(jobApplicationId, "scraping", "scraped");
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Scraping completed",
-        metadata: { companyName: job.companyName, roleTitle: job.title },
-      });
-
-      if (this.matching) {
-        await this.transition(jobApplicationId, "scraped", "analyzing");
-        await this.jobApplications.addEvent({
+      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        await jobApplications.saveScrapeBundle(jobApplicationId, scrape);
+        await jobApplications.updateStatus(jobApplicationId, "scraped");
+        await jobApplications.addEvent({
           jobApplicationId,
           type: "processing",
-          title: "AI analysis started",
+          title: "Scraping completed",
+          metadata: { companyName: job.companyName, roleTitle: job.title },
+        });
+        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      });
+      scrapePersisted = true;
+
+      if (this.matching) {
+        const attemptId = randomUUID();
+        await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+          await jobApplications.setAnalysisAttempt(jobApplicationId, attemptId);
+          if (!(await jobApplications.beginAnalysis(jobApplicationId, attemptId))) {
+            throw new Error("Could not start AI analysis");
+          }
+          await jobApplications.addEvent({
+            jobApplicationId,
+            type: "processing",
+            title: "AI analysis started",
+            metadata: { attemptId },
+          });
+          await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
         });
 
         const analysis = await this.matching.execute({
@@ -109,45 +134,58 @@ export class ProcessJobApplicationUseCase {
           profile,
           scrape,
         });
-        await this.jobApplications.saveMatchAnalysis(jobApplicationId, analysis);
-        await this.jobApplications.saveDocumentContent(
-          jobApplicationId,
-          documentContentFromMatchAnalysis(analysis),
-        );
-
-        await this.jobApplications.addEvent({
-          jobApplicationId,
-          type: "processing",
-          title: "AI analysis completed",
-          metadata: { matchScore: analysis.matchScore },
-        });
-        await this.transition(jobApplicationId, "analyzing", "review_ready");
-        await this.jobApplications.addEvent({
-          jobApplicationId,
-          type: "processing",
-          title: "Ready for AI match review",
-          metadata: { matchScore: analysis.matchScore },
+        await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+          if (
+            !(await jobApplications.completeAnalysis(
+              jobApplicationId,
+              attemptId,
+              analysis,
+              documentContentFromMatchAnalysis(analysis),
+            ))
+          ) {
+            throw new Error("AI analysis was superseded");
+          }
+          await jobApplications.addEvent({
+            jobApplicationId,
+            type: "processing",
+            title: "AI analysis completed",
+            metadata: { matchScore: analysis.matchScore, attemptId },
+          });
+          await jobApplications.addEvent({
+            jobApplicationId,
+            type: "processing",
+            title: "Ready for AI match review",
+            metadata: { matchScore: analysis.matchScore, attemptId },
+          });
+          await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
         });
       } else {
-        await this.transition(jobApplicationId, "scraped", "review_ready");
-        await this.jobApplications.addEvent({
-          jobApplicationId,
-          type: "processing",
-          title: "Scrape ready for review",
-          metadata: { companyName: job.companyName, roleTitle: job.title },
+        await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+          await jobApplications.updateStatus(jobApplicationId, "review_ready");
+          await jobApplications.addEvent({
+            jobApplicationId,
+            type: "processing",
+            title: "Scrape ready for review",
+            metadata: { companyName: job.companyName, roleTitle: job.title },
+          });
+          await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
         });
       }
-      await this.changes.changed(jobApplication.id, jobApplication.profileId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown processing error";
-      await this.jobApplications.updateStatus(jobApplicationId, "failed", message);
-      await this.jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Processing failed",
-        body: message,
+      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        await jobApplications.updateStatus(jobApplicationId, "failed", message);
+        await jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "Processing failed",
+          body: message,
+        });
+        if (logoFileId && !scrapePersisted) {
+          await enqueueStorageDeletions(outbox, [logoFileId]);
+        }
+        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
       });
-      await this.changes.changed(jobApplication.id, jobApplication.profileId);
       throw error;
     }
   }
@@ -179,18 +217,6 @@ export class ProcessJobApplicationUseCase {
     } catch {
       return company;
     }
-  }
-
-  private async transition(
-    jobApplicationId: string,
-    from: Parameters<typeof canTransitionJobApplicationStatus>[0],
-    to: Parameters<typeof canTransitionJobApplicationStatus>[1],
-  ): Promise<void> {
-    if (!canTransitionJobApplicationStatus(from, to)) {
-      throw new Error(`Invalid job application status transition: ${from} -> ${to}`);
-    }
-
-    await this.jobApplications.updateStatus(jobApplicationId, to);
   }
 }
 

@@ -33,37 +33,36 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   constructor(private readonly db: Knex) {}
 
   async create(input: CreateJobApplicationInput): Promise<JobApplication> {
-    const id = randomUUID();
-    const [row] = await this.db("job_applications")
-      .insert({
-        id,
-        profile_id: input.profileId,
-        source_url: input.sourceUrl ?? null,
-        status: input.sourceUrl ? "queued" : "completed",
-        company_name: input.companyName ?? null,
-        role_title: input.roleTitle ?? null,
-        role_type: input.roleType ?? null,
-        job_url: input.jobUrl ?? input.sourceUrl ?? null,
-        date_applied: input.dateApplied ?? null,
-        application_status: input.applicationStatus ?? "applied",
-        priority: input.priority ?? "medium",
-        tags: JSON.stringify(input.tags ?? []),
-        last_response_at: input.lastResponseAt ?? null,
-        metadata: JSON.stringify(input.metadata ?? {}),
-        scrape_attempt_count: 0,
-      })
-      .returning("*");
-
-    const jobApplication = toJobApplication(row);
-
-    await this.addEvent({
-      jobApplicationId: jobApplication.id,
-      type: "created",
-      title: input.sourceUrl ? "LinkedIn job submitted" : "Application created",
-      metadata: { sourceUrl: input.sourceUrl },
+    return this.db.transaction(async (transaction) => {
+      const id = randomUUID();
+      const [row] = await transaction("job_applications")
+        .insert({
+          id,
+          profile_id: input.profileId,
+          source_url: input.sourceUrl ?? null,
+          status: input.sourceUrl ? "queued" : "completed",
+          company_name: input.companyName ?? null,
+          role_title: input.roleTitle ?? null,
+          role_type: input.roleType ?? null,
+          job_url: input.jobUrl ?? input.sourceUrl ?? null,
+          date_applied: input.dateApplied ?? null,
+          application_status: input.applicationStatus ?? "applied",
+          priority: input.priority ?? "medium",
+          tags: JSON.stringify(input.tags ?? []),
+          last_response_at: input.lastResponseAt ?? null,
+          metadata: JSON.stringify(input.metadata ?? {}),
+          scrape_attempt_count: 0,
+        })
+        .returning("*");
+      const jobApplication = toJobApplication(row);
+      await new KnexJobApplicationRepository(transaction).addEvent({
+        jobApplicationId: jobApplication.id,
+        type: "created",
+        title: input.sourceUrl ? "LinkedIn job submitted" : "Application created",
+        metadata: { sourceUrl: input.sourceUrl },
+      });
+      return jobApplication;
     });
-
-    return jobApplication;
   }
 
   async findById(id: string): Promise<JobApplication | null> {

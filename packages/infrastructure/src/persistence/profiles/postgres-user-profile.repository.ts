@@ -35,9 +35,13 @@ export class PostgresUserProfileRepository extends KnexUserProfileRepository {
         certifications: JSON.stringify(input.certifications ?? []),
         projects: JSON.stringify(input.projects ?? []),
       })
+      .onConflict("user_id")
+      .ignore()
       .returning("*");
-
-    return toUserProfile(row);
+    if (row) return toUserProfile(row);
+    const existing = await this.findByUserId(userId);
+    if (!existing) throw new Error(`Could not create or load profile for user ${userId}`);
+    return existing;
   }
 
   async findUserIdByProfileId(profileId: string): Promise<string | null> {

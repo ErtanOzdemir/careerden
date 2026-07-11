@@ -1,0 +1,51 @@
+import { vi } from "vitest";
+import type { Notification, NotificationRepository, UserProfile } from "@link2cv/domain";
+import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
+
+export function createTestNotification(): Notification {
+  return {
+    id: "notification-1",
+    profileId: "profile-1",
+    type: "follow_up_reminder",
+    title: "Follow up with Acme",
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  };
+}
+
+export function createNotificationRepository(
+  notification: Notification = createTestNotification(),
+): NotificationRepository {
+  return {
+    create: vi.fn(async () => notification),
+    findById: vi.fn(async () => notification),
+    listByProfileId: vi.fn(async () => [notification]),
+    countUnreadByProfileId: vi.fn(async () => 1),
+    markRead: vi.fn(async () => ({ ...notification, readAt: new Date() })),
+    markAllRead: vi.fn(),
+  };
+}
+
+export function createCurrentProfileProvider(): Pick<GetOrCreateCurrentProfileUseCase, "execute"> {
+  return {
+    execute: vi.fn(async () => createTestProfile()),
+  };
+}
+
+function createTestProfile(): UserProfile {
+  const now = new Date("2026-01-01T00:00:00.000Z");
+  return {
+    id: "profile-1",
+    fullName: "Ada Lovelace",
+    email: "ada@example.com",
+    autoRunMatchAnalysis: true,
+    followUpRemindersEnabled: true,
+    links: [],
+    skills: [],
+    experience: [],
+    education: [],
+    certifications: [],
+    projects: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}

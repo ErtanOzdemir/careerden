@@ -18,6 +18,10 @@ import {
   UpdateDocumentTemplateMappingsUseCase,
   UpdateDocumentTemplateVariableAliasesUseCase,
   UploadDocumentTemplateUseCase,
+  CountUnreadNotificationsUseCase,
+  ListNotificationsUseCase,
+  MarkAllNotificationsReadUseCase,
+  MarkNotificationReadUseCase,
 } from "@link2cv/application";
 import {
   BullMqJobApplicationQueue,
@@ -176,8 +180,16 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   app.use(
     "/notifications",
     createNotificationRouter({
-      notifications,
-      getProfileForUser,
+      listNotifications: new ListNotificationsUseCase(notifications, getCurrentProfile),
+      countUnreadNotifications: new CountUnreadNotificationsUseCase(
+        notifications,
+        getCurrentProfile,
+      ),
+      markNotificationRead: new MarkNotificationReadUseCase(notifications, getCurrentProfile),
+      markAllNotificationsRead: new MarkAllNotificationsReadUseCase(
+        notifications,
+        getCurrentProfile,
+      ),
     }),
   );
   app.use(errorHandler);

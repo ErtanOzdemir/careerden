@@ -2,6 +2,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { describe, expect, it, vi } from "vitest";
 import { LocalScrapingWorker } from "./local-scraping-worker.js";
 import type { DesktopScrapingApiClient, LinkedInScrapingRunner } from "./local-scraping-worker.js";
+import { DesktopApiError } from "./desktop-api-error.js";
 
 describe("LocalScrapingWorker", () => {
   it("waits without claiming scrape tasks when the desktop app is unauthenticated", async () => {
@@ -165,6 +166,85 @@ describe("LocalScrapingWorker", () => {
     expect(api.submitScrapeData).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [400, "validation"],
+    [404, "not_found"],
+    [409, "conflict"],
+  ] as const)(
+    "drops a terminal %s submission response without reporting another failure",
+    async (status, code) => {
+      const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const api = createApiClient({
+        claimNextScrapeJob: vi
+          .fn()
+          .mockResolvedValueOnce({
+            id: "job-1",
+            sourceUrl: "https://www.linkedin.com/jobs/view/1",
+          })
+          .mockResolvedValueOnce(null),
+        submitScrapeData: vi.fn(async () => {
+          throw new DesktopApiError(status, "Terminal response", code);
+        }),
+      });
+      const worker = new LocalScrapingWorker({
+        api,
+        runner: createRunner({
+          scrape: vi.fn(async () => ({
+            job: {
+              title: "Engineer",
+              companyName: "Acme",
+              description: "Build software",
+              requirements: [],
+              raw: {},
+            },
+          })),
+        }),
+      });
+
+      await worker.runOnce();
+
+      expect(api.failScrapeJob).not.toHaveBeenCalled();
+      expect(warning).toHaveBeenCalledWith(
+        "Desktop dropped scrape claim after terminal API response",
+        expect.objectContaining({ code, jobApplicationId: "job-1", status }),
+      );
+      warning.mockRestore();
+    },
+  );
+
+  it("reports an unexpected submission failure through the failure endpoint", async () => {
+    const api = createApiClient({
+      claimNextScrapeJob: vi
+        .fn()
+        .mockResolvedValueOnce({
+          id: "job-1",
+          sourceUrl: "https://www.linkedin.com/jobs/view/1",
+        })
+        .mockResolvedValueOnce(null),
+      submitScrapeData: vi.fn(async () => {
+        throw new DesktopApiError(500, "Unexpected server error", "internal");
+      }),
+    });
+    const worker = new LocalScrapingWorker({
+      api,
+      runner: createRunner({
+        scrape: vi.fn(async () => ({
+          job: {
+            title: "Engineer",
+            companyName: "Acme",
+            description: "Build software",
+            requirements: [],
+            raw: {},
+          },
+        })),
+      }),
+    });
+
+    await worker.runOnce();
+
+    expect(api.failScrapeJob).toHaveBeenCalledWith("job-1", "Unexpected server error");
+  });
+
   it("does not run overlapping polls", async () => {
     let resolveClaim: (value: null) => void = () => {};
     const api = createApiClient({
@@ -191,7 +271,7 @@ describe("LocalScrapingWorker", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const api = createApiClient({
       claimNextScrapeJob: vi.fn(async () => {
-        throw new Error("API request failed with status 401");
+        throw new DesktopApiError(401, "Unauthorized", "unauthorized");
       }),
     });
     const worker = new LocalScrapingWorker({ api, runner: createRunner(), intervalMs: 1 });
@@ -225,7 +305,7 @@ describe("LocalScrapingWorker", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const api = createApiClient({
       claimNextScrapeJob: vi.fn(async () => {
-        throw new Error("API request failed with status 500");
+        throw new DesktopApiError(500, "Unexpected server error", "internal");
       }),
     });
     const worker = new LocalScrapingWorker({ api, runner: createRunner(), intervalMs: 1 });

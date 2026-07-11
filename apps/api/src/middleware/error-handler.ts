@@ -18,13 +18,14 @@ export function errorHandler(
       validation: 400,
     }[error.code];
 
-    response.status(status).json({ error: error.message, ...error.details });
+    response.status(status).json({ ...error.details, code: error.code, error: error.message });
     return;
   }
 
   const message = error instanceof Error ? error.message : "Unexpected error";
 
   response.status(500).json({
+    code: "internal",
     error: message,
     ...(traceId ? { traceId } : {}),
   });

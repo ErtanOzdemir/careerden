@@ -109,12 +109,14 @@ export function createProfileRouter(dependencies: {
   router.post("/:id/document-templates", upload.single("file"), async (request, response, next) => {
     try {
       if (!request.file) {
-        response.status(400).json({ error: "DOCX file is required" });
+        response.status(400).json({ code: "validation", error: "DOCX file is required" });
         return;
       }
 
       if (!isDocxUpload(request.file)) {
-        response.status(400).json({ error: "Only .docx templates are supported" });
+        response
+          .status(400)
+          .json({ code: "validation", error: "Only .docx templates are supported" });
         return;
       }
 

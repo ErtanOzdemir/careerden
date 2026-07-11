@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DesktopApiClient } from "./desktop-api-client.js";
+import { DesktopApiError } from "./desktop-api-error.js";
 
 describe("DesktopApiClient", () => {
   afterEach(() => {
@@ -138,4 +139,53 @@ describe("DesktopApiClient", () => {
       },
     );
   });
+
+  it("throws a typed error from a coded API response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              code: "conflict",
+              error: "Scrape claim is owned by another desktop client",
+              owner: "desktop-b",
+            }),
+            { status: 409 },
+          ),
+      ),
+    );
+    const client = createClient();
+
+    const error = await client.renewScrapeClaim("job-1").catch((failure: unknown) => failure);
+
+    expect(error).toBeInstanceOf(DesktopApiError);
+    expect(error).toMatchObject({
+      code: "conflict",
+      details: { owner: "desktop-b" },
+      message: "Scrape claim is owned by another desktop client",
+      status: 409,
+    });
+  });
+
+  it("falls back safely when an error response is not JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("Service unavailable", { status: 503 })),
+    );
+
+    await expect(createClient().claimNextScrapeJob()).rejects.toMatchObject({
+      code: undefined,
+      message: "API request failed with status 503",
+      status: 503,
+    });
+  });
 });
+
+function createClient(): DesktopApiClient {
+  return new DesktopApiClient({
+    apiBaseUrl: "http://127.0.0.1:3000",
+    claimedBy: "desktop-a",
+    getCookies: vi.fn(async () => []),
+  });
+}

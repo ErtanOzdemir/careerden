@@ -16,6 +16,7 @@ import {
 } from "@link2cv/infrastructure";
 import type { Knex } from "knex";
 import type { NotificationsWorkerEnv } from "./env.js";
+import { toBullMqWorkerError } from "./bullmq-worker-error.js";
 
 export interface NotificationsWorkerRuntime {
   db: Knex;
@@ -49,36 +50,40 @@ export async function createNotificationsWorkerRuntime(
   const worker = new Worker<FollowUpReminderQueuePayload>(
     followUpReminderQueueName,
     async (job) => {
-      const reminder = await reminders.findValidReminder(job.data);
+      try {
+        const reminder = await reminders.findValidReminder(job.data);
 
-      if (!reminder) {
-        return;
+        if (!reminder) {
+          return;
+        }
+
+        const title = reminder.title;
+        const body = createFollowUpBody(
+          reminder.companyName,
+          reminder.roleTitle,
+          reminder.description,
+        );
+
+        await notifications.create({
+          profileId: reminder.profileId,
+          jobApplicationId: reminder.jobApplicationId,
+          type: "follow_up_reminder",
+          title,
+          body,
+        });
+        // TODO: Open it when email sender is ready
+        // await _emailSender.sendFollowUpReminder({
+        //   email: reminder.profileEmail,
+        //   companyName: reminder.companyName,
+        //   roleTitle: reminder.roleTitle,
+        //   followUpAt: reminder.scheduledAt,
+        //   title: reminder.title,
+        //   description: reminder.description,
+        // });
+        await reminders.markSent(job.data, new Date());
+      } catch (error) {
+        throw toBullMqWorkerError(error);
       }
-
-      const title = reminder.title;
-      const body = createFollowUpBody(
-        reminder.companyName,
-        reminder.roleTitle,
-        reminder.description,
-      );
-
-      await notifications.create({
-        profileId: reminder.profileId,
-        jobApplicationId: reminder.jobApplicationId,
-        type: "follow_up_reminder",
-        title,
-        body,
-      });
-      // TODO: Open it when email sender is ready
-      // await _emailSender.sendFollowUpReminder({
-      //   email: reminder.profileEmail,
-      //   companyName: reminder.companyName,
-      //   roleTitle: reminder.roleTitle,
-      //   followUpAt: reminder.scheduledAt,
-      //   title: reminder.title,
-      //   description: reminder.description,
-      // });
-      await reminders.markSent(job.data, new Date());
     },
     {
       concurrency: env.NOTIFICATIONS_WORKER_CONCURRENCY,

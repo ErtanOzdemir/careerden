@@ -13,6 +13,7 @@ import {
 } from "@link2cv/infrastructure";
 import type { Knex } from "knex";
 import type { LlmWorkerEnv } from "./env.js";
+import { toBullMqWorkerError } from "./bullmq-worker-error.js";
 
 export interface LlmWorkerRuntime {
   db: Knex;
@@ -39,7 +40,13 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
   );
   const worker = new Worker<JobApplicationQueuePayload>(
     jobApplicationQueueName,
-    async (job) => analyzeScrapedJob.execute(job.data),
+    async (job) => {
+      try {
+        return await analyzeScrapedJob.execute(job.data);
+      } catch (error) {
+        throw toBullMqWorkerError(error);
+      }
+    },
     {
       concurrency: env.LLM_WORKER_CONCURRENCY,
       connection: { url: env.REDIS_URL },

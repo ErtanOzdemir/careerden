@@ -135,7 +135,7 @@ export function createJobApplicationRouter(dependencies: {
       typeof request.query.profileId === "string" ? request.query.profileId.trim() : "";
 
     if (!profileId) {
-      response.status(400).json({ error: "profileId is required" });
+      response.status(400).json({ code: "validation", error: "profileId is required" });
       return;
     }
 
@@ -229,9 +229,11 @@ export function createJobApplicationRouter(dependencies: {
       const result = listJobApplicationsQuerySchema.safeParse(request.query);
 
       if (!result.success) {
-        response
-          .status(400)
-          .json({ error: "Invalid query parameters", issues: result.error.issues });
+        response.status(400).json({
+          code: "validation",
+          error: "Invalid query parameters",
+          issues: result.error.issues,
+        });
         return;
       }
 
@@ -252,9 +254,11 @@ export function createJobApplicationRouter(dependencies: {
       const result = jobApplicationAnalyticsQuerySchema.safeParse(request.query);
 
       if (!result.success) {
-        response
-          .status(400)
-          .json({ error: "Invalid query parameters", issues: result.error.issues });
+        response.status(400).json({
+          code: "validation",
+          error: "Invalid query parameters",
+          issues: result.error.issues,
+        });
         return;
       }
 

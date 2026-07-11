@@ -17,8 +17,29 @@ describe("errorHandler", () => {
 
     expect(response.status).toHaveBeenCalledWith(400);
     expect(response.json).toHaveBeenCalledWith({
+      code: "validation",
       error: "Unknown placeholders",
       unknown: ["missing"],
+    });
+  });
+
+  it("does not let application details override stable error fields", () => {
+    const response = createResponse();
+
+    errorHandler(
+      new ApplicationError("conflict", "Claim conflict", {
+        code: "internal",
+        error: "Overridden",
+      }),
+      {} as Request,
+      response,
+      vi.fn() as NextFunction,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith({
+      code: "conflict",
+      error: "Claim conflict",
     });
   });
 
@@ -34,6 +55,7 @@ describe("errorHandler", () => {
 
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith({
+      code: "internal",
       error: "Something failed",
       traceId: "0af7651916cd43dd8448eb211c80319c",
     });
@@ -46,6 +68,7 @@ describe("errorHandler", () => {
 
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith({
+      code: "internal",
       error: "Something failed",
     });
   });

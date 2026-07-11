@@ -1,5 +1,6 @@
 import type { ScrapeBundle } from "@link2cv/domain";
 import type { ClaimedScrapeJob, DesktopScrapingApiClient } from "./local-scraping-worker.js";
+import { DesktopApiError } from "./desktop-api-error.js";
 
 export interface DesktopApiCookie {
   name: string;
@@ -103,7 +104,7 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
     });
 
     if (!response.ok && response.status !== 204) {
-      throw new Error(`API request failed with status ${response.status}`);
+      throw await DesktopApiError.fromResponse(response);
     }
 
     return response;

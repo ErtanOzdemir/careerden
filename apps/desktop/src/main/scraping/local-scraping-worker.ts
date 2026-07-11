@@ -1,4 +1,5 @@
 import type { ScrapeBundle } from "@link2cv/domain";
+import { DesktopApiError, isTerminalClaimApiError } from "./desktop-api-error.js";
 
 export interface ClaimedScrapeJob {
   id: string;
@@ -102,13 +103,33 @@ export class LocalScrapingWorker {
     const heartbeat = this.startHeartbeat(claimed.id);
 
     try {
-      const scrapeBundle = await this.dependencies.runner.scrape(claimed.sourceUrl);
-      await this.dependencies.api.submitScrapeData(claimed.id, {
-        sourceUrl: claimed.sourceUrl,
-        scrapeBundle,
-      });
-    } catch (error) {
-      await this.dependencies.api.failScrapeJob(claimed.id, errorMessage(error));
+      let scrapeBundle: ScrapeBundle;
+
+      try {
+        scrapeBundle = await this.dependencies.runner.scrape(claimed.sourceUrl);
+      } catch (error) {
+        await this.dependencies.api.failScrapeJob(claimed.id, errorMessage(error));
+        return;
+      }
+
+      try {
+        await this.dependencies.api.submitScrapeData(claimed.id, {
+          sourceUrl: claimed.sourceUrl,
+          scrapeBundle,
+        });
+      } catch (error) {
+        if (isTerminalClaimApiError(error)) {
+          console.warn("Desktop dropped scrape claim after terminal API response", {
+            code: error.code,
+            jobApplicationId: claimed.id,
+            message: error.message,
+            status: error.status,
+          });
+          return;
+        }
+
+        await this.dependencies.api.failScrapeJob(claimed.id, errorMessage(error));
+      }
     } finally {
       if (heartbeat) {
         clearInterval(heartbeat);
@@ -140,7 +161,6 @@ function isExpectedStartupError(error: unknown): boolean {
 
   return (
     error.message === "fetch failed" ||
-    error.message === "API request failed with status 401" ||
-    error.message === "API request failed with status 503"
+    (error instanceof DesktopApiError && [401, 403, 503].includes(error.status))
   );
 }

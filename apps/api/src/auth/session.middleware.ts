@@ -20,7 +20,7 @@ export function requireSession(auth: Link2CvAuth) {
       });
 
       if (!session) {
-        response.status(401).json({ error: "Unauthorized" });
+        response.status(401).json({ code: "unauthorized", error: "Unauthorized" });
         return;
       }
 

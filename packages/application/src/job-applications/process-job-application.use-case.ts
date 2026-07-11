@@ -7,6 +7,7 @@ import type {
   ScrapeBundle,
   UserProfileRepository,
 } from "@link2cv/domain";
+import { documentContentFromMatchAnalysis } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.use-case.js";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
@@ -108,6 +109,11 @@ export class ProcessJobApplicationUseCase {
           profile,
           scrape,
         });
+        await this.jobApplications.saveMatchAnalysis(jobApplicationId, analysis);
+        await this.jobApplications.saveDocumentContent(
+          jobApplicationId,
+          documentContentFromMatchAnalysis(analysis),
+        );
 
         await this.jobApplications.addEvent({
           jobApplicationId,

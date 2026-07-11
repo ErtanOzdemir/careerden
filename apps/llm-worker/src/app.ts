@@ -1,10 +1,6 @@
 import { Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import {
-  AnalyzeScrapedJobUseCase,
-  JobApplicationChangeNotifier,
-  RunMatchAnalysisUseCase,
-} from "@link2cv/application";
+import { AnalyzeScrapedJobUseCase, RunMatchAnalysisUseCase } from "@link2cv/application";
 import type { JobApplicationQueuePayload } from "@link2cv/domain";
 import {
   AiProviderFactory,
@@ -13,6 +9,7 @@ import {
   PostgresJobApplicationRepository,
   PostgresJobApplicationChangeOutboxDispatcher,
   PostgresOutboxRepository,
+  PostgresPersistenceUnitOfWork,
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
   createPostgresDb,
@@ -33,6 +30,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const jobApplications = new PostgresJobApplicationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
+  const unitOfWork = new PostgresPersistenceUnitOfWork(db);
   const outboxDispatcher = new PostgresJobApplicationChangeOutboxDispatcher(
     new PostgresOutboxRepository(db),
     changeBus,
@@ -70,8 +68,8 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
   const analyzeScrapedJob = new AnalyzeScrapedJobUseCase(
     jobApplications,
     profiles,
-    new RunMatchAnalysisUseCase(aiProviderFactory.create(), jobApplications),
-    new JobApplicationChangeNotifier(changeBus),
+    new RunMatchAnalysisUseCase(aiProviderFactory.create()),
+    unitOfWork,
   );
   const worker = new Worker<JobApplicationQueuePayload>(
     jobApplicationQueueName,

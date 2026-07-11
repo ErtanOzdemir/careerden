@@ -7,7 +7,7 @@ export class SelfProcessingJobApplicationQueue implements JobApplicationQueue {
 
   constructor(private readonly processor: JobProcessor) {}
 
-  async enqueue(payload: JobApplicationQueuePayload): Promise<void> {
+  async enqueue(payload: JobApplicationQueuePayload, _options?: { jobId?: string }): Promise<void> {
     void this.process(payload);
   }
 

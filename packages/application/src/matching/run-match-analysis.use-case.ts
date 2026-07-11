@@ -1,18 +1,8 @@
 import { aiMatchResultSchema } from "@link2cv/contracts";
-import type {
-  AiProvider,
-  JobApplicationRepository,
-  MatchAnalysisResult,
-  ScrapeBundle,
-  UserProfile,
-} from "@link2cv/domain";
-import { documentContentFromMatchAnalysis } from "@link2cv/domain";
+import type { AiProvider, MatchAnalysisResult, ScrapeBundle, UserProfile } from "@link2cv/domain";
 
 export class RunMatchAnalysisUseCase {
-  constructor(
-    private readonly aiProvider: AiProvider,
-    private readonly jobApplications: JobApplicationRepository,
-  ) {}
+  constructor(private readonly aiProvider: AiProvider) {}
 
   async execute(input: {
     jobApplicationId: string;
@@ -176,12 +166,6 @@ export class RunMatchAnalysisUseCase {
       ...sanitizedResult,
       matchScore: calculateMatchScore(sanitizedResult),
     };
-
-    await this.jobApplications.saveMatchAnalysis(input.jobApplicationId, deterministicResult);
-    await this.jobApplications.saveDocumentContent(
-      input.jobApplicationId,
-      documentContentFromMatchAnalysis(deterministicResult),
-    );
 
     return deterministicResult;
   }

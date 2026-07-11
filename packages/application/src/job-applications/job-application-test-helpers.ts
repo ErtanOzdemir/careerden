@@ -52,6 +52,10 @@ export function createJobApplicationRepository(
     saveScrapeBundle: vi.fn(),
     renewScrapeClaim: vi.fn(async () => null),
     recordScrapeFailure: vi.fn(async () => null),
+    setAnalysisAttempt: vi.fn(),
+    beginAnalysis: vi.fn(async () => true),
+    completeAnalysis: vi.fn(async () => true),
+    failAnalysis: vi.fn(async () => true),
     addEvent: vi.fn(),
     ...overrides,
   } as JobApplicationRepository;

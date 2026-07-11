@@ -226,6 +226,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
           company_logo_file_id: null,
           match_analysis: null,
           document_content: null,
+          analysis_attempt_id: null,
           updated_at: transaction.fn.now(),
         })
         .returning("*");
@@ -251,6 +252,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
           next_scrape_attempt_at: null,
           match_analysis: null,
           document_content: null,
+          analysis_attempt_id: null,
           updated_at: transaction.fn.now(),
         })
         .returning("*");
@@ -261,6 +263,55 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
 
       return toJobApplication(row);
     });
+  }
+
+  async beginAnalysis(id: string, attemptId: string): Promise<boolean> {
+    const updated = await this.db("job_applications")
+      .where({ id, analysis_attempt_id: attemptId })
+      .whereIn("status", ["scraped", "analyzing", "failed"])
+      .update({
+        status: "analyzing",
+        analysis_attempt_id: attemptId,
+        failure_reason: null,
+        updated_at: this.db.fn.now(),
+      });
+    return updated > 0;
+  }
+
+  async setAnalysisAttempt(id: string, attemptId: string): Promise<void> {
+    const updated = await this.db("job_applications")
+      .where({ id, status: "scraped" })
+      .update({ analysis_attempt_id: attemptId, updated_at: this.db.fn.now() });
+    if (updated === 0) throw new Error(`Job application ${id} is not ready for analysis`);
+  }
+
+  async completeAnalysis(
+    id: string,
+    attemptId: string,
+    result: MatchAnalysisResult,
+    content: DocumentContent,
+  ): Promise<boolean> {
+    const updated = await this.db("job_applications")
+      .where({ id, analysis_attempt_id: attemptId, status: "analyzing" })
+      .update({
+        match_analysis: JSON.stringify(result),
+        document_content: JSON.stringify(content),
+        status: "review_ready",
+        failure_reason: null,
+        updated_at: this.db.fn.now(),
+      });
+    return updated > 0;
+  }
+
+  async failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean> {
+    const updated = await this.db("job_applications")
+      .where({ id, analysis_attempt_id: attemptId, status: "analyzing" })
+      .update({
+        status: "failed",
+        failure_reason: reason,
+        updated_at: this.db.fn.now(),
+      });
+    return updated > 0;
   }
 
   async updateStatus(

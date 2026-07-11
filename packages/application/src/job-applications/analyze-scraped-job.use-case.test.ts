@@ -1,12 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AiGenerateParams, AiProvider } from "@link2cv/domain";
+import type { AiGenerateParams, AiProvider, PersistenceUnitOfWork } from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
 } from "@link2cv/infrastructure";
 import { AnalyzeScrapedJobUseCase } from "./analyze-scraped-job.use-case.js";
 import { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("AnalyzeScrapedJobUseCase", () => {
   it("runs AI analysis for a scraped job and marks it ready for review", async () => {
@@ -32,14 +31,15 @@ describe("AnalyzeScrapedJobUseCase", () => {
       },
     });
     await jobApplications.updateStatus(jobApplication.id, "scraped");
-    const publish = vi.fn();
+    await jobApplications.setAnalysisAttempt(jobApplication.id, "attempt-1");
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(jobApplications, profiles);
 
     await new AnalyzeScrapedJobUseCase(
       jobApplications,
       profiles,
-      new RunMatchAnalysisUseCase(createAiProvider(), jobApplications),
-      new JobApplicationChangeNotifier({ publish }),
-    ).execute({ jobApplicationId: jobApplication.id });
+      new RunMatchAnalysisUseCase(createAiProvider()),
+      unitOfWork,
+    ).execute({ jobApplicationId: jobApplication.id, analysisAttemptId: "attempt-1" });
 
     const analyzed = await jobApplications.findById(jobApplication.id);
     const analysis = await jobApplications.getMatchAnalysis(jobApplication.id);
@@ -58,7 +58,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
         "Ready for AI match review",
       ]),
     );
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledTimes(2);
   });
 
   it("marks the job failed when required scraped data is missing", async () => {
@@ -75,15 +75,16 @@ describe("AnalyzeScrapedJobUseCase", () => {
       sourceUrl: "https://www.linkedin.com/jobs/view/123",
     });
     await jobApplications.updateStatus(jobApplication.id, "scraped");
-    const publish = vi.fn();
+    await jobApplications.setAnalysisAttempt(jobApplication.id, "attempt-1");
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(jobApplications, profiles);
 
     await expect(
       new AnalyzeScrapedJobUseCase(
         jobApplications,
         profiles,
-        new RunMatchAnalysisUseCase(createAiProvider(), jobApplications),
-        new JobApplicationChangeNotifier({ publish }),
-      ).execute({ jobApplicationId: jobApplication.id }),
+        new RunMatchAnalysisUseCase(createAiProvider()),
+        unitOfWork,
+      ).execute({ jobApplicationId: jobApplication.id, analysisAttemptId: "attempt-1" }),
     ).rejects.toThrow(`No desktop scrape bundle found for job application ${jobApplication.id}`);
 
     const failed = await jobApplications.findById(jobApplication.id);
@@ -94,9 +95,64 @@ describe("AnalyzeScrapedJobUseCase", () => {
       `No desktop scrape bundle found for job application ${jobApplication.id}`,
     );
     expect(events.map((event) => event.title)).toContain("AI analysis failed");
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores a stale analysis attempt without calling the AI provider", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: [],
+      experience: [],
+    });
+    const jobApplication = await jobApplications.create({
+      profileId: profile.id,
+      sourceUrl: "https://www.linkedin.com/jobs/view/123",
+    });
+    await jobApplications.updateStatus(jobApplication.id, "scraped");
+    await jobApplications.setAnalysisAttempt(jobApplication.id, "current-attempt");
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(jobApplications, profiles);
+    const aiProvider = createAiProvider();
+    const generate = vi.spyOn(aiProvider, "generate");
+
+    await new AnalyzeScrapedJobUseCase(
+      jobApplications,
+      profiles,
+      new RunMatchAnalysisUseCase(aiProvider),
+      unitOfWork,
+    ).execute({ jobApplicationId: jobApplication.id, analysisAttemptId: "stale-attempt" });
+
+    expect(generate).not.toHaveBeenCalled();
+    expect((await jobApplications.findById(jobApplication.id))?.status).toBe("scraped");
+    expect(addOutboxEvent).not.toHaveBeenCalled();
   });
 });
+
+function createUnitOfWork(
+  jobApplications: InMemoryJobApplicationRepository,
+  profiles: InMemoryUserProfileRepository,
+): { unitOfWork: PersistenceUnitOfWork; addOutboxEvent: ReturnType<typeof vi.fn> } {
+  const addOutboxEvent = vi.fn(async (input) => ({
+    ...input,
+    id: `outbox-${addOutboxEvent.mock.calls.length}`,
+    attemptCount: 0,
+  }));
+  return {
+    addOutboxEvent,
+    unitOfWork: {
+      execute: async (work) =>
+        work({
+          jobApplications,
+          profiles: profiles as never,
+          notifications: {} as never,
+          followUpReminders: {} as never,
+          outbox: { add: addOutboxEvent },
+        }),
+    },
+  };
+}
 
 function createAiProvider(): AiProvider {
   return {

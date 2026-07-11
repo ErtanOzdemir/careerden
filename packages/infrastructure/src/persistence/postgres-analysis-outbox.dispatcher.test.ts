@@ -11,7 +11,7 @@ describe("PostgresAnalysisOutboxDispatcher", () => {
     await new PostgresAnalysisOutboxDispatcher(outbox, queue).dispatchPending();
 
     expect(queue.enqueue).toHaveBeenCalledWith(
-      { jobApplicationId: "application-1" },
+      { jobApplicationId: "application-1", analysisAttemptId: "event-1" },
       { jobId: "event-1" },
     );
     expect(outbox.markProcessed).toHaveBeenCalledWith("event-1", expect.any(String));

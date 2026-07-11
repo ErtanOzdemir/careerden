@@ -36,7 +36,7 @@ describe("ProcessJobApplicationUseCase", () => {
     const scraper = createScraper();
     const aiProvider = createMockAiProvider();
     const requirementExtraction = new ExtractJobRequirementsUseCase(aiProvider);
-    const matching = new RunMatchAnalysisUseCase(aiProvider, jobApplications);
+    const matching = new RunMatchAnalysisUseCase(aiProvider);
     const logoStorage = {
       put: vi.fn(async () => ({
         id: "logos/example.png",
@@ -181,7 +181,7 @@ describe("ProcessJobApplicationUseCase", () => {
       },
       new JobApplicationChangeNotifier({ publish: vi.fn() }),
       new ExtractJobRequirementsUseCase(aiProvider),
-      new RunMatchAnalysisUseCase(aiProvider, jobApplications),
+      new RunMatchAnalysisUseCase(aiProvider),
       storage,
       { fetch: vi.fn(async () => Promise.reject(new Error("download failed"))) },
     ).execute(jobApplication.id);

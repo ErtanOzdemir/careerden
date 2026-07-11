@@ -88,6 +88,15 @@ export interface JobApplicationRepository {
   listByStatus(status: JobApplicationStatus): Promise<JobApplication[]>;
   resetProcessing(id: string): Promise<JobApplication>;
   resetAnalysis(id: string): Promise<JobApplication>;
+  setAnalysisAttempt(id: string, attemptId: string): Promise<void>;
+  beginAnalysis(id: string, attemptId: string): Promise<boolean>;
+  completeAnalysis(
+    id: string,
+    attemptId: string,
+    result: MatchAnalysisResult,
+    content: DocumentContent,
+  ): Promise<boolean>;
+  failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean>;
   updateStatus(id: string, status: JobApplicationStatus, failureReason?: string): Promise<void>;
   updateTracking(id: string, input: UpdateJobApplicationTrackingInput): Promise<JobApplication>;
   saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void>;

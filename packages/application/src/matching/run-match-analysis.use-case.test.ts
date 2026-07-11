@@ -51,7 +51,7 @@ describe("RunMatchAnalysisUseCase", () => {
       },
     };
 
-    const result = await new RunMatchAnalysisUseCase(aiProvider, jobApplications).execute({
+    const result = await new RunMatchAnalysisUseCase(aiProvider).execute({
       jobApplicationId: jobApplication.id,
       profile: createProfile(),
       scrape: {
@@ -71,14 +71,6 @@ describe("RunMatchAnalysisUseCase", () => {
     });
 
     expect(result.matchScore).toBe(50);
-    await expect(jobApplications.getMatchAnalysis(jobApplication.id)).resolves.toMatchObject({
-      matchScore: 50,
-      requirementEvaluations: [
-        expect.objectContaining({ status: "matched" }),
-        expect.objectContaining({ status: "partial" }),
-        expect.objectContaining({ status: "missing" }),
-      ],
-    });
     expect(result.experienceEnhancements).toHaveLength(1);
 
     const call = calls[0];
@@ -172,7 +164,7 @@ describe("RunMatchAnalysisUseCase", () => {
       },
     };
 
-    const result = await new RunMatchAnalysisUseCase(aiProvider, jobApplications).execute({
+    const result = await new RunMatchAnalysisUseCase(aiProvider).execute({
       jobApplicationId: jobApplication.id,
       profile: createProfile({
         summary: "Backend engineer with 4 years of TypeScript experience.",
@@ -196,12 +188,6 @@ describe("RunMatchAnalysisUseCase", () => {
     expect(result.interviewTips).toEqual([]);
     expect(result.coverLetterGuidance).toEqual([]);
     expect(result.experienceEnhancements).toEqual([]);
-
-    const content = await jobApplications.getDocumentContent(jobApplication.id);
-    expect(content?.customizedSummary.blocks[0]?.children[0]?.text).toBe(
-      "Backend engineer with 4 years of TypeScript experience.",
-    );
-    expect(content?.experienceEnhancements).toEqual([]);
   });
 
   it("keeps AI-generated duration claims when the exact duration exists in the profile", async () => {
@@ -239,7 +225,7 @@ describe("RunMatchAnalysisUseCase", () => {
       },
     };
 
-    const result = await new RunMatchAnalysisUseCase(aiProvider, jobApplications).execute({
+    const result = await new RunMatchAnalysisUseCase(aiProvider).execute({
       jobApplicationId: jobApplication.id,
       profile: createProfile({
         summary: "Backend engineer with 4 years of TypeScript experience.",

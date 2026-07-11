@@ -23,6 +23,7 @@ import type { JobApplicationStatus } from "@link2cv/domain";
 import { randomUUID } from "node:crypto";
 
 export class InMemoryJobApplicationRepository implements JobApplicationRepository {
+  private readonly analysisAttempts = new Map<string, string>();
   private readonly jobApplications = new Map<string, JobApplication>();
   private readonly scrapeBundles = new Map<string, ScrapeBundle>();
   private readonly matchAnalyses = new Map<string, MatchAnalysisResult>();
@@ -227,7 +228,63 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     this.matchAnalyses.delete(id);
     this.documentContents.delete(id);
     this.documents.delete(id);
+    this.analysisAttempts.delete(id);
     return updated;
+  }
+
+  async beginAnalysis(id: string, attemptId: string): Promise<boolean> {
+    const jobApplication = this.jobApplications.get(id);
+    if (!jobApplication) return false;
+    const currentAttempt = this.analysisAttempts.get(id);
+    if (
+      currentAttempt !== attemptId ||
+      !["scraped", "analyzing", "failed"].includes(jobApplication.status)
+    ) {
+      return false;
+    }
+    this.jobApplications.set(id, { ...jobApplication, status: "analyzing" });
+    return true;
+  }
+
+  async setAnalysisAttempt(id: string, attemptId: string): Promise<void> {
+    const jobApplication = this.jobApplications.get(id);
+    if (!jobApplication || jobApplication.status !== "scraped") {
+      throw new Error(`Job application ${id} is not ready for analysis`);
+    }
+    this.analysisAttempts.set(id, attemptId);
+  }
+
+  async completeAnalysis(
+    id: string,
+    attemptId: string,
+    result: MatchAnalysisResult,
+    content: DocumentContent,
+  ): Promise<boolean> {
+    const jobApplication = this.jobApplications.get(id);
+    if (
+      !jobApplication ||
+      jobApplication.status !== "analyzing" ||
+      this.analysisAttempts.get(id) !== attemptId
+    ) {
+      return false;
+    }
+    this.matchAnalyses.set(id, structuredClone(result));
+    this.documentContents.set(id, structuredClone(content));
+    this.jobApplications.set(id, { ...jobApplication, status: "review_ready" });
+    return true;
+  }
+
+  async failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean> {
+    const jobApplication = this.jobApplications.get(id);
+    if (
+      !jobApplication ||
+      jobApplication.status !== "analyzing" ||
+      this.analysisAttempts.get(id) !== attemptId
+    ) {
+      return false;
+    }
+    this.jobApplications.set(id, { ...jobApplication, status: "failed", failureReason: reason });
+    return true;
   }
 
   async updateStatus(

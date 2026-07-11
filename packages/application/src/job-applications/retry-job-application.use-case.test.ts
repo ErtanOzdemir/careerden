@@ -7,6 +7,7 @@ import type {
 } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
 import { RetryJobApplicationUseCase } from "./retry-job-application.use-case.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("RetryJobApplicationUseCase", () => {
   it("clears failed processing data and returns the job to the desktop scraping queue", async () => {
@@ -25,11 +26,13 @@ describe("RetryJobApplicationUseCase", () => {
       contentType: "application/pdf",
     });
     const storage = createStorage();
+    const publish = vi.fn();
     const useCase = new RetryJobApplicationUseCase(
       repository,
       createProfiles(),
       storage,
       createQueue(),
+      new JobApplicationChangeNotifier({ publish }),
     );
 
     const retried = await useCase.execute(job.id, "user-1");
@@ -41,6 +44,7 @@ describe("RetryJobApplicationUseCase", () => {
     expect(await repository.getScrapeBundle(job.id)).toBeNull();
     expect(storage.delete).toHaveBeenCalledWith("files/cv.pdf");
     expect((await repository.listEvents(job.id))[0]?.title).toBe("Retry requested");
+    expect(publish).toHaveBeenCalledOnce();
   });
 
   it("preserves scraped data and restarts AI analysis when retrying an AI failure", async () => {
@@ -62,7 +66,13 @@ describe("RetryJobApplicationUseCase", () => {
     });
     const storage = createStorage();
     const queue = createQueue();
-    const useCase = new RetryJobApplicationUseCase(repository, createProfiles(), storage, queue);
+    const useCase = new RetryJobApplicationUseCase(
+      repository,
+      createProfiles(),
+      storage,
+      queue,
+      new JobApplicationChangeNotifier({ publish: vi.fn() }),
+    );
 
     const retried = await useCase.execute(job.id, "user-1");
 
@@ -86,6 +96,7 @@ describe("RetryJobApplicationUseCase", () => {
       createProfiles(),
       createStorage(),
       createQueue(),
+      new JobApplicationChangeNotifier({ publish: vi.fn() }),
     );
 
     await expect(useCase.execute(job.id, "user-1")).rejects.toThrow(

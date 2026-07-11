@@ -7,6 +7,7 @@ import type {
 } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export type JobApplicationRetryMode = "analysis" | "scraping";
 
@@ -25,6 +26,7 @@ export class RetryJobApplicationUseCase {
     private readonly profiles: UserProfileAccessRepository,
     private readonly storage: FileStorage,
     private readonly queue: JobApplicationQueue,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(
@@ -80,6 +82,8 @@ export class RetryJobApplicationUseCase {
     if (mode === "analysis") {
       await this.queue.restart({ jobApplicationId });
     }
+
+    await this.changes.changed(reset.id, reset.profileId);
 
     return {
       jobApplication: reset,

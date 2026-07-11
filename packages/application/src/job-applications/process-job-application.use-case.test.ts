@@ -3,6 +3,7 @@ import {
   ExtractJobRequirementsUseCase,
   GenerateDocumentsUseCase,
   GenerateJobApplicationDocumentsUseCase,
+  JobApplicationChangeNotifier,
   ProcessJobApplicationUseCase,
   RunMatchAnalysisUseCase,
 } from "../index.js";
@@ -92,6 +93,7 @@ describe("ProcessJobApplicationUseCase", () => {
         companyWebsite: scraper,
         careerPage: scraper,
       },
+      new JobApplicationChangeNotifier({ publish: vi.fn() }),
       requirementExtraction,
       matching,
       logoStorage,
@@ -119,9 +121,12 @@ describe("ProcessJobApplicationUseCase", () => {
     expect(events.map((event) => event.title)).toContain("Scraping completed");
     expect(events.map((event) => event.title)).toContain("Ready for AI match review");
 
-    await new GenerateJobApplicationDocumentsUseCase(jobApplications, profiles, documents).execute(
-      jobApplication.id,
-    );
+    await new GenerateJobApplicationDocumentsUseCase(
+      jobApplications,
+      profiles,
+      documents,
+      new JobApplicationChangeNotifier({ publish: vi.fn() }),
+    ).execute(jobApplication.id);
 
     const completed = await jobApplications.findById(jobApplication.id);
     const generatedAfterApproval = await jobApplications.listGeneratedDocuments(jobApplication.id);
@@ -133,9 +138,12 @@ describe("ProcessJobApplicationUseCase", () => {
       "Document generation completed",
     );
 
-    await new GenerateJobApplicationDocumentsUseCase(jobApplications, profiles, documents).execute(
-      jobApplication.id,
-    );
+    await new GenerateJobApplicationDocumentsUseCase(
+      jobApplications,
+      profiles,
+      documents,
+      new JobApplicationChangeNotifier({ publish: vi.fn() }),
+    ).execute(jobApplication.id);
 
     expect((await jobApplications.findById(jobApplication.id))?.status).toBe("completed");
     expect(await jobApplications.listGeneratedDocuments(jobApplication.id)).toHaveLength(2);
@@ -171,6 +179,7 @@ describe("ProcessJobApplicationUseCase", () => {
         companyWebsite: scraper,
         careerPage: scraper,
       },
+      new JobApplicationChangeNotifier({ publish: vi.fn() }),
       new ExtractJobRequirementsUseCase(aiProvider),
       new RunMatchAnalysisUseCase(aiProvider, jobApplications),
       storage,

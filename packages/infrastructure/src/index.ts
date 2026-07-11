@@ -4,7 +4,6 @@ export * from "./matching/ai/providers/gemini-ai.provider.js";
 export * from "./matching/ai/providers/openai-ai.provider.js";
 export * from "./matching/remote-premium-ai.service.js";
 export * from "./job-applications/in-memory-job-application-change.bus.js";
-export * from "./job-applications/publishing-job-application.repository.js";
 export * from "./job-applications/redis-job-application-change.bus.js";
 export * from "./persistence/job-applications/in-memory-job-application.repository.js";
 export * from "./persistence/job-applications/knex-job-application.repository.js";

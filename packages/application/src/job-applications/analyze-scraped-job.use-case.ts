@@ -4,12 +4,14 @@ import type {
   UserProfileRepository,
 } from "@link2cv/domain";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class AnalyzeScrapedJobUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
     private readonly matching: RunMatchAnalysisUseCase,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(payload: JobApplicationQueuePayload): Promise<void> {
@@ -58,6 +60,7 @@ export class AnalyzeScrapedJobUseCase {
         title: "Ready for AI match review",
         metadata: { matchScore: analysis.matchScore },
       });
+      await this.changes.changed(jobApplication.id, jobApplication.profileId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown AI analysis error";
       await this.jobApplications.updateStatus(jobApplication.id, "failed", message);
@@ -67,6 +70,7 @@ export class AnalyzeScrapedJobUseCase {
         title: "AI analysis failed",
         body: message,
       });
+      await this.changes.changed(jobApplication.id, jobApplication.profileId);
       throw error;
     }
   }

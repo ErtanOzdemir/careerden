@@ -10,6 +10,7 @@ import type {
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.use-case.js";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class ProcessJobApplicationUseCase {
   constructor(
@@ -21,6 +22,7 @@ export class ProcessJobApplicationUseCase {
       companyWebsite: JobSiteScraper;
       careerPage: JobSiteScraper;
     },
+    private readonly changes: JobApplicationChangeNotifier,
     private readonly requirementExtraction?: ExtractJobRequirementsUseCase,
     private readonly matching?: RunMatchAnalysisUseCase,
     private readonly storage?: FileStorage,
@@ -129,6 +131,7 @@ export class ProcessJobApplicationUseCase {
           metadata: { companyName: job.companyName, roleTitle: job.title },
         });
       }
+      await this.changes.changed(jobApplication.id, jobApplication.profileId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown processing error";
       await this.jobApplications.updateStatus(jobApplicationId, "failed", message);
@@ -138,6 +141,7 @@ export class ProcessJobApplicationUseCase {
         title: "Processing failed",
         body: message,
       });
+      await this.changes.changed(jobApplication.id, jobApplication.profileId);
       throw error;
     }
   }

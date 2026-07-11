@@ -58,7 +58,6 @@ import {
   PostgresJobApplicationRepository,
   PostgresNotificationRepository,
   PostgresUserProfileRepository,
-  PublishingJobApplicationRepository,
   RedisJobApplicationChangeBus,
   RustFsStorage,
   createPostgresDb,
@@ -97,8 +96,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
   });
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
-  const innerJobApplications = new PostgresJobApplicationRepository(db);
-  const jobApplications = new PublishingJobApplicationRepository(innerJobApplications, changeBus);
+  const jobApplications = new PostgresJobApplicationRepository(db);
   const jobApplicationChanges = new JobApplicationChangeNotifier(changeBus);
   const notifications = new PostgresNotificationRepository(db);
   const followUpReminders = new PostgresFollowUpReminderRepository(db);
@@ -168,30 +166,37 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     "/job-applications",
     createJobApplicationRouter({
       submitJobApplication: new SubmitJobApplicationUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
-      deleteJobApplication: new DeleteJobApplicationUseCase(jobApplications, profiles, storage),
+      deleteJobApplication: new DeleteJobApplicationUseCase(
+        jobApplications,
+        profiles,
+        storage,
+        jobApplicationChanges,
+      ),
       generateJobApplicationDocuments: new GenerateJobApplicationDocumentsUseCase(
         jobApplications,
         profiles,
         generateDocumentsUseCase,
+        jobApplicationChanges,
       ),
       retryJobApplication: new RetryJobApplicationUseCase(
         jobApplications,
         profiles,
         storage,
         queue,
+        jobApplicationChanges,
       ),
       updateDocumentContent: new UpdateDocumentContentUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
       ensureJobApplicationAccess: new EnsureJobApplicationAccessUseCase(jobApplications, profiles),
       updateJobApplicationStatus: new UpdateJobApplicationStatusUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
@@ -199,7 +204,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       getJobApplicationAnalytics: new GetJobApplicationAnalyticsUseCase(jobApplications, profiles),
       getJobApplicationDetail,
       updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
@@ -207,30 +212,27 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         jobApplications,
         profiles,
         queue,
+        jobApplicationChanges,
       ),
       claimNextScrapeJob: new ClaimNextScrapeJobUseCase(
-        innerJobApplications,
+        jobApplications,
         getCurrentProfile,
         jobApplicationChanges,
       ),
       createJobApplicationFromScrape: new CreateJobApplicationFromScrapeUseCase(
-        innerJobApplications,
+        jobApplications,
         getCurrentProfile,
         queue,
         jobApplicationChanges,
       ),
       renewScrapeClaim: new RenewScrapeClaimUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
-      failScrapeJob: new FailScrapeJobUseCase(
-        innerJobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      failScrapeJob: new FailScrapeJobUseCase(jobApplications, profiles, jobApplicationChanges),
       submitJobApplicationScrapeData: new SubmitJobApplicationScrapeDataUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         queue,
         remoteImageFetcher,
@@ -241,29 +243,29 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       getProfile,
       jobApplicationChanges: changeBus,
       createJobApplicationEvent: new CreateJobApplicationEventUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
       listJobApplicationEvents: new ListJobApplicationEventsUseCase(jobApplications, profiles),
       createJobApplicationContact: new CreateJobApplicationContactUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
       listJobApplicationContacts: new ListJobApplicationContactsUseCase(jobApplications, profiles),
       updateJobApplicationContact: new UpdateJobApplicationContactUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
       deleteJobApplicationContact: new DeleteJobApplicationContactUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         jobApplicationChanges,
       ),
       createJobApplicationFollowUp: new CreateJobApplicationFollowUpUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         followUpReminderQueue,
         followUpReminders,
@@ -274,14 +276,14 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         profiles,
       ),
       updateJobApplicationFollowUp: new UpdateJobApplicationFollowUpUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         followUpReminderQueue,
         followUpReminders,
         jobApplicationChanges,
       ),
       deleteJobApplicationFollowUp: new DeleteJobApplicationFollowUpUseCase(
-        innerJobApplications,
+        jobApplications,
         profiles,
         followUpReminderQueue,
         jobApplicationChanges,

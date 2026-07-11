@@ -5,12 +5,14 @@ import type {
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import type { GenerateDocumentsUseCase } from "../documents/generate-documents.use-case.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class GenerateJobApplicationDocumentsUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
     private readonly documentGeneration: GenerateDocumentsUseCase,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(jobApplicationId: string): Promise<GeneratedDocument[]> {
@@ -62,6 +64,7 @@ export class GenerateJobApplicationDocumentsUseCase {
         type: "processing",
         title: "Document generation completed",
       });
+      await this.changes.changed(jobApplication.id, jobApplication.profileId);
 
       return generated;
     } catch (error) {
@@ -73,6 +76,7 @@ export class GenerateJobApplicationDocumentsUseCase {
         title: "Document generation failed",
         body: message,
       });
+      await this.changes.changed(jobApplication.id, jobApplication.profileId);
       throw error;
     }
   }

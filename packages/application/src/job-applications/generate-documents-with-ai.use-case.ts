@@ -7,6 +7,7 @@ import type {
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import { GenerateDocumentsUseCase } from "../documents/generate-documents.use-case.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class GenerateDocumentsWithAiUseCase {
   constructor(
@@ -14,6 +15,7 @@ export class GenerateDocumentsWithAiUseCase {
     private readonly generateDocuments: GenerateDocumentsUseCase,
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(input: {
@@ -77,6 +79,7 @@ export class GenerateDocumentsWithAiUseCase {
       type: "processing",
       title: "Documents generated",
     });
+    await this.changes.changed(jobApplication.id, jobApplication.profileId);
 
     return documents;
   }

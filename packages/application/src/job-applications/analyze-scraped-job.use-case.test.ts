@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AiGenerateParams, AiProvider } from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
@@ -6,6 +6,7 @@ import {
 } from "@link2cv/infrastructure";
 import { AnalyzeScrapedJobUseCase } from "./analyze-scraped-job.use-case.js";
 import { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("AnalyzeScrapedJobUseCase", () => {
   it("runs AI analysis for a scraped job and marks it ready for review", async () => {
@@ -31,11 +32,13 @@ describe("AnalyzeScrapedJobUseCase", () => {
       },
     });
     await jobApplications.updateStatus(jobApplication.id, "scraped");
+    const publish = vi.fn();
 
     await new AnalyzeScrapedJobUseCase(
       jobApplications,
       profiles,
       new RunMatchAnalysisUseCase(createAiProvider(), jobApplications),
+      new JobApplicationChangeNotifier({ publish }),
     ).execute({ jobApplicationId: jobApplication.id });
 
     const analyzed = await jobApplications.findById(jobApplication.id);
@@ -55,6 +58,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
         "Ready for AI match review",
       ]),
     );
+    expect(publish).toHaveBeenCalledOnce();
   });
 
   it("marks the job failed when required scraped data is missing", async () => {
@@ -71,12 +75,14 @@ describe("AnalyzeScrapedJobUseCase", () => {
       sourceUrl: "https://www.linkedin.com/jobs/view/123",
     });
     await jobApplications.updateStatus(jobApplication.id, "scraped");
+    const publish = vi.fn();
 
     await expect(
       new AnalyzeScrapedJobUseCase(
         jobApplications,
         profiles,
         new RunMatchAnalysisUseCase(createAiProvider(), jobApplications),
+        new JobApplicationChangeNotifier({ publish }),
       ).execute({ jobApplicationId: jobApplication.id }),
     ).rejects.toThrow(`No desktop scrape bundle found for job application ${jobApplication.id}`);
 
@@ -88,6 +94,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
       `No desktop scrape bundle found for job application ${jobApplication.id}`,
     );
     expect(events.map((event) => event.title)).toContain("AI analysis failed");
+    expect(publish).toHaveBeenCalledOnce();
   });
 });
 

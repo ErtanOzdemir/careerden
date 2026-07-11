@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createJobApplicationRepository,
+  createJobApplicationChanges,
   createProfiles,
   createQueue,
   createTestJobApplication,
@@ -15,11 +16,14 @@ describe("RequestJobApplicationAnalysisUseCase", () => {
       getScrapeBundle: vi.fn(async () => ({ job: {} }) as never),
     });
     const queue = createQueue();
+    const { changes, publish } = createJobApplicationChanges();
 
-    await new RequestJobApplicationAnalysisUseCase(repository, createProfiles(), queue).execute(
-      job.id,
-      "user-1",
-    );
+    await new RequestJobApplicationAnalysisUseCase(
+      repository,
+      createProfiles(),
+      queue,
+      changes,
+    ).execute(job.id, "user-1");
 
     expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: job.id });
     expect(repository.addEvent).toHaveBeenCalledWith({
@@ -27,5 +31,6 @@ describe("RequestJobApplicationAnalysisUseCase", () => {
       type: "processing",
       title: "AI analysis requested",
     });
+    expect(publish).toHaveBeenCalledOnce();
   });
 });

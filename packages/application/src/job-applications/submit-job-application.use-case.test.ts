@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { UserProfileAccountRepository } from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
 } from "@link2cv/infrastructure";
-import { SubmitJobApplicationUseCase } from "./submit-job-application.js";
+import { SubmitJobApplicationUseCase } from "./submit-job-application.use-case.js";
 
 describe("SubmitJobApplicationUseCase", () => {
   it("creates source URL tracker applications without enqueueing background work", async () => {
@@ -16,11 +17,15 @@ describe("SubmitJobApplicationUseCase", () => {
       experience: [],
     });
 
-    const jobApplication = await new SubmitJobApplicationUseCase(jobApplications, profiles).execute(
+    const jobApplication = await new SubmitJobApplicationUseCase(
+      jobApplications,
+      withAccountOwnership(profiles),
+    ).execute(
       {
         profileId: profile.id,
         sourceUrl: "https://www.linkedin.com/jobs/view/123",
       },
+      "user-1",
     );
 
     expect(jobApplication.status).toBe("queued");
@@ -38,7 +43,10 @@ describe("SubmitJobApplicationUseCase", () => {
       experience: [],
     });
 
-    const jobApplication = await new SubmitJobApplicationUseCase(jobApplications, profiles).execute(
+    const jobApplication = await new SubmitJobApplicationUseCase(
+      jobApplications,
+      withAccountOwnership(profiles),
+    ).execute(
       {
         profileId: profile.id,
         companyName: "Example Inc",
@@ -46,6 +54,7 @@ describe("SubmitJobApplicationUseCase", () => {
         priority: "high",
         tags: ["Remote"],
       },
+      "user-1",
     );
 
     const scrape = await jobApplications.getScrapeBundle(jobApplication.id);
@@ -67,3 +76,13 @@ describe("SubmitJobApplicationUseCase", () => {
     });
   });
 });
+
+function withAccountOwnership(
+  profiles: InMemoryUserProfileRepository,
+): UserProfileAccountRepository {
+  return Object.assign(profiles, {
+    findByUserId: vi.fn(),
+    createForUserId: vi.fn(),
+    findUserIdByProfileId: vi.fn(async () => "user-1"),
+  });
+}

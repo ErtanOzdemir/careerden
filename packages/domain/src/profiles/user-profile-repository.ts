@@ -33,8 +33,13 @@ export interface UserProfileRepository {
   ): Promise<DocumentTemplate | null>;
 }
 
-export interface UserProfileAccountRepository extends UserProfileRepository {
+export interface UserProfileAccessRepository {
+  findById(id: string): Promise<UserProfile | null>;
+  findUserIdByProfileId(profileId: string): Promise<string | null>;
+}
+
+export interface UserProfileAccountRepository
+  extends UserProfileRepository, UserProfileAccessRepository {
   findByUserId(userId: string): Promise<UserProfile | null>;
   createForUserId(userId: string, input: CreateUserProfileInput): Promise<UserProfile>;
-  findUserIdByProfileId(profileId: string): Promise<string | null>;
 }

@@ -3,21 +3,18 @@ import type {
   JobApplication,
   JobApplicationRepository,
   ScrapeBundle,
-  UserProfileRepository,
+  UserProfileAccessRepository,
 } from "@link2cv/domain";
+import { getAccessibleProfile } from "../profiles/profile-access.js";
 
 export class SubmitJobApplicationUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileRepository,
+    private readonly profiles: UserProfileAccessRepository,
   ) {}
 
-  async execute(input: CreateJobApplicationInput): Promise<JobApplication> {
-    const profile = await this.profiles.findById(input.profileId);
-
-    if (!profile) {
-      throw new Error(`Profile ${input.profileId} was not found`);
-    }
+  async execute(input: CreateJobApplicationInput, userId: string): Promise<JobApplication> {
+    await getAccessibleProfile(this.profiles, input.profileId, userId);
 
     const jobApplication = await this.jobApplications.create(input);
 

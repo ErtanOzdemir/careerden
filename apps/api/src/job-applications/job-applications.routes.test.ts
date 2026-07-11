@@ -1,72 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 import type {
-  DocumentContent,
   FileStorage,
   GeneratedDocument,
   JobApplication,
-  JobApplicationContact,
   JobApplicationEvent,
-  JobApplicationFollowUp,
   JobApplicationQueue,
   JobApplicationRepository,
 } from "@link2cv/domain";
 import {
-  calculateJobApplicationAnalytics,
   claimNextScrapeJob,
   enqueueMatchAnalysisIfEnabled,
   failScrapeJob,
   getGeneratedDocumentDownloadUrl,
-  getJobApplicationDetail,
-  listJobApplicationsWithDocuments,
   renewScrapeClaim,
-  requestJobApplicationAnalysis,
-  retryFailedJobApplication,
 } from "./job-applications.routes.js";
 
 describe("job applications route behavior", () => {
-  it("includes generated documents in the job list response", async () => {
-    const job = createJobApplication({ id: "job-1" });
-    const document = createGeneratedDocument({
-      id: "doc-1",
-      jobApplicationId: job.id,
-      kind: "cv",
-      fileId: "object-key/cv.pdf",
-      fileName: "cv.pdf",
-    });
-    const jobApplications = createJobApplicationRepository({
-      listByProfileId: vi.fn(async () => [job]),
-      getCompanyLogoFileId: vi.fn(async () => "logos/acme.png"),
-      getMatchAnalysis: vi.fn(async () => ({
-        matchScore: 82,
-        missingSkills: [],
-        strongSkills: [],
-        recommendedAchievements: [],
-        customizedSummary: "",
-        interviewTips: [],
-      })),
-      listGeneratedDocuments: vi.fn(async (jobApplicationId: string) =>
-        jobApplicationId === job.id ? [document] : [],
-      ),
-    });
-
-    const storage = createFileStorage({
-      getSignedUrl: vi.fn(async () => "http://localhost:9000/signed-logo"),
-    });
-    const result = await listJobApplicationsWithDocuments(jobApplications, storage, "profile-1");
-
-    expect(jobApplications.listByProfileId).toHaveBeenCalledWith("profile-1", {});
-    expect(jobApplications.listGeneratedDocuments).toHaveBeenCalledWith("job-1");
-    expect(storage.getSignedUrl).toHaveBeenCalledWith("logos/acme.png");
-    expect(result).toEqual([
-      {
-        ...job,
-        companyLogoUrl: "http://localhost:9000/signed-logo",
-        documents: [document],
-        matchScore: 82,
-      },
-    ]);
-  });
-
   it("returns a signed URL for the selected document", async () => {
     const document = createGeneratedDocument({
       id: "doc-1",
@@ -111,23 +60,6 @@ describe("job applications route behavior", () => {
     expect(storage.getSignedUrl).not.toHaveBeenCalled();
   });
 
-  it("restarts the LLM queue when retrying a failed job from saved scrape data", async () => {
-    const job = createJobApplication({ id: "job-1", status: "scraped" });
-    const retryJobApplication = {
-      execute: vi.fn(async () => ({ jobApplication: job, mode: "analysis" as const })),
-    };
-    const queue = createJobApplicationQueue();
-
-    const retried = await retryFailedJobApplication({
-      retryJobApplication,
-      queue,
-      jobApplicationId: job.id,
-    });
-
-    expect(retried).toBe(job);
-    expect(queue.restart).toHaveBeenCalledWith({ jobApplicationId: job.id });
-  });
-
   it("enqueues match analysis when the profile preference is enabled", async () => {
     const queue = createJobApplicationQueue();
     const jobApplications = createJobApplicationRepository();
@@ -167,148 +99,6 @@ describe("job applications route behavior", () => {
       title: "AI analysis skipped",
       body: "Auto-run match analysis is disabled for this profile.",
     });
-  });
-
-  it("queues manual analysis for a scraped job", async () => {
-    const job = createJobApplication({ id: "job-1", status: "scraped" });
-    const queue = createJobApplicationQueue();
-    const jobApplications = createJobApplicationRepository({
-      findById: vi.fn(async () => job),
-      getScrapeBundle: vi.fn(async () => ({
-        job: {
-          title: "Engineer",
-          companyName: "Acme",
-          description: "Build software",
-          requirements: [],
-          raw: {},
-        },
-      })),
-      addEvent: vi.fn(async () => createEvent({ jobApplicationId: job.id })),
-    });
-
-    await expect(
-      requestJobApplicationAnalysis({
-        jobApplications,
-        queue,
-        jobApplicationId: job.id,
-      }),
-    ).resolves.toBe(job);
-
-    expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: job.id });
-    expect(jobApplications.addEvent).toHaveBeenCalledWith({
-      jobApplicationId: job.id,
-      type: "processing",
-      title: "AI analysis requested",
-    });
-  });
-
-  it("does not restart the LLM queue when forcing a scraping retry", async () => {
-    const job = createJobApplication({ id: "job-1", status: "queued" });
-    const retryJobApplication = {
-      execute: vi.fn(async () => ({ jobApplication: job, mode: "scraping" as const })),
-    };
-    const queue = createJobApplicationQueue();
-
-    const retried = await retryFailedJobApplication({
-      retryJobApplication,
-      queue,
-      jobApplicationId: job.id,
-      retryOptions: { mode: "scraping" },
-    });
-
-    expect(retried).toBe(job);
-    expect(retryJobApplication.execute).toHaveBeenCalledWith(job.id, { mode: "scraping" });
-    expect(queue.restart).not.toHaveBeenCalled();
-  });
-
-  it("calculates tracker analytics from application status and response dates", () => {
-    const jobs = [
-      createJobApplication({
-        id: "job-1",
-        tracking: createTracking({
-          applicationStatus: "interview",
-          dateApplied: "2026-06-01",
-          lastResponseAt: new Date("2026-06-04T00:00:00.000Z"),
-        }),
-      }),
-      createJobApplication({
-        id: "job-2",
-        tracking: createTracking({ applicationStatus: "rejected", dateApplied: "2026-06-02" }),
-      }),
-      createJobApplication({
-        id: "job-3",
-        tracking: createTracking({ applicationStatus: "applied", dateApplied: "2026-06-02" }),
-      }),
-    ];
-
-    const result = calculateJobApplicationAnalytics(jobs);
-
-    expect(result.byStatus).toEqual({ applied: 1, interview: 1, rejected: 1 });
-    expect(result.responseRate).toBe(2 / 3);
-    expect(result.interviewConversionRate).toBe(1 / 3);
-    expect(result.applicationsOverTime).toEqual({ "2026-06-01": 1, "2026-06-02": 2 });
-    expect(result.averageTimeToResponseDays).toBe(3);
-  });
-
-  it("includes contacts, events, and follow-ups in the detail response", async () => {
-    const job = createJobApplication({ id: "job-1" });
-    const contact = createContact({ jobApplicationId: job.id });
-    const event = createEvent({ jobApplicationId: job.id, title: "Follow-up scheduled" });
-    const followUp = createFollowUp({ jobApplicationId: job.id });
-    const jobApplications = createJobApplicationRepository({
-      getDocumentContent: vi.fn(
-        async () =>
-          ({
-            customizedSummary: {
-              version: 1,
-              blocks: [
-                {
-                  type: "paragraph",
-                  children: [{ type: "text", text: "Editable summary" }],
-                },
-              ],
-            },
-            experienceEnhancements: [],
-          }) satisfies DocumentContent,
-      ),
-      listContacts: vi.fn(async () => [contact]),
-      listEvents: vi.fn(async () => [event]),
-      listFollowUps: vi.fn(async () => [followUp]),
-      listGeneratedDocuments: vi.fn(async () => []),
-      getScrapeBundle: vi.fn(async () => ({
-        job: {
-          title: "Engineer",
-          companyName: "Acme",
-          description: "Build software",
-          requirements: [],
-          raw: {},
-        },
-        companyLinkedIn: {
-          name: "Acme",
-          logoFileId: "logos/acme.png",
-          logoUrl: "https://media.licdn.com/acme.png",
-          raw: {},
-        },
-      })),
-      getMatchAnalysis: vi.fn(async () => null),
-      getCompanyLogoFileId: vi.fn(async () => "logos/acme.png"),
-    });
-    const storage = createFileStorage({
-      getSignedUrl: vi.fn(async () => "http://localhost:9000/signed-logo"),
-    });
-
-    const detail = await getJobApplicationDetail({
-      jobApplications,
-      storage,
-      jobApplication: job,
-    });
-
-    expect(detail.contacts).toEqual([contact]);
-    expect(detail.events).toEqual([event]);
-    expect(detail.followUps).toEqual([followUp]);
-    expect(detail.companyLogoUrl).toBe("http://localhost:9000/signed-logo");
-    expect(detail.scrapeBundle?.companyLinkedIn).toEqual({ name: "Acme", raw: {} });
-    expect(detail.documentContent?.customizedSummary.blocks).toHaveLength(1);
   });
 
   it("claims a queued scrape job through the desktop worker endpoint", async () => {
@@ -537,32 +327,6 @@ function createEvent(overrides: Partial<JobApplicationEvent> = {}): JobApplicati
     occurredAt: new Date("2026-06-20T09:00:00.000Z"),
     metadata: {},
     createdAt: new Date("2026-06-20T09:00:00.000Z"),
-    ...overrides,
-  };
-}
-
-function createContact(overrides: Partial<JobApplicationContact> = {}): JobApplicationContact {
-  return {
-    id: "contact-1",
-    jobApplicationId: "job-1",
-    name: "Sarah Hughes",
-    role: "Recruitment Lead",
-    createdAt: new Date("2026-06-20T09:00:00.000Z"),
-    updatedAt: new Date("2026-06-20T09:00:00.000Z"),
-    ...overrides,
-  };
-}
-
-function createFollowUp(overrides: Partial<JobApplicationFollowUp> = {}): JobApplicationFollowUp {
-  return {
-    id: "follow-up-1",
-    jobApplicationId: "job-1",
-    profileId: "profile-1",
-    title: "Send thank-you email",
-    description: "Follow up after the phone screen.",
-    scheduledAt: new Date("2026-07-15T09:00:00.000Z"),
-    createdAt: new Date("2026-07-08T09:00:00.000Z"),
-    updatedAt: new Date("2026-07-08T09:00:00.000Z"),
     ...overrides,
   };
 }

@@ -1,4 +1,12 @@
-import type { FileStorage, JobApplication, JobApplicationRepository } from "@link2cv/domain";
+import type {
+  FileStorage,
+  JobApplication,
+  JobApplicationQueue,
+  JobApplicationRepository,
+  UserProfileAccessRepository,
+} from "@link2cv/domain";
+import { ApplicationError } from "../application-error.js";
+import { getAccessibleJobApplication } from "./job-application-access.js";
 
 export type JobApplicationRetryMode = "analysis" | "scraping";
 
@@ -14,21 +22,25 @@ export interface RetryJobApplicationOptions {
 export class RetryJobApplicationUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
+    private readonly profiles: UserProfileAccessRepository,
     private readonly storage: FileStorage,
+    private readonly queue: JobApplicationQueue,
   ) {}
 
   async execute(
     jobApplicationId: string,
+    userId: string,
     options: RetryJobApplicationOptions = {},
-  ): Promise<RetryJobApplicationResult | null> {
-    const jobApplication = await this.jobApplications.findById(jobApplicationId);
-
-    if (!jobApplication) {
-      return null;
-    }
+  ): Promise<RetryJobApplicationResult> {
+    const jobApplication = await getAccessibleJobApplication(
+      this.jobApplications,
+      this.profiles,
+      jobApplicationId,
+      userId,
+    );
 
     if (jobApplication.status !== "failed") {
-      throw new Error("Only failed job applications can be retried");
+      throw new ApplicationError("validation", "Only failed job applications can be retried");
     }
 
     const scrape = await this.jobApplications.getScrapeBundle(jobApplicationId);
@@ -36,7 +48,10 @@ export class RetryJobApplicationUseCase {
       options.mode === "scraping" || !scrape ? "scraping" : "analysis";
 
     if (mode === "scraping" && !jobApplication.sourceUrl) {
-      throw new Error("Job application does not have a source URL to retry");
+      throw new ApplicationError(
+        "validation",
+        "Job application does not have a source URL to retry",
+      );
     }
 
     const [documents, companyLogoFileId] = await Promise.all([
@@ -61,6 +76,10 @@ export class RetryJobApplicationUseCase {
       title: mode === "analysis" ? "AI analysis retry requested" : "Retry requested",
     });
     await Promise.allSettled([...fileIds].map((fileId) => this.storage.delete(fileId)));
+
+    if (mode === "analysis") {
+      await this.queue.restart({ jobApplicationId });
+    }
 
     return {
       jobApplication: reset,

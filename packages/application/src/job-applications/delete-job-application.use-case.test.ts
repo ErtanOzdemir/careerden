@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FileStorage } from "@link2cv/domain";
+import type { FileStorage, UserProfileAccountRepository } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
-import { DeleteJobApplicationUseCase } from "./delete-job-application.js";
+import { DeleteJobApplicationUseCase } from "./delete-job-application.use-case.js";
 
 describe("DeleteJobApplicationUseCase", () => {
   it("deletes the application and its stored files", async () => {
@@ -20,20 +20,22 @@ describe("DeleteJobApplicationUseCase", () => {
       contentType: "application/pdf",
     });
     const storage = createStorage();
-    const useCase = new DeleteJobApplicationUseCase(repository, storage);
+    const useCase = new DeleteJobApplicationUseCase(repository, createProfiles(), storage);
 
-    await expect(useCase.execute(job.id)).resolves.toBe(true);
+    await expect(useCase.execute(job.id, "user-1")).resolves.toBeUndefined();
 
     expect(await repository.findById(job.id)).toBeNull();
     expect(storage.delete).toHaveBeenCalledWith("files/cv.pdf");
   });
 
-  it("returns false when the application does not exist", async () => {
+  it("reports a missing application", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const storage = createStorage();
-    const useCase = new DeleteJobApplicationUseCase(repository, storage);
+    const useCase = new DeleteJobApplicationUseCase(repository, createProfiles(), storage);
 
-    await expect(useCase.execute("missing-job")).resolves.toBe(false);
+    await expect(useCase.execute("missing-job", "user-1")).rejects.toMatchObject({
+      code: "not_found",
+    });
 
     expect(storage.delete).not.toHaveBeenCalled();
   });
@@ -55,9 +57,9 @@ describe("DeleteJobApplicationUseCase", () => {
     });
     const storage = createStorage();
     vi.mocked(storage.delete).mockRejectedValue(new Error("Storage unavailable"));
-    const useCase = new DeleteJobApplicationUseCase(repository, storage);
+    const useCase = new DeleteJobApplicationUseCase(repository, createProfiles(), storage);
 
-    await expect(useCase.execute(job.id)).resolves.toBe(true);
+    await expect(useCase.execute(job.id, "user-1")).resolves.toBeUndefined();
     expect(await repository.findById(job.id)).toBeNull();
   });
 });
@@ -69,4 +71,8 @@ function createStorage(): FileStorage {
     getSignedUrl: vi.fn(),
     delete: vi.fn(),
   } as FileStorage;
+}
+
+function createProfiles(): UserProfileAccountRepository {
+  return { findUserIdByProfileId: vi.fn(async () => "user-1") } as UserProfileAccountRepository;
 }

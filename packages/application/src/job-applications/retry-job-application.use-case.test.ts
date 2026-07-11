@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FileStorage, ScrapeBundle } from "@link2cv/domain";
+import type {
+  FileStorage,
+  JobApplicationQueue,
+  ScrapeBundle,
+  UserProfileAccountRepository,
+} from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
-import { RetryJobApplicationUseCase } from "./retry-job-application.js";
+import { RetryJobApplicationUseCase } from "./retry-job-application.use-case.js";
 
 describe("RetryJobApplicationUseCase", () => {
   it("clears failed processing data and returns the job to the desktop scraping queue", async () => {
@@ -20,9 +25,14 @@ describe("RetryJobApplicationUseCase", () => {
       contentType: "application/pdf",
     });
     const storage = createStorage();
-    const useCase = new RetryJobApplicationUseCase(repository, storage);
+    const useCase = new RetryJobApplicationUseCase(
+      repository,
+      createProfiles(),
+      storage,
+      createQueue(),
+    );
 
-    const retried = await useCase.execute(job.id);
+    const retried = await useCase.execute(job.id, "user-1");
 
     expect(retried?.mode).toBe("scraping");
     expect(retried?.jobApplication.status).toBe("queued");
@@ -51,9 +61,10 @@ describe("RetryJobApplicationUseCase", () => {
       contentType: "application/pdf",
     });
     const storage = createStorage();
-    const useCase = new RetryJobApplicationUseCase(repository, storage);
+    const queue = createQueue();
+    const useCase = new RetryJobApplicationUseCase(repository, createProfiles(), storage, queue);
 
-    const retried = await useCase.execute(job.id);
+    const retried = await useCase.execute(job.id, "user-1");
 
     expect(retried?.mode).toBe("analysis");
     expect(retried?.jobApplication.status).toBe("scraped");
@@ -61,6 +72,7 @@ describe("RetryJobApplicationUseCase", () => {
     expect(await repository.getScrapeBundle(job.id)).toEqual(scrape);
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
     expect(storage.delete).toHaveBeenCalledWith("files/cv.pdf");
+    expect(queue.restart).toHaveBeenCalledWith({ jobApplicationId: job.id });
   });
 
   it("rejects retrying a job that is not failed", async () => {
@@ -69,9 +81,14 @@ describe("RetryJobApplicationUseCase", () => {
       profileId: "profile-1",
       sourceUrl: "https://www.linkedin.com/jobs/view/123",
     });
-    const useCase = new RetryJobApplicationUseCase(repository, createStorage());
+    const useCase = new RetryJobApplicationUseCase(
+      repository,
+      createProfiles(),
+      createStorage(),
+      createQueue(),
+    );
 
-    await expect(useCase.execute(job.id)).rejects.toThrow(
+    await expect(useCase.execute(job.id, "user-1")).rejects.toThrow(
       "Only failed job applications can be retried",
     );
   });
@@ -84,6 +101,14 @@ function createStorage(): FileStorage {
     getSignedUrl: vi.fn(),
     delete: vi.fn(),
   } as FileStorage;
+}
+
+function createProfiles(): UserProfileAccountRepository {
+  return { findUserIdByProfileId: vi.fn(async () => "user-1") } as UserProfileAccountRepository;
+}
+
+function createQueue(): JobApplicationQueue {
+  return { enqueue: vi.fn(), restart: vi.fn() };
 }
 
 function createScrapeBundle(): ScrapeBundle {

@@ -22,6 +22,13 @@ import {
   ListNotificationsUseCase,
   MarkAllNotificationsReadUseCase,
   MarkNotificationReadUseCase,
+  EnsureJobApplicationAccessUseCase,
+  GetJobApplicationAnalyticsUseCase,
+  GetJobApplicationDetailUseCase,
+  ListJobApplicationsUseCase,
+  RequestJobApplicationAnalysisUseCase,
+  UpdateJobApplicationStatusUseCase,
+  UpdateJobApplicationTrackingUseCase,
 } from "@link2cv/application";
 import {
   BullMqJobApplicationQueue,
@@ -106,19 +113,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     return (await profiles.findUserIdByProfileId(profileId)) === userId;
   }
 
-  async function canAccessJobApplication(
-    jobApplicationId: string,
-    userId: string,
-  ): Promise<boolean> {
-    const jobApplication = await jobApplications.findById(jobApplicationId);
-
-    if (!jobApplication) {
-      return false;
-    }
-
-    return canAccessProfile(jobApplication.profileId, userId);
-  }
-
   const app = express();
 
   app.use(traceIdMiddleware);
@@ -156,14 +150,37 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     "/job-applications",
     createJobApplicationRouter({
       submitJobApplication: new SubmitJobApplicationUseCase(jobApplications, profiles),
-      deleteJobApplication: new DeleteJobApplicationUseCase(jobApplications, storage),
+      deleteJobApplication: new DeleteJobApplicationUseCase(jobApplications, profiles, storage),
       generateJobApplicationDocuments: new GenerateJobApplicationDocumentsUseCase(
         jobApplications,
         profiles,
         generateDocumentsUseCase,
       ),
-      retryJobApplication: new RetryJobApplicationUseCase(jobApplications, storage),
+      retryJobApplication: new RetryJobApplicationUseCase(
+        jobApplications,
+        profiles,
+        storage,
+        queue,
+      ),
       updateDocumentContent: new UpdateDocumentContentUseCase(jobApplications),
+      ensureJobApplicationAccess: new EnsureJobApplicationAccessUseCase(jobApplications, profiles),
+      updateJobApplicationStatus: new UpdateJobApplicationStatusUseCase(jobApplications, profiles),
+      listJobApplications: new ListJobApplicationsUseCase(jobApplications, profiles, storage),
+      getJobApplicationAnalytics: new GetJobApplicationAnalyticsUseCase(jobApplications, profiles),
+      getJobApplicationDetail: new GetJobApplicationDetailUseCase(
+        jobApplications,
+        profiles,
+        storage,
+      ),
+      updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(
+        jobApplications,
+        profiles,
+      ),
+      requestJobApplicationAnalysis: new RequestJobApplicationAnalysisUseCase(
+        jobApplications,
+        profiles,
+        queue,
+      ),
       jobApplications,
       profiles,
       jobApplicationChanges: changeBus,
@@ -174,7 +191,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       remoteImages: remoteImageFetcher,
       getProfileForUser,
       canAccessProfile,
-      canAccessJobApplication,
     }),
   );
   app.use(

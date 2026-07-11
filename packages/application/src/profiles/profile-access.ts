@@ -1,4 +1,4 @@
-import type { UserProfile, UserProfileAccountRepository } from "@link2cv/domain";
+import type { UserProfile, UserProfileAccessRepository } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 
 export interface AuthenticatedProfileUser {
@@ -8,7 +8,7 @@ export interface AuthenticatedProfileUser {
 }
 
 export async function getAccessibleProfile(
-  profiles: UserProfileAccountRepository,
+  profiles: UserProfileAccessRepository,
   profileId: string,
   userId: string,
 ): Promise<UserProfile> {

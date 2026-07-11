@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DocxTemplateRenderer, FileStorage } from "@link2cv/domain";
+import type { DocxTemplateRenderer, FileStorage, PersistenceUnitOfWork } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { createProfileRepository, createTestTemplate } from "./profile-test-helpers.js";
 import { UploadDocumentTemplateUseCase } from "./upload-document-template.use-case.js";
@@ -9,9 +9,15 @@ describe("UploadDocumentTemplateUseCase", () => {
     const template = createTestTemplate();
     const profiles = createProfileRepository(undefined, template);
     const storage = createStorage();
+    const { unitOfWork } = createUnitOfWork(profiles);
 
     await expect(
-      new UploadDocumentTemplateUseCase(profiles, storage, createRenderer(["full_name"])).execute({
+      new UploadDocumentTemplateUseCase(
+        profiles,
+        storage,
+        createRenderer(["full_name"]),
+        unitOfWork,
+      ).execute({
         profileId: "profile-1",
         userId: "user-1",
         fileName: "cv.docx",
@@ -21,6 +27,7 @@ describe("UploadDocumentTemplateUseCase", () => {
     ).resolves.toBe(template);
     expect(storage.put).toHaveBeenCalledWith(
       expect.objectContaining({
+        key: expect.stringMatching(/^profiles\/profile-1\/document-templates\/.+\/cv\.docx$/),
         fileName: "cv.docx",
         metadata: { kind: "cv_template", profileId: "profile-1" },
       }),
@@ -33,9 +40,10 @@ describe("UploadDocumentTemplateUseCase", () => {
   it("rejects a template without placeholders before storing it", async () => {
     const profiles = createProfileRepository();
     const storage = createStorage();
+    const { unitOfWork } = createUnitOfWork(profiles);
 
     await expect(
-      new UploadDocumentTemplateUseCase(profiles, storage, createRenderer([])).execute({
+      new UploadDocumentTemplateUseCase(profiles, storage, createRenderer([]), unitOfWork).execute({
         profileId: "profile-1",
         userId: "user-1",
         fileName: "cv.docx",
@@ -50,7 +58,53 @@ describe("UploadDocumentTemplateUseCase", () => {
     );
     expect(storage.put).not.toHaveBeenCalled();
   });
+
+  it("durably schedules uploaded-file cleanup when template persistence fails", async () => {
+    const profiles = createProfileRepository();
+    vi.mocked(profiles.createDocumentTemplate).mockRejectedValue(new Error("database unavailable"));
+    const storage = createStorage();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(profiles);
+
+    await expect(
+      new UploadDocumentTemplateUseCase(
+        profiles,
+        storage,
+        createRenderer(["full_name"]),
+        unitOfWork,
+      ).execute({
+        profileId: "profile-1",
+        userId: "user-1",
+        fileName: "cv.docx",
+        size: 128,
+        body: Buffer.from("template"),
+      }),
+    ).rejects.toThrow("database unavailable");
+
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "storage.delete", payload: { fileId: "file-1" } }),
+    );
+  });
 });
+
+function createUnitOfWork(profiles: ReturnType<typeof createProfileRepository>): {
+  unitOfWork: PersistenceUnitOfWork;
+  addOutboxEvent: ReturnType<typeof vi.fn>;
+} {
+  const addOutboxEvent = vi.fn(async (input) => ({ ...input, id: "outbox-1", attemptCount: 0 }));
+  return {
+    addOutboxEvent,
+    unitOfWork: {
+      execute: async (work) =>
+        work({
+          jobApplications: {} as never,
+          profiles,
+          notifications: {} as never,
+          followUpReminders: {} as never,
+          outbox: { add: addOutboxEvent },
+        }),
+    },
+  };
+}
 
 function createStorage(): FileStorage {
   return {

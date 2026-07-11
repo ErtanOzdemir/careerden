@@ -2,9 +2,12 @@ import type {
   DocumentTemplate,
   DocxTemplateRenderer,
   FileStorage,
+  PersistenceUnitOfWork,
   UserProfileAccountRepository,
 } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
+import { randomUUID } from "node:crypto";
 import { getAccessibleProfile } from "./profile-access.js";
 
 const docxContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -22,6 +25,7 @@ export class UploadDocumentTemplateUseCase {
     private readonly profiles: UserProfileAccountRepository,
     private readonly storage: FileStorage,
     private readonly docxTemplates: DocxTemplateRenderer,
+    private readonly unitOfWork: PersistenceUnitOfWork,
   ) {}
 
   async execute(input: UploadDocumentTemplateInput): Promise<DocumentTemplate> {
@@ -35,24 +39,37 @@ export class UploadDocumentTemplateUseCase {
       );
     }
 
+    const templateId = randomUUID();
     const stored = await this.storage.put({
+      key: `profiles/${input.profileId}/document-templates/${templateId}/${safeFileName(input.fileName)}`,
       fileName: input.fileName,
       contentType: docxContentType,
       body: input.body,
       metadata: { kind: "cv_template", profileId: input.profileId },
     });
-    const existing = await this.profiles.listDocumentTemplates(input.profileId);
-
-    return this.profiles.createDocumentTemplate({
-      profileId: input.profileId,
-      kind: "cv",
-      format: "docx",
-      fileId: stored.id,
-      fileName: input.fileName,
-      contentType: docxContentType,
-      size: input.size,
-      placeholders,
-      isDefault: existing.length === 0,
-    });
+    try {
+      return await this.unitOfWork.execute(async ({ profiles }) => {
+        await getAccessibleProfile(profiles, input.profileId, input.userId);
+        const existing = await profiles.listDocumentTemplates(input.profileId);
+        return profiles.createDocumentTemplate({
+          profileId: input.profileId,
+          kind: "cv",
+          format: "docx",
+          fileId: stored.id,
+          fileName: input.fileName,
+          contentType: docxContentType,
+          size: input.size,
+          placeholders,
+          isDefault: existing.length === 0,
+        });
+      });
+    } catch (error) {
+      await this.unitOfWork.execute(({ outbox }) => enqueueStorageDeletions(outbox, [stored.id]));
+      throw error;
+    }
   }
+}
+
+function safeFileName(fileName: string): string {
+  return fileName.replaceAll(/[^a-zA-Z0-9._-]/g, "-") || "template.docx";
 }

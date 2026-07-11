@@ -154,7 +154,12 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       getProfile,
       updateProfile: new UpdateProfileUseCase(profiles),
       listDocumentTemplates: new ListDocumentTemplatesUseCase(profiles),
-      uploadDocumentTemplate: new UploadDocumentTemplateUseCase(profiles, storage, docxTemplates),
+      uploadDocumentTemplate: new UploadDocumentTemplateUseCase(
+        profiles,
+        storage,
+        docxTemplates,
+        unitOfWork,
+      ),
       updateDocumentTemplateMappings: new UpdateDocumentTemplateMappingsUseCase(profiles),
       updateDocumentTemplateVariableAliases: new UpdateDocumentTemplateVariableAliasesUseCase(
         profiles,

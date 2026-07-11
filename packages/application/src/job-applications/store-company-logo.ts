@@ -5,7 +5,7 @@ export async function storeCompanyLogo(input: {
   scrape: ScrapeBundle;
   remoteImages: RemoteImageFetcher;
   storage: FileStorage;
-}): Promise<ScrapeBundle> {
+}): Promise<{ scrape: ScrapeBundle; uploadedFileId?: string }> {
   const { jobApplicationId, scrape, remoteImages, storage } = input;
   const companyWithLogo = scrape.companyLinkedIn?.logoUrl
     ? scrape.companyLinkedIn
@@ -15,28 +15,33 @@ export async function storeCompanyLogo(input: {
         ? scrape.careerPage
         : undefined;
 
-  if (!companyWithLogo?.logoUrl) return scrape;
+  if (!companyWithLogo?.logoUrl) return { scrape };
 
   try {
     const image = await remoteImages.fetch(companyWithLogo.logoUrl);
+    const fileName = `company-logo.${extensionForContentType(image.contentType)}`;
     const stored = await storage.put({
-      fileName: `company-logo.${extensionForContentType(image.contentType)}`,
+      key: `job-applications/${jobApplicationId}/company-logo/${fileName}`,
+      fileName,
       contentType: image.contentType,
       body: image.body,
       metadata: { jobApplicationId, kind: "company_logo", companyName: companyWithLogo.name },
     });
     const updatedCompany = { ...companyWithLogo, logoFileId: stored.id };
     return {
-      ...scrape,
-      companyLinkedIn:
-        scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
-      companyWebsite:
-        scrape.companyWebsite === companyWithLogo ? updatedCompany : scrape.companyWebsite,
-      careerPage: scrape.careerPage === companyWithLogo ? updatedCompany : scrape.careerPage,
+      uploadedFileId: stored.id,
+      scrape: {
+        ...scrape,
+        companyLinkedIn:
+          scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
+        companyWebsite:
+          scrape.companyWebsite === companyWithLogo ? updatedCompany : scrape.companyWebsite,
+        careerPage: scrape.careerPage === companyWithLogo ? updatedCompany : scrape.careerPage,
+      },
     };
   } catch {
     // Logo download is optional and must not fail scrape submission.
-    return scrape;
+    return { scrape };
   }
 }
 

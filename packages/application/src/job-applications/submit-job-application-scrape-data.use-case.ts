@@ -8,6 +8,7 @@ import type {
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 import type { GetJobApplicationDetailUseCase } from "./get-job-application-detail.use-case.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
@@ -39,43 +40,60 @@ export class SubmitJobApplicationScrapeDataUseCase {
 
     assertScrapeSubmissionAllowed(jobApplication, input.claimedBy);
 
-    const scrape = await storeCompanyLogo({
+    const previousLogoFileId = await this.jobApplications.getCompanyLogoFileId(jobApplicationId);
+    const logo = await storeCompanyLogo({
       jobApplicationId,
       scrape: input.scrapeBundle,
       remoteImages: this.remoteImages,
       storage: this.storage,
     });
-    await this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
-      const current = await getAccessibleJobApplication(
-        jobApplications,
-        profiles,
-        jobApplicationId,
-        userId,
-      );
-      assertScrapeSubmissionAllowed(current, input.claimedBy);
-      await jobApplications.saveScrapeBundle(jobApplicationId, scrape);
-      await jobApplications.updateTracking(jobApplicationId, {
-        companyName: scrape.job.companyName,
-        roleTitle: scrape.job.title,
-      });
-      await jobApplications.updateStatus(jobApplicationId, "scraped");
-      await jobApplications.addEvent({
-        jobApplicationId,
-        type: "processing",
-        title: "Scraping complete",
-        metadata: { companyName: scrape.job.companyName, roleTitle: scrape.job.title },
-      });
+    try {
+      await this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+        const current = await getAccessibleJobApplication(
+          jobApplications,
+          profiles,
+          jobApplicationId,
+          userId,
+        );
+        assertScrapeSubmissionAllowed(current, input.claimedBy);
+        await jobApplications.saveScrapeBundle(jobApplicationId, logo.scrape);
+        await jobApplications.updateTracking(jobApplicationId, {
+          companyName: logo.scrape.job.companyName,
+          roleTitle: logo.scrape.job.title,
+        });
+        await jobApplications.updateStatus(jobApplicationId, "scraped");
+        await jobApplications.addEvent({
+          jobApplicationId,
+          type: "processing",
+          title: "Scraping complete",
+          metadata: {
+            companyName: logo.scrape.job.companyName,
+            roleTitle: logo.scrape.job.title,
+          },
+        });
 
-      const profile = await profiles.findById(current.profileId);
-      if (!profile) throw new ApplicationError("not_found", "Profile not found");
-      await enqueueMatchAnalysisIfEnabled({
-        jobApplications,
-        outbox,
-        jobApplicationId,
-        autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
+        const profile = await profiles.findById(current.profileId);
+        if (!profile) throw new ApplicationError("not_found", "Profile not found");
+        await enqueueMatchAnalysisIfEnabled({
+          jobApplications,
+          outbox,
+          jobApplicationId,
+          autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
+        });
+        if (previousLogoFileId && previousLogoFileId !== logo.uploadedFileId) {
+          await enqueueStorageDeletions(outbox, [previousLogoFileId]);
+        }
+        await enqueueJobApplicationChange(outbox, current.id, current.profileId);
       });
-      await enqueueJobApplicationChange(outbox, current.id, current.profileId);
-    });
+    } catch (error) {
+      const uploadedFileId = logo.uploadedFileId;
+      if (uploadedFileId && uploadedFileId !== previousLogoFileId) {
+        await this.unitOfWork.execute(({ outbox }) =>
+          enqueueStorageDeletions(outbox, [uploadedFileId]),
+        );
+      }
+      throw error;
+    }
 
     return this.getJobApplicationDetail.execute(jobApplicationId, userId);
   }

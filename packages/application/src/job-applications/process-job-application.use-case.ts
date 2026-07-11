@@ -162,8 +162,10 @@ export class ProcessJobApplicationUseCase {
 
     try {
       const image = await this.remoteImages.fetch(company.logoUrl);
+      const fileName = `company-logo.${extensionForContentType(image.contentType)}`;
       const stored = await this.storage.put({
-        fileName: `company-logo.${extensionForContentType(image.contentType)}`,
+        key: `job-applications/${jobApplicationId}/company-logo/${fileName}`,
+        fileName,
         contentType: image.contentType,
         body: image.body,
         metadata: {

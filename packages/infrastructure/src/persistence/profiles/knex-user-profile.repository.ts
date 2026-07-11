@@ -78,29 +78,30 @@ export class KnexUserProfileRepository implements UserProfileRepository {
 
   async createDocumentTemplate(input: CreateDocumentTemplateInput): Promise<DocumentTemplate> {
     const id = randomUUID();
-
-    if (input.isDefault) {
-      await this.clearDefaultDocumentTemplates(input.profileId, input.kind);
-    }
-
-    const [row] = await this.db("document_templates")
-      .insert({
-        id,
-        profile_id: input.profileId,
-        kind: input.kind,
-        format: input.format,
-        file_id: input.fileId,
-        file_name: input.fileName,
-        content_type: input.contentType,
-        size: input.size,
-        placeholders: JSON.stringify(input.placeholders),
-        field_mappings: JSON.stringify(input.fieldMappings ?? {}),
-        variable_aliases: JSON.stringify(input.variableAliases ?? { fields: {} }),
-        is_default: input.isDefault ?? false,
-      })
-      .returning("*");
-
-    return toDocumentTemplate(row);
+    return this.db.transaction(async (transaction) => {
+      if (input.isDefault) {
+        await transaction("document_templates")
+          .where({ profile_id: input.profileId, kind: input.kind })
+          .update({ is_default: false, updated_at: transaction.fn.now() });
+      }
+      const [row] = await transaction("document_templates")
+        .insert({
+          id,
+          profile_id: input.profileId,
+          kind: input.kind,
+          format: input.format,
+          file_id: input.fileId,
+          file_name: input.fileName,
+          content_type: input.contentType,
+          size: input.size,
+          placeholders: JSON.stringify(input.placeholders),
+          field_mappings: JSON.stringify(input.fieldMappings ?? {}),
+          variable_aliases: JSON.stringify(input.variableAliases ?? { fields: {} }),
+          is_default: input.isDefault ?? false,
+        })
+        .returning("*");
+      return toDocumentTemplate(row);
+    });
   }
 
   async findDocumentTemplateById(id: string): Promise<DocumentTemplate | null> {
@@ -130,20 +131,18 @@ export class KnexUserProfileRepository implements UserProfileRepository {
     profileId: string,
     id: string,
   ): Promise<DocumentTemplate | null> {
-    const existing = await this.findDocumentTemplateById(id);
-
-    if (!existing || existing.profileId !== profileId) {
-      return null;
-    }
-
-    await this.clearDefaultDocumentTemplates(profileId, existing.kind);
-
-    const [row] = await this.db("document_templates")
-      .where({ id })
-      .update({ is_default: true, updated_at: this.db.fn.now() })
-      .returning("*");
-
-    return row ? toDocumentTemplate(row) : null;
+    return this.db.transaction(async (transaction) => {
+      const existing = await transaction("document_templates").where({ id }).forUpdate().first();
+      if (!existing || existing.profile_id !== profileId) return null;
+      await transaction("document_templates")
+        .where({ profile_id: profileId, kind: existing.kind })
+        .update({ is_default: false, updated_at: transaction.fn.now() });
+      const [row] = await transaction("document_templates")
+        .where({ id })
+        .update({ is_default: true, updated_at: transaction.fn.now() })
+        .returning("*");
+      return row ? toDocumentTemplate(row) : null;
+    });
   }
 
   async updateDocumentTemplateMappings(
@@ -174,11 +173,5 @@ export class KnexUserProfileRepository implements UserProfileRepository {
       .returning("*");
 
     return row ? toDocumentTemplate(row) : null;
-  }
-
-  private async clearDefaultDocumentTemplates(profileId: string, kind: string): Promise<void> {
-    await this.db("document_templates")
-      .where({ profile_id: profileId, kind })
-      .update({ is_default: false, updated_at: this.db.fn.now() });
   }
 }

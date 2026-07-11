@@ -1,49 +1,48 @@
 import type {
   CreateJobApplicationInput,
   JobApplication,
-  JobApplicationRepository,
+  PersistenceUnitOfWork,
   ScrapeBundle,
-  UserProfileAccessRepository,
 } from "@link2cv/domain";
+import { outboxEventTypes } from "@link2cv/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class SubmitJobApplicationUseCase {
-  constructor(
-    private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileAccessRepository,
-    private readonly changes: JobApplicationChangeNotifier,
-  ) {}
+  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(input: CreateJobApplicationInput, userId: string): Promise<JobApplication> {
-    await getAccessibleProfile(this.profiles, input.profileId, userId);
+    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+      await getAccessibleProfile(profiles, input.profileId, userId);
 
-    const jobApplication = await this.jobApplications.create(input);
+      const jobApplication = await jobApplications.create(input);
 
-    if (!input.sourceUrl) {
-      await this.jobApplications.saveScrapeBundle(
-        jobApplication.id,
-        createManualScrapeBundle(input),
-      );
-      await this.jobApplications.updateStatus(jobApplication.id, "scraped");
-      await this.jobApplications.addEvent({
-        jobApplicationId: jobApplication.id,
-        type: "processing",
-        title: "Manual job details saved",
-        metadata: { strategy: "manual" },
+      if (!input.sourceUrl) {
+        await jobApplications.saveScrapeBundle(jobApplication.id, createManualScrapeBundle(input));
+        await jobApplications.updateStatus(jobApplication.id, "scraped");
+        await jobApplications.addEvent({
+          jobApplicationId: jobApplication.id,
+          type: "processing",
+          title: "Manual job details saved",
+          metadata: { strategy: "manual" },
+        });
+      }
+
+      await outbox.add({
+        type: outboxEventTypes.jobApplicationChange,
+        aggregateId: jobApplication.id,
+        payload: {
+          type: "application.changed",
+          applicationId: jobApplication.id,
+          profileId: jobApplication.profileId,
+          occurredAt: new Date().toISOString(),
+        },
       });
-
-      await this.changes.changed(jobApplication.id, jobApplication.profileId);
 
       return {
         ...jobApplication,
-        status: "scraped",
+        ...(!input.sourceUrl ? { status: "scraped" as const } : {}),
       };
-    }
-
-    await this.changes.changed(jobApplication.id, jobApplication.profileId);
-
-    return jobApplication;
+    });
   }
 }
 

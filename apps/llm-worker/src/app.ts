@@ -9,6 +9,8 @@ import type { JobApplicationQueuePayload } from "@link2cv/domain";
 import {
   AiProviderFactory,
   PostgresJobApplicationRepository,
+  PostgresJobApplicationChangeOutboxDispatcher,
+  PostgresOutboxRepository,
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
   createPostgresDb,
@@ -29,6 +31,26 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const jobApplications = new PostgresJobApplicationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
+  const outboxDispatcher = new PostgresJobApplicationChangeOutboxDispatcher(
+    new PostgresOutboxRepository(db),
+    changeBus,
+  );
+  let isDispatchingOutbox = false;
+  const dispatchOutbox = async () => {
+    if (isDispatchingOutbox) return;
+    isDispatchingOutbox = true;
+    try {
+      await outboxDispatcher.dispatchPending();
+    } finally {
+      isDispatchingOutbox = false;
+    }
+  };
+  await dispatchOutbox();
+  const outboxInterval = setInterval(() => {
+    void dispatchOutbox().catch((error) => {
+      console.error("LLM worker failed job application change outbox dispatch", error);
+    });
+  }, 1_000);
   const aiProviderFactory = new AiProviderFactory({
     aiProvider: env.AI_PROVIDER,
     openaiApiKey: env.OPENAI_API_KEY,
@@ -69,6 +91,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     db,
     worker,
     close: async () => {
+      clearInterval(outboxInterval);
       await worker.close();
       await changeBus.close();
       await db.destroy();

@@ -9,6 +9,8 @@ export * from "./job-applications/workflow-status.js";
 export * from "./notifications/follow-up-reminder.js";
 export * from "./notifications/notification.js";
 export * from "./notifications/notification-repository.js";
+export * from "./persistence/outbox.js";
+export * from "./persistence/persistence-unit-of-work.js";
 export * from "./scraping/app-path-provider.js";
 export * from "./scraping/job-site-scraper.js";
 export * from "./scraping/linkedin-session.js";

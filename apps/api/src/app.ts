@@ -57,6 +57,7 @@ import {
   PostgresFollowUpReminderRepository,
   PostgresJobApplicationRepository,
   PostgresNotificationRepository,
+  PostgresPersistenceUnitOfWork,
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
   RustFsStorage,
@@ -101,6 +102,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const notifications = new PostgresNotificationRepository(db);
   const followUpReminders = new PostgresFollowUpReminderRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
+  const unitOfWork = new PostgresPersistenceUnitOfWork(db);
   const queue = BullMqJobApplicationQueue.create(env.REDIS_URL);
   const followUpReminderQueue = BullMqFollowUpReminderQueue.create(env.REDIS_URL);
   const storage = new RustFsStorage({
@@ -165,11 +167,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   app.use(
     "/job-applications",
     createJobApplicationRouter({
-      submitJobApplication: new SubmitJobApplicationUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      submitJobApplication: new SubmitJobApplicationUseCase(unitOfWork),
       deleteJobApplication: new DeleteJobApplicationUseCase(
         jobApplications,
         profiles,

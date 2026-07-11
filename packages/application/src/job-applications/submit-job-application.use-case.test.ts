@@ -1,11 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import type { UserProfileAccountRepository } from "@link2cv/domain";
+import type {
+  AddOutboxEventInput,
+  OutboxEvent,
+  PersistenceUnitOfWork,
+  UserProfileAccountRepository,
+} from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
 } from "@link2cv/infrastructure";
 import { SubmitJobApplicationUseCase } from "./submit-job-application.use-case.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("SubmitJobApplicationUseCase", () => {
   it("creates source URL tracker applications without enqueueing background work", async () => {
@@ -17,12 +21,10 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    const publish = vi.fn();
+    const outbox: AddOutboxEventInput[] = [];
 
     const jobApplication = await new SubmitJobApplicationUseCase(
-      jobApplications,
-      withAccountOwnership(profiles),
-      new JobApplicationChangeNotifier({ publish }),
+      createUnitOfWork(jobApplications, withAccountOwnership(profiles), outbox),
     ).execute(
       {
         profileId: profile.id,
@@ -34,12 +36,16 @@ describe("SubmitJobApplicationUseCase", () => {
     expect(jobApplication.status).toBe("queued");
     expect(jobApplication.sourceUrl).toBe("https://www.linkedin.com/jobs/view/123");
     expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
-    expect(publish).toHaveBeenCalledOnce();
-    expect(publish).toHaveBeenCalledWith(
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0]).toEqual(
       expect.objectContaining({
-        type: "application.changed",
-        applicationId: jobApplication.id,
-        profileId: profile.id,
+        type: "job-application.change",
+        aggregateId: jobApplication.id,
+        payload: expect.objectContaining({
+          type: "application.changed",
+          applicationId: jobApplication.id,
+          profileId: profile.id,
+        }),
       }),
     );
   });
@@ -53,12 +59,10 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    const publish = vi.fn();
+    const outbox: AddOutboxEventInput[] = [];
 
     const jobApplication = await new SubmitJobApplicationUseCase(
-      jobApplications,
-      withAccountOwnership(profiles),
-      new JobApplicationChangeNotifier({ publish }),
+      createUnitOfWork(jobApplications, withAccountOwnership(profiles), outbox),
     ).execute(
       {
         profileId: profile.id,
@@ -87,12 +91,14 @@ describe("SubmitJobApplicationUseCase", () => {
         source: "user-created-job-application",
       },
     });
-    expect(publish).toHaveBeenCalledOnce();
-    expect(publish).toHaveBeenCalledWith(
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0]).toEqual(
       expect.objectContaining({
-        type: "application.changed",
-        applicationId: jobApplication.id,
-        profileId: profile.id,
+        type: "job-application.change",
+        payload: expect.objectContaining({
+          applicationId: jobApplication.id,
+          profileId: profile.id,
+        }),
       }),
     );
   });
@@ -106,21 +112,23 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: [],
       experience: [],
     });
-    const publish = vi.fn();
+    const outbox: AddOutboxEventInput[] = [];
 
     await expect(
       new SubmitJobApplicationUseCase(
-        jobApplications,
-        Object.assign(profiles, {
-          findByUserId: vi.fn(),
-          createForUserId: vi.fn(),
-          findUserIdByProfileId: vi.fn(async () => "another-user"),
-        }),
-        new JobApplicationChangeNotifier({ publish }),
+        createUnitOfWork(
+          jobApplications,
+          Object.assign(profiles, {
+            findByUserId: vi.fn(),
+            createForUserId: vi.fn(),
+            findUserIdByProfileId: vi.fn(async () => "another-user"),
+          }),
+          outbox,
+        ),
       ).execute({ profileId: profile.id }, "user-1"),
     ).rejects.toThrow("Profile not found");
 
-    expect(publish).not.toHaveBeenCalled();
+    expect(outbox).toHaveLength(0);
   });
 });
 
@@ -132,4 +140,26 @@ function withAccountOwnership(
     createForUserId: vi.fn(),
     findUserIdByProfileId: vi.fn(async () => "user-1"),
   });
+}
+
+function createUnitOfWork(
+  jobApplications: InMemoryJobApplicationRepository,
+  profiles: UserProfileAccountRepository,
+  events: AddOutboxEventInput[],
+): PersistenceUnitOfWork {
+  return {
+    execute: async (work) =>
+      work({
+        jobApplications,
+        profiles,
+        notifications: {} as never,
+        followUpReminders: {} as never,
+        outbox: {
+          add: vi.fn(async (input): Promise<OutboxEvent> => {
+            events.push(input);
+            return { ...input, id: `outbox-${events.length}`, attemptCount: 0 };
+          }),
+        },
+      }),
+  };
 }

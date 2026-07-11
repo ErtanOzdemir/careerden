@@ -5,6 +5,7 @@ import type {
   JobApplicationChangePublisher,
   JobApplicationQueue,
   JobApplicationRepository,
+  PersistenceUnitOfWork,
   ScrapeBundle,
   UserProfileAccessRepository,
 } from "@link2cv/domain";
@@ -75,6 +76,30 @@ export function createStorage(overrides: Partial<FileStorage> = {}): FileStorage
 
 export function createQueue(): JobApplicationQueue {
   return { enqueue: vi.fn(), restart: vi.fn() };
+}
+
+export function createUnitOfWork(
+  jobApplications: JobApplicationRepository,
+  profiles: UserProfileAccessRepository = createProfiles(),
+): { unitOfWork: PersistenceUnitOfWork; addOutboxEvent: ReturnType<typeof vi.fn> } {
+  const addOutboxEvent = vi.fn(async (input) => ({
+    ...input,
+    id: `outbox-${addOutboxEvent.mock.calls.length}`,
+    attemptCount: 0,
+  }));
+  return {
+    addOutboxEvent,
+    unitOfWork: {
+      execute: async (work) =>
+        work({
+          jobApplications,
+          profiles: profiles as never,
+          notifications: {} as never,
+          followUpReminders: {} as never,
+          outbox: { add: addOutboxEvent },
+        }),
+    },
+  };
 }
 
 export function createJobApplicationChanges(): {

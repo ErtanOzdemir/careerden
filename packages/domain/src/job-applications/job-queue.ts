@@ -3,6 +3,6 @@ export interface JobApplicationQueuePayload {
 }
 
 export interface JobApplicationQueue {
-  enqueue(payload: JobApplicationQueuePayload): Promise<void>;
+  enqueue(payload: JobApplicationQueuePayload, options?: { jobId?: string }): Promise<void>;
   restart(payload: JobApplicationQueuePayload): Promise<void>;
 }

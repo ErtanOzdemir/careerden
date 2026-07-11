@@ -1,5 +1,6 @@
 export const outboxEventTypes = {
   jobApplicationChange: "job-application.change",
+  jobApplicationAnalysisRequested: "job-application.analysis-requested",
 } as const;
 
 export interface AddOutboxEventInput {

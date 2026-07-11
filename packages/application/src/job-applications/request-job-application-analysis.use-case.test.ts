@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createJobApplicationRepository,
-  createJobApplicationChanges,
   createProfiles,
-  createQueue,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 import { RequestJobApplicationAnalysisUseCase } from "./request-job-application-analysis.use-case.js";
 
@@ -15,22 +14,20 @@ describe("RequestJobApplicationAnalysisUseCase", () => {
       findById: vi.fn(async () => job),
       getScrapeBundle: vi.fn(async () => ({ job: {} }) as never),
     });
-    const queue = createQueue();
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
-    await new RequestJobApplicationAnalysisUseCase(
-      repository,
-      createProfiles(),
-      queue,
-      changes,
-    ).execute(job.id, "user-1");
+    await new RequestJobApplicationAnalysisUseCase(unitOfWork).execute(job.id, "user-1");
 
-    expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: job.id });
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.analysis-requested" }),
+    );
     expect(repository.addEvent).toHaveBeenCalledWith({
       jobApplicationId: job.id,
       type: "processing",
       title: "AI analysis requested",
     });
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.change" }),
+    );
   });
 });

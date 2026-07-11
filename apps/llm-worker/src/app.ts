@@ -8,6 +8,8 @@ import {
 import type { JobApplicationQueuePayload } from "@link2cv/domain";
 import {
   AiProviderFactory,
+  BullMqJobApplicationQueue,
+  PostgresAnalysisOutboxDispatcher,
   PostgresJobApplicationRepository,
   PostgresJobApplicationChangeOutboxDispatcher,
   PostgresOutboxRepository,
@@ -35,12 +37,20 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     new PostgresOutboxRepository(db),
     changeBus,
   );
+  const analysisQueue = BullMqJobApplicationQueue.create(env.REDIS_URL);
+  const analysisOutboxDispatcher = new PostgresAnalysisOutboxDispatcher(
+    new PostgresOutboxRepository(db),
+    analysisQueue,
+  );
   let isDispatchingOutbox = false;
   const dispatchOutbox = async () => {
     if (isDispatchingOutbox) return;
     isDispatchingOutbox = true;
     try {
-      await outboxDispatcher.dispatchPending();
+      await Promise.all([
+        outboxDispatcher.dispatchPending(),
+        analysisOutboxDispatcher.dispatchPending(),
+      ]);
     } finally {
       isDispatchingOutbox = false;
     }
@@ -93,6 +103,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     close: async () => {
       clearInterval(outboxInterval);
       await worker.close();
+      await analysisQueue.close();
       await changeBus.close();
       await db.destroy();
     },

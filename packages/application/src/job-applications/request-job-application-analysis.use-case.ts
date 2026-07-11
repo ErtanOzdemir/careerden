@@ -1,46 +1,44 @@
-import type {
-  JobApplication,
-  JobApplicationQueue,
-  JobApplicationRepository,
-  UserProfileAccessRepository,
-} from "@link2cv/domain";
+import type { JobApplication, PersistenceUnitOfWork } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
+import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 
 export class RequestJobApplicationAnalysisUseCase {
-  constructor(
-    private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileAccessRepository,
-    private readonly queue: JobApplicationQueue,
-    private readonly changes: JobApplicationChangeNotifier,
-  ) {}
+  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(jobApplicationId: string, userId: string): Promise<JobApplication> {
-    const jobApplication = await getAccessibleJobApplication(
-      this.jobApplications,
-      this.profiles,
-      jobApplicationId,
-      userId,
-    );
-
-    if (jobApplication.status !== "scraped") {
-      throw new ApplicationError(
-        "validation",
-        "AI analysis can only be started after scraping completes",
+    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+      const jobApplication = await getAccessibleJobApplication(
+        jobApplications,
+        profiles,
+        jobApplicationId,
+        userId,
       );
-    }
-    if (!(await this.jobApplications.getScrapeBundle(jobApplicationId))) {
-      throw new ApplicationError("validation", "AI analysis requires saved scrape data");
-    }
 
-    await this.jobApplications.addEvent({
-      jobApplicationId,
-      type: "processing",
-      title: "AI analysis requested",
+      if (jobApplication.status !== "scraped") {
+        throw new ApplicationError(
+          "validation",
+          "AI analysis can only be started after scraping completes",
+        );
+      }
+      if (!(await jobApplications.getScrapeBundle(jobApplicationId))) {
+        throw new ApplicationError("validation", "AI analysis requires saved scrape data");
+      }
+
+      await jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: "AI analysis requested",
+      });
+      await enqueueMatchAnalysisIfEnabled({
+        jobApplications,
+        outbox,
+        jobApplicationId,
+        autoRunMatchAnalysis: true,
+      });
+      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      return jobApplication;
     });
-    await this.queue.enqueue({ jobApplicationId });
-    await this.changes.changed(jobApplication.id, jobApplication.profileId);
-    return jobApplication;
   }
 }

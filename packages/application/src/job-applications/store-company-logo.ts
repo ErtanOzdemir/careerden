@@ -1,18 +1,12 @@
-import type {
-  FileStorage,
-  JobApplicationRepository,
-  RemoteImageFetcher,
-  ScrapeBundle,
-} from "@link2cv/domain";
+import type { FileStorage, RemoteImageFetcher, ScrapeBundle } from "@link2cv/domain";
 
 export async function storeCompanyLogo(input: {
   jobApplicationId: string;
   scrape: ScrapeBundle;
   remoteImages: RemoteImageFetcher;
   storage: FileStorage;
-  jobApplications: JobApplicationRepository;
-}): Promise<void> {
-  const { jobApplicationId, scrape, remoteImages, storage, jobApplications } = input;
+}): Promise<ScrapeBundle> {
+  const { jobApplicationId, scrape, remoteImages, storage } = input;
   const companyWithLogo = scrape.companyLinkedIn?.logoUrl
     ? scrape.companyLinkedIn
     : scrape.companyWebsite?.logoUrl
@@ -21,7 +15,7 @@ export async function storeCompanyLogo(input: {
         ? scrape.careerPage
         : undefined;
 
-  if (!companyWithLogo?.logoUrl) return;
+  if (!companyWithLogo?.logoUrl) return scrape;
 
   try {
     const image = await remoteImages.fetch(companyWithLogo.logoUrl);
@@ -32,16 +26,17 @@ export async function storeCompanyLogo(input: {
       metadata: { jobApplicationId, kind: "company_logo", companyName: companyWithLogo.name },
     });
     const updatedCompany = { ...companyWithLogo, logoFileId: stored.id };
-    await jobApplications.saveScrapeBundle(jobApplicationId, {
+    return {
       ...scrape,
       companyLinkedIn:
         scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
       companyWebsite:
         scrape.companyWebsite === companyWithLogo ? updatedCompany : scrape.companyWebsite,
       careerPage: scrape.careerPage === companyWithLogo ? updatedCompany : scrape.careerPage,
-    });
+    };
   } catch {
     // Logo download is optional and must not fail scrape submission.
+    return scrape;
   }
 }
 

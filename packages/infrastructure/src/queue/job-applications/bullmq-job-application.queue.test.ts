@@ -16,6 +16,20 @@ describe("BullMqJobApplicationQueue", () => {
     );
   });
 
+  it("uses a supplied idempotency job ID for outbox delivery", async () => {
+    const queue = createQueue();
+    const payload = { jobApplicationId: "job-1" };
+
+    await new BullMqJobApplicationQueue(queue).enqueue(payload, { jobId: "outbox-1" });
+
+    expect(queue.getJob).toHaveBeenCalledWith("outbox-1");
+    expect(queue.add).toHaveBeenCalledWith(
+      "process",
+      payload,
+      expect.objectContaining({ jobId: "outbox-1" }),
+    );
+  });
+
   it("uses a retry-safe custom id when enqueueing after a retained failed job", async () => {
     const queue = createQueue({
       existingJobState: "failed",

@@ -3,8 +3,8 @@ import { ClaimNextScrapeJobUseCase } from "./claim-next-scrape-job.use-case.js";
 import {
   createJobApplicationRepository,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("ClaimNextScrapeJobUseCase", () => {
   it("claims work for the current profile and records the start event", async () => {
@@ -13,14 +13,13 @@ describe("ClaimNextScrapeJobUseCase", () => {
       claimNextScrapeJob: vi.fn(async () => job),
     });
     const currentProfile = { execute: vi.fn(async () => ({ id: "profile-1" }) as never) };
-    const publish = vi.fn();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository);
 
     await expect(
-      new ClaimNextScrapeJobUseCase(
-        repository,
-        currentProfile,
-        new JobApplicationChangeNotifier({ publish }),
-      ).execute({ id: "user-1", name: "Ada", email: "ada@example.com" }, "desktop-a"),
+      new ClaimNextScrapeJobUseCase(currentProfile, unitOfWork).execute(
+        { id: "user-1", name: "Ada", email: "ada@example.com" },
+        "desktop-a",
+      ),
     ).resolves.toBe(job);
     expect(repository.claimNextScrapeJob).toHaveBeenCalledWith({
       profileId: "profile-1",
@@ -32,6 +31,8 @@ describe("ClaimNextScrapeJobUseCase", () => {
       type: "processing",
       title: "Scraping started",
     });
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.change" }),
+    );
   });
 });

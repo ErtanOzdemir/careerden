@@ -3,13 +3,12 @@ import type { RemoteImageFetcher } from "@link2cv/domain";
 import {
   createJobApplicationRepository,
   createProfiles,
-  createQueue,
   createScrapeBundle,
   createStorage,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 import { SubmitJobApplicationScrapeDataUseCase } from "./submit-job-application-scrape-data.use-case.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("SubmitJobApplicationScrapeDataUseCase", () => {
   it("persists scrape results, updates tracking, and returns the detail projection", async () => {
@@ -19,17 +18,16 @@ describe("SubmitJobApplicationScrapeDataUseCase", () => {
     vi.mocked(profiles.findById).mockResolvedValue({ autoRunMatchAnalysis: true } as never);
     const detail = { ...job, documents: [] } as never;
     const getDetail = { execute: vi.fn(async () => detail) };
-    const publish = vi.fn();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, profiles);
 
     await expect(
       new SubmitJobApplicationScrapeDataUseCase(
         repository,
         profiles,
-        createQueue(),
+        unitOfWork,
         { fetch: vi.fn() } as RemoteImageFetcher,
         createStorage(),
         getDetail,
-        new JobApplicationChangeNotifier({ publish }),
       ).execute(job.id, "user-1", {
         claimedBy: "desktop-a",
         scrapeBundle: createScrapeBundle(),
@@ -40,6 +38,11 @@ describe("SubmitJobApplicationScrapeDataUseCase", () => {
       roleTitle: "Backend Engineer",
     });
     expect(repository.updateStatus).toHaveBeenCalledWith(job.id, "scraped");
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.analysis-requested" }),
+    );
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.change" }),
+    );
   });
 });

@@ -4,8 +4,8 @@ import {
   createJobApplicationRepository,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("FailScrapeJobUseCase", () => {
   it("applies retry backoff and records a scheduled retry", async () => {
@@ -24,14 +24,15 @@ describe("FailScrapeJobUseCase", () => {
       recordScrapeFailure: vi.fn(async () => retry),
     });
     const now = new Date("2026-06-30T10:00:00.000Z");
-    const publish = vi.fn();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
     await expect(
-      new FailScrapeJobUseCase(
-        repository,
-        createProfiles(),
-        new JobApplicationChangeNotifier({ publish }),
-      ).execute(job.id, "user-1", { claimedBy: "desktop-a", reason: "Session expired" }, now),
+      new FailScrapeJobUseCase(unitOfWork).execute(
+        job.id,
+        "user-1",
+        { claimedBy: "desktop-a", reason: "Session expired" },
+        now,
+      ),
     ).resolves.toBe("retry_scheduled");
     expect(repository.recordScrapeFailure).toHaveBeenCalledWith(job.id, {
       claimedBy: "desktop-a",
@@ -40,21 +41,20 @@ describe("FailScrapeJobUseCase", () => {
       backoffMs: 60_000,
       now,
     });
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledOnce();
   });
 
   it("rejects a failure report from another desktop claimant", async () => {
     const job = createTestJobApplication({ scrapeClaimedBy: "desktop-a" });
     const repository = createJobApplicationRepository({ findById: vi.fn(async () => job) });
-    const publish = vi.fn();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
     await expect(
-      new FailScrapeJobUseCase(
-        repository,
-        createProfiles(),
-        new JobApplicationChangeNotifier({ publish }),
-      ).execute(job.id, "user-1", { claimedBy: "desktop-b", reason: "Failed" }),
+      new FailScrapeJobUseCase(unitOfWork).execute(job.id, "user-1", {
+        claimedBy: "desktop-b",
+        reason: "Failed",
+      }),
     ).rejects.toMatchObject({ code: "conflict" });
-    expect(publish).not.toHaveBeenCalled();
+    expect(addOutboxEvent).not.toHaveBeenCalled();
   });
 });

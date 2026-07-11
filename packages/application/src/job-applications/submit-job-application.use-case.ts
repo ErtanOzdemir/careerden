@@ -4,8 +4,8 @@ import type {
   PersistenceUnitOfWork,
   ScrapeBundle,
 } from "@link2cv/domain";
-import { outboxEventTypes } from "@link2cv/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class SubmitJobApplicationUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -27,16 +27,7 @@ export class SubmitJobApplicationUseCase {
         });
       }
 
-      await outbox.add({
-        type: outboxEventTypes.jobApplicationChange,
-        aggregateId: jobApplication.id,
-        payload: {
-          type: "application.changed",
-          applicationId: jobApplication.id,
-          profileId: jobApplication.profileId,
-          occurredAt: new Date().toISOString(),
-        },
-      });
+      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
 
       return {
         ...jobApplication,

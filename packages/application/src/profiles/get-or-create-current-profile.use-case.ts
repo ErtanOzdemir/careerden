@@ -1,0 +1,27 @@
+import type { UserProfile, UserProfileAccountRepository } from "@link2cv/domain";
+import type { AuthenticatedProfileUser } from "./profile-access.js";
+
+export class GetOrCreateCurrentProfileUseCase {
+  constructor(private readonly profiles: UserProfileAccountRepository) {}
+
+  async execute(user: AuthenticatedProfileUser): Promise<UserProfile> {
+    const existing = await this.profiles.findByUserId(user.id);
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.profiles.createForUserId(user.id, {
+      fullName: user.name || user.email,
+      email: user.email,
+      autoRunMatchAnalysis: true,
+      followUpRemindersEnabled: true,
+      skills: [],
+      experience: [],
+      links: [],
+      education: [],
+      certifications: [],
+      projects: [],
+    });
+  }
+}

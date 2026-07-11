@@ -32,3 +32,9 @@ export interface UserProfileRepository {
     variableAliases: DocumentTemplateVariableAliases,
   ): Promise<DocumentTemplate | null>;
 }
+
+export interface UserProfileAccountRepository extends UserProfileRepository {
+  findByUserId(userId: string): Promise<UserProfile | null>;
+  createForUserId(userId: string, input: CreateUserProfileInput): Promise<UserProfile>;
+  findUserIdByProfileId(profileId: string): Promise<string | null>;
+}

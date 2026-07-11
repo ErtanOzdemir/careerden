@@ -1,9 +1,27 @@
 import type { NextFunction, Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
+import { ApplicationError } from "@link2cv/application";
 import { errorHandler } from "./error-handler.js";
 import type { TraceIdRequest } from "./trace-id.middleware.js";
 
 describe("errorHandler", () => {
+  it("maps typed application failures to transport responses", () => {
+    const response = createResponse();
+
+    errorHandler(
+      new ApplicationError("validation", "Unknown placeholders", { unknown: ["missing"] }),
+      {} as Request,
+      response,
+      vi.fn() as NextFunction,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith({
+      error: "Unknown placeholders",
+      unknown: ["missing"],
+    });
+  });
+
   it("includes the request trace id in 500 responses when present", () => {
     const response = createResponse();
 

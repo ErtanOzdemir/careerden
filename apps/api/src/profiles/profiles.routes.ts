@@ -1,19 +1,23 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
 import multer from "multer";
-import type { CreateProfileUseCase, UpdateProfileUseCase } from "@link2cv/application";
+import type {
+  CreateProfileUseCase,
+  GetOrCreateCurrentProfileUseCase,
+  GetProfileUseCase,
+  ListDocumentTemplatesUseCase,
+  SetDefaultDocumentTemplateUseCase,
+  UpdateDocumentTemplateMappingsUseCase,
+  UpdateDocumentTemplateVariableAliasesUseCase,
+  UpdateProfileUseCase,
+  UploadDocumentTemplateUseCase,
+} from "@link2cv/application";
 import {
   createProfileSchema,
   updateDocumentTemplateMappingsSchema,
   updateDocumentTemplateVariableAliasesSchema,
   updateProfileSchema,
 } from "@link2cv/contracts";
-import type {
-  DocxTemplateRenderer,
-  FileStorage,
-  UserProfile,
-  UserProfileRepository,
-} from "@link2cv/domain";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
@@ -25,18 +29,20 @@ const upload = multer({
 
 export function createProfileRouter(dependencies: {
   createProfile: CreateProfileUseCase;
+  getCurrentProfile: GetOrCreateCurrentProfileUseCase;
+  getProfile: GetProfileUseCase;
   updateProfile: UpdateProfileUseCase;
-  profiles: UserProfileRepository;
-  storage: FileStorage;
-  docxTemplates: DocxTemplateRenderer;
-  getProfileForUser: (user: AuthenticatedRequest["user"]) => Promise<UserProfile>;
-  canAccessProfile: (profileId: string, userId: string) => Promise<boolean>;
+  listDocumentTemplates: ListDocumentTemplatesUseCase;
+  uploadDocumentTemplate: UploadDocumentTemplateUseCase;
+  updateDocumentTemplateMappings: UpdateDocumentTemplateMappingsUseCase;
+  updateDocumentTemplateVariableAliases: UpdateDocumentTemplateVariableAliasesUseCase;
+  setDefaultDocumentTemplate: SetDefaultDocumentTemplateUseCase;
 }): ExpressRouter {
   const router = Router();
 
   router.get("/me", async (request, response, next) => {
     try {
-      response.json(await dependencies.getProfileForUser(currentUser(request)));
+      response.json(await dependencies.getCurrentProfile.execute(currentUser(request)));
     } catch (error) {
       next(error);
     }
@@ -44,8 +50,9 @@ export function createProfileRouter(dependencies: {
 
   router.patch("/me", validateBody(updateProfileSchema), async (request, response, next) => {
     try {
-      const profile = await dependencies.getProfileForUser(currentUser(request));
-      const updated = await dependencies.updateProfile.execute(profile.id, request.body);
+      const user = currentUser(request);
+      const profile = await dependencies.getCurrentProfile.execute(user);
+      const updated = await dependencies.updateProfile.execute(profile.id, user.id, request.body);
 
       response.json(updated);
     } catch (error) {
@@ -64,19 +71,9 @@ export function createProfileRouter(dependencies: {
 
   router.get("/:id", async (request, response, next) => {
     try {
-      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      const profile = await dependencies.profiles.findById(request.params.id);
-
-      if (!profile) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      response.json(profile);
+      response.json(
+        await dependencies.getProfile.execute(request.params.id, currentUser(request).id),
+      );
     } catch (error) {
       next(error);
     }
@@ -84,19 +81,13 @@ export function createProfileRouter(dependencies: {
 
   router.patch("/:id", validateBody(updateProfileSchema), async (request, response, next) => {
     try {
-      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      const profile = await dependencies.updateProfile.execute(request.params.id, request.body);
-
-      if (!profile) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      response.json(profile);
+      response.json(
+        await dependencies.updateProfile.execute(
+          request.params.id,
+          currentUser(request).id,
+          request.body,
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -104,19 +95,12 @@ export function createProfileRouter(dependencies: {
 
   router.get("/:id/document-templates", async (request, response, next) => {
     try {
-      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      const profile = await dependencies.profiles.findById(request.params.id);
-
-      if (!profile) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      response.json(await dependencies.profiles.listDocumentTemplates(request.params.id));
+      response.json(
+        await dependencies.listDocumentTemplates.execute(
+          request.params.id,
+          currentUser(request).id,
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -124,18 +108,6 @@ export function createProfileRouter(dependencies: {
 
   router.post("/:id/document-templates", upload.single("file"), async (request, response, next) => {
     try {
-      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      const profile = await dependencies.profiles.findById(request.params.id);
-
-      if (!profile) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
       if (!request.file) {
         response.status(400).json({ error: "DOCX file is required" });
         return;
@@ -146,37 +118,12 @@ export function createProfileRouter(dependencies: {
         return;
       }
 
-      const placeholders = await dependencies.docxTemplates.extractPlaceholders(
-        request.file.buffer,
-      );
-
-      if (placeholders.length === 0) {
-        response.status(400).json({
-          error: "DOCX template must include at least one {{placeholder_name}} field",
-        });
-        return;
-      }
-
-      const stored = await dependencies.storage.put({
-        fileName: request.file.originalname,
-        contentType: docxContentType,
-        body: request.file.buffer,
-        metadata: {
-          kind: "cv_template",
-          profileId: request.params.id,
-        },
-      });
-      const existing = await dependencies.profiles.listDocumentTemplates(request.params.id);
-      const template = await dependencies.profiles.createDocumentTemplate({
+      const template = await dependencies.uploadDocumentTemplate.execute({
         profileId: request.params.id,
-        kind: "cv",
-        format: "docx",
-        fileId: stored.id,
+        userId: currentUser(request).id,
         fileName: request.file.originalname,
-        contentType: docxContentType,
+        body: request.file.buffer,
         size: request.file.size,
-        placeholders,
-        isDefault: existing.length === 0,
       });
 
       response.status(201).json(template);
@@ -190,36 +137,11 @@ export function createProfileRouter(dependencies: {
     validateBody(updateDocumentTemplateMappingsSchema),
     async (request, response, next) => {
       try {
-        if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
-          response.status(404).json({ error: "Profile not found" });
-          return;
-        }
-
-        const template = await dependencies.profiles.findDocumentTemplateById(
+        const updated = await dependencies.updateDocumentTemplateMappings.execute(
+          request.params.id,
           request.params.templateId,
-        );
-
-        if (!template || template.profileId !== request.params.id) {
-          response.status(404).json({ error: "Document template not found" });
-          return;
-        }
-
-        const fieldMappings = request.body.fieldMappings;
-        const unknown = Object.keys(fieldMappings).filter(
-          (placeholder) => !template.placeholders.includes(placeholder),
-        );
-
-        if (unknown.length > 0) {
-          response.status(400).json({
-            error: "Template mappings contain unknown placeholder keys",
-            unknown,
-          });
-          return;
-        }
-
-        const updated = await dependencies.profiles.updateDocumentTemplateMappings(
-          template.id,
-          fieldMappings,
+          currentUser(request).id,
+          request.body.fieldMappings,
         );
 
         response.json(updated);
@@ -234,22 +156,10 @@ export function createProfileRouter(dependencies: {
     validateBody(updateDocumentTemplateVariableAliasesSchema),
     async (request, response, next) => {
       try {
-        if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
-          response.status(404).json({ error: "Profile not found" });
-          return;
-        }
-
-        const template = await dependencies.profiles.findDocumentTemplateById(
+        const updated = await dependencies.updateDocumentTemplateVariableAliases.execute(
+          request.params.id,
           request.params.templateId,
-        );
-
-        if (!template || template.profileId !== request.params.id) {
-          response.status(404).json({ error: "Document template not found" });
-          return;
-        }
-
-        const updated = await dependencies.profiles.updateDocumentTemplateVariableAliases(
-          template.id,
+          currentUser(request).id,
           request.body.variableAliases,
         );
 
@@ -262,20 +172,11 @@ export function createProfileRouter(dependencies: {
 
   router.patch("/:id/document-templates/:templateId/default", async (request, response, next) => {
     try {
-      if (!(await dependencies.canAccessProfile(request.params.id, currentUser(request).id))) {
-        response.status(404).json({ error: "Profile not found" });
-        return;
-      }
-
-      const template = await dependencies.profiles.setDefaultDocumentTemplate(
+      const template = await dependencies.setDefaultDocumentTemplate.execute(
         request.params.id,
         request.params.templateId,
+        currentUser(request).id,
       );
-
-      if (!template) {
-        response.status(404).json({ error: "Document template not found" });
-        return;
-      }
 
       response.json(template);
     } catch (error) {

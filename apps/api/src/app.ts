@@ -11,6 +11,13 @@ import {
   SubmitJobApplicationUseCase,
   UpdateDocumentContentUseCase,
   UpdateProfileUseCase,
+  GetOrCreateCurrentProfileUseCase,
+  GetProfileUseCase,
+  ListDocumentTemplatesUseCase,
+  SetDefaultDocumentTemplateUseCase,
+  UpdateDocumentTemplateMappingsUseCase,
+  UpdateDocumentTemplateVariableAliasesUseCase,
+  UploadDocumentTemplateUseCase,
 } from "@link2cv/application";
 import {
   BullMqJobApplicationQueue,
@@ -88,26 +95,8 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     profiles,
     docxTemplates,
   );
-  async function getProfileForUser(user: AuthenticatedUser) {
-    const existing = await profiles.findByUserId(user.id);
-
-    if (existing) {
-      return existing;
-    }
-
-    return profiles.createForUserId(user.id, {
-      fullName: user.name || user.email,
-      email: user.email,
-      autoRunMatchAnalysis: true,
-      followUpRemindersEnabled: true,
-      skills: [],
-      experience: [],
-      links: [],
-      education: [],
-      certifications: [],
-      projects: [],
-    });
-  }
+  const getCurrentProfile = new GetOrCreateCurrentProfileUseCase(profiles);
+  const getProfileForUser = (user: AuthenticatedUser) => getCurrentProfile.execute(user);
 
   async function canAccessProfile(profileId: string, userId: string): Promise<boolean> {
     return (await profiles.findUserIdByProfileId(profileId)) === userId;
@@ -147,12 +136,16 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     "/profiles",
     createProfileRouter({
       createProfile: new CreateProfileUseCase(profiles),
+      getCurrentProfile,
+      getProfile: new GetProfileUseCase(profiles),
       updateProfile: new UpdateProfileUseCase(profiles),
-      profiles,
-      storage,
-      docxTemplates,
-      getProfileForUser,
-      canAccessProfile,
+      listDocumentTemplates: new ListDocumentTemplatesUseCase(profiles),
+      uploadDocumentTemplate: new UploadDocumentTemplateUseCase(profiles, storage, docxTemplates),
+      updateDocumentTemplateMappings: new UpdateDocumentTemplateMappingsUseCase(profiles),
+      updateDocumentTemplateVariableAliases: new UpdateDocumentTemplateVariableAliasesUseCase(
+        profiles,
+      ),
+      setDefaultDocumentTemplate: new SetDefaultDocumentTemplateUseCase(profiles),
     }),
   );
   app.use(

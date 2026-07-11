@@ -1,0 +1,28 @@
+import { describe, expect, it, vi } from "vitest";
+import { GetOrCreateCurrentProfileUseCase } from "./get-or-create-current-profile.use-case.js";
+import { createProfileRepository, createTestProfile } from "./profile-test-helpers.js";
+
+describe("GetOrCreateCurrentProfileUseCase", () => {
+  it("creates the current user's profile with default preferences when absent", async () => {
+    const profile = createTestProfile();
+    const profiles = createProfileRepository(profile);
+    vi.mocked(profiles.findByUserId).mockResolvedValue(null);
+
+    await expect(
+      new GetOrCreateCurrentProfileUseCase(profiles).execute({
+        id: "user-1",
+        email: "ada@example.com",
+        name: "Ada Lovelace",
+      }),
+    ).resolves.toBe(profile);
+    expect(profiles.createForUserId).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        fullName: "Ada Lovelace",
+        email: "ada@example.com",
+        autoRunMatchAnalysis: true,
+        followUpRemindersEnabled: true,
+      }),
+    );
+  });
+});

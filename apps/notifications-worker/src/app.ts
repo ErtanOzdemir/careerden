@@ -9,6 +9,7 @@ import { DeliverFollowUpReminderUseCase } from "@link2cv/application";
 import {
   BullMqFollowUpReminderQueue,
   PostgresFollowUpReminderRepository,
+  PostgresEmailOutboxDispatcher,
   PostgresOutboxRepository,
   PostgresPersistenceUnitOfWork,
   PostgresReminderOutboxDispatcher,
@@ -56,11 +57,14 @@ export async function createNotificationsWorkerRuntime(
     reminders,
     reminderQueue,
   );
-  const _emailSender = createSmtpNotificationEmailSender({
+  const emailSender = createSmtpNotificationEmailSender({
     from: env.SMTP_FROM,
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
   });
+  const emailOutbox = env.NOTIFICATION_EMAIL_ENABLED
+    ? new PostgresEmailOutboxDispatcher(new PostgresOutboxRepository(db), emailSender)
+    : undefined;
   const recoverFollowUpReminders = createFollowUpReminderRecoveryRunner(reminders, reminderQueue);
 
   await recoverFollowUpReminders();
@@ -74,7 +78,11 @@ export async function createNotificationsWorkerRuntime(
     if (isDispatchingStorageOutbox) return;
     isDispatchingStorageOutbox = true;
     try {
-      await Promise.all([storageOutbox.dispatchPending(), reminderOutbox.dispatchPending()]);
+      await Promise.all([
+        storageOutbox.dispatchPending(),
+        reminderOutbox.dispatchPending(),
+        ...(emailOutbox ? [emailOutbox.dispatchPending()] : []),
+      ]);
     } finally {
       isDispatchingStorageOutbox = false;
     }
@@ -91,15 +99,6 @@ export async function createNotificationsWorkerRuntime(
     async (job) => {
       try {
         await deliverFollowUpReminder.execute(job.data);
-        // TODO: Open it when email sender is ready
-        // await _emailSender.sendFollowUpReminder({
-        //   email: reminder.profileEmail,
-        //   companyName: reminder.companyName,
-        //   roleTitle: reminder.roleTitle,
-        //   followUpAt: reminder.scheduledAt,
-        //   title: reminder.title,
-        //   description: reminder.description,
-        // });
       } catch (error) {
         throw toBullMqWorkerError(error);
       }

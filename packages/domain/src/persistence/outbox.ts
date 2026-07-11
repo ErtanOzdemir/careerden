@@ -4,6 +4,7 @@ export const outboxEventTypes = {
   storageDelete: "storage.delete",
   followUpReminderSchedule: "follow-up-reminder.schedule",
   followUpReminderCancel: "follow-up-reminder.cancel",
+  followUpReminderEmail: "follow-up-reminder.email",
 } as const;
 
 export interface AddOutboxEventInput {

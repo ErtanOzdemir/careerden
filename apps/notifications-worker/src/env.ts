@@ -11,6 +11,13 @@ export const notificationsWorkerEnvSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   SMTP_FROM: z.string().min(1).default("Link2CV <no-reply@link2cv.local>"),
   NOTIFICATIONS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  NOTIFICATION_EMAIL_ENABLED: z
+    .preprocess((value) => {
+      if (value === "true") return true;
+      if (value === "false") return false;
+      return value;
+    }, z.boolean())
+    .default(false),
   RUSTFS_ENDPOINT: z.string().url().default("http://localhost:9000"),
   RUSTFS_BUCKET: z.string().min(1).default("link2cv"),
   RUSTFS_ACCESS_KEY_ID: z.string().min(1).default("rustfsadmin"),

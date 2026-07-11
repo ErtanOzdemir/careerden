@@ -17,11 +17,20 @@ export function createSmtpNotificationEmailSender(
   });
 
   return {
-    async sendFollowUpReminder({ email, companyName, roleTitle, followUpAt, title, description }) {
+    async sendFollowUpReminder({
+      messageId,
+      email,
+      companyName,
+      roleTitle,
+      followUpAt,
+      title,
+      description,
+    }) {
       const target = [companyName, roleTitle].filter(Boolean).join(" - ") || "your application";
       const formatted = followUpAt.toLocaleString();
 
       await transport.sendMail({
+        messageId,
         from: config.from,
         to: email,
         subject: `Follow-up reminder: ${title}`,

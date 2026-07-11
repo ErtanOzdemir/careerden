@@ -57,6 +57,7 @@ export interface FollowUpReminderRepository {
 
 export interface NotificationEmailSender {
   sendFollowUpReminder(input: {
+    messageId: string;
     email: string;
     companyName?: string;
     roleTitle?: string;

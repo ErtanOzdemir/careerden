@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { JobApplicationContact } from "@link2cv/domain";
 import {
   createJobApplicationRepository,
-  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 import { UpdateJobApplicationContactUseCase } from "./update-job-application-contact.use-case.js";
 
@@ -17,17 +17,14 @@ describe("UpdateJobApplicationContactUseCase", () => {
       findContactById: vi.fn(async () => contact),
       updateContact: vi.fn(async () => ({ ...contact, role: "Hiring Manager" })),
     });
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
-    await new UpdateJobApplicationContactUseCase(repository, createProfiles(), changes).execute(
-      job.id,
-      contact.id,
-      "user-1",
-      { role: "Hiring Manager" },
-    );
+    await new UpdateJobApplicationContactUseCase(unitOfWork).execute(job.id, contact.id, "user-1", {
+      role: "Hiring Manager",
+    });
 
     expect(repository.updateContact).toHaveBeenCalledWith(contact.id, { role: "Hiring Manager" });
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledOnce();
   });
 });
 

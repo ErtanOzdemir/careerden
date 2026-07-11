@@ -1,33 +1,30 @@
 import type {
   JobApplicationContact,
-  JobApplicationRepository,
+  PersistenceUnitOfWork,
   UpdateJobApplicationContactInput,
-  UserProfileAccessRepository,
 } from "@link2cv/domain";
 import { getAccessibleContact } from "./job-application-resource-access.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class UpdateJobApplicationContactUseCase {
-  constructor(
-    private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileAccessRepository,
-    private readonly changes: JobApplicationChangeNotifier,
-  ) {}
+  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
   async execute(
     jobApplicationId: string,
     contactId: string,
     userId: string,
     input: UpdateJobApplicationContactInput,
   ): Promise<JobApplicationContact> {
-    const { jobApplication } = await getAccessibleContact(
-      this.jobApplications,
-      this.profiles,
-      jobApplicationId,
-      contactId,
-      userId,
-    );
-    const contact = await this.jobApplications.updateContact(contactId, input);
-    await this.changes.changed(jobApplication.id, jobApplication.profileId);
-    return contact;
+    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+      const { jobApplication } = await getAccessibleContact(
+        jobApplications,
+        profiles,
+        jobApplicationId,
+        contactId,
+        userId,
+      );
+      const contact = await jobApplications.updateContact(contactId, input);
+      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      return contact;
+    });
   }
 }

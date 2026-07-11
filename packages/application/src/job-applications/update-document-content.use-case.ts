@@ -1,31 +1,25 @@
-import type {
-  DocumentContent,
-  JobApplicationRepository,
-  UserProfileAccessRepository,
-} from "@link2cv/domain";
+import type { DocumentContent, PersistenceUnitOfWork } from "@link2cv/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class UpdateDocumentContentUseCase {
-  constructor(
-    private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileAccessRepository,
-    private readonly changes: JobApplicationChangeNotifier,
-  ) {}
+  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(
     jobApplicationId: string,
     userId: string,
     documentContent: DocumentContent,
   ): Promise<DocumentContent> {
-    const jobApplication = await getAccessibleJobApplication(
-      this.jobApplications,
-      this.profiles,
-      jobApplicationId,
-      userId,
-    );
-    await this.jobApplications.saveDocumentContent(jobApplicationId, documentContent);
-    await this.changes.changed(jobApplication.id, jobApplication.profileId);
-    return documentContent;
+    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+      const jobApplication = await getAccessibleJobApplication(
+        jobApplications,
+        profiles,
+        jobApplicationId,
+        userId,
+      );
+      await jobApplications.saveDocumentContent(jobApplicationId, documentContent);
+      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      return documentContent;
+    });
   }
 }

@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { JobApplicationContact } from "@link2cv/domain";
 import { DeleteJobApplicationContactUseCase } from "./delete-job-application-contact.use-case.js";
 import {
-  createJobApplicationChanges,
   createJobApplicationRepository,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 
 describe("DeleteJobApplicationContactUseCase", () => {
@@ -17,15 +17,11 @@ describe("DeleteJobApplicationContactUseCase", () => {
       findContactById: vi.fn(async () => contact),
       deleteContact: vi.fn(),
     });
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
-    await new DeleteJobApplicationContactUseCase(repository, createProfiles(), changes).execute(
-      job.id,
-      contact.id,
-      "user-1",
-    );
+    await new DeleteJobApplicationContactUseCase(unitOfWork).execute(job.id, contact.id, "user-1");
 
     expect(repository.deleteContact).toHaveBeenCalledWith(contact.id);
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledOnce();
   });
 });

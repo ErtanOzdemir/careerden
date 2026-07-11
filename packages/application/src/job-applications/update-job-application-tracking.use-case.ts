@@ -1,43 +1,40 @@
 import type {
   JobApplication,
-  JobApplicationRepository,
+  PersistenceUnitOfWork,
   UpdateJobApplicationTrackingInput,
-  UserProfileAccessRepository,
 } from "@link2cv/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class UpdateJobApplicationTrackingUseCase {
-  constructor(
-    private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileAccessRepository,
-    private readonly changes: JobApplicationChangeNotifier,
-  ) {}
+  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(
     jobApplicationId: string,
     userId: string,
     input: UpdateJobApplicationTrackingInput,
   ): Promise<JobApplication> {
-    const existing = await getAccessibleJobApplication(
-      this.jobApplications,
-      this.profiles,
-      jobApplicationId,
-      userId,
-    );
-    const previousStatus = existing.tracking.applicationStatus;
-    const updated = await this.jobApplications.updateTracking(jobApplicationId, input);
-
-    if (input.applicationStatus && input.applicationStatus !== previousStatus) {
-      await this.jobApplications.addEvent({
+    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+      const existing = await getAccessibleJobApplication(
+        jobApplications,
+        profiles,
         jobApplicationId,
-        type: "status_changed",
-        title: `Status changed to ${input.applicationStatus}`,
-        metadata: { from: previousStatus, to: input.applicationStatus },
-      });
-    }
+        userId,
+      );
+      const previousStatus = existing.tracking.applicationStatus;
+      const updated = await jobApplications.updateTracking(jobApplicationId, input);
 
-    await this.changes.changed(updated.id, updated.profileId);
-    return updated;
+      if (input.applicationStatus && input.applicationStatus !== previousStatus) {
+        await jobApplications.addEvent({
+          jobApplicationId,
+          type: "status_changed",
+          title: `Status changed to ${input.applicationStatus}`,
+          metadata: { from: previousStatus, to: input.applicationStatus },
+        });
+      }
+
+      await enqueueJobApplicationChange(outbox, updated.id, updated.profileId);
+      return updated;
+    });
   }
 }

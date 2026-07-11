@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createJobApplicationRepository,
-  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 import { UpdateJobApplicationStatusUseCase } from "./update-job-application-status.use-case.js";
 
@@ -14,20 +14,16 @@ describe("UpdateJobApplicationStatusUseCase", () => {
     const repository = createJobApplicationRepository({
       findById: vi.fn().mockResolvedValueOnce(initial).mockResolvedValueOnce(updated),
     });
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
     await expect(
-      new UpdateJobApplicationStatusUseCase(repository, createProfiles(), changes).execute(
-        initial.id,
-        "user-1",
-        "scraping",
-      ),
+      new UpdateJobApplicationStatusUseCase(unitOfWork).execute(initial.id, "user-1", "scraping"),
     ).resolves.toBe(updated);
     expect(repository.addEvent).toHaveBeenCalledWith({
       jobApplicationId: initial.id,
       type: "processing",
       title: "Scraping started",
     });
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledOnce();
   });
 });

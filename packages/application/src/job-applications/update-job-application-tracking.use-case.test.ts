@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createJobApplicationRepository,
-  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 import { UpdateJobApplicationTrackingUseCase } from "./update-job-application-tracking.use-case.js";
 
@@ -17,13 +17,11 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
       findById: vi.fn(async () => job),
       updateTracking: vi.fn(async () => updated),
     });
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
-    await new UpdateJobApplicationTrackingUseCase(repository, createProfiles(), changes).execute(
-      job.id,
-      "user-1",
-      { applicationStatus: "interview" },
-    );
+    await new UpdateJobApplicationTrackingUseCase(unitOfWork).execute(job.id, "user-1", {
+      applicationStatus: "interview",
+    });
 
     expect(repository.addEvent).toHaveBeenCalledWith({
       jobApplicationId: job.id,
@@ -31,6 +29,6 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
       title: "Status changed to interview",
       metadata: { from: "applied", to: "interview" },
     });
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledOnce();
   });
 });

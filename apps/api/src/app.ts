@@ -45,7 +45,6 @@ import {
   UpdateJobApplicationFollowUpUseCase,
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
-  JobApplicationChangeNotifier,
 } from "@link2cv/application";
 import {
   DocxtemplaterTemplateRenderer,
@@ -95,7 +94,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   });
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const jobApplications = new PostgresJobApplicationRepository(db);
-  const jobApplicationChanges = new JobApplicationChangeNotifier(changeBus);
   const notifications = new PostgresNotificationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
   const unitOfWork = new PostgresPersistenceUnitOfWork(db);
@@ -175,36 +173,20 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         unitOfWork,
       ),
       retryJobApplication: new RetryJobApplicationUseCase(unitOfWork),
-      updateDocumentContent: new UpdateDocumentContentUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      updateDocumentContent: new UpdateDocumentContentUseCase(unitOfWork),
       ensureJobApplicationAccess: new EnsureJobApplicationAccessUseCase(jobApplications, profiles),
-      updateJobApplicationStatus: new UpdateJobApplicationStatusUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      updateJobApplicationStatus: new UpdateJobApplicationStatusUseCase(unitOfWork),
       listJobApplications: new ListJobApplicationsUseCase(jobApplications, profiles, storage),
       getJobApplicationAnalytics: new GetJobApplicationAnalyticsUseCase(jobApplications, profiles),
       getJobApplicationDetail,
-      updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(unitOfWork),
       requestJobApplicationAnalysis: new RequestJobApplicationAnalysisUseCase(unitOfWork),
       claimNextScrapeJob: new ClaimNextScrapeJobUseCase(getCurrentProfile, unitOfWork),
       createJobApplicationFromScrape: new CreateJobApplicationFromScrapeUseCase(
         getCurrentProfile,
         unitOfWork,
       ),
-      renewScrapeClaim: new RenewScrapeClaimUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      renewScrapeClaim: new RenewScrapeClaimUseCase(unitOfWork),
       failScrapeJob: new FailScrapeJobUseCase(unitOfWork),
       submitJobApplicationScrapeData: new SubmitJobApplicationScrapeDataUseCase(
         jobApplications,
@@ -216,28 +198,12 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       ),
       getProfile,
       jobApplicationChanges: changeBus,
-      createJobApplicationEvent: new CreateJobApplicationEventUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      createJobApplicationEvent: new CreateJobApplicationEventUseCase(unitOfWork),
       listJobApplicationEvents: new ListJobApplicationEventsUseCase(jobApplications, profiles),
-      createJobApplicationContact: new CreateJobApplicationContactUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      createJobApplicationContact: new CreateJobApplicationContactUseCase(unitOfWork),
       listJobApplicationContacts: new ListJobApplicationContactsUseCase(jobApplications, profiles),
-      updateJobApplicationContact: new UpdateJobApplicationContactUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
-      deleteJobApplicationContact: new DeleteJobApplicationContactUseCase(
-        jobApplications,
-        profiles,
-        jobApplicationChanges,
-      ),
+      updateJobApplicationContact: new UpdateJobApplicationContactUseCase(unitOfWork),
+      deleteJobApplicationContact: new DeleteJobApplicationContactUseCase(unitOfWork),
       createJobApplicationFollowUp: new CreateJobApplicationFollowUpUseCase(unitOfWork),
       listJobApplicationFollowUps: new ListJobApplicationFollowUpsUseCase(
         jobApplications,

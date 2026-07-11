@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { JobApplicationEvent } from "@link2cv/domain";
 import { CreateJobApplicationEventUseCase } from "./create-job-application-event.use-case.js";
 import {
-  createJobApplicationChanges,
   createJobApplicationRepository,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 
 describe("CreateJobApplicationEventUseCase", () => {
@@ -24,15 +24,14 @@ describe("CreateJobApplicationEventUseCase", () => {
       findById: vi.fn(async () => job),
       addEvent: vi.fn(async () => event),
     });
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
     await expect(
-      new CreateJobApplicationEventUseCase(repository, createProfiles(), changes).execute(
-        job.id,
-        "user-1",
-        { type: "note", title: "Recruiter replied" },
-      ),
+      new CreateJobApplicationEventUseCase(unitOfWork).execute(job.id, "user-1", {
+        type: "note",
+        title: "Recruiter replied",
+      }),
     ).resolves.toBe(event);
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledOnce();
   });
 });

@@ -2,12 +2,17 @@ import type {
   DocumentPreferences,
   GeneratedDocument,
   JobApplicationRepository,
+  PersistenceUnitOfWork,
   PremiumAiService,
   UserProfileRepository,
 } from "@link2cv/domain";
-import { canTransitionJobApplicationStatus } from "@link2cv/domain";
-import { GenerateDocumentsUseCase } from "../documents/generate-documents.use-case.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { randomUUID } from "node:crypto";
+import {
+  generatedDocumentFileIds,
+  type GenerateDocumentsUseCase,
+} from "../documents/generate-documents.use-case.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class GenerateDocumentsWithAiUseCase {
   constructor(
@@ -15,7 +20,7 @@ export class GenerateDocumentsWithAiUseCase {
     private readonly generateDocuments: GenerateDocumentsUseCase,
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
-    private readonly changes: JobApplicationChangeNotifier,
+    private readonly unitOfWork: PersistenceUnitOfWork,
   ) {}
 
   async execute(input: {
@@ -40,59 +45,124 @@ export class GenerateDocumentsWithAiUseCase {
       throw new Error(`No scrape bundle found for job application ${input.jobApplicationId}`);
     }
 
-    await this.transition(input.jobApplicationId, jobApplication.status, "generating_documents");
-    await this.jobApplications.addEvent({
-      jobApplicationId: input.jobApplicationId,
-      type: "processing",
-      title: "AI document generation started",
+    const attemptId = randomUUID();
+    const previousDocuments = await this.jobApplications.listGeneratedDocuments(
+      input.jobApplicationId,
+    );
+    const started = await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+      const result = await jobApplications.beginDocumentGeneration(
+        input.jobApplicationId,
+        attemptId,
+      );
+      if (!result.started) return false;
+      if (result.supersededAttemptId) {
+        await enqueueStorageDeletions(
+          outbox,
+          generatedDocumentFileIds(input.jobApplicationId, result.supersededAttemptId),
+        );
+      }
+      await jobApplications.addEvent({
+        jobApplicationId: input.jobApplicationId,
+        type: "processing",
+        title: "AI document generation started",
+        metadata: { attemptId },
+      });
+      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      return true;
     });
-
-    const result = await this.premiumAi.generate({
-      scrape,
-      profile,
-      preferences: input.preferences,
-    });
-
-    await this.jobApplications.saveMatchAnalysis(input.jobApplicationId, result.matchAnalysis);
-    await this.jobApplications.saveDocumentContent(input.jobApplicationId, result.documentContent);
-    await this.jobApplications.addEvent({
-      jobApplicationId: input.jobApplicationId,
-      type: "processing",
-      title: "AI document generation completed",
-      metadata: {
-        matchScore: result.matchAnalysis.matchScore,
-        creditsRemaining: result.creditsRemaining,
-      },
-    });
-
-    const documents = await this.generateDocuments.execute({
-      jobApplicationId: input.jobApplicationId,
-      jobApplication,
-      profile,
-      analysis: result.matchAnalysis,
-      documentContent: result.documentContent,
-    });
-
-    await this.transition(input.jobApplicationId, "generating_documents", "completed");
-    await this.jobApplications.addEvent({
-      jobApplicationId: input.jobApplicationId,
-      type: "processing",
-      title: "Documents generated",
-    });
-    await this.changes.changed(jobApplication.id, jobApplication.profileId);
-
-    return documents;
-  }
-
-  private async transition(
-    jobApplicationId: string,
-    from: Parameters<typeof canTransitionJobApplicationStatus>[0],
-    to: Parameters<typeof canTransitionJobApplicationStatus>[1],
-  ): Promise<void> {
-    if (!canTransitionJobApplicationStatus(from, to)) {
-      throw new Error(`Invalid job application status transition: ${from} -> ${to}`);
+    if (!started) {
+      throw new Error(
+        `Invalid job application status transition: ${jobApplication.status} -> generating_documents`,
+      );
     }
 
-    await this.jobApplications.updateStatus(jobApplicationId, to);
+    try {
+      const result = await this.premiumAi.generate({
+        scrape,
+        profile,
+        preferences: input.preferences,
+      });
+      const uploads = await this.generateDocuments.stage({
+        jobApplicationId: input.jobApplicationId,
+        generationAttemptId: attemptId,
+        jobApplication,
+        profile,
+        analysis: result.matchAnalysis,
+        documentContent: result.documentContent,
+      });
+      const documents = await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        if (
+          !(await jobApplications.completeDocumentGeneration(input.jobApplicationId, attemptId))
+        ) {
+          await enqueueStorageDeletions(
+            outbox,
+            uploads.map((upload) => upload.fileId),
+          );
+          return null;
+        }
+        await jobApplications.saveMatchAnalysis(input.jobApplicationId, result.matchAnalysis);
+        await jobApplications.saveDocumentContent(input.jobApplicationId, result.documentContent);
+        const attached = await Promise.all(
+          uploads.map((upload) =>
+            jobApplications.attachGeneratedDocument({
+              jobApplicationId: input.jobApplicationId,
+              ...upload,
+            }),
+          ),
+        );
+        await enqueueStorageDeletions(
+          outbox,
+          previousDocuments
+            .map((document) => document.fileId)
+            .filter((fileId) => !uploads.some((upload) => upload.fileId === fileId)),
+        );
+        await jobApplications.addEvent({
+          jobApplicationId: input.jobApplicationId,
+          type: "processing",
+          title: "AI document generation completed",
+          metadata: {
+            attemptId,
+            matchScore: result.matchAnalysis.matchScore,
+            creditsRemaining: result.creditsRemaining,
+          },
+        });
+        await jobApplications.addEvent({
+          jobApplicationId: input.jobApplicationId,
+          type: "processing",
+          title: "Documents generated",
+          metadata: { attemptId },
+        });
+        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        return attached;
+      });
+      if (!documents) throw new Error("Document generation was superseded by a newer attempt");
+      return documents;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown document generation error";
+      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        await enqueueStorageDeletions(
+          outbox,
+          generatedDocumentFileIds(input.jobApplicationId, attemptId),
+        );
+        if (
+          !(await jobApplications.failDocumentGeneration(
+            input.jobApplicationId,
+            attemptId,
+            message,
+          ))
+        ) {
+          return;
+        }
+        await jobApplications.addEvent({
+          jobApplicationId: input.jobApplicationId,
+          type: "processing",
+          title: "AI document generation failed",
+          body: message,
+          metadata: { attemptId },
+        });
+        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      });
+      throw error;
+    }
   }
 }

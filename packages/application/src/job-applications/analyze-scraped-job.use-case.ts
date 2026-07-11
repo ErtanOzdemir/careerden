@@ -3,7 +3,7 @@ import type {
   JobApplicationRepository,
   UserProfileRepository,
 } from "@link2cv/domain";
-import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.js";
+import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 
 export class AnalyzeScrapedJobUseCase {
   constructor(

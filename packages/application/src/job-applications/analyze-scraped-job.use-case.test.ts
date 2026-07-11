@@ -4,8 +4,8 @@ import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
 } from "@link2cv/infrastructure";
-import { AnalyzeScrapedJobUseCase } from "./analyze-scraped-job.js";
-import { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.js";
+import { AnalyzeScrapedJobUseCase } from "./analyze-scraped-job.use-case.js";
+import { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 
 describe("AnalyzeScrapedJobUseCase", () => {
   it("runs AI analysis for a scraped job and marks it ready for review", async () => {

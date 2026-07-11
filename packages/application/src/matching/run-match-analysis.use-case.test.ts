@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AiGenerateParams, AiProvider, UserProfile } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
-import { RunMatchAnalysisUseCase } from "./run-match-analysis.js";
+import { RunMatchAnalysisUseCase } from "./run-match-analysis.use-case.js";
 
 describe("RunMatchAnalysisUseCase", () => {
   it("computes a deterministic score from requirement evaluations and prompts grounded description enhancement", async () => {

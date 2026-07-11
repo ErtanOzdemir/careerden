@@ -4,7 +4,7 @@ import type {
   UserProfileRepository,
 } from "@link2cv/domain";
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
-import type { GenerateDocumentsUseCase } from "../documents/generate-documents.js";
+import type { GenerateDocumentsUseCase } from "../documents/generate-documents.use-case.js";
 
 export class GenerateJobApplicationDocumentsUseCase {
   constructor(

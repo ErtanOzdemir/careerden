@@ -1,15 +1,21 @@
 import { Router } from "express";
 import type { Router as ExpressRouter } from "express";
-import type { LinkedInSessionManager } from "@link2cv/infrastructure";
+import type {
+  CheckLinkedInSessionUseCase,
+  SaveLinkedInSessionUseCase,
+  StartLinkedInSessionUseCase,
+} from "@link2cv/application";
 
 export function createLinkedInSessionRouter(dependencies: {
-  linkedInSessionManager: LinkedInSessionManager;
+  startLinkedInSession: StartLinkedInSessionUseCase;
+  saveLinkedInSession: SaveLinkedInSessionUseCase;
+  checkLinkedInSession: CheckLinkedInSessionUseCase;
 }): ExpressRouter {
   const router = Router();
 
   router.post("/start", async (_request, response, next) => {
     try {
-      response.json(await dependencies.linkedInSessionManager.startLogin());
+      response.json(await dependencies.startLinkedInSession.execute());
     } catch (error) {
       next(error);
     }
@@ -17,7 +23,7 @@ export function createLinkedInSessionRouter(dependencies: {
 
   router.post("/save", async (_request, response, next) => {
     try {
-      response.json(await dependencies.linkedInSessionManager.saveLogin());
+      response.json(await dependencies.saveLinkedInSession.execute());
     } catch (error) {
       next(error);
     }
@@ -25,7 +31,7 @@ export function createLinkedInSessionRouter(dependencies: {
 
   router.get("/status", async (_request, response, next) => {
     try {
-      response.json(await dependencies.linkedInSessionManager.getStatus());
+      response.json(await dependencies.checkLinkedInSession.execute());
     } catch (error) {
       next(error);
     }

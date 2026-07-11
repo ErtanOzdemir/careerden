@@ -20,16 +20,19 @@ import type {
   RenewScrapeClaimUseCase,
   SubmitJobApplicationScrapeDataUseCase,
   GetProfileUseCase,
+  CreateJobApplicationEventUseCase,
+  ListJobApplicationEventsUseCase,
+  CreateJobApplicationContactUseCase,
+  ListJobApplicationContactsUseCase,
+  UpdateJobApplicationContactUseCase,
+  DeleteJobApplicationContactUseCase,
+  CreateJobApplicationFollowUpUseCase,
+  ListJobApplicationFollowUpsUseCase,
+  UpdateJobApplicationFollowUpUseCase,
+  DeleteJobApplicationFollowUpUseCase,
+  GetGeneratedDocumentDownloadUrlUseCase,
 } from "@link2cv/application";
-import type {
-  FileStorage,
-  FollowUpReminderQueue,
-  FollowUpReminderRepository,
-  JobApplicationFollowUp,
-  JobApplicationChangeSubscriber,
-  JobApplicationRepository,
-} from "@link2cv/domain";
-import { getFollowUpReminderScheduledFor } from "@link2cv/infrastructure";
+import type { JobApplicationChangeSubscriber } from "@link2cv/domain";
 import {
   createJobApplicationFromScrapeSchema,
   claimScrapeJobSchema,
@@ -70,12 +73,19 @@ export function createJobApplicationRouter(dependencies: {
   failScrapeJob: FailScrapeJobUseCase;
   submitJobApplicationScrapeData: SubmitJobApplicationScrapeDataUseCase;
   getProfile: GetProfileUseCase;
-  jobApplications: JobApplicationRepository;
   jobApplicationChanges: JobApplicationChangeSubscriber;
-  followUpReminderQueue: FollowUpReminderQueue;
-  followUpReminders: FollowUpReminderRepository;
-  storage: FileStorage;
   generateWithAi?: GenerateDocumentsWithAiUseCase;
+  createJobApplicationEvent: CreateJobApplicationEventUseCase;
+  listJobApplicationEvents: ListJobApplicationEventsUseCase;
+  createJobApplicationContact: CreateJobApplicationContactUseCase;
+  listJobApplicationContacts: ListJobApplicationContactsUseCase;
+  updateJobApplicationContact: UpdateJobApplicationContactUseCase;
+  deleteJobApplicationContact: DeleteJobApplicationContactUseCase;
+  createJobApplicationFollowUp: CreateJobApplicationFollowUpUseCase;
+  listJobApplicationFollowUps: ListJobApplicationFollowUpsUseCase;
+  updateJobApplicationFollowUp: UpdateJobApplicationFollowUpUseCase;
+  deleteJobApplicationFollowUp: DeleteJobApplicationFollowUpUseCase;
+  getGeneratedDocumentDownloadUrl: GetGeneratedDocumentDownloadUrlUseCase;
 }): ExpressRouter {
   const router = Router();
 
@@ -377,17 +387,11 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(createJobApplicationEventSchema),
     async (request, response, next) => {
       try {
-        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-        if (!jobApplication) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
-
-        const event = await dependencies.jobApplications.addEvent({
-          jobApplicationId: request.params.id,
-          ...request.body,
-        });
+        const event = await dependencies.createJobApplicationEvent.execute(
+          request.params.id,
+          currentUser(request).id,
+          request.body,
+        );
 
         response.status(201).json(event);
       } catch (error) {
@@ -398,14 +402,12 @@ export function createJobApplicationRouter(dependencies: {
 
   router.get("/:id/events", async (request, response, next) => {
     try {
-      const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-      if (!jobApplication) {
-        response.status(404).json({ error: "Job application not found" });
-        return;
-      }
-
-      response.json(await dependencies.jobApplications.listEvents(request.params.id));
+      response.json(
+        await dependencies.listJobApplicationEvents.execute(
+          request.params.id,
+          currentUser(request).id,
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -416,17 +418,11 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(createJobApplicationContactSchema),
     async (request, response, next) => {
       try {
-        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-        if (!jobApplication) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
-
-        const contact = await dependencies.jobApplications.createContact({
-          jobApplicationId: request.params.id,
-          ...request.body,
-        });
+        const contact = await dependencies.createJobApplicationContact.execute(
+          request.params.id,
+          currentUser(request).id,
+          request.body,
+        );
 
         response.status(201).json(contact);
       } catch (error) {
@@ -437,14 +433,12 @@ export function createJobApplicationRouter(dependencies: {
 
   router.get("/:id/contacts", async (request, response, next) => {
     try {
-      const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-      if (!jobApplication) {
-        response.status(404).json({ error: "Job application not found" });
-        return;
-      }
-
-      response.json(await dependencies.jobApplications.listContacts(request.params.id));
+      response.json(
+        await dependencies.listJobApplicationContacts.execute(
+          request.params.id,
+          currentUser(request).id,
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -455,17 +449,13 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(updateJobApplicationContactSchema),
     async (request, response, next) => {
       try {
-        const contact = await dependencies.jobApplications.findContactById(
-          request.params.contactId,
-        );
-
-        if (!contact || contact.jobApplicationId !== request.params.id) {
-          response.status(404).json({ error: "Contact not found" });
-          return;
-        }
-
         response.json(
-          await dependencies.jobApplications.updateContact(request.params.contactId, request.body),
+          await dependencies.updateJobApplicationContact.execute(
+            request.params.id,
+            request.params.contactId,
+            currentUser(request).id,
+            request.body,
+          ),
         );
       } catch (error) {
         next(error);
@@ -475,14 +465,11 @@ export function createJobApplicationRouter(dependencies: {
 
   router.delete("/:id/contacts/:contactId", async (request, response, next) => {
     try {
-      const contact = await dependencies.jobApplications.findContactById(request.params.contactId);
-
-      if (!contact || contact.jobApplicationId !== request.params.id) {
-        response.status(404).json({ error: "Contact not found" });
-        return;
-      }
-
-      await dependencies.jobApplications.deleteContact(request.params.contactId);
+      await dependencies.deleteJobApplicationContact.execute(
+        request.params.id,
+        request.params.contactId,
+        currentUser(request).id,
+      );
       response.status(204).send();
     } catch (error) {
       next(error);
@@ -494,33 +481,11 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(createJobApplicationFollowUpSchema),
     async (request, response, next) => {
       try {
-        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-        if (!jobApplication) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
-
-        const followUp = await dependencies.jobApplications.createFollowUp({
-          jobApplicationId: request.params.id,
-          profileId: jobApplication.profileId,
-          title: request.body.title,
-          description: request.body.description,
-          scheduledAt: request.body.scheduledAt,
-        });
-
-        await scheduleFollowUpReminder({
-          followUp,
-          followUpReminderQueue: dependencies.followUpReminderQueue,
-          followUpReminders: dependencies.followUpReminders,
-        });
-
-        await dependencies.jobApplications.addEvent({
-          jobApplicationId: request.params.id,
-          type: "reminder",
-          title: `Follow-up scheduled: ${followUp.title}`,
-          occurredAt: followUp.scheduledAt,
-        });
+        const followUp = await dependencies.createJobApplicationFollowUp.execute(
+          request.params.id,
+          currentUser(request).id,
+          request.body,
+        );
 
         response.status(201).json(followUp);
       } catch (error) {
@@ -531,14 +496,12 @@ export function createJobApplicationRouter(dependencies: {
 
   router.get("/:id/follow-ups", async (request, response, next) => {
     try {
-      const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-      if (!jobApplication) {
-        response.status(404).json({ error: "Job application not found" });
-        return;
-      }
-
-      response.json(await dependencies.jobApplications.listFollowUps(request.params.id));
+      response.json(
+        await dependencies.listJobApplicationFollowUps.execute(
+          request.params.id,
+          currentUser(request).id,
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -549,38 +512,12 @@ export function createJobApplicationRouter(dependencies: {
     validateBody(updateJobApplicationFollowUpSchema),
     async (request, response, next) => {
       try {
-        const existing = await dependencies.jobApplications.findFollowUpById(
+        const updated = await dependencies.updateJobApplicationFollowUp.execute(
+          request.params.id,
           request.params.followUpId,
-        );
-
-        if (!existing || existing.jobApplicationId !== request.params.id) {
-          response.status(404).json({ error: "Follow-up not found" });
-          return;
-        }
-
-        const updated = await dependencies.jobApplications.updateFollowUp(
-          request.params.followUpId,
+          currentUser(request).id,
           request.body,
         );
-
-        if ("scheduledAt" in request.body && existing.reminderJobId) {
-          await dependencies.followUpReminderQueue.remove(existing.reminderJobId);
-        }
-
-        if ("scheduledAt" in request.body) {
-          await scheduleFollowUpReminder({
-            followUp: updated,
-            followUpReminderQueue: dependencies.followUpReminderQueue,
-            followUpReminders: dependencies.followUpReminders,
-          });
-
-          await dependencies.jobApplications.addEvent({
-            jobApplicationId: request.params.id,
-            type: "reminder",
-            title: `Follow-up rescheduled: ${updated.title}`,
-            occurredAt: updated.scheduledAt,
-          });
-        }
 
         response.json(updated);
       } catch (error) {
@@ -591,20 +528,11 @@ export function createJobApplicationRouter(dependencies: {
 
   router.delete("/:id/follow-ups/:followUpId", async (request, response, next) => {
     try {
-      const followUp = await dependencies.jobApplications.findFollowUpById(
+      await dependencies.deleteJobApplicationFollowUp.execute(
+        request.params.id,
         request.params.followUpId,
+        currentUser(request).id,
       );
-
-      if (!followUp || followUp.jobApplicationId !== request.params.id) {
-        response.status(404).json({ error: "Follow-up not found" });
-        return;
-      }
-
-      if (followUp.reminderJobId) {
-        await dependencies.followUpReminderQueue.remove(followUp.reminderJobId);
-      }
-
-      await dependencies.jobApplications.deleteFollowUp(request.params.followUpId);
       response.status(204).send();
     } catch (error) {
       next(error);
@@ -618,13 +546,9 @@ export function createJobApplicationRouter(dependencies: {
       try {
         const documentContent = await dependencies.updateDocumentContent.execute(
           request.params.id,
+          currentUser(request).id,
           request.body.documentContent,
         );
-
-        if (!documentContent) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
 
         response.json({ documentContent });
       } catch (error) {
@@ -635,13 +559,6 @@ export function createJobApplicationRouter(dependencies: {
 
   router.post("/:id/documents/generate", async (request, response, next) => {
     try {
-      const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-      if (!jobApplication) {
-        response.status(404).json({ error: "Job application not found" });
-        return;
-      }
-
       await dependencies.generateJobApplicationDocuments.execute(request.params.id);
 
       response
@@ -660,13 +577,6 @@ export function createJobApplicationRouter(dependencies: {
   if (dependencies.generateWithAi) {
     router.post("/:id/documents/generate-with-ai", async (request, response, next) => {
       try {
-        const jobApplication = await dependencies.jobApplications.findById(request.params.id);
-
-        if (!jobApplication) {
-          response.status(404).json({ error: "Job application not found" });
-          return;
-        }
-
         const preferences = request.body ?? {};
 
         await dependencies.generateWithAi!.execute({
@@ -695,17 +605,11 @@ export function createJobApplicationRouter(dependencies: {
 
   router.get("/:id/documents/:documentId/download", async (request, response, next) => {
     try {
-      const url = await getGeneratedDocumentDownloadUrl({
-        jobApplications: dependencies.jobApplications,
-        storage: dependencies.storage,
-        jobApplicationId: request.params.id,
-        documentId: request.params.documentId,
-      });
-
-      if (!url) {
-        response.status(404).json({ error: "Document not found" });
-        return;
-      }
+      const url = await dependencies.getGeneratedDocumentDownloadUrl.execute(
+        request.params.id,
+        request.params.documentId,
+        currentUser(request).id,
+      );
 
       response.json({ url });
     } catch (error) {
@@ -714,42 +618,6 @@ export function createJobApplicationRouter(dependencies: {
   });
 
   return router;
-}
-
-async function scheduleFollowUpReminder(input: {
-  followUp: JobApplicationFollowUp;
-  followUpReminderQueue: FollowUpReminderQueue;
-  followUpReminders: FollowUpReminderRepository;
-}): Promise<void> {
-  const scheduledFor = getFollowUpReminderScheduledFor(input.followUp.scheduledAt);
-  const scheduled = await input.followUpReminderQueue.enqueue({
-    followUpId: input.followUp.id,
-    jobApplicationId: input.followUp.jobApplicationId,
-    profileId: input.followUp.profileId,
-    followUpAt: input.followUp.scheduledAt,
-    scheduledFor,
-  });
-
-  await input.followUpReminders.setSchedule(input.followUp.id, {
-    jobId: scheduled.jobId,
-    scheduledFor,
-  });
-}
-
-export async function getGeneratedDocumentDownloadUrl(input: {
-  jobApplications: JobApplicationRepository;
-  storage: FileStorage;
-  jobApplicationId: string;
-  documentId: string;
-}): Promise<string | undefined> {
-  const documents = await input.jobApplications.listGeneratedDocuments(input.jobApplicationId);
-  const document = documents.find((item) => item.id === input.documentId);
-
-  if (!document) {
-    return undefined;
-  }
-
-  return input.storage.getSignedUrl(document.fileId);
 }
 
 function currentUser(request: Request): AuthenticatedRequest["user"] {

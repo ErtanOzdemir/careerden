@@ -10,7 +10,7 @@ import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
 } from "@link2cv/infrastructure";
-import { GenerateDocumentsUseCase } from "./generate-documents.js";
+import { GenerateDocumentsUseCase } from "./generate-documents.use-case.js";
 
 describe("GenerateDocumentsUseCase", () => {
   it("passes AI-enhanced selected experiences with dates to DOCX templates", async () => {

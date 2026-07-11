@@ -6,11 +6,13 @@ import type {
   UserProfileAccessRepository,
 } from "@link2cv/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class SubmitJobApplicationUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileAccessRepository,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(input: CreateJobApplicationInput, userId: string): Promise<JobApplication> {
@@ -31,11 +33,15 @@ export class SubmitJobApplicationUseCase {
         metadata: { strategy: "manual" },
       });
 
+      await this.changes.changed(jobApplication.id, jobApplication.profileId);
+
       return {
         ...jobApplication,
         status: "scraped",
       };
     }
+
+    await this.changes.changed(jobApplication.id, jobApplication.profileId);
 
     return jobApplication;
   }

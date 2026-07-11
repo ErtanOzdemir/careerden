@@ -45,6 +45,7 @@ import {
   UpdateJobApplicationFollowUpUseCase,
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
+  JobApplicationChangeNotifier,
 } from "@link2cv/application";
 import {
   BullMqJobApplicationQueue,
@@ -98,6 +99,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const innerJobApplications = new PostgresJobApplicationRepository(db);
   const jobApplications = new PublishingJobApplicationRepository(innerJobApplications, changeBus);
+  const jobApplicationChanges = new JobApplicationChangeNotifier(changeBus);
   const notifications = new PostgresNotificationRepository(db);
   const followUpReminders = new PostgresFollowUpReminderRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
@@ -165,7 +167,11 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   app.use(
     "/job-applications",
     createJobApplicationRouter({
-      submitJobApplication: new SubmitJobApplicationUseCase(jobApplications, profiles),
+      submitJobApplication: new SubmitJobApplicationUseCase(
+        innerJobApplications,
+        profiles,
+        jobApplicationChanges,
+      ),
       deleteJobApplication: new DeleteJobApplicationUseCase(jobApplications, profiles, storage),
       generateJobApplicationDocuments: new GenerateJobApplicationDocumentsUseCase(
         jobApplications,

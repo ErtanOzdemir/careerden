@@ -5,6 +5,7 @@ import {
   InMemoryUserProfileRepository,
 } from "@link2cv/infrastructure";
 import { SubmitJobApplicationUseCase } from "./submit-job-application.use-case.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 describe("SubmitJobApplicationUseCase", () => {
   it("creates source URL tracker applications without enqueueing background work", async () => {
@@ -16,10 +17,12 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
+    const publish = vi.fn();
 
     const jobApplication = await new SubmitJobApplicationUseCase(
       jobApplications,
       withAccountOwnership(profiles),
+      new JobApplicationChangeNotifier({ publish }),
     ).execute(
       {
         profileId: profile.id,
@@ -31,6 +34,14 @@ describe("SubmitJobApplicationUseCase", () => {
     expect(jobApplication.status).toBe("queued");
     expect(jobApplication.sourceUrl).toBe("https://www.linkedin.com/jobs/view/123");
     expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
+    expect(publish).toHaveBeenCalledOnce();
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "application.changed",
+        applicationId: jobApplication.id,
+        profileId: profile.id,
+      }),
+    );
   });
 
   it("creates manual applications with a manual scrape bundle", async () => {
@@ -42,10 +53,12 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
+    const publish = vi.fn();
 
     const jobApplication = await new SubmitJobApplicationUseCase(
       jobApplications,
       withAccountOwnership(profiles),
+      new JobApplicationChangeNotifier({ publish }),
     ).execute(
       {
         profileId: profile.id,
@@ -74,6 +87,40 @@ describe("SubmitJobApplicationUseCase", () => {
         source: "user-created-job-application",
       },
     });
+    expect(publish).toHaveBeenCalledOnce();
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "application.changed",
+        applicationId: jobApplication.id,
+        profileId: profile.id,
+      }),
+    );
+  });
+
+  it("does not publish when profile access is denied before creation", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: [],
+      experience: [],
+    });
+    const publish = vi.fn();
+
+    await expect(
+      new SubmitJobApplicationUseCase(
+        jobApplications,
+        Object.assign(profiles, {
+          findByUserId: vi.fn(),
+          createForUserId: vi.fn(),
+          findUserIdByProfileId: vi.fn(async () => "another-user"),
+        }),
+        new JobApplicationChangeNotifier({ publish }),
+      ).execute({ profileId: profile.id }, "user-1"),
+    ).rejects.toThrow("Profile not found");
+
+    expect(publish).not.toHaveBeenCalled();
   });
 });
 

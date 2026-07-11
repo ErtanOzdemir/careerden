@@ -5,11 +5,13 @@ import type {
   UserProfileAccessRepository,
 } from "@link2cv/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class UpdateJobApplicationTrackingUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileAccessRepository,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(
@@ -35,6 +37,7 @@ export class UpdateJobApplicationTrackingUseCase {
       });
     }
 
+    await this.changes.changed(updated.id, updated.profileId);
     return updated;
   }
 }

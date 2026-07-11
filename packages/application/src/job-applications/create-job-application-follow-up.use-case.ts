@@ -6,6 +6,7 @@ import type {
   UserProfileAccessRepository,
 } from "@link2cv/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 import { scheduleFollowUpReminder } from "./schedule-follow-up-reminder.js";
 
 export class CreateJobApplicationFollowUpUseCase {
@@ -14,6 +15,7 @@ export class CreateJobApplicationFollowUpUseCase {
     private readonly profiles: UserProfileAccessRepository,
     private readonly queue: FollowUpReminderQueue,
     private readonly reminders: FollowUpReminderRepository,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
   async execute(
     jobApplicationId: string,
@@ -38,6 +40,7 @@ export class CreateJobApplicationFollowUpUseCase {
       title: `Follow-up scheduled: ${followUp.title}`,
       occurredAt: followUp.scheduledAt,
     });
+    await this.changes.changed(jobApplication.id, jobApplication.profileId);
     return followUp;
   }
 }

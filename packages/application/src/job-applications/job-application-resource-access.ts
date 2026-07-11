@@ -1,6 +1,7 @@
 import type {
   JobApplicationContact,
   JobApplicationFollowUp,
+  JobApplication,
   JobApplicationRepository,
   UserProfileAccessRepository,
 } from "@link2cv/domain";
@@ -13,13 +14,18 @@ export async function getAccessibleContact(
   jobApplicationId: string,
   contactId: string,
   userId: string,
-): Promise<JobApplicationContact> {
-  await getAccessibleJobApplication(jobApplications, profiles, jobApplicationId, userId);
+): Promise<{ contact: JobApplicationContact; jobApplication: JobApplication }> {
+  const jobApplication = await getAccessibleJobApplication(
+    jobApplications,
+    profiles,
+    jobApplicationId,
+    userId,
+  );
   const contact = await jobApplications.findContactById(contactId);
   if (!contact || contact.jobApplicationId !== jobApplicationId) {
     throw new ApplicationError("not_found", "Contact not found");
   }
-  return contact;
+  return { contact, jobApplication };
 }
 
 export async function getAccessibleFollowUp(
@@ -28,11 +34,16 @@ export async function getAccessibleFollowUp(
   jobApplicationId: string,
   followUpId: string,
   userId: string,
-): Promise<JobApplicationFollowUp> {
-  await getAccessibleJobApplication(jobApplications, profiles, jobApplicationId, userId);
+): Promise<{ followUp: JobApplicationFollowUp; jobApplication: JobApplication }> {
+  const jobApplication = await getAccessibleJobApplication(
+    jobApplications,
+    profiles,
+    jobApplicationId,
+    userId,
+  );
   const followUp = await jobApplications.findFollowUpById(followUpId);
   if (!followUp || followUp.jobApplicationId !== jobApplicationId) {
     throw new ApplicationError("not_found", "Follow-up not found");
   }
-  return followUp;
+  return { followUp, jobApplication };
 }

@@ -7,6 +7,7 @@ import type {
 import { CreateJobApplicationFollowUpUseCase } from "./create-job-application-follow-up.use-case.js";
 import {
   createJobApplicationRepository,
+  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
 } from "./job-application-test-helpers.js";
@@ -21,12 +22,14 @@ describe("CreateJobApplicationFollowUpUseCase", () => {
     });
     const queue = createReminderQueue();
     const reminders = createReminderRepository();
+    const { changes, publish } = createJobApplicationChanges();
 
     await new CreateJobApplicationFollowUpUseCase(
       repository,
       createProfiles(),
       queue,
       reminders,
+      changes,
     ).execute(job.id, "user-1", {
       title: followUp.title,
       scheduledAt: followUp.scheduledAt,
@@ -44,6 +47,7 @@ describe("CreateJobApplicationFollowUpUseCase", () => {
       jobId: "reminder-1",
       scheduledFor,
     });
+    expect(publish).toHaveBeenCalledOnce();
   });
 });
 

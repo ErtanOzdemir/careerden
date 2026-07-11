@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createJobApplicationRepository,
+  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
 } from "./job-application-test-helpers.js";
@@ -16,8 +17,9 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
       findById: vi.fn(async () => job),
       updateTracking: vi.fn(async () => updated),
     });
+    const { changes, publish } = createJobApplicationChanges();
 
-    await new UpdateJobApplicationTrackingUseCase(repository, createProfiles()).execute(
+    await new UpdateJobApplicationTrackingUseCase(repository, createProfiles(), changes).execute(
       job.id,
       "user-1",
       { applicationStatus: "interview" },
@@ -29,5 +31,6 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
       title: "Status changed to interview",
       metadata: { from: "applied", to: "interview" },
     });
+    expect(publish).toHaveBeenCalledOnce();
   });
 });

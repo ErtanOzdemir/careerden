@@ -9,6 +9,7 @@ import type {
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 import type { AuthenticatedProfileUser } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export interface CreateJobApplicationFromScrapeInput {
   sourceUrl: string;
@@ -25,6 +26,7 @@ export class CreateJobApplicationFromScrapeUseCase {
     private readonly jobApplications: JobApplicationRepository,
     private readonly getCurrentProfile: Pick<GetOrCreateCurrentProfileUseCase, "execute">,
     private readonly queue: JobApplicationQueue,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(
@@ -61,6 +63,7 @@ export class CreateJobApplicationFromScrapeUseCase {
       jobApplicationId: jobApplication.id,
       autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
     });
+    await this.changes.changed(jobApplication.id, jobApplication.profileId);
     return jobApplication;
   }
 }

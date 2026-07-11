@@ -2,11 +2,13 @@ import { vi } from "vitest";
 import type {
   FileStorage,
   JobApplication,
+  JobApplicationChangePublisher,
   JobApplicationQueue,
   JobApplicationRepository,
   ScrapeBundle,
   UserProfileAccessRepository,
 } from "@link2cv/domain";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export function createTestJobApplication(overrides: Partial<JobApplication> = {}): JobApplication {
   const now = new Date("2026-06-14T00:00:00.000Z");
@@ -73,6 +75,14 @@ export function createStorage(overrides: Partial<FileStorage> = {}): FileStorage
 
 export function createQueue(): JobApplicationQueue {
   return { enqueue: vi.fn(), restart: vi.fn() };
+}
+
+export function createJobApplicationChanges(): {
+  changes: JobApplicationChangeNotifier;
+  publish: ReturnType<typeof vi.fn<JobApplicationChangePublisher["publish"]>>;
+} {
+  const publish = vi.fn<JobApplicationChangePublisher["publish"]>();
+  return { changes: new JobApplicationChangeNotifier({ publish }), publish };
 }
 
 export function createScrapeBundle(): ScrapeBundle {

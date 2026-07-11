@@ -11,6 +11,7 @@ import { ApplicationError } from "../application-error.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 import type { GetJobApplicationDetailUseCase } from "./get-job-application-detail.use-case.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 import type { JobApplicationDetail } from "./job-application-read-model.js";
 import { storeCompanyLogo } from "./store-company-logo.js";
 
@@ -22,6 +23,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
     private readonly remoteImages: RemoteImageFetcher,
     private readonly storage: FileStorage,
     private readonly getJobApplicationDetail: Pick<GetJobApplicationDetailUseCase, "execute">,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(
@@ -72,6 +74,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
       jobApplicationId,
       autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
     });
+    await this.changes.changed(jobApplication.id, jobApplication.profileId);
 
     return this.getJobApplicationDetail.execute(jobApplicationId, userId);
   }

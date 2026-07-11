@@ -7,11 +7,13 @@ import type {
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class UpdateJobApplicationStatusUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileAccessRepository,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(
@@ -39,6 +41,7 @@ export class UpdateJobApplicationStatusUseCase {
 
     const updated = await this.jobApplications.findById(jobApplicationId);
     if (!updated) throw new ApplicationError("not_found", "Job application not found");
+    await this.changes.changed(updated.id, updated.profileId);
     return updated;
   }
 }

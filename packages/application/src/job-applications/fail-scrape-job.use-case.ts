@@ -1,6 +1,7 @@
 import type { JobApplicationRepository, UserProfileAccessRepository } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 const maxScrapeAttempts = 3;
 const scrapeRetryBackoffMs = [60_000, 300_000];
@@ -11,6 +12,7 @@ export class FailScrapeJobUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileAccessRepository,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
 
   async execute(
@@ -49,6 +51,7 @@ export class FailScrapeJobUseCase {
         body: input.reason,
         metadata: { attempt: updated.scrapeAttemptCount, maxAttempts: maxScrapeAttempts },
       });
+      await this.changes.changed(updated.id, updated.profileId);
       return "failed";
     }
 
@@ -65,6 +68,7 @@ export class FailScrapeJobUseCase {
           : {}),
       },
     });
+    await this.changes.changed(updated.id, updated.profileId);
     return "retry_scheduled";
   }
 }

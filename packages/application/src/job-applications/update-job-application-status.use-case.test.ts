@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createJobApplicationRepository,
+  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
 } from "./job-application-test-helpers.js";
@@ -13,9 +14,10 @@ describe("UpdateJobApplicationStatusUseCase", () => {
     const repository = createJobApplicationRepository({
       findById: vi.fn().mockResolvedValueOnce(initial).mockResolvedValueOnce(updated),
     });
+    const { changes, publish } = createJobApplicationChanges();
 
     await expect(
-      new UpdateJobApplicationStatusUseCase(repository, createProfiles()).execute(
+      new UpdateJobApplicationStatusUseCase(repository, createProfiles(), changes).execute(
         initial.id,
         "user-1",
         "scraping",
@@ -26,5 +28,6 @@ describe("UpdateJobApplicationStatusUseCase", () => {
       type: "processing",
       title: "Scraping started",
     });
+    expect(publish).toHaveBeenCalledOnce();
   });
 });

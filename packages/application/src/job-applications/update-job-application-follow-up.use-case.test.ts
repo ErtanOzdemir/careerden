@@ -6,6 +6,7 @@ import type {
 } from "@link2cv/domain";
 import {
   createJobApplicationRepository,
+  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
 } from "./job-application-test-helpers.js";
@@ -27,12 +28,14 @@ describe("UpdateJobApplicationFollowUpUseCase", () => {
       close: vi.fn(),
     } satisfies FollowUpReminderQueue;
     const reminders = { setSchedule: vi.fn() } as unknown as FollowUpReminderRepository;
+    const { changes, publish } = createJobApplicationChanges();
 
     await new UpdateJobApplicationFollowUpUseCase(
       repository,
       createProfiles(),
       queue,
       reminders,
+      changes,
     ).execute(job.id, existing.id, "user-1", { scheduledAt: updated.scheduledAt });
 
     expect(queue.remove).toHaveBeenCalledWith("old-reminder");
@@ -40,6 +43,7 @@ describe("UpdateJobApplicationFollowUpUseCase", () => {
     expect(repository.addEvent).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Follow-up rescheduled: Send a note" }),
     );
+    expect(publish).toHaveBeenCalledOnce();
   });
 });
 

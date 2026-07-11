@@ -5,11 +5,13 @@ import type {
   UserProfileAccessRepository,
 } from "@link2cv/domain";
 import { getAccessibleContact } from "./job-application-resource-access.js";
+import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export class UpdateJobApplicationContactUseCase {
   constructor(
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileAccessRepository,
+    private readonly changes: JobApplicationChangeNotifier,
   ) {}
   async execute(
     jobApplicationId: string,
@@ -17,13 +19,15 @@ export class UpdateJobApplicationContactUseCase {
     userId: string,
     input: UpdateJobApplicationContactInput,
   ): Promise<JobApplicationContact> {
-    await getAccessibleContact(
+    const { jobApplication } = await getAccessibleContact(
       this.jobApplications,
       this.profiles,
       jobApplicationId,
       contactId,
       userId,
     );
-    return this.jobApplications.updateContact(contactId, input);
+    const contact = await this.jobApplications.updateContact(contactId, input);
+    await this.changes.changed(jobApplication.id, jobApplication.profileId);
+    return contact;
   }
 }

@@ -9,6 +9,9 @@ import {
   BullMqFollowUpReminderQueue,
   PostgresFollowUpReminderRepository,
   PostgresNotificationRepository,
+  PostgresOutboxRepository,
+  PostgresStorageOutboxDispatcher,
+  RustFsStorage,
   createPostgresDb,
   createSmtpNotificationEmailSender,
   followUpReminderQueueName,
@@ -32,6 +35,18 @@ export async function createNotificationsWorkerRuntime(
   const db = createPostgresDb(env.DATABASE_URL);
   const reminders = new PostgresFollowUpReminderRepository(db);
   const notifications = new PostgresNotificationRepository(db);
+  const storage = new RustFsStorage({
+    accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
+    bucket: env.RUSTFS_BUCKET,
+    endpoint: env.RUSTFS_ENDPOINT,
+    forcePathStyle: env.RUSTFS_FORCE_PATH_STYLE,
+    region: env.RUSTFS_REGION,
+    secretAccessKey: env.RUSTFS_SECRET_ACCESS_KEY,
+  });
+  const storageOutbox = new PostgresStorageOutboxDispatcher(
+    new PostgresOutboxRepository(db),
+    storage,
+  );
   const reminderQueue = BullMqFollowUpReminderQueue.create(env.REDIS_URL);
   const _emailSender = createSmtpNotificationEmailSender({
     from: env.SMTP_FROM,
@@ -46,6 +61,22 @@ export async function createNotificationsWorkerRuntime(
       console.error("Notifications worker failed follow-up reminder recovery", error);
     });
   }, recoveryIntervalMs);
+  let isDispatchingStorageOutbox = false;
+  const dispatchStorageOutbox = async () => {
+    if (isDispatchingStorageOutbox) return;
+    isDispatchingStorageOutbox = true;
+    try {
+      await storageOutbox.dispatchPending();
+    } finally {
+      isDispatchingStorageOutbox = false;
+    }
+  };
+  await dispatchStorageOutbox();
+  const storageOutboxInterval = setInterval(() => {
+    void dispatchStorageOutbox().catch((error) => {
+      console.error("Notifications worker failed storage cleanup outbox dispatch", error);
+    });
+  }, 1_000);
 
   const worker = new Worker<FollowUpReminderQueuePayload>(
     followUpReminderQueueName,
@@ -105,6 +136,7 @@ export async function createNotificationsWorkerRuntime(
     worker,
     close: async () => {
       clearInterval(recoveryInterval);
+      clearInterval(storageOutboxInterval);
       await worker.close();
       await reminderQueue.close();
       await db.destroy();

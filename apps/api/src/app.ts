@@ -48,7 +48,6 @@ import {
   JobApplicationChangeNotifier,
 } from "@link2cv/application";
 import {
-  BullMqJobApplicationQueue,
   BullMqFollowUpReminderQueue,
   DocxtemplaterTemplateRenderer,
   HtmlTemplateRenderer,
@@ -103,7 +102,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const followUpReminders = new PostgresFollowUpReminderRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
   const unitOfWork = new PostgresPersistenceUnitOfWork(db);
-  const queue = BullMqJobApplicationQueue.create(env.REDIS_URL);
   const followUpReminderQueue = BullMqFollowUpReminderQueue.create(env.REDIS_URL);
   const storage = new RustFsStorage({
     accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
@@ -168,25 +166,14 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     "/job-applications",
     createJobApplicationRouter({
       submitJobApplication: new SubmitJobApplicationUseCase(unitOfWork),
-      deleteJobApplication: new DeleteJobApplicationUseCase(
-        jobApplications,
-        profiles,
-        storage,
-        jobApplicationChanges,
-      ),
+      deleteJobApplication: new DeleteJobApplicationUseCase(unitOfWork),
       generateJobApplicationDocuments: new GenerateJobApplicationDocumentsUseCase(
         jobApplications,
         profiles,
         generateDocumentsUseCase,
         jobApplicationChanges,
       ),
-      retryJobApplication: new RetryJobApplicationUseCase(
-        jobApplications,
-        profiles,
-        storage,
-        queue,
-        jobApplicationChanges,
-      ),
+      retryJobApplication: new RetryJobApplicationUseCase(unitOfWork),
       updateDocumentContent: new UpdateDocumentContentUseCase(
         jobApplications,
         profiles,
@@ -302,7 +289,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     app,
     db,
     close: async () => {
-      await queue.close();
       await followUpReminderQueue.close();
       await changeBus.close();
       await db.destroy();

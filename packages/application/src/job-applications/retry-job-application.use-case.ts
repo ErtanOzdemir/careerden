@@ -1,13 +1,9 @@
-import type {
-  FileStorage,
-  JobApplication,
-  JobApplicationQueue,
-  JobApplicationRepository,
-  UserProfileAccessRepository,
-} from "@link2cv/domain";
+import type { JobApplication, PersistenceUnitOfWork } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
+import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 
 export type JobApplicationRetryMode = "analysis" | "scraping";
 
@@ -21,73 +17,72 @@ export interface RetryJobApplicationOptions {
 }
 
 export class RetryJobApplicationUseCase {
-  constructor(
-    private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileAccessRepository,
-    private readonly storage: FileStorage,
-    private readonly queue: JobApplicationQueue,
-    private readonly changes: JobApplicationChangeNotifier,
-  ) {}
+  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(
     jobApplicationId: string,
     userId: string,
     options: RetryJobApplicationOptions = {},
   ): Promise<RetryJobApplicationResult> {
-    const jobApplication = await getAccessibleJobApplication(
-      this.jobApplications,
-      this.profiles,
-      jobApplicationId,
-      userId,
-    );
-
-    if (jobApplication.status !== "failed") {
-      throw new ApplicationError("validation", "Only failed job applications can be retried");
-    }
-
-    const scrape = await this.jobApplications.getScrapeBundle(jobApplicationId);
-    const mode: JobApplicationRetryMode =
-      options.mode === "scraping" || !scrape ? "scraping" : "analysis";
-
-    if (mode === "scraping" && !jobApplication.sourceUrl) {
-      throw new ApplicationError(
-        "validation",
-        "Job application does not have a source URL to retry",
+    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+      const jobApplication = await getAccessibleJobApplication(
+        jobApplications,
+        profiles,
+        jobApplicationId,
+        userId,
       );
-    }
 
-    const [documents, companyLogoFileId] = await Promise.all([
-      this.jobApplications.listGeneratedDocuments(jobApplicationId),
-      mode === "scraping"
-        ? this.jobApplications.getCompanyLogoFileId(jobApplicationId)
-        : Promise.resolve(null),
-    ]);
-    const fileIds = new Set(documents.map((document) => document.fileId));
+      if (jobApplication.status !== "failed") {
+        throw new ApplicationError("validation", "Only failed job applications can be retried");
+      }
 
-    if (companyLogoFileId) {
-      fileIds.add(companyLogoFileId);
-    }
+      const scrape = await jobApplications.getScrapeBundle(jobApplicationId);
+      const mode: JobApplicationRetryMode =
+        options.mode === "scraping" || !scrape ? "scraping" : "analysis";
 
-    const reset =
-      mode === "analysis"
-        ? await this.jobApplications.resetAnalysis(jobApplicationId)
-        : await this.jobApplications.resetProcessing(jobApplicationId);
-    await this.jobApplications.addEvent({
-      jobApplicationId,
-      type: "processing",
-      title: mode === "analysis" ? "AI analysis retry requested" : "Retry requested",
+      if (mode === "scraping" && !jobApplication.sourceUrl) {
+        throw new ApplicationError(
+          "validation",
+          "Job application does not have a source URL to retry",
+        );
+      }
+
+      const [documents, companyLogoFileId] = await Promise.all([
+        jobApplications.listGeneratedDocuments(jobApplicationId),
+        mode === "scraping"
+          ? jobApplications.getCompanyLogoFileId(jobApplicationId)
+          : Promise.resolve(null),
+      ]);
+      const fileIds = new Set(documents.map((document) => document.fileId));
+
+      if (companyLogoFileId) fileIds.add(companyLogoFileId);
+
+      const reset =
+        mode === "analysis"
+          ? await jobApplications.resetAnalysis(jobApplicationId)
+          : await jobApplications.resetProcessing(jobApplicationId);
+      await jobApplications.addEvent({
+        jobApplicationId,
+        type: "processing",
+        title: mode === "analysis" ? "AI analysis retry requested" : "Retry requested",
+      });
+      await enqueueStorageDeletions(outbox, fileIds);
+
+      if (mode === "analysis") {
+        await enqueueMatchAnalysisIfEnabled({
+          jobApplications,
+          outbox,
+          jobApplicationId,
+          autoRunMatchAnalysis: true,
+        });
+      }
+
+      await enqueueJobApplicationChange(outbox, reset.id, reset.profileId);
+
+      return {
+        jobApplication: reset,
+        mode,
+      };
     });
-    await Promise.allSettled([...fileIds].map((fileId) => this.storage.delete(fileId)));
-
-    if (mode === "analysis") {
-      await this.queue.restart({ jobApplicationId });
-    }
-
-    await this.changes.changed(reset.id, reset.profileId);
-
-    return {
-      jobApplication: reset,
-      mode,
-    };
   }
 }

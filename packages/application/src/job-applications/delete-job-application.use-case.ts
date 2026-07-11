@@ -1,39 +1,36 @@
-import type {
-  FileStorage,
-  JobApplicationRepository,
-  UserProfileAccessRepository,
-} from "@link2cv/domain";
+import type { PersistenceUnitOfWork } from "@link2cv/domain";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
+import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class DeleteJobApplicationUseCase {
-  constructor(
-    private readonly jobApplications: JobApplicationRepository,
-    private readonly profiles: UserProfileAccessRepository,
-    private readonly storage: FileStorage,
-    private readonly changes: JobApplicationChangeNotifier,
-  ) {}
+  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(jobApplicationId: string, userId: string): Promise<void> {
-    const jobApplication = await getAccessibleJobApplication(
-      this.jobApplications,
-      this.profiles,
-      jobApplicationId,
-      userId,
-    );
+    await this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+      const jobApplication = await getAccessibleJobApplication(
+        jobApplications,
+        profiles,
+        jobApplicationId,
+        userId,
+      );
 
-    const [documents, companyLogoFileId] = await Promise.all([
-      this.jobApplications.listGeneratedDocuments(jobApplicationId),
-      this.jobApplications.getCompanyLogoFileId(jobApplicationId),
-    ]);
-    const fileIds = new Set(documents.map((document) => document.fileId));
+      const [documents, companyLogoFileId] = await Promise.all([
+        jobApplications.listGeneratedDocuments(jobApplicationId),
+        jobApplications.getCompanyLogoFileId(jobApplicationId),
+      ]);
+      const fileIds = new Set(documents.map((document) => document.fileId));
 
-    if (companyLogoFileId) {
-      fileIds.add(companyLogoFileId);
-    }
+      if (companyLogoFileId) fileIds.add(companyLogoFileId);
 
-    await this.jobApplications.deleteById(jobApplicationId);
-    await Promise.allSettled([...fileIds].map((fileId) => this.storage.delete(fileId)));
-    await this.changes.deleted(jobApplication.id, jobApplication.profileId);
+      await jobApplications.deleteById(jobApplicationId);
+      await enqueueStorageDeletions(outbox, fileIds);
+      await enqueueJobApplicationChange(
+        outbox,
+        jobApplication.id,
+        jobApplication.profileId,
+        "application.deleted",
+      );
+    });
   }
 }

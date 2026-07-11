@@ -21,10 +21,6 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
     title: "Document templates",
     subtitle: "Manage your CV and cover letter templates.",
   },
-  "/linkedin": {
-    title: "LinkedIn session",
-    subtitle: "Keep your connection healthy and secure.",
-  },
   "/settings": {
     title: "Settings",
     subtitle: "Preferences, account, and app updates.",

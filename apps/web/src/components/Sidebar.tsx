@@ -11,7 +11,6 @@ import {
   Link2,
   LogOut,
 } from "lucide-react";
-import { LinkedinIcon } from "./link2cv/linkedin-icon.js";
 import { profilesApi, profileUpdatedEvent } from "../api/profiles.js";
 import { authClient } from "../api/auth.js";
 import type { ApiProfile } from "../api/types.js";
@@ -21,7 +20,6 @@ const navItems = [
   { to: "/applications", label: "Applications", icon: ListChecks },
   { to: "/profile", label: "Profile", icon: UserRound },
   { to: "/templates", label: "Templates", icon: FileText },
-  { to: "/linkedin", label: "LinkedIn session", icon: LinkedinIcon },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

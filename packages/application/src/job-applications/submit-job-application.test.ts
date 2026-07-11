@@ -28,7 +28,7 @@ describe("SubmitJobApplicationUseCase", () => {
     expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
   });
 
-  it("creates manual tracker applications without enqueueing background work", async () => {
+  it("creates manual applications with a manual scrape bundle", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
     const profile = await profiles.create({
@@ -48,10 +48,22 @@ describe("SubmitJobApplicationUseCase", () => {
       },
     );
 
-    expect(jobApplication.status).toBe("completed");
+    const scrape = await jobApplications.getScrapeBundle(jobApplication.id);
+
+    expect(jobApplication.status).toBe("scraped");
     expect(jobApplication.sourceUrl).toBeUndefined();
     expect(jobApplication.tracking.companyName).toBe("Example Inc");
     expect(jobApplication.tracking.roleTitle).toBe("Backend Engineer");
     expect(jobApplication.tracking.priority).toBe("high");
+    expect(scrape?.job).toMatchObject({
+      title: "Backend Engineer",
+      companyName: "Example Inc",
+      description: "Manual job entry for Backend Engineer at Example Inc.",
+      raw: {
+        adapter: "manual-job",
+        strategy: "manual",
+        source: "user-created-job-application",
+      },
+    });
   });
 });

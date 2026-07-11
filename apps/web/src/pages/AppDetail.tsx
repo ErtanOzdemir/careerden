@@ -40,7 +40,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "analysis", label: "AI match" },
   { id: "documents", label: "Documents" },
-  { id: "timeline", label: "Timeline & notes" },
+  { id: "timeline", label: "Follow-ups & notes" },
 ];
 
 export default function AppDetail() {

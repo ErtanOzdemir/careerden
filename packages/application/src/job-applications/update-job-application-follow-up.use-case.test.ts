@@ -1,14 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import type {
-  FollowUpReminderQueue,
-  FollowUpReminderRepository,
-  JobApplicationFollowUp,
-} from "@link2cv/domain";
+import type { JobApplicationFollowUp } from "@link2cv/domain";
 import {
   createJobApplicationRepository,
-  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 import { UpdateJobApplicationFollowUpUseCase } from "./update-job-application-follow-up.use-case.js";
 
@@ -22,28 +18,27 @@ describe("UpdateJobApplicationFollowUpUseCase", () => {
       findFollowUpById: vi.fn(async () => existing),
       updateFollowUp: vi.fn(async () => updated),
     });
-    const queue = {
-      enqueue: vi.fn(async () => ({ jobId: "new-reminder" })),
-      remove: vi.fn(),
-      close: vi.fn(),
-    } satisfies FollowUpReminderQueue;
-    const reminders = { setSchedule: vi.fn() } as unknown as FollowUpReminderRepository;
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
-    await new UpdateJobApplicationFollowUpUseCase(
-      repository,
-      createProfiles(),
-      queue,
-      reminders,
-      changes,
-    ).execute(job.id, existing.id, "user-1", { scheduledAt: updated.scheduledAt });
+    await new UpdateJobApplicationFollowUpUseCase(unitOfWork).execute(
+      job.id,
+      existing.id,
+      "user-1",
+      { scheduledAt: updated.scheduledAt },
+    );
 
-    expect(queue.remove).toHaveBeenCalledWith("old-reminder");
-    expect(queue.enqueue).toHaveBeenCalled();
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "follow-up-reminder.cancel" }),
+    );
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "follow-up-reminder.schedule" }),
+    );
     expect(repository.addEvent).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Follow-up rescheduled: Send a note" }),
     );
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.change" }),
+    );
   });
 });
 

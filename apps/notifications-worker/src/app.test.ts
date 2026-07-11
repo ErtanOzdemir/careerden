@@ -68,6 +68,7 @@ function createReminderRepository(
     findValidReminder: vi.fn(),
     listPendingForRecovery: vi.fn().mockResolvedValue([]),
     markSent: vi.fn(),
+    isPendingScheduleCurrent: vi.fn().mockResolvedValue(true),
     setSchedule: vi.fn(),
     ...overrides,
   };

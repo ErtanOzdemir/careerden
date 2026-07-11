@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FollowUpReminderQueue, JobApplicationFollowUp } from "@link2cv/domain";
+import type { JobApplicationFollowUp } from "@link2cv/domain";
 import { DeleteJobApplicationFollowUpUseCase } from "./delete-job-application-follow-up.use-case.js";
 import {
-  createJobApplicationChanges,
   createJobApplicationRepository,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 
 describe("DeleteJobApplicationFollowUpUseCase", () => {
@@ -22,18 +22,20 @@ describe("DeleteJobApplicationFollowUpUseCase", () => {
       findFollowUpById: vi.fn(async () => followUp),
       deleteFollowUp: vi.fn(),
     });
-    const queue = { remove: vi.fn() } as unknown as FollowUpReminderQueue;
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
-    await new DeleteJobApplicationFollowUpUseCase(
-      repository,
-      createProfiles(),
-      queue,
-      changes,
-    ).execute(job.id, followUp.id, "user-1");
+    await new DeleteJobApplicationFollowUpUseCase(unitOfWork).execute(
+      job.id,
+      followUp.id,
+      "user-1",
+    );
 
-    expect(queue.remove).toHaveBeenCalledWith("reminder-1");
     expect(repository.deleteFollowUp).toHaveBeenCalledWith(followUp.id);
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "follow-up-reminder.cancel" }),
+    );
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.change" }),
+    );
   });
 });

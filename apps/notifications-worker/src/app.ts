@@ -5,11 +5,13 @@ import type {
   FollowUpReminderQueuePayload,
   FollowUpReminderRepository,
 } from "@link2cv/domain";
+import { DeliverFollowUpReminderUseCase } from "@link2cv/application";
 import {
   BullMqFollowUpReminderQueue,
   PostgresFollowUpReminderRepository,
-  PostgresNotificationRepository,
   PostgresOutboxRepository,
+  PostgresPersistenceUnitOfWork,
+  PostgresReminderOutboxDispatcher,
   PostgresStorageOutboxDispatcher,
   RustFsStorage,
   createPostgresDb,
@@ -34,7 +36,8 @@ export async function createNotificationsWorkerRuntime(
 ): Promise<NotificationsWorkerRuntime> {
   const db = createPostgresDb(env.DATABASE_URL);
   const reminders = new PostgresFollowUpReminderRepository(db);
-  const notifications = new PostgresNotificationRepository(db);
+  const unitOfWork = new PostgresPersistenceUnitOfWork(db);
+  const deliverFollowUpReminder = new DeliverFollowUpReminderUseCase(reminders, unitOfWork);
   const storage = new RustFsStorage({
     accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
     bucket: env.RUSTFS_BUCKET,
@@ -48,6 +51,11 @@ export async function createNotificationsWorkerRuntime(
     storage,
   );
   const reminderQueue = BullMqFollowUpReminderQueue.create(env.REDIS_URL);
+  const reminderOutbox = new PostgresReminderOutboxDispatcher(
+    new PostgresOutboxRepository(db),
+    reminders,
+    reminderQueue,
+  );
   const _emailSender = createSmtpNotificationEmailSender({
     from: env.SMTP_FROM,
     host: env.SMTP_HOST,
@@ -66,7 +74,7 @@ export async function createNotificationsWorkerRuntime(
     if (isDispatchingStorageOutbox) return;
     isDispatchingStorageOutbox = true;
     try {
-      await storageOutbox.dispatchPending();
+      await Promise.all([storageOutbox.dispatchPending(), reminderOutbox.dispatchPending()]);
     } finally {
       isDispatchingStorageOutbox = false;
     }
@@ -82,26 +90,7 @@ export async function createNotificationsWorkerRuntime(
     followUpReminderQueueName,
     async (job) => {
       try {
-        const reminder = await reminders.findValidReminder(job.data);
-
-        if (!reminder) {
-          return;
-        }
-
-        const title = reminder.title;
-        const body = createFollowUpBody(
-          reminder.companyName,
-          reminder.roleTitle,
-          reminder.description,
-        );
-
-        await notifications.create({
-          profileId: reminder.profileId,
-          jobApplicationId: reminder.jobApplicationId,
-          type: "follow_up_reminder",
-          title,
-          body,
-        });
+        await deliverFollowUpReminder.execute(job.data);
         // TODO: Open it when email sender is ready
         // await _emailSender.sendFollowUpReminder({
         //   email: reminder.profileEmail,
@@ -111,7 +100,6 @@ export async function createNotificationsWorkerRuntime(
         //   title: reminder.title,
         //   description: reminder.description,
         // });
-        await reminders.markSent(job.data, new Date());
       } catch (error) {
         throw toBullMqWorkerError(error);
       }
@@ -195,10 +183,4 @@ async function recoverPendingReminders(
       scheduledFor,
     });
   }
-}
-
-function createFollowUpBody(companyName?: string, roleTitle?: string, description?: string) {
-  const target = [companyName, roleTitle].filter(Boolean).join(" - ");
-  const context = target ? `It is time to follow up on ${target}.` : "It is time to follow up.";
-  return description ? `${context}\n\n${description}` : context;
 }

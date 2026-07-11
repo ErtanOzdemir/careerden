@@ -48,12 +48,10 @@ import {
   JobApplicationChangeNotifier,
 } from "@link2cv/application";
 import {
-  BullMqFollowUpReminderQueue,
   DocxtemplaterTemplateRenderer,
   HtmlTemplateRenderer,
   HttpRemoteImageFetcher,
   PlaywrightPdfRenderer,
-  PostgresFollowUpReminderRepository,
   PostgresJobApplicationRepository,
   PostgresNotificationRepository,
   PostgresPersistenceUnitOfWork,
@@ -99,10 +97,8 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const jobApplications = new PostgresJobApplicationRepository(db);
   const jobApplicationChanges = new JobApplicationChangeNotifier(changeBus);
   const notifications = new PostgresNotificationRepository(db);
-  const followUpReminders = new PostgresFollowUpReminderRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
   const unitOfWork = new PostgresPersistenceUnitOfWork(db);
-  const followUpReminderQueue = BullMqFollowUpReminderQueue.create(env.REDIS_URL);
   const storage = new RustFsStorage({
     accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
     bucket: env.RUSTFS_BUCKET,
@@ -242,30 +238,13 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         profiles,
         jobApplicationChanges,
       ),
-      createJobApplicationFollowUp: new CreateJobApplicationFollowUpUseCase(
-        jobApplications,
-        profiles,
-        followUpReminderQueue,
-        followUpReminders,
-        jobApplicationChanges,
-      ),
+      createJobApplicationFollowUp: new CreateJobApplicationFollowUpUseCase(unitOfWork),
       listJobApplicationFollowUps: new ListJobApplicationFollowUpsUseCase(
         jobApplications,
         profiles,
       ),
-      updateJobApplicationFollowUp: new UpdateJobApplicationFollowUpUseCase(
-        jobApplications,
-        profiles,
-        followUpReminderQueue,
-        followUpReminders,
-        jobApplicationChanges,
-      ),
-      deleteJobApplicationFollowUp: new DeleteJobApplicationFollowUpUseCase(
-        jobApplications,
-        profiles,
-        followUpReminderQueue,
-        jobApplicationChanges,
-      ),
+      updateJobApplicationFollowUp: new UpdateJobApplicationFollowUpUseCase(unitOfWork),
+      deleteJobApplicationFollowUp: new DeleteJobApplicationFollowUpUseCase(unitOfWork),
       getGeneratedDocumentDownloadUrl: new GetGeneratedDocumentDownloadUrlUseCase(
         jobApplications,
         profiles,
@@ -294,7 +273,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     app,
     db,
     close: async () => {
-      await followUpReminderQueue.close();
       await changeBus.close();
       await db.destroy();
     },

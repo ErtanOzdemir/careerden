@@ -1,15 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import type {
-  FollowUpReminderQueue,
-  FollowUpReminderRepository,
-  JobApplicationFollowUp,
-} from "@link2cv/domain";
+import type { JobApplicationFollowUp } from "@link2cv/domain";
 import { CreateJobApplicationFollowUpUseCase } from "./create-job-application-follow-up.use-case.js";
 import {
   createJobApplicationRepository,
-  createJobApplicationChanges,
   createProfiles,
   createTestJobApplication,
+  createUnitOfWork,
 } from "./job-application-test-helpers.js";
 
 describe("CreateJobApplicationFollowUpUseCase", () => {
@@ -20,34 +16,26 @@ describe("CreateJobApplicationFollowUpUseCase", () => {
       findById: vi.fn(async () => job),
       createFollowUp: vi.fn(async () => followUp),
     });
-    const queue = createReminderQueue();
-    const reminders = createReminderRepository();
-    const { changes, publish } = createJobApplicationChanges();
+    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
 
-    await new CreateJobApplicationFollowUpUseCase(
-      repository,
-      createProfiles(),
-      queue,
-      reminders,
-      changes,
-    ).execute(job.id, "user-1", {
+    await new CreateJobApplicationFollowUpUseCase(unitOfWork).execute(job.id, "user-1", {
       title: followUp.title,
       scheduledAt: followUp.scheduledAt,
     });
 
     const scheduledFor = new Date(followUp.scheduledAt.getTime() - 10 * 60 * 1000);
-    expect(queue.enqueue).toHaveBeenCalledWith({
-      followUpId: followUp.id,
-      jobApplicationId: job.id,
-      profileId: job.profileId,
-      followUpAt: followUp.scheduledAt,
-      scheduledFor,
-    });
-    expect(reminders.setSchedule).toHaveBeenCalledWith(followUp.id, {
-      jobId: "reminder-1",
-      scheduledFor,
-    });
-    expect(publish).toHaveBeenCalledOnce();
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "follow-up-reminder.schedule",
+        payload: expect.objectContaining({
+          followUpId: followUp.id,
+          scheduledFor: scheduledFor.toISOString(),
+        }),
+      }),
+    );
+    expect(addOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "job-application.change" }),
+    );
   });
 });
 
@@ -62,12 +50,4 @@ function createFollowUp(): JobApplicationFollowUp {
     createdAt: now,
     updatedAt: now,
   };
-}
-
-function createReminderQueue(): FollowUpReminderQueue {
-  return { enqueue: vi.fn(async () => ({ jobId: "reminder-1" })), remove: vi.fn(), close: vi.fn() };
-}
-
-function createReminderRepository(): FollowUpReminderRepository {
-  return { setSchedule: vi.fn() } as unknown as FollowUpReminderRepository;
 }

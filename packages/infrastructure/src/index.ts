@@ -17,6 +17,7 @@ export * from "./persistence/postgres-outbox.repository.js";
 export * from "./persistence/postgres-outbox.dispatcher.js";
 export * from "./persistence/postgres-analysis-outbox.dispatcher.js";
 export * from "./persistence/postgres-storage-outbox.dispatcher.js";
+export * from "./persistence/postgres-reminder-outbox.dispatcher.js";
 export * from "./persistence/postgres-persistence-unit-of-work.js";
 export * from "./persistence/profiles/in-memory-user-profile.repository.js";
 export * from "./persistence/profiles/knex-user-profile.repository.js";

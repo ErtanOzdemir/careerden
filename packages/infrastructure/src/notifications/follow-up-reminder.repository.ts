@@ -94,6 +94,19 @@ export class PostgresFollowUpReminderRepository implements FollowUpReminderRepos
     return updated > 0;
   }
 
+  async isPendingScheduleCurrent(input: FollowUpReminderQueuePayload): Promise<boolean> {
+    const row = await this.db("job_application_follow_ups")
+      .where({
+        id: input.followUpId,
+        job_application_id: input.jobApplicationId,
+        profile_id: input.profileId,
+        scheduled_at: new Date(input.followUpAt),
+      })
+      .whereNull("reminder_sent_at")
+      .first();
+    return Boolean(row);
+  }
+
   private baseQuery() {
     return this.db("job_application_follow_ups")
       .join("user_profiles", "user_profiles.id", "job_application_follow_ups.profile_id")

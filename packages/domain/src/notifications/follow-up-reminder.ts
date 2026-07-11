@@ -52,6 +52,7 @@ export interface FollowUpReminderRepository {
   findValidReminder(input: FollowUpReminderQueuePayload): Promise<FollowUpReminderCandidate | null>;
   listPendingForRecovery(now: Date, limit?: number): Promise<FollowUpReminderCandidate[]>;
   markSent(input: FollowUpReminderQueuePayload, sentAt: Date): Promise<boolean>;
+  isPendingScheduleCurrent(input: FollowUpReminderQueuePayload): Promise<boolean>;
 }
 
 export interface NotificationEmailSender {

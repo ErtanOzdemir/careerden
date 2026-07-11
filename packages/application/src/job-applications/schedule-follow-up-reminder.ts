@@ -1,22 +1,31 @@
-import type {
-  FollowUpReminderQueue,
-  FollowUpReminderRepository,
-  JobApplicationFollowUp,
-} from "@link2cv/domain";
-import { followUpReminderLeadTimeMs } from "@link2cv/domain";
+import type { JobApplicationFollowUp, OutboxRepository } from "@link2cv/domain";
+import { followUpReminderLeadTimeMs, outboxEventTypes } from "@link2cv/domain";
 
 export async function scheduleFollowUpReminder(input: {
   followUp: JobApplicationFollowUp;
-  queue: FollowUpReminderQueue;
-  reminders: FollowUpReminderRepository;
+  outbox: OutboxRepository;
 }): Promise<void> {
   const scheduledFor = new Date(input.followUp.scheduledAt.getTime() - followUpReminderLeadTimeMs);
-  const scheduled = await input.queue.enqueue({
-    followUpId: input.followUp.id,
-    jobApplicationId: input.followUp.jobApplicationId,
-    profileId: input.followUp.profileId,
-    followUpAt: input.followUp.scheduledAt,
-    scheduledFor,
+  await input.outbox.add({
+    type: outboxEventTypes.followUpReminderSchedule,
+    aggregateId: input.followUp.id,
+    payload: {
+      followUpId: input.followUp.id,
+      jobApplicationId: input.followUp.jobApplicationId,
+      profileId: input.followUp.profileId,
+      followUpAt: input.followUp.scheduledAt.toISOString(),
+      scheduledFor: scheduledFor.toISOString(),
+    },
   });
-  await input.reminders.setSchedule(input.followUp.id, { jobId: scheduled.jobId, scheduledFor });
+}
+
+export function cancelFollowUpReminder(
+  outbox: OutboxRepository,
+  followUpId: string,
+): Promise<unknown> {
+  return outbox.add({
+    type: outboxEventTypes.followUpReminderCancel,
+    aggregateId: followUpId,
+    payload: { followUpId, jobId: `follow-up-${followUpId}` },
+  });
 }

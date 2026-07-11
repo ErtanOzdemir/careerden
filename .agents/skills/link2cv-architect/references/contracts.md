@@ -1,41 +1,37 @@
 # Contracts
 
-For source placement and bounded-context rules, read `architecture.md` first.
+## Contract Placement
+
+- Put external/shared DTO validation in `packages/contracts/src/<context>` using Zod.
+- Put stable business entities, repository/provider interfaces, queue payloads, and policies in `packages/domain/src/<context>`.
+- Put application-only command/query inputs, results, read models, and expected errors beside their use cases.
+- Validate before persistence, queueing, AI result use, or rendering.
 
 ## Core Interfaces
 
-- `JobSiteScraper`
-  - `canHandle(url: string): boolean`
-  - `scrapeJob(url: string): Promise<ScrapedJob>`
-  - `scrapeCompany(input: CompanyLookupInput): Promise<ScrapedCompany>`
-- `AiMatchingProvider`
-  - `analyze(input: MatchAnalysisInput): Promise<MatchAnalysisResult>`
-- `TemplateRenderer`
-  - `render(templateId: string, data: Record<string, unknown>): Promise<string | Buffer>`
-- `DocumentRenderer`
-  - `htmlToPdf(html: string): Promise<Buffer>`
-- `FileStorage`
-  - `put(file: StoredFileInput): Promise<StoredFile>`
-  - `getSignedUrl(fileId: string): Promise<string>`
+- `JobSiteScraper`: select by URL, scrape jobs, and scrape companies without leaking site conditionals into workflows.
+- `AiProvider`: generate schema-validated output from provider-neutral prompts/parameters.
+- `JobApplicationRepository` and `UserProfileRepository`: persistence boundaries; introduce narrower capability interfaces when consumers need only a subset.
+- `JobApplicationQueue` and `FollowUpReminderQueue`: producer interfaces; BullMQ remains an adapter detail.
+- `TemplateRenderer`, `DocxTemplateRenderer`, `DocumentRenderer`, and `FileStorage`: deterministic rendering and storage boundaries.
 
-## Data Shape Guidance
+## REST and Read Models
 
-- Store raw scrape payloads separately from normalized fields.
-- Keep provider-specific fields behind metadata or JSON columns when they are not part of the stable domain model.
-- Validate URL input, AI JSON output, and document template data at the boundary.
+- Preserve existing REST endpoints during architectural refactors.
+- Build enriched list/detail projections in application code, including documents, events, contacts, follow-ups, sanitized scrape data, match results, and signed logo URLs.
+- Keep HTTP parsing, headers, status selection, multipart mechanics, and final serialization in API code.
+- Do not expose internal logo source/file fields inside public scrape payloads.
 
-## API Surface
+## Authentication and Ownership
 
-- `POST /job-applications`
-- `GET /job-applications`
-- `GET /job-applications/:id`
-- `GET /job-applications/:id/documents/:documentId/download`
-- `POST /profiles`
-- `GET /profiles/:id`
+- Authentication middleware supplies a stable actor with `id`, `email`, and `name`.
+- Protected use cases accept the actor/user ID and verify profile/job/resource ownership through domain repository interfaces.
+- Return typed not-found failures for inaccessible owned resources when ownership disclosure is undesirable.
 
 ## Testing Expectations
 
-- Test URL routing for scraper selection.
-- Test queue/job state transitions.
-- Test schema validation for AI output.
-- Test template rendering and PDF generation separately.
+- Colocate use-case tests as `*.use-case.test.ts` and cover success, ownership isolation, expected failures, and orchestration side effects.
+- Test Zod contracts independently.
+- Test persistence/queue adapters with integration-focused tests.
+- Test renderers and provider adapters independently from use cases.
+- Keep API tests focused on validation, authentication, error/status mapping, and transport lifecycle behavior.

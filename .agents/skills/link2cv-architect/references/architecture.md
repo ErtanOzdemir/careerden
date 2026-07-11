@@ -1,60 +1,62 @@
 # Architecture
 
-## Stack
+## Runtime and Layer Ownership
 
-- Use `Express` for HTTP APIs.
-- Use `PostgreSQL` for durable app state.
-- Use `Redis + BullMQ` for background jobs and retries.
-- Use `Playwright` workers for browser-based scraping.
-- Use HTML templates first for documents, then render to PDF.
+- `apps/api`: Express transport, authentication middleware, validation invocation, response mapping, SSE lifecycle, and composition root.
+- `packages/application`: focused commands/queries, ownership checks, workflow orchestration, read-model assembly, and typed expected failures.
+- `packages/domain`: entities, workflow policies, repository/provider/queue interfaces, and stable constants.
+- `packages/contracts`: shared Zod schemas and transport DTO types; it must not depend on application or infrastructure.
+- `packages/infrastructure`: PostgreSQL/Knex repositories, Redis/BullMQ adapters, site scrapers, AI adapters, storage, DOCX/HTML/PDF renderers, and migrations.
+- `apps/desktop`: Electron runtime and local Playwright scraping worker; it claims API work, heartbeats claims, and submits scrape results.
+- `apps/llm-worker`: BullMQ consumer for match analysis.
+- `apps/notifications-worker`: BullMQ consumer and recovery loop for follow-up reminders.
+- `apps/web`: React client using shared REST behavior through its API client/mappers.
 
-## Modules
+Dependencies point inward: apps compose packages; application depends on domain/contracts; infrastructure implements domain interfaces. Do not make domain depend on application, apps, or infrastructure. Avoid infrastructure depending on application.
 
-- `api`: request validation, controllers, response mapping.
-- `application`: use cases such as job submission, scraping orchestration, AI matching, and document generation.
-- `domain`: entities, value objects, workflow state, and provider interfaces.
-- `infrastructure`: DB repositories, scrapers, AI clients, template rendering, PDF conversion, file storage.
-- `workers`: separately runnable `apps/*-worker` packages for BullMQ processors and retry/recovery orchestration.
+## Bounded Contexts
 
-## Bounded Context Layout
+Use the same context name across layers:
 
-Keep source organized by business context inside each package instead of by generic technical folders.
+- `profiles`: user-linked profiles, ownership access, document templates, mappings, and aliases.
+- `job-applications`: tracking lifecycle, scrape claims, events, contacts, follow-ups, analysis, read models, and documents.
+- `scraping`: scrape/session contracts and site-specific adapters.
+- `matching`: AI provider contracts, requirement extraction, and match analysis.
+- `documents`: content, templates, deterministic rendering, and generated files.
+- `notifications`: reminders, notification persistence, delivery, and recovery.
+- `storage`, `queue`, and `persistence`: infrastructure adapters grouped by their owning capability/context.
 
-- `profiles`: profile entities, repository contracts, schemas, use cases, and API routes.
-- `job-applications`: application lifecycle, workflow status, queue contracts, persistence, submission, processing, API routes, and worker entrypoints.
-- `scraping`: job/company scrape models, scraper contracts, LinkedIn session handling, site adapters, and scraper factories.
-- `matching`: AI provider contracts, AI schemas, requirement extraction, match analysis, and AI provider adapters.
-- `documents`: generated document models, rendering contracts, document generation, HTML templates, and PDF rendering.
-- `storage`: file-storage contracts and storage adapters.
-- `persistence`: infrastructure database setup, repositories, migrations, and schema files.
-- `queue`: infrastructure queue adapters.
+Do not reintroduce cross-context generic source buckets. Keep package barrels stable while internal files remain context-oriented.
 
-Use the same context name across layers when a feature crosses packages. For example, a new job-application capability should place domain types under `packages/domain/src/job-applications`, use cases under `packages/application/src/job-applications`, schemas under `packages/contracts/src/job-applications`, and API routes under `apps/api/src/job-applications`.
+## Application and API Shape
 
-Worker apps should be named for their responsibility and include the `worker` suffix. For example, `apps/llm-worker` owns LLM analysis jobs, while a future notification processor should use a name such as `apps/notifications-worker`.
+- Use one exported class per operation, named `VerbNounUseCase` in `verb-noun.use-case.ts`.
+- Put reusable access checks and projection builders in internal context helpers, not routes.
+- Use narrow repository capabilities such as `UserProfileAccessRepository` when a use case only needs ownership/read access.
+- Protected use cases receive `userId`/actor input and independently enforce access; API parameter middleware may provide defense in depth but is not the business authorization boundary.
+- API routers receive use cases and transport services only. The API composition root creates concrete repositories/adapters and wires them into use cases.
+- Keep SSE headers, heartbeat timers, disconnect cleanup, multipart parsing, and basic file/MIME checks in the API layer.
 
-Do not reintroduce broad folders like `entities`, `interfaces`, `schemas`, `routes`, or `use-cases` for backend source. Package barrels should keep public `@link2cv/*` imports stable while internals stay context-oriented.
+## Adapter and Worker Rules
 
-## Patterns
+- Resolve site scrapers through Strategy/Factory patterns. LinkedIn is one adapter, not a core-workflow special case.
+- Keep AI, file storage, template rendering, PDF conversion, email, persistence, and queues behind domain interfaces.
+- API runtimes produce queue work; `apps/*-worker` runtimes consume it.
+- Convert typed terminal application failures to BullMQ `UnrecoverableError`; rethrow unexpected failures unchanged so queue attempts/backoff apply.
+- Keep worker logging and runtime recovery mechanics in worker apps, while status/event business behavior stays in use cases.
 
-- Use Strategy for site-specific scrapers.
-- Use Factory to resolve the right scraper from a URL.
-- Use Adapter for AI providers, storage, and PDF rendering.
-- Use Repository for database access.
-- Use a queue-driven pipeline for all long-running processing.
-- Keep API runtimes as producers/controllers only; BullMQ consumers belong in worker apps.
+## Current Infrastructure
 
-## Tooling
-
-- Run `pnpm lint` for ESLint checks and `pnpm lint:fix` only for mechanical fixes.
-- Run `pnpm format:check` before finishing; use `pnpm format` for repo-wide Prettier formatting.
-- Run `pnpm typecheck`, `pnpm test`, and `pnpm build` after source or structure changes.
-- Keep generated output, caches, local storage, and dependency folders out of source edits.
+- Node.js 22, pnpm 9, strict ESM TypeScript with `NodeNext`.
+- PostgreSQL via Knex, migrations during API startup.
+- Redis/BullMQ for LLM processing and reminder delivery/recovery.
+- RustFS-compatible object storage for generated/template/logo files.
+- Playwright for local desktop scraping and PDF rendering.
+- Vercel AI SDK providers behind AI interfaces.
 
 ## Non-Negotiables
 
-- Keep LinkedIn support as one adapter, not a special case spread across the app.
-- Keep future career sites additive.
-- Keep raw scraped data and normalized data both available.
-- Keep the core workflow independent from any single AI vendor.
-- Keep bounded-context placement and tooling checks current in contributor and agent docs when architecture changes.
+- Preserve normalized and raw scrape data.
+- Preserve explicit workflow transitions and failure reasons/events.
+- Keep the core independent from a single job site, AI provider, storage service, renderer, or transport.
+- Keep REST URLs and payload compatibility during boundary-only refactors.

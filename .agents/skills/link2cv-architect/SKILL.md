@@ -1,40 +1,50 @@
 ---
 name: link2cv-architect
-description: Design and implement the Link2CV Node.js/TypeScript backend architecture. Use when working on this repo's app structure, LinkedIn-first scraping, future career-site adapters, BullMQ workers, AI matching, template rendering, PDF generation, API boundaries, data model, or tests.
+description: Design, implement, and review Link2CV's Node.js/TypeScript architecture across API, application, domain, contracts, infrastructure, Electron desktop scraping, BullMQ workers, persistence, AI matching, document generation, storage, and tests. Use for backend features, refactors, boundaries, workflows, adapters, queues, error handling, or package organization in the Link2CV repository.
 ---
 
 # Link2CV Architect
 
-Use this skill to keep Link2CV modular and expandable while building the backend.
+Keep Link2CV modular, transport-independent, and expandable across job sites and providers.
 
-## Operating Rules
+## Core Workflow
 
-- Prefer a backend-first architecture with clear boundaries between API, application, domain, and infrastructure code.
-- Keep scraping behind site-specific adapters; add a new adapter instead of branching the core workflow.
-- Keep AI providers, document rendering, and storage behind interfaces so they can be swapped without changing use cases.
-- Push long-running work into queue workers; keep HTTP handlers thin and synchronous.
-- Validate external inputs and AI output with schemas before persisting or rendering anything.
-- Preserve raw scrape payloads alongside normalized data for traceability.
-- Keep backend source organized by bounded context inside each package; do not reintroduce broad `entities`, `interfaces`, `schemas`, `routes`, or `use-cases` buckets.
-- Preserve ESLint and Prettier cleanliness; after code or docs changes, run the relevant `pnpm lint` and `pnpm format:check` verification.
+1. Inspect the affected bounded context across API, application, domain, contracts, infrastructure, desktop, and workers.
+2. Put business decisions and orchestration in a focused application use case; put invariants and stable policies in domain code.
+3. Keep adapters and runtime mechanics in infrastructure or the owning app.
+4. Preserve public package exports and external REST behavior unless the task explicitly changes them.
+5. Add tests at the layer that owns the changed behavior.
 
-## When To Load References
+## Required Conventions
 
-- Read [architecture.md](references/architecture.md) before proposing modules, packages, or service boundaries.
-- Read [workflow.md](references/workflow.md) before changing the job-processing pipeline or queue design.
-- Read [contracts.md](references/contracts.md) before defining entities, DTOs, provider interfaces, or AI JSON output.
+- Keep Express handlers transport-only: validate/parse input, extract the authenticated actor, call use cases, and map responses. Never inject repositories, queues, storage, renderers, or infrastructure managers into route modules.
+- Construct repositories, adapters, queues, and use cases in app composition roots.
+- Give every exported `*UseCase` class its own matching kebab-case `*.use-case.ts` file. Name its colocated test `*.use-case.test.ts`. Keep shared helpers free of a `UseCase` suffix.
+- Organize every backend package by bounded context. Do not create broad `entities`, `interfaces`, `schemas`, `routes`, or `use-cases` buckets.
+- Pass `userId` or an authenticated actor into protected use cases and enforce ownership in application code. Return not-found semantics for inaccessible owned resources when disclosure must be avoided.
+- Keep site, AI, storage, rendering, persistence, and queue variations behind domain interfaces and infrastructure adapters.
+- Keep long-running consumers in descriptive `apps/*-worker` runtimes. Workers call use cases; they do not own business rules.
+- Preserve raw scrape payloads with normalized data for traceability.
+- Use internal relative TypeScript imports with the runtime `.js` extension and stable `@link2cv/*` package barrels for public imports.
+- Use Conventional Commit subjects such as `feat:`, `fix:`, `refactor:`, `test:`, or `docs:` when committing.
+
+## Reference Routing
+
+- Read [architecture.md](references/architecture.md) before changing packages, dependencies, module boundaries, naming, or composition roots.
+- Read [workflow.md](references/workflow.md) before changing scraping, job status transitions, retries, queues, analysis, reminders, or documents.
+- Read [contracts.md](references/contracts.md) before changing DTOs, Zod schemas, domain/provider interfaces, read models, or REST payloads.
+- Read [errors.md](references/errors.md) before changing API errors, desktop API behavior, worker retries, or terminal failure handling.
 
 ## Decision Rules
 
-- Choose extensibility over hard-coded LinkedIn assumptions.
-- Choose deterministic outputs over prompt-only behavior for AI and document generation.
-- Choose explicit state transitions over implicit status updates.
-- Choose adapters and factories for anything that will vary by provider, source site, or file format.
+- Prefer additive site/provider adapters over conditionals spread through workflows.
+- Prefer explicit use-case inputs/results and status transitions over implicit repository orchestration.
+- Prefer deterministic schemas and render inputs over prompt-only behavior.
+- Keep transport codes and BullMQ retry semantics out of domain rules.
+- Treat unexpected infrastructure/provider failures as retryable unless a typed application failure explicitly makes them terminal.
 
-## Implementation Checks
+## Verification
 
-- Keep API routes thin and delegate to use cases.
-- Keep business rules in application/domain code, not in controllers or workers.
-- Keep infrastructure code isolated to database, scraping, AI, PDF, and storage integrations.
-- Add tests at the level of the behavior being changed: unit for logic, integration for queues and persistence, contract for provider boundaries.
-- For structural refactors, verify `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, and `pnpm build`.
+- Run focused tests and checks while iterating.
+- For structural or behavioral changes, run `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, and `pnpm build`.
+- If a repository-wide gate fails only on unrelated pre-existing files, leave them untouched, run focused checks for changed files, and report the exception precisely.

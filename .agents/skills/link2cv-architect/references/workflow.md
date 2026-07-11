@@ -1,37 +1,47 @@
 # Workflow
 
-For source placement and bounded-context rules, read `architecture.md` first.
+## Job Submission and Desktop Scraping
 
-## Submission Flow
+1. The API validates submission and creates a `queued` job application through an application use case.
+2. The Electron desktop worker authenticates, claims eligible queued or expired scraping work, and receives a time-limited claim.
+3. The desktop worker heartbeats while Playwright scrapes the job and related company sources.
+4. The desktop submits the raw/normalized scrape bundle with its claim identity.
+5. The application layer validates status and claim ownership, stores the scrape and optional logo, updates tracking fields, emits events, and transitions to `scraped`.
+6. If the profile enables automatic analysis, enqueue the LLM job; otherwise emit an explicit skipped event.
 
-1. Validate the LinkedIn job URL.
-2. Create a `job_application` record.
-3. Enqueue background processing.
-4. Scrape the job page.
-5. Scrape the company LinkedIn page.
-6. Discover and scrape the company website and career page when available.
-7. Normalize the collected data.
-8. Enqueue LLM analysis on BullMQ.
-9. Run AI matching against the user profile in `apps/llm-worker`.
-10. Render the CV and cover letter from templates.
-11. Convert outputs to PDF.
-12. Store artifacts and update status.
+Manual tracker entries create a deterministic manual scrape bundle and transition directly to `scraped`. Desktop `from-scrape` submissions persist supplied scrape data and follow the same analysis preference.
 
-## Status Model
+## Scrape Claims and Failures
 
-- Use explicit states such as `queued`, `scraping`, `analyzing`, `generating_documents`, `completed`, and `failed`.
-- Persist a failure reason when a run stops.
-- Emit events or processing logs for each major transition.
-- API routes enqueue work but do not consume LLM jobs. LLM status transitions are owned by the LLM worker.
+- Claim duration is explicit; expired `scraping` claims are reclaimable.
+- Increment scrape attempts on claim and persist retry scheduling/backoff through the repository.
+- Reject another desktop's claim with a typed conflict.
+- Local scraper failures call the API failure operation. Terminal API submission responses are not reported through a second failure request.
+- Preserve failure reason and processing events for scheduled retries and final failures.
 
-## AI Output
+## LLM Analysis
 
-- Require structured JSON from the AI provider.
-- Validate output before saving or rendering.
-- Include at minimum match score, criteria matches, missing skills, recommended highlights, personalized summary, and cover-letter guidance.
+1. `apps/llm-worker` consumes the job-application queue.
+2. The analysis use case loads the owned profile and stored scrape bundle, validates prerequisites/transitions, and calls provider-neutral matching operations.
+3. Validate structured AI output before persistence.
+4. Save match analysis, emit events, and transition to review-ready/failure states explicitly.
 
 ## Documents
 
-- Fill `{{field}}` placeholders from user profile data and AI recommendations.
-- Keep template rendering deterministic.
-- Treat PDF generation as a separate infrastructure step.
+- Keep editable document content separate from rendered artifacts.
+- Generate deterministic render inputs from profile, scrape, analysis, selected content, and template mappings.
+- Keep DOCX template extraction/rendering, HTML rendering, PDF conversion, storage, and signed URLs behind interfaces.
+- Treat generation status changes and events as application behavior; treat rendering/storage implementations as infrastructure.
+
+## Follow-ups and Notifications
+
+- Follow-up create/update/delete use cases own reminder scheduling, replacement, and cancellation.
+- Keep the reminder lead time as a domain policy.
+- `apps/notifications-worker` creates notifications for valid reminders, marks delivery state, and periodically rebuilds missing delayed jobs.
+- Recovery overlap guards and timers belong to the worker runtime.
+
+## Status and Retry Rules
+
+- Use the domain transition policy for `queued`, `scraping`, `scraped`, `analyzing`, `review_ready`, `generating_documents`, `completed`, and `failed`.
+- Persist a failure reason and event whenever processing becomes failed.
+- Retry only through explicit use cases/queue adapters. Typed application failures are terminal in BullMQ; unexpected infrastructure/provider failures retain configured attempts and backoff.

@@ -18,7 +18,7 @@ describe("SubmitJobApplicationScrapeDataUseCase", () => {
     vi.mocked(profiles.findById).mockResolvedValue({ autoRunMatchAnalysis: true } as never);
     const detail = { ...job, documents: [] } as never;
     const getDetail = { execute: vi.fn(async () => detail) };
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, profiles);
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(repository, profiles);
 
     await expect(
       new SubmitJobApplicationScrapeDataUseCase(
@@ -41,9 +41,7 @@ describe("SubmitJobApplicationScrapeDataUseCase", () => {
     expect(addOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "job-application.analysis-requested" }),
     );
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 
   it("durably schedules a newly uploaded logo for cleanup when scrape persistence fails", async () => {

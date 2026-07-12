@@ -23,13 +23,13 @@ describe("CreateJobApplicationContactUseCase", () => {
       findById: vi.fn(async () => job),
       createContact: vi.fn(async () => contact),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await expect(
       new CreateJobApplicationContactUseCase(unitOfWork).execute(job.id, "user-1", {
         name: contact.name,
       }),
     ).resolves.toBe(contact);
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

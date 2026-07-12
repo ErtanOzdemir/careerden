@@ -12,7 +12,6 @@ import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 import type { GetJobApplicationDetailUseCase } from "./get-job-application-detail.use-case.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 import type { JobApplicationDetail } from "./job-application-read-model.js";
 import { storeCompanyLogo } from "./store-company-logo.js";
 
@@ -48,43 +47,45 @@ export class SubmitJobApplicationScrapeDataUseCase {
       storage: this.storage,
     });
     try {
-      await this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
-        const current = await getAccessibleJobApplication(
-          jobApplications,
-          profiles,
-          jobApplicationId,
-          userId,
-        );
-        assertScrapeSubmissionAllowed(current, input.claimedBy);
-        await jobApplications.saveScrapeBundle(jobApplicationId, logo.scrape);
-        await jobApplications.updateTracking(jobApplicationId, {
-          companyName: logo.scrape.job.companyName,
-          roleTitle: logo.scrape.job.title,
-        });
-        await jobApplications.updateStatus(jobApplicationId, "scraped");
-        await jobApplications.addEvent({
-          jobApplicationId,
-          type: "processing",
-          title: "Scraping complete",
-          metadata: {
+      await this.unitOfWork.execute(
+        async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
+          const current = await getAccessibleJobApplication(
+            jobApplications,
+            profiles,
+            jobApplicationId,
+            userId,
+          );
+          assertScrapeSubmissionAllowed(current, input.claimedBy);
+          await jobApplications.saveScrapeBundle(jobApplicationId, logo.scrape);
+          await jobApplications.updateTracking(jobApplicationId, {
             companyName: logo.scrape.job.companyName,
             roleTitle: logo.scrape.job.title,
-          },
-        });
+          });
+          await jobApplications.updateStatus(jobApplicationId, "scraped");
+          await jobApplications.addEvent({
+            jobApplicationId,
+            type: "processing",
+            title: "Scraping complete",
+            metadata: {
+              companyName: logo.scrape.job.companyName,
+              roleTitle: logo.scrape.job.title,
+            },
+          });
 
-        const profile = await profiles.findById(current.profileId);
-        if (!profile) throw new ApplicationError("not_found", "Profile not found");
-        await enqueueMatchAnalysisIfEnabled({
-          jobApplications,
-          outbox,
-          jobApplicationId,
-          autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
-        });
-        if (previousLogoFileId && previousLogoFileId !== logo.uploadedFileId) {
-          await enqueueStorageDeletions(outbox, [previousLogoFileId]);
-        }
-        await enqueueJobApplicationChange(outbox, current.id, current.profileId);
-      });
+          const profile = await profiles.findById(current.profileId);
+          if (!profile) throw new ApplicationError("not_found", "Profile not found");
+          await enqueueMatchAnalysisIfEnabled({
+            jobApplications,
+            outbox,
+            jobApplicationId,
+            autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
+          });
+          if (previousLogoFileId && previousLogoFileId !== logo.uploadedFileId) {
+            await enqueueStorageDeletions(outbox, [previousLogoFileId]);
+          }
+          await jobApplicationChanges.changed(current.id, current.profileId);
+        },
+      );
     } catch (error) {
       const uploadedFileId = logo.uploadedFileId;
       if (uploadedFileId && uploadedFileId !== previousLogoFileId) {

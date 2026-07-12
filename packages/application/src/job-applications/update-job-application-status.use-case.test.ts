@@ -14,7 +14,7 @@ describe("UpdateJobApplicationStatusUseCase", () => {
     const repository = createJobApplicationRepository({
       findById: vi.fn().mockResolvedValueOnce(initial).mockResolvedValueOnce(updated),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await expect(
       new UpdateJobApplicationStatusUseCase(unitOfWork).execute(initial.id, "user-1", "scraping"),
@@ -24,6 +24,6 @@ describe("UpdateJobApplicationStatusUseCase", () => {
       type: "processing",
       title: "Scraping started",
     });
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

@@ -16,7 +16,10 @@ describe("CreateJobApplicationFollowUpUseCase", () => {
       findById: vi.fn(async () => job),
       createFollowUp: vi.fn(async () => followUp),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(
+      repository,
+      createProfiles(),
+    );
 
     await new CreateJobApplicationFollowUpUseCase(unitOfWork).execute(job.id, "user-1", {
       title: followUp.title,
@@ -33,9 +36,7 @@ describe("CreateJobApplicationFollowUpUseCase", () => {
         }),
       }),
     );
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });
 

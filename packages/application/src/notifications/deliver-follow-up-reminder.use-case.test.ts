@@ -89,6 +89,7 @@ function createUnitOfWork(
     execute: async (work) =>
       work({
         jobApplications: {} as never,
+        jobApplicationChanges: {} as never,
         profiles: {} as never,
         notifications,
         followUpReminders: reminders,

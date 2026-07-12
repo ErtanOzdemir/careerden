@@ -14,7 +14,7 @@ describe("RenewScrapeClaimUseCase", () => {
       findById: vi.fn(async () => job),
       renewScrapeClaim: vi.fn(async () => job),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await new RenewScrapeClaimUseCase(unitOfWork).execute(job.id, "user-1", "desktop-a");
 
@@ -22,6 +22,6 @@ describe("RenewScrapeClaimUseCase", () => {
       claimedBy: "desktop-a",
       claimDurationMs: 600_000,
     });
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

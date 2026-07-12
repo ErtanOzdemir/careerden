@@ -1,7 +1,6 @@
 import type { PersistenceUnitOfWork } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 const maxScrapeAttempts = 3;
 const scrapeRetryBackoffMs = [60_000, 300_000];
@@ -17,7 +16,7 @@ export class FailScrapeJobUseCase {
     input: { claimedBy: string; reason: string },
     now = new Date(),
   ): Promise<FailScrapeJobResult> {
-    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+    return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
       const jobApplication = await getAccessibleJobApplication(
         jobApplications,
         profiles,
@@ -53,7 +52,7 @@ export class FailScrapeJobUseCase {
             : {}),
         },
       });
-      await enqueueJobApplicationChange(outbox, updated.id, updated.profileId);
+      await jobApplicationChanges.changed(updated.id, updated.profileId);
       return updated.status === "failed" ? "failed" : "retry_scheduled";
     });
   }

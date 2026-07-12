@@ -6,7 +6,6 @@ import type {
 } from "@link2cv/domain";
 import { documentContentFromMatchAnalysis } from "@link2cv/domain";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class AnalyzeScrapedJobUseCase {
   constructor(
@@ -24,7 +23,7 @@ export class AnalyzeScrapedJobUseCase {
     }
     const attemptId = payload.analysisAttemptId ?? payload.jobApplicationId;
     const started = await this.unitOfWork.execute(
-      async ({ jobApplications, outbox }): Promise<boolean> => {
+      async ({ jobApplications, jobApplicationChanges }): Promise<boolean> => {
         if (!(await jobApplications.beginAnalysis(jobApplication.id, attemptId))) return false;
         await jobApplications.addEvent({
           jobApplicationId: jobApplication.id,
@@ -32,7 +31,7 @@ export class AnalyzeScrapedJobUseCase {
           title: "AI analysis started",
           metadata: { attemptId },
         });
-        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         return true;
       },
     );
@@ -57,7 +56,7 @@ export class AnalyzeScrapedJobUseCase {
         scrape,
       });
 
-      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+      await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
         const completed = await jobApplications.completeAnalysis(
           jobApplication.id,
           attemptId,
@@ -77,11 +76,11 @@ export class AnalyzeScrapedJobUseCase {
           title: "Ready for AI match review",
           metadata: { matchScore: analysis.matchScore, attemptId },
         });
-        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown AI analysis error";
-      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+      await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
         if (!(await jobApplications.failAnalysis(jobApplication.id, attemptId, message))) return;
         await jobApplications.addEvent({
           jobApplicationId: jobApplication.id,
@@ -90,7 +89,7 @@ export class AnalyzeScrapedJobUseCase {
           body: message,
           metadata: { attemptId },
         });
-        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       });
       throw error;
     }

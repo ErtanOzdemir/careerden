@@ -24,7 +24,7 @@ describe("CreateJobApplicationEventUseCase", () => {
       findById: vi.fn(async () => job),
       addEvent: vi.fn(async () => event),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await expect(
       new CreateJobApplicationEventUseCase(unitOfWork).execute(job.id, "user-1", {
@@ -32,6 +32,6 @@ describe("CreateJobApplicationEventUseCase", () => {
         title: "Recruiter replied",
       }),
     ).resolves.toBe(event);
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

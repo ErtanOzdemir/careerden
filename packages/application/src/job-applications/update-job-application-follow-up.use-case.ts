@@ -4,7 +4,6 @@ import type {
   UpdateJobApplicationFollowUpInput,
 } from "@link2cv/domain";
 import { getAccessibleFollowUp } from "./job-application-resource-access.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 import { cancelFollowUpReminder, scheduleFollowUpReminder } from "./schedule-follow-up-reminder.js";
 
 export class UpdateJobApplicationFollowUpUseCase {
@@ -15,21 +14,29 @@ export class UpdateJobApplicationFollowUpUseCase {
     userId: string,
     input: UpdateJobApplicationFollowUpInput,
   ): Promise<JobApplicationFollowUp> {
-    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
-      await getAccessibleFollowUp(jobApplications, profiles, jobApplicationId, followUpId, userId);
-      const updated = await jobApplications.updateFollowUp(followUpId, input);
-      if ("scheduledAt" in input) {
-        await cancelFollowUpReminder(outbox, followUpId);
-        await scheduleFollowUpReminder({ followUp: updated, outbox });
-        await jobApplications.addEvent({
+    return this.unitOfWork.execute(
+      async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
+        await getAccessibleFollowUp(
+          jobApplications,
+          profiles,
           jobApplicationId,
-          type: "reminder",
-          title: `Follow-up rescheduled: ${updated.title}`,
-          occurredAt: updated.scheduledAt,
-        });
-      }
-      await enqueueJobApplicationChange(outbox, updated.jobApplicationId, updated.profileId);
-      return updated;
-    });
+          followUpId,
+          userId,
+        );
+        const updated = await jobApplications.updateFollowUp(followUpId, input);
+        if ("scheduledAt" in input) {
+          await cancelFollowUpReminder(outbox, followUpId);
+          await scheduleFollowUpReminder({ followUp: updated, outbox });
+          await jobApplications.addEvent({
+            jobApplicationId,
+            type: "reminder",
+            title: `Follow-up rescheduled: ${updated.title}`,
+            occurredAt: updated.scheduledAt,
+          });
+        }
+        await jobApplicationChanges.changed(updated.jobApplicationId, updated.profileId);
+        return updated;
+      },
+    );
   }
 }

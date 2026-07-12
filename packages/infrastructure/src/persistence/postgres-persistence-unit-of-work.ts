@@ -1,5 +1,11 @@
 import type { Knex } from "knex";
-import type { PersistenceTransaction, PersistenceUnitOfWork } from "@link2cv/domain";
+import type {
+  JobApplicationChange,
+  JobApplicationChangePublisher,
+  JobApplicationChangeRecorder,
+  PersistenceTransaction,
+  PersistenceUnitOfWork,
+} from "@link2cv/domain";
 import { PostgresFollowUpReminderRepository } from "../notifications/follow-up-reminder.repository.js";
 import { PostgresJobApplicationRepository } from "./job-applications/postgres-job-application.repository.js";
 import { PostgresNotificationRepository } from "./notifications/postgres-notification.repository.js";
@@ -7,17 +13,64 @@ import { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresUserProfileRepository } from "./profiles/postgres-user-profile.repository.js";
 
 export class PostgresPersistenceUnitOfWork implements PersistenceUnitOfWork {
-  constructor(private readonly db: Knex) {}
+  constructor(
+    private readonly db: Knex,
+    private readonly jobApplicationChangePublisher?: JobApplicationChangePublisher,
+  ) {}
 
-  execute<T>(work: (transaction: PersistenceTransaction) => Promise<T>): Promise<T> {
-    return this.db.transaction((transaction) =>
+  async execute<T>(work: (transaction: PersistenceTransaction) => Promise<T>): Promise<T> {
+    const changes = new BufferedJobApplicationChangeRecorder();
+    const result = await this.db.transaction((transaction) =>
       work({
         jobApplications: new PostgresJobApplicationRepository(transaction),
+        jobApplicationChanges: changes,
         profiles: new PostgresUserProfileRepository(transaction),
         notifications: new PostgresNotificationRepository(transaction),
         followUpReminders: new PostgresFollowUpReminderRepository(transaction),
         outbox: new PostgresOutboxRepository(transaction),
       }),
     );
+
+    await changes.publishBestEffort(this.jobApplicationChangePublisher);
+    return result;
+  }
+}
+
+class BufferedJobApplicationChangeRecorder implements JobApplicationChangeRecorder {
+  private readonly changes = new Map<string, JobApplicationChange>();
+
+  async changed(applicationId: string, profileId: string): Promise<void> {
+    this.record("application.changed", applicationId, profileId);
+  }
+
+  async deleted(applicationId: string, profileId: string): Promise<void> {
+    this.record("application.deleted", applicationId, profileId);
+  }
+
+  async publishBestEffort(publisher?: JobApplicationChangePublisher): Promise<void> {
+    if (!publisher) return;
+
+    const results = await Promise.allSettled(
+      [...this.changes.values()].map((change) => publisher.publish(change)),
+    );
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error("Failed to publish job application realtime change", result.reason);
+      }
+    }
+  }
+
+  private record(
+    type: JobApplicationChange["type"],
+    applicationId: string,
+    profileId: string,
+  ): void {
+    this.changes.set(`${type}:${applicationId}`, {
+      type,
+      applicationId,
+      profileId,
+      occurredAt: new Date().toISOString(),
+    });
   }
 }

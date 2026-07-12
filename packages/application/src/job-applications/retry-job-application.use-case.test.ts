@@ -20,7 +20,10 @@ describe("RetryJobApplicationUseCase", () => {
       fileName: "cv.pdf",
       contentType: "application/pdf",
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(
+      repository,
+      createProfiles(),
+    );
     const useCase = new RetryJobApplicationUseCase(unitOfWork);
 
     const retried = await useCase.execute(job.id, "user-1");
@@ -34,9 +37,7 @@ describe("RetryJobApplicationUseCase", () => {
       expect.objectContaining({ type: "storage.delete", payload: { fileId: "files/cv.pdf" } }),
     );
     expect((await repository.listEvents(job.id))[0]?.title).toBe("Retry requested");
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 
   it("preserves scraped data and restarts AI analysis when retrying an AI failure", async () => {

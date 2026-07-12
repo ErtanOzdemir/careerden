@@ -13,7 +13,6 @@ import { randomUUID } from "node:crypto";
 import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.use-case.js";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class ProcessJobApplicationUseCase {
   constructor(
@@ -52,7 +51,7 @@ export class ProcessJobApplicationUseCase {
     let logoFileId: string | undefined;
     let scrapePersisted = false;
     try {
-      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+      await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
         if (jobApplication.status !== "queued" && jobApplication.status !== "scraped") {
           throw new Error(
             `Invalid job application status transition: ${jobApplication.status} -> scraping`,
@@ -64,7 +63,7 @@ export class ProcessJobApplicationUseCase {
           type: "processing",
           title: "Scraping started",
         });
-        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       });
 
       const scrapedJob = await this.scrapers.job.scrapeJob(jobApplication.sourceUrl);
@@ -100,7 +99,7 @@ export class ProcessJobApplicationUseCase {
         careerPage,
       };
 
-      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+      await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
         await jobApplications.saveScrapeBundle(jobApplicationId, scrape);
         await jobApplications.updateStatus(jobApplicationId, "scraped");
         await jobApplications.addEvent({
@@ -109,13 +108,13 @@ export class ProcessJobApplicationUseCase {
           title: "Scraping completed",
           metadata: { companyName: job.companyName, roleTitle: job.title },
         });
-        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       });
       scrapePersisted = true;
 
       if (this.matching) {
         const attemptId = randomUUID();
-        await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
           await jobApplications.setAnalysisAttempt(jobApplicationId, attemptId);
           if (!(await jobApplications.beginAnalysis(jobApplicationId, attemptId))) {
             throw new Error("Could not start AI analysis");
@@ -126,7 +125,7 @@ export class ProcessJobApplicationUseCase {
             title: "AI analysis started",
             metadata: { attemptId },
           });
-          await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+          await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         });
 
         const analysis = await this.matching.execute({
@@ -134,7 +133,7 @@ export class ProcessJobApplicationUseCase {
           profile,
           scrape,
         });
-        await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
           if (
             !(await jobApplications.completeAnalysis(
               jobApplicationId,
@@ -157,10 +156,10 @@ export class ProcessJobApplicationUseCase {
             title: "Ready for AI match review",
             metadata: { matchScore: analysis.matchScore, attemptId },
           });
-          await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+          await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         });
       } else {
-        await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+        await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
           await jobApplications.updateStatus(jobApplicationId, "review_ready");
           await jobApplications.addEvent({
             jobApplicationId,
@@ -168,12 +167,12 @@ export class ProcessJobApplicationUseCase {
             title: "Scrape ready for review",
             metadata: { companyName: job.companyName, roleTitle: job.title },
           });
-          await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+          await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown processing error";
-      await this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+      await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, outbox }) => {
         await jobApplications.updateStatus(jobApplicationId, "failed", message);
         await jobApplications.addEvent({
           jobApplicationId,
@@ -184,7 +183,7 @@ export class ProcessJobApplicationUseCase {
         if (logoFileId && !scrapePersisted) {
           await enqueueStorageDeletions(outbox, [logoFileId]);
         }
-        await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+        await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       });
       throw error;
     }

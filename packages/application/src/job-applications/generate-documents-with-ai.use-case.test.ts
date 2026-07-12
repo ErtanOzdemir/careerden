@@ -12,7 +12,7 @@ describe("GenerateDocumentsWithAiUseCase", () => {
   it("atomically persists premium AI content and staged documents", async () => {
     const { profiles, jobApplications, jobApplication } = await createState();
     const premiumAi = createPremiumAi();
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(jobApplications, profiles as never);
+    const { unitOfWork, recordChanged } = createUnitOfWork(jobApplications, profiles as never);
     const generation = {
       stage: vi.fn(async (input: { generationAttemptId: string }) => [
         {
@@ -41,9 +41,7 @@ describe("GenerateDocumentsWithAiUseCase", () => {
     expect(await jobApplications.getMatchAnalysis(jobApplication.id)).toMatchObject({
       matchScore: 90,
     });
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledTimes(2);
   });
 
   it("fails the current attempt and schedules deterministic cleanup when premium AI fails", async () => {

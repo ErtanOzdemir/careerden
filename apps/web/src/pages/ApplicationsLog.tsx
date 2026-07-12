@@ -35,6 +35,7 @@ export default function ApplicationsLog() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<DisplayStatus | "all">("all");
   const [sort, setSort] = useState<SortKey>("recent");
+  const loadSequence = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -54,14 +55,12 @@ export default function ApplicationsLog() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!profileId) return;
-    const pid = profileId;
-    let isMounted = true;
-
-    async function load() {
+  const loadApplications = useCallback(
+    async (showLoading = true) => {
+      if (!profileId) return;
+      const sequence = ++loadSequence.current;
       try {
-        setIsLoading(true);
+        if (showLoading) setIsLoading(true);
         setError(null);
         let apiStatus: ApiApplicationStatus | undefined;
         if (filter === "applied") apiStatus = "applied" as ApiApplicationStatus;
@@ -69,10 +68,10 @@ export default function ApplicationsLog() {
         else if (filter === "offer") apiStatus = "offer" as ApiApplicationStatus;
         else if (filter === "rejected") apiStatus = "rejected" as ApiApplicationStatus;
         const items = await jobApplicationsApi.list({
-          profileId: pid,
+          profileId,
           applicationStatus: apiStatus,
         });
-        if (isMounted) {
+        if (sequence === loadSequence.current) {
           const mapped = items.map((item) => mapApiJobApplicationToUi(item));
           let filtered = mapped;
           if (filter === "processing") {
@@ -87,17 +86,27 @@ export default function ApplicationsLog() {
           setApplications(filtered);
         }
       } catch (e) {
-        if (isMounted) setError(e instanceof Error ? e.message : "Failed to load.");
+        if (sequence === loadSequence.current) {
+          setError(e instanceof Error ? e.message : "Failed to load.");
+        }
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (showLoading && sequence === loadSequence.current) setIsLoading(false);
       }
-    }
+    },
+    [filter, profileId],
+  );
 
-    void load();
-    return () => {
-      isMounted = false;
+  useEffect(() => {
+    void loadApplications();
+  }, [loadApplications]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadApplications(false);
     };
-  }, [profileId, filter]);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => document.removeEventListener("visibilitychange", refreshWhenVisible);
+  }, [loadApplications]);
 
   useJobApplicationChanges(profileId ?? undefined, {
     onChange: async (change: JobApplicationChange) => {
@@ -118,7 +127,7 @@ export default function ApplicationsLog() {
         /* ignore realtime race */
       }
     },
-    onOpen: () => {},
+    onReconnect: () => loadApplications(false),
   });
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);

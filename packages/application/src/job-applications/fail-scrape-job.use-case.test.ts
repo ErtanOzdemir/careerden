@@ -24,7 +24,7 @@ describe("FailScrapeJobUseCase", () => {
       recordScrapeFailure: vi.fn(async () => retry),
     });
     const now = new Date("2026-06-30T10:00:00.000Z");
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await expect(
       new FailScrapeJobUseCase(unitOfWork).execute(
@@ -41,13 +41,13 @@ describe("FailScrapeJobUseCase", () => {
       backoffMs: 60_000,
       now,
     });
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 
   it("rejects a failure report from another desktop claimant", async () => {
     const job = createTestJobApplication({ scrapeClaimedBy: "desktop-a" });
     const repository = createJobApplicationRepository({ findById: vi.fn(async () => job) });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await expect(
       new FailScrapeJobUseCase(unitOfWork).execute(job.id, "user-1", {
@@ -55,6 +55,6 @@ describe("FailScrapeJobUseCase", () => {
         reason: "Failed",
       }),
     ).rejects.toMatchObject({ code: "conflict" });
-    expect(addOutboxEvent).not.toHaveBeenCalled();
+    expect(recordChanged).not.toHaveBeenCalled();
   });
 });

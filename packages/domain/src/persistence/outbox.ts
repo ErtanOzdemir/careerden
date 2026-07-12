@@ -1,5 +1,4 @@
 export const outboxEventTypes = {
-  jobApplicationChange: "job-application.change",
   jobApplicationAnalysisRequested: "job-application.analysis-requested",
   storageDelete: "storage.delete",
   followUpReminderSchedule: "follow-up-reminder.schedule",

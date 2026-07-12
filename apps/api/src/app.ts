@@ -96,7 +96,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const jobApplications = new PostgresJobApplicationRepository(db);
   const notifications = new PostgresNotificationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
-  const unitOfWork = new PostgresPersistenceUnitOfWork(db);
+  const unitOfWork = new PostgresPersistenceUnitOfWork(db, changeBus);
   const storage = new RustFsStorage({
     accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
     bucket: env.RUSTFS_BUCKET,

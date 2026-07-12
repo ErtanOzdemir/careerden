@@ -4,7 +4,6 @@ import type {
   UpdateJobApplicationTrackingInput,
 } from "@link2cv/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class UpdateJobApplicationTrackingUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -14,7 +13,7 @@ export class UpdateJobApplicationTrackingUseCase {
     userId: string,
     input: UpdateJobApplicationTrackingInput,
   ): Promise<JobApplication> {
-    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+    return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
       const existing = await getAccessibleJobApplication(
         jobApplications,
         profiles,
@@ -33,7 +32,7 @@ export class UpdateJobApplicationTrackingUseCase {
         });
       }
 
-      await enqueueJobApplicationChange(outbox, updated.id, updated.profileId);
+      await jobApplicationChanges.changed(updated.id, updated.profileId);
       return updated;
     });
   }

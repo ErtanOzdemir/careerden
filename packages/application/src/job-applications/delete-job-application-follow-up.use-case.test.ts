@@ -22,7 +22,10 @@ describe("DeleteJobApplicationFollowUpUseCase", () => {
       findFollowUpById: vi.fn(async () => followUp),
       deleteFollowUp: vi.fn(),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(
+      repository,
+      createProfiles(),
+    );
 
     await new DeleteJobApplicationFollowUpUseCase(unitOfWork).execute(
       job.id,
@@ -34,8 +37,6 @@ describe("DeleteJobApplicationFollowUpUseCase", () => {
     expect(addOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "follow-up-reminder.cancel" }),
     );
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

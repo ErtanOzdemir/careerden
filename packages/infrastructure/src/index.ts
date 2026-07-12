@@ -14,7 +14,6 @@ export * from "./persistence/notifications/postgres-notification.repository.js";
 export * from "./persistence/knex.js";
 export * from "./persistence/postgres-knex.js";
 export * from "./persistence/postgres-outbox.repository.js";
-export * from "./persistence/postgres-outbox.dispatcher.js";
 export * from "./persistence/postgres-analysis-outbox.dispatcher.js";
 export * from "./persistence/postgres-storage-outbox.dispatcher.js";
 export * from "./persistence/postgres-reminder-outbox.dispatcher.js";

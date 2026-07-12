@@ -17,11 +17,11 @@ describe("DeleteJobApplicationContactUseCase", () => {
       findContactById: vi.fn(async () => contact),
       deleteContact: vi.fn(),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await new DeleteJobApplicationContactUseCase(unitOfWork).execute(job.id, contact.id, "user-1");
 
     expect(repository.deleteContact).toHaveBeenCalledWith(contact.id);
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

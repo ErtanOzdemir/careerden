@@ -10,7 +10,7 @@ export interface JobApplicationChange {
 
 interface JobApplicationChangeHandlers {
   onChange: (change: JobApplicationChange) => void | Promise<void>;
-  onOpen?: () => void | Promise<void>;
+  onReconnect?: () => void | Promise<void>;
 }
 
 export function useJobApplicationChanges(
@@ -32,6 +32,7 @@ export function useJobApplicationChanges(
       { withCredentials: true },
     );
     const pending = new Map<string, number>();
+    let hasOpened = false;
 
     const handleEvent = (event: Event) => {
       const change = parseChange(event);
@@ -58,7 +59,10 @@ export function useJobApplicationChanges(
     source.addEventListener("application.changed", handleEvent);
     source.addEventListener("application.deleted", handleEvent);
     source.onopen = () => {
-      void handlersRef.current.onOpen?.();
+      if (hasOpened) {
+        void handlersRef.current.onReconnect?.();
+      }
+      hasOpened = true;
     };
 
     return () => {

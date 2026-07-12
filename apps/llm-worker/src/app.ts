@@ -7,7 +7,6 @@ import {
   BullMqJobApplicationQueue,
   PostgresAnalysisOutboxDispatcher,
   PostgresJobApplicationRepository,
-  PostgresJobApplicationChangeOutboxDispatcher,
   PostgresOutboxRepository,
   PostgresPersistenceUnitOfWork,
   PostgresUserProfileRepository,
@@ -30,11 +29,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const jobApplications = new PostgresJobApplicationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
-  const unitOfWork = new PostgresPersistenceUnitOfWork(db);
-  const outboxDispatcher = new PostgresJobApplicationChangeOutboxDispatcher(
-    new PostgresOutboxRepository(db),
-    changeBus,
-  );
+  const unitOfWork = new PostgresPersistenceUnitOfWork(db, changeBus);
   const analysisQueue = BullMqJobApplicationQueue.create(env.REDIS_URL);
   const analysisOutboxDispatcher = new PostgresAnalysisOutboxDispatcher(
     new PostgresOutboxRepository(db),
@@ -45,10 +40,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     if (isDispatchingOutbox) return;
     isDispatchingOutbox = true;
     try {
-      await Promise.all([
-        outboxDispatcher.dispatchPending(),
-        analysisOutboxDispatcher.dispatchPending(),
-      ]);
+      await analysisOutboxDispatcher.dispatchPending();
     } finally {
       isDispatchingOutbox = false;
     }
@@ -56,7 +48,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
   await dispatchOutbox();
   const outboxInterval = setInterval(() => {
     void dispatchOutbox().catch((error) => {
-      console.error("LLM worker failed job application change outbox dispatch", error);
+      console.error("LLM worker failed analysis outbox dispatch", error);
     });
   }, 1_000);
   const aiProviderFactory = new AiProviderFactory({

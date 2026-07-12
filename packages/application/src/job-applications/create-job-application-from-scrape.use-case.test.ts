@@ -14,7 +14,7 @@ describe("CreateJobApplicationFromScrapeUseCase", () => {
     const currentProfile = {
       execute: vi.fn(async () => ({ id: "profile-1", autoRunMatchAnalysis: true }) as never),
     };
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository);
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(repository);
 
     await new CreateJobApplicationFromScrapeUseCase(currentProfile, unitOfWork).execute(
       { id: "user-1", name: "Ada", email: "ada@example.com" },
@@ -26,8 +26,6 @@ describe("CreateJobApplicationFromScrapeUseCase", () => {
     expect(addOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "job-application.analysis-requested" }),
     );
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

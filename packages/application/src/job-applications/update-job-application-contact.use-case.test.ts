@@ -17,14 +17,14 @@ describe("UpdateJobApplicationContactUseCase", () => {
       findContactById: vi.fn(async () => contact),
       updateContact: vi.fn(async () => ({ ...contact, role: "Hiring Manager" })),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await new UpdateJobApplicationContactUseCase(unitOfWork).execute(job.id, contact.id, "user-1", {
       role: "Hiring Manager",
     });
 
     expect(repository.updateContact).toHaveBeenCalledWith(contact.id, { role: "Hiring Manager" });
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });
 

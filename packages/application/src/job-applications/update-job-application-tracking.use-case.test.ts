@@ -17,7 +17,7 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
       findById: vi.fn(async () => job),
       updateTracking: vi.fn(async () => updated),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
     await new UpdateJobApplicationTrackingUseCase(unitOfWork).execute(job.id, "user-1", {
       applicationStatus: "interview",
@@ -29,6 +29,6 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
       title: "Status changed to interview",
       metadata: { from: "applied", to: "interview" },
     });
-    expect(addOutboxEvent).toHaveBeenCalledOnce();
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

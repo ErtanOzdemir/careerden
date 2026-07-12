@@ -115,7 +115,7 @@ export default function AppDetail() {
         /* ignore */
       }
     },
-    onOpen: () => refresh(),
+    onReconnect: () => refresh(),
   });
 
   async function refresh() {

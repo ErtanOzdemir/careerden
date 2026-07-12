@@ -97,6 +97,7 @@ function createUnitOfWork(profiles: ReturnType<typeof createProfileRepository>):
       execute: async (work) =>
         work({
           jobApplications: {} as never,
+          jobApplicationChanges: {} as never,
           profiles,
           notifications: {} as never,
           followUpReminders: {} as never,

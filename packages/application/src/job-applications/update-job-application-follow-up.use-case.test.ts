@@ -18,7 +18,10 @@ describe("UpdateJobApplicationFollowUpUseCase", () => {
       findFollowUpById: vi.fn(async () => existing),
       updateFollowUp: vi.fn(async () => updated),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(
+      repository,
+      createProfiles(),
+    );
 
     await new UpdateJobApplicationFollowUpUseCase(unitOfWork).execute(
       job.id,
@@ -36,9 +39,7 @@ describe("UpdateJobApplicationFollowUpUseCase", () => {
     expect(repository.addEvent).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Follow-up rescheduled: Send a note" }),
     );
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });
 

@@ -8,7 +8,6 @@ import type {
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 import type { AuthenticatedProfileUser } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export interface CreateJobApplicationFromScrapeInput {
   sourceUrl: string;
@@ -31,7 +30,7 @@ export class CreateJobApplicationFromScrapeUseCase {
     input: CreateJobApplicationFromScrapeInput,
   ): Promise<JobApplication> {
     const profile = await this.getCurrentProfile.execute(user);
-    return this.unitOfWork.execute(async ({ jobApplications, outbox }) => {
+    return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, outbox }) => {
       const scrape = input.scrapeBundle;
       const jobApplication = await jobApplications.create({
         profileId: profile.id,
@@ -61,7 +60,7 @@ export class CreateJobApplicationFromScrapeUseCase {
         jobApplicationId: jobApplication.id,
         autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
       });
-      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       return jobApplication;
     });
   }

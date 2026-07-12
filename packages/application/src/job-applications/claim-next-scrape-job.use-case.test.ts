@@ -13,7 +13,7 @@ describe("ClaimNextScrapeJobUseCase", () => {
       claimNextScrapeJob: vi.fn(async () => job),
     });
     const currentProfile = { execute: vi.fn(async () => ({ id: "profile-1" }) as never) };
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository);
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository);
 
     await expect(
       new ClaimNextScrapeJobUseCase(currentProfile, unitOfWork).execute(
@@ -31,8 +31,6 @@ describe("ClaimNextScrapeJobUseCase", () => {
       type: "processing",
       title: "Scraping started",
     });
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

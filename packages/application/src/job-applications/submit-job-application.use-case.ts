@@ -5,13 +5,12 @@ import type {
   ScrapeBundle,
 } from "@link2cv/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class SubmitJobApplicationUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(input: CreateJobApplicationInput, userId: string): Promise<JobApplication> {
-    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+    return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
       await getAccessibleProfile(profiles, input.profileId, userId);
 
       const jobApplication = await jobApplications.create(input);
@@ -27,7 +26,7 @@ export class SubmitJobApplicationUseCase {
         });
       }
 
-      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
 
       return {
         ...jobApplication,

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type {
-  AddOutboxEventInput,
-  OutboxEvent,
+  JobApplicationChange,
   PersistenceUnitOfWork,
   UserProfileAccountRepository,
 } from "@link2cv/domain";
@@ -21,10 +20,10 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    const outbox: AddOutboxEventInput[] = [];
+    const changes: JobApplicationChange[] = [];
 
     const jobApplication = await new SubmitJobApplicationUseCase(
-      createUnitOfWork(jobApplications, withAccountOwnership(profiles), outbox),
+      createUnitOfWork(jobApplications, withAccountOwnership(profiles), changes),
     ).execute(
       {
         profileId: profile.id,
@@ -36,16 +35,12 @@ describe("SubmitJobApplicationUseCase", () => {
     expect(jobApplication.status).toBe("queued");
     expect(jobApplication.sourceUrl).toBe("https://www.linkedin.com/jobs/view/123");
     expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
-    expect(outbox).toHaveLength(1);
-    expect(outbox[0]).toEqual(
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toEqual(
       expect.objectContaining({
-        type: "job-application.change",
-        aggregateId: jobApplication.id,
-        payload: expect.objectContaining({
-          type: "application.changed",
-          applicationId: jobApplication.id,
-          profileId: profile.id,
-        }),
+        type: "application.changed",
+        applicationId: jobApplication.id,
+        profileId: profile.id,
       }),
     );
   });
@@ -59,10 +54,10 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    const outbox: AddOutboxEventInput[] = [];
+    const changes: JobApplicationChange[] = [];
 
     const jobApplication = await new SubmitJobApplicationUseCase(
-      createUnitOfWork(jobApplications, withAccountOwnership(profiles), outbox),
+      createUnitOfWork(jobApplications, withAccountOwnership(profiles), changes),
     ).execute(
       {
         profileId: profile.id,
@@ -91,14 +86,12 @@ describe("SubmitJobApplicationUseCase", () => {
         source: "user-created-job-application",
       },
     });
-    expect(outbox).toHaveLength(1);
-    expect(outbox[0]).toEqual(
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toEqual(
       expect.objectContaining({
-        type: "job-application.change",
-        payload: expect.objectContaining({
-          applicationId: jobApplication.id,
-          profileId: profile.id,
-        }),
+        type: "application.changed",
+        applicationId: jobApplication.id,
+        profileId: profile.id,
       }),
     );
   });
@@ -112,7 +105,7 @@ describe("SubmitJobApplicationUseCase", () => {
       skills: [],
       experience: [],
     });
-    const outbox: AddOutboxEventInput[] = [];
+    const changes: JobApplicationChange[] = [];
 
     await expect(
       new SubmitJobApplicationUseCase(
@@ -123,12 +116,12 @@ describe("SubmitJobApplicationUseCase", () => {
             createForUserId: vi.fn(),
             findUserIdByProfileId: vi.fn(async () => "another-user"),
           }),
-          outbox,
+          changes,
         ),
       ).execute({ profileId: profile.id }, "user-1"),
     ).rejects.toThrow("Profile not found");
 
-    expect(outbox).toHaveLength(0);
+    expect(changes).toHaveLength(0);
   });
 });
 
@@ -145,21 +138,27 @@ function withAccountOwnership(
 function createUnitOfWork(
   jobApplications: InMemoryJobApplicationRepository,
   profiles: UserProfileAccountRepository,
-  events: AddOutboxEventInput[],
+  changes: JobApplicationChange[],
 ): PersistenceUnitOfWork {
   return {
     execute: async (work) =>
       work({
         jobApplications,
+        jobApplicationChanges: {
+          changed: async (applicationId, profileId) => {
+            changes.push({
+              type: "application.changed",
+              applicationId,
+              profileId,
+              occurredAt: new Date().toISOString(),
+            });
+          },
+          deleted: vi.fn(),
+        },
         profiles,
         notifications: {} as never,
         followUpReminders: {} as never,
-        outbox: {
-          add: vi.fn(async (input): Promise<OutboxEvent> => {
-            events.push(input);
-            return { ...input, id: `outbox-${events.length}`, attemptCount: 0 };
-          }),
-        },
+        outbox: {} as never,
       }),
   };
 }

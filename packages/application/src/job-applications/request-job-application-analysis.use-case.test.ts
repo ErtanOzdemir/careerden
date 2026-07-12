@@ -14,7 +14,10 @@ describe("RequestJobApplicationAnalysisUseCase", () => {
       findById: vi.fn(async () => job),
       getScrapeBundle: vi.fn(async () => ({ job: {} }) as never),
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(
+      repository,
+      createProfiles(),
+    );
 
     await new RequestJobApplicationAnalysisUseCase(unitOfWork).execute(job.id, "user-1");
 
@@ -26,8 +29,6 @@ describe("RequestJobApplicationAnalysisUseCase", () => {
       type: "processing",
       title: "AI analysis requested",
     });
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "job-application.change" }),
-    );
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 });

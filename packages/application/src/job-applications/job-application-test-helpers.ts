@@ -2,14 +2,12 @@ import { vi } from "vitest";
 import type {
   FileStorage,
   JobApplication,
-  JobApplicationChangePublisher,
   JobApplicationQueue,
   JobApplicationRepository,
   PersistenceUnitOfWork,
   ScrapeBundle,
   UserProfileAccessRepository,
 } from "@link2cv/domain";
-import { JobApplicationChangeNotifier } from "./job-application-change.notifier.js";
 
 export function createTestJobApplication(overrides: Partial<JobApplication> = {}): JobApplication {
   const now = new Date("2026-06-14T00:00:00.000Z");
@@ -88,18 +86,28 @@ export function createQueue(): JobApplicationQueue {
 export function createUnitOfWork(
   jobApplications: JobApplicationRepository,
   profiles: UserProfileAccessRepository = createProfiles(),
-): { unitOfWork: PersistenceUnitOfWork; addOutboxEvent: ReturnType<typeof vi.fn> } {
+): {
+  unitOfWork: PersistenceUnitOfWork;
+  addOutboxEvent: ReturnType<typeof vi.fn>;
+  recordChanged: ReturnType<typeof vi.fn>;
+  recordDeleted: ReturnType<typeof vi.fn>;
+} {
   const addOutboxEvent = vi.fn(async (input) => ({
     ...input,
     id: `outbox-${addOutboxEvent.mock.calls.length}`,
     attemptCount: 0,
   }));
+  const recordChanged = vi.fn();
+  const recordDeleted = vi.fn();
   return {
     addOutboxEvent,
+    recordChanged,
+    recordDeleted,
     unitOfWork: {
       execute: async (work) =>
         work({
           jobApplications,
+          jobApplicationChanges: { changed: recordChanged, deleted: recordDeleted },
           profiles: profiles as never,
           notifications: {} as never,
           followUpReminders: {} as never,
@@ -107,14 +115,6 @@ export function createUnitOfWork(
         }),
     },
   };
-}
-
-export function createJobApplicationChanges(): {
-  changes: JobApplicationChangeNotifier;
-  publish: ReturnType<typeof vi.fn<JobApplicationChangePublisher["publish"]>>;
-} {
-  const publish = vi.fn<JobApplicationChangePublisher["publish"]>();
-  return { changes: new JobApplicationChangeNotifier({ publish }), publish };
 }
 
 export function createScrapeBundle(): ScrapeBundle {

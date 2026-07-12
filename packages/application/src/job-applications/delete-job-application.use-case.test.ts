@@ -20,7 +20,10 @@ describe("DeleteJobApplicationUseCase", () => {
       fileName: "cv.pdf",
       contentType: "application/pdf",
     });
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, addOutboxEvent, recordDeleted } = createUnitOfWork(
+      repository,
+      createProfiles(),
+    );
     const useCase = new DeleteJobApplicationUseCase(unitOfWork);
 
     await expect(useCase.execute(job.id, "user-1")).resolves.toBeUndefined();
@@ -29,24 +32,19 @@ describe("DeleteJobApplicationUseCase", () => {
     expect(addOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "storage.delete", payload: { fileId: "files/cv.pdf" } }),
     );
-    expect(addOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "job-application.change",
-        payload: expect.objectContaining({ type: "application.deleted", applicationId: job.id }),
-      }),
-    );
+    expect(recordDeleted).toHaveBeenCalledWith(job.id, job.profileId);
   });
 
   it("reports a missing application", async () => {
     const repository = new InMemoryJobApplicationRepository();
-    const { unitOfWork, addOutboxEvent } = createUnitOfWork(repository, createProfiles());
+    const { unitOfWork, recordDeleted } = createUnitOfWork(repository, createProfiles());
     const useCase = new DeleteJobApplicationUseCase(unitOfWork);
 
     await expect(useCase.execute("missing-job", "user-1")).rejects.toMatchObject({
       code: "not_found",
     });
 
-    expect(addOutboxEvent).not.toHaveBeenCalled();
+    expect(recordDeleted).not.toHaveBeenCalled();
   });
 });
 

@@ -2,7 +2,6 @@ import type { JobApplication, JobApplicationStatus, PersistenceUnitOfWork } from
 import { canTransitionJobApplicationStatus } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class UpdateJobApplicationStatusUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -12,7 +11,7 @@ export class UpdateJobApplicationStatusUseCase {
     userId: string,
     status: JobApplicationStatus,
   ): Promise<JobApplication> {
-    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+    return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
       const jobApplication = await getAccessibleJobApplication(
         jobApplications,
         profiles,
@@ -33,7 +32,7 @@ export class UpdateJobApplicationStatusUseCase {
 
       const updated = await jobApplications.findById(jobApplicationId);
       if (!updated) throw new ApplicationError("not_found", "Job application not found");
-      await enqueueJobApplicationChange(outbox, updated.id, updated.profileId);
+      await jobApplicationChanges.changed(updated.id, updated.profileId);
       return updated;
     });
   }

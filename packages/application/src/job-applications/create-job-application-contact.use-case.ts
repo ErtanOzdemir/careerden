@@ -4,7 +4,6 @@ import type {
   PersistenceUnitOfWork,
 } from "@link2cv/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
-import { enqueueJobApplicationChange } from "./enqueue-job-application-change.js";
 
 export class CreateJobApplicationContactUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -13,7 +12,7 @@ export class CreateJobApplicationContactUseCase {
     userId: string,
     input: Omit<CreateJobApplicationContactInput, "jobApplicationId">,
   ): Promise<JobApplicationContact> {
-    return this.unitOfWork.execute(async ({ jobApplications, outbox, profiles }) => {
+    return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
       const jobApplication = await getAccessibleJobApplication(
         jobApplications,
         profiles,
@@ -21,7 +20,7 @@ export class CreateJobApplicationContactUseCase {
         userId,
       );
       const contact = await jobApplications.createContact({ jobApplicationId, ...input });
-      await enqueueJobApplicationChange(outbox, jobApplication.id, jobApplication.profileId);
+      await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       return contact;
     });
   }

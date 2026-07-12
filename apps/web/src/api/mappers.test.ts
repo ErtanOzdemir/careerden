@@ -35,6 +35,10 @@ describe("API mappers", () => {
     expect(mapped.domain).toBe("linkedin.com");
     expect(mapped.status).toBe("Interviewing");
     expect(mapped.priority).toBe("High");
+    expect(mapped.salaryMinAmount).toBe(90_000);
+    expect(mapped.salaryMaxAmount).toBe(120_000);
+    expect(mapped.salaryCurrency).toBe("EUR");
+    expect(mapped.salaryPeriod).toBe("yearly");
     expect(mapped.contacts).toEqual([
       {
         email: "sarah.hughes@example.com",
@@ -280,6 +284,10 @@ function createApplicationDetail(): ApiJobApplicationDetail {
       metadata: {},
       priority: "high",
       roleTitle: "Frontend Engineer",
+      salaryMinAmount: 90_000,
+      salaryMaxAmount: 120_000,
+      salaryCurrency: "EUR",
+      salaryPeriod: "yearly",
       tags: ["Remote"],
     },
     followUps: [

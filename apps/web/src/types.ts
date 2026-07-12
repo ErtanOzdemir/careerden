@@ -105,6 +105,10 @@ export interface JobApplication {
   processingFailureReason?: string;
   processingLog?: ProcessingLogItem[];
   sourceUrl?: string;
+  salaryCurrency?: string;
+  salaryMaxAmount?: number;
+  salaryMinAmount?: number;
+  salaryPeriod?: "hourly" | "monthly" | "yearly";
   metadata?: Record<string, unknown>;
   contacts?: Contact[];
   followUps?: FollowUp[];

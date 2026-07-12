@@ -99,18 +99,74 @@ export const createJobApplicationFromScrapeSchema = z.object({
   metadata: metadataSchema,
 });
 
-export const updateJobApplicationSchema = z.object({
-  companyName: z.string().min(1).optional(),
-  roleTitle: z.string().min(1).optional(),
-  roleType: z.string().min(1).optional(),
-  jobUrl: z.string().url().optional(),
-  dateApplied: z.string().min(1).optional(),
-  applicationStatus: applicationStatusSchema.optional(),
-  priority: applicationPrioritySchema.optional(),
-  tags: z.array(z.string().min(1)).optional(),
-  lastResponseAt: z.coerce.date().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
+export const salaryCurrencyCodes = Intl.supportedValuesOf("currency");
+
+const salaryCurrencySchema = z
+  .string()
+  .refine((value) => salaryCurrencyCodes.includes(value), "Unsupported ISO 4217 currency code");
+const salaryAmountSchema = z.number().finite().nonnegative();
+const salaryPeriodSchema = z.enum(["hourly", "monthly", "yearly"]);
+
+export const updateJobApplicationSchema = z
+  .object({
+    companyName: z.string().min(1).optional(),
+    roleTitle: z.string().min(1).optional(),
+    roleType: z.string().min(1).optional(),
+    jobUrl: z.string().url().optional(),
+    dateApplied: z.string().min(1).optional(),
+    applicationStatus: applicationStatusSchema.optional(),
+    priority: applicationPrioritySchema.optional(),
+    tags: z.array(z.string().min(1)).optional(),
+    lastResponseAt: z.coerce.date().nullable().optional(),
+    salaryMinAmount: salaryAmountSchema.nullable().optional(),
+    salaryMaxAmount: salaryAmountSchema.nullable().optional(),
+    salaryCurrency: salaryCurrencySchema.nullable().optional(),
+    salaryPeriod: salaryPeriodSchema.nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .superRefine((value, context) => {
+    const salaryKeys = [
+      "salaryMinAmount",
+      "salaryMaxAmount",
+      "salaryCurrency",
+      "salaryPeriod",
+    ] as const;
+    if (!salaryKeys.some((key) => key in value)) return;
+
+    const hasMinimum = value.salaryMinAmount != null;
+    const hasMaximum = value.salaryMaxAmount != null;
+    const isClear = salaryKeys.every((key) => value[key] === null);
+    if (isClear) return;
+
+    if (!hasMinimum && !hasMaximum) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["salaryMinAmount"],
+        message: "At least one salary amount is required",
+      });
+    }
+    if (!value.salaryCurrency) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["salaryCurrency"],
+        message: "Currency is required when salary is set",
+      });
+    }
+    if (!value.salaryPeriod) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["salaryPeriod"],
+        message: "Pay period is required when salary is set",
+      });
+    }
+    if (hasMinimum && hasMaximum && value.salaryMinAmount! > value.salaryMaxAmount!) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["salaryMaxAmount"],
+        message: "Maximum salary must be greater than or equal to minimum salary",
+      });
+    }
+  });
 
 export const createJobApplicationFollowUpSchema = z.object({
   title: z.string().min(1),

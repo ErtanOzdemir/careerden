@@ -50,6 +50,10 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
           priority: input.priority ?? "medium",
           tags: JSON.stringify(input.tags ?? []),
           last_response_at: input.lastResponseAt ?? null,
+          salary_min_amount: input.salaryMinAmount ?? null,
+          salary_max_amount: input.salaryMaxAmount ?? null,
+          salary_currency: input.salaryCurrency ?? null,
+          salary_period: input.salaryPeriod ?? null,
           metadata: JSON.stringify(input.metadata ?? {}),
           scrape_attempt_count: 0,
         })
@@ -389,6 +393,10 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     if ("priority" in input) update.priority = input.priority;
     if ("tags" in input) update.tags = JSON.stringify(input.tags ?? []);
     if ("lastResponseAt" in input) update.last_response_at = input.lastResponseAt ?? null;
+    if ("salaryMinAmount" in input) update.salary_min_amount = input.salaryMinAmount ?? null;
+    if ("salaryMaxAmount" in input) update.salary_max_amount = input.salaryMaxAmount ?? null;
+    if ("salaryCurrency" in input) update.salary_currency = input.salaryCurrency ?? null;
+    if ("salaryPeriod" in input) update.salary_period = input.salaryPeriod ?? null;
     if ("metadata" in input) update.metadata = JSON.stringify(input.metadata ?? {});
 
     const [row] = await this.db("job_applications").where({ id }).update(update).returning("*");

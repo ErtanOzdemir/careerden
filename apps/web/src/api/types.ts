@@ -19,6 +19,10 @@ export interface ApiJobApplicationTracking {
   priority: ApiApplicationPriority;
   roleTitle?: string;
   roleType?: string;
+  salaryCurrency?: string;
+  salaryMaxAmount?: number;
+  salaryMinAmount?: number;
+  salaryPeriod?: "hourly" | "monthly" | "yearly";
   tags: string[];
 }
 

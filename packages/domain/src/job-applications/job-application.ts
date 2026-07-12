@@ -10,6 +10,7 @@ export type ApplicationStatus =
   | "ghosted";
 
 export type ApplicationPriority = "low" | "medium" | "high";
+export type SalaryPeriod = "hourly" | "monthly" | "yearly";
 
 export interface JobApplicationTrackingFields {
   companyName?: string;
@@ -21,6 +22,10 @@ export interface JobApplicationTrackingFields {
   priority: ApplicationPriority;
   tags: string[];
   lastResponseAt?: Date;
+  salaryMinAmount?: number;
+  salaryMaxAmount?: number;
+  salaryCurrency?: string;
+  salaryPeriod?: SalaryPeriod;
   metadata: Record<string, unknown>;
 }
 
@@ -50,6 +55,10 @@ export interface CreateJobApplicationInput extends Partial<
     | "priority"
     | "tags"
     | "lastResponseAt"
+    | "salaryMinAmount"
+    | "salaryMaxAmount"
+    | "salaryCurrency"
+    | "salaryPeriod"
     | "metadata"
   >
 > {
@@ -68,6 +77,10 @@ export interface UpdateJobApplicationTrackingInput {
   priority?: ApplicationPriority;
   tags?: string[];
   lastResponseAt?: Date | null;
+  salaryMinAmount?: number | null;
+  salaryMaxAmount?: number | null;
+  salaryCurrency?: string | null;
+  salaryPeriod?: SalaryPeriod | null;
   metadata?: Record<string, unknown>;
 }
 

@@ -40,9 +40,19 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
         "medium") as JobApplication["tracking"]["priority"],
       tags: stringArray(row.tags),
       lastResponseAt: nullableDate(row.last_response_at),
+      salaryMinAmount: nullableNumber(row.salary_min_amount),
+      salaryMaxAmount: nullableNumber(row.salary_max_amount),
+      salaryCurrency: nullableString(row.salary_currency),
+      salaryPeriod: nullableString(row.salary_period) as JobApplication["tracking"]["salaryPeriod"],
       metadata: record(row.metadata),
     },
   };
+}
+
+function nullableNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 export function toGeneratedDocument(row: Record<string, unknown>): GeneratedDocument {

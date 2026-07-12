@@ -16,6 +16,7 @@ import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import AiMatchCard from "../components/AiMatchCard.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
+import { UnifiedSelect, type UnifiedSelectOption } from "../components/link2cv/unified-select.js";
 import type { ApiDocumentContent } from "../api/types.js";
 import {
   ArrowLeft,
@@ -58,6 +59,7 @@ export default function AppDetail() {
   const [isSavingFollowUp, setIsSavingFollowUp] = useState(false);
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isSavingSalary, setIsSavingSalary] = useState(false);
   const [followUpForm, setFollowUpForm] = useState({
     id: "",
     title: "",
@@ -242,6 +244,26 @@ export default function AppDetail() {
       setError(e instanceof Error ? e.message : "Failed to save notes.");
     } finally {
       setIsSavingNotes(false);
+    }
+  }
+
+  async function handleSaveSalary(input: {
+    salaryCurrency: string | null;
+    salaryMaxAmount: number | null;
+    salaryMinAmount: number | null;
+    salaryPeriod: "hourly" | "monthly" | "yearly" | null;
+  }) {
+    if (!id) return;
+    try {
+      setIsSavingSalary(true);
+      setError(null);
+      await jobApplicationsApi.update(id, input);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save salary information.");
+      throw e;
+    } finally {
+      setIsSavingSalary(false);
     }
   }
 
@@ -470,7 +492,9 @@ export default function AppDetail() {
         ))}
       </div>
 
-      {tab === "overview" && <OverviewTab app={app} />}
+      {tab === "overview" && (
+        <OverviewTab app={app} isSavingSalary={isSavingSalary} onSaveSalary={handleSaveSalary} />
+      )}
       {tab === "analysis" &&
         (app.aiMatch && app.documentContent ? (
           <AiMatchCard
@@ -533,7 +557,20 @@ export default function AppDetail() {
 
 // --- Sub-components ---
 
-function OverviewTab({ app }: { app: JobApplication }) {
+function OverviewTab({
+  app,
+  isSavingSalary,
+  onSaveSalary,
+}: {
+  app: JobApplication;
+  isSavingSalary: boolean;
+  onSaveSalary: (input: {
+    salaryCurrency: string | null;
+    salaryMaxAmount: number | null;
+    salaryMinAmount: number | null;
+    salaryPeriod: "hourly" | "monthly" | "yearly" | null;
+  }) => Promise<void>;
+}) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <Panel className="lg:col-span-2">
@@ -562,23 +599,245 @@ function OverviewTab({ app }: { app: JobApplication }) {
           )}
         </div>
       </Panel>
-      <Panel className="self-start">
-        <PanelHeader title="At a glance" />
-        <dl className="divide-y divide-border border-t border-border text-sm">
-          {[
-            ["Source", app.domain],
-            ["Added", app.dateApplied],
-            ["Status", app.status],
-            ["Match", app.matchScore ? `${app.matchScore}%` : "Pending"],
-          ].map(([k, v]) => (
-            <div key={k} className="flex justify-between px-5 py-2.5">
-              <dt className="text-muted-foreground">{k}</dt>
-              <dd className="font-medium text-foreground">{v}</dd>
-            </div>
-          ))}
-        </dl>
-      </Panel>
+      <div className="self-start space-y-6">
+        <Panel>
+          <PanelHeader title="At a glance" />
+          <dl className="divide-y divide-border border-t border-border text-sm">
+            {[
+              ["Source", app.domain],
+              ["Added", app.dateApplied],
+              ["Status", app.status],
+              ["Match", app.matchScore ? `${app.matchScore}%` : "Pending"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between px-5 py-2.5">
+                <dt className="text-muted-foreground">{k}</dt>
+                <dd className="font-medium text-foreground">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+        <SalaryDetailsPanel app={app} isSaving={isSavingSalary} onSave={onSaveSalary} />
+      </div>
     </div>
+  );
+}
+
+const currencyCodes = Intl.supportedValuesOf("currency");
+const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" });
+const currencyOptions: UnifiedSelectOption[] = currencyCodes.map((code) => ({
+  value: code,
+  label: `${code} · ${currencyNames.of(code) ?? code}`,
+  leading: currencyFlag(code),
+  searchText: currencyNames.of(code),
+}));
+const salaryPeriodOptions: UnifiedSelectOption[] = [
+  { value: "hourly", label: "Hourly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly", label: "Yearly" },
+];
+
+function SalaryDetailsPanel({
+  app,
+  isSaving,
+  onSave,
+}: {
+  app: JobApplication;
+  isSaving: boolean;
+  onSave: Parameters<typeof OverviewTab>[0]["onSaveSalary"];
+}) {
+  const [minimum, setMinimum] = useState("");
+  const [maximum, setMaximum] = useState("");
+  const [currency, setCurrency] = useState("");
+  const [period, setPeriod] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMinimum(app.salaryMinAmount?.toString() ?? "");
+    setMaximum(app.salaryMaxAmount?.toString() ?? "");
+    setCurrency(app.salaryCurrency ?? "");
+    setPeriod(app.salaryPeriod ?? "");
+    setIsEditing(false);
+  }, [app.id, app.salaryCurrency, app.salaryMaxAmount, app.salaryMinAmount, app.salaryPeriod]);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const hasMinimum = minimum.trim() !== "";
+    const hasMaximum = maximum.trim() !== "";
+    const isClear = !hasMinimum && !hasMaximum && !currency && !period;
+    const parsedMinimum = hasMinimum ? Number(minimum) : null;
+    const parsedMaximum = hasMaximum ? Number(maximum) : null;
+
+    if (!isClear && !hasMinimum && !hasMaximum) {
+      setValidationError("Enter at least one salary amount.");
+      return;
+    }
+    if (!isClear && (!currency || !currencyCodes.includes(currency))) {
+      setValidationError("Choose a valid currency.");
+      return;
+    }
+    if (!isClear && !period) {
+      setValidationError("Choose a pay period.");
+      return;
+    }
+    if (
+      (parsedMinimum !== null && !Number.isFinite(parsedMinimum)) ||
+      (parsedMaximum !== null && !Number.isFinite(parsedMaximum))
+    ) {
+      setValidationError("Enter valid salary amounts.");
+      return;
+    }
+    if (
+      (parsedMinimum !== null && parsedMinimum < 0) ||
+      (parsedMaximum !== null && parsedMaximum < 0)
+    ) {
+      setValidationError("Salary amounts cannot be negative.");
+      return;
+    }
+    if (parsedMinimum !== null && parsedMaximum !== null && parsedMinimum > parsedMaximum) {
+      setValidationError("Maximum salary must be at least the minimum salary.");
+      return;
+    }
+
+    setValidationError(null);
+    try {
+      await onSave({
+        salaryMinAmount: isClear ? null : parsedMinimum,
+        salaryMaxAmount: isClear ? null : parsedMaximum,
+        salaryCurrency: isClear ? null : currency,
+        salaryPeriod: isClear ? null : (period as "hourly" | "monthly" | "yearly"),
+      });
+      setIsEditing(false);
+    } catch {
+      // The page-level error message is shown while the draft remains editable.
+    }
+  }
+
+  const salaryValue = formatSalary(app);
+
+  return (
+    <Panel>
+      <PanelHeader title="Job details" />
+      {!isEditing ? (
+        <dl className="divide-y divide-border border-t border-border text-sm">
+          <div className="flex items-center justify-between gap-4 px-5 py-2.5">
+            <dt className="text-muted-foreground">Salary</dt>
+            <dd className="flex items-center gap-2 text-right font-medium text-foreground">
+              <span>{salaryValue}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Edit salary"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            </dd>
+          </div>
+        </dl>
+      ) : (
+        <form
+          onSubmit={(event) => void handleSubmit(event)}
+          className="space-y-4 border-t border-border px-5 py-4"
+        >
+          <div>
+            <p className="mb-3 text-sm font-medium text-foreground">Salary</p>
+            <div className="grid grid-cols-2 gap-3">
+              <SalaryInput label="Minimum" value={minimum} onChange={setMinimum} />
+              <SalaryInput label="Maximum" value={maximum} onChange={setMaximum} />
+            </div>
+          </div>
+          <UnifiedSelect
+            label="Currency"
+            options={currencyOptions}
+            placeholder="Select currency"
+            value={currency}
+            onChange={setCurrency}
+          />
+          <UnifiedSelect
+            label="Pay period"
+            options={salaryPeriodOptions}
+            placeholder="Select period"
+            value={period}
+            onChange={setPeriod}
+          />
+          {validationError && <p className="text-xs text-destructive">{validationError}</p>}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSaving}
+              className="flex-1"
+              onClick={() => {
+                setMinimum(app.salaryMinAmount?.toString() ?? "");
+                setMaximum(app.salaryMaxAmount?.toString() ?? "");
+                setCurrency(app.salaryCurrency ?? "");
+                setPeriod(app.salaryPeriod ?? "");
+                setValidationError(null);
+                setIsEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={isSaving} className="flex-1">
+              {isSaving && <Loader2 className="size-4 animate-spin" />}
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Panel>
+  );
+}
+
+function formatSalary(app: JobApplication): string {
+  if (app.salaryMinAmount === undefined && app.salaryMaxAmount === undefined) return "Not set";
+  const formatter = new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 2,
+  });
+  const amounts = [app.salaryMinAmount, app.salaryMaxAmount]
+    .filter((amount): amount is number => amount !== undefined)
+    .map((amount) => formatter.format(amount))
+    .join(" – ");
+  const currency = app.salaryCurrency ? ` ${app.salaryCurrency}` : "";
+  const period = app.salaryPeriod ? ` / ${app.salaryPeriod.replace("ly", "")}` : "";
+  return `${amounts}${currency}${period}`;
+}
+
+function currencyFlag(currencyCode: string): string {
+  const regionOverrides: Record<string, string> = {
+    EUR: "EU",
+    GBP: "GB",
+    USD: "US",
+  };
+  const region = regionOverrides[currencyCode] ?? currencyCode.slice(0, 2);
+  if (!/^[A-Z]{2}$/.test(region) || currencyCode.startsWith("X")) return "🌐";
+  return String.fromCodePoint(...[...region].map((letter) => letter.charCodeAt(0) + 127397));
+}
+
+function SalaryInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block text-xs font-medium text-muted-foreground">
+      {label}
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="0.00"
+        className="mt-1.5 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary"
+      />
+    </label>
   );
 }
 

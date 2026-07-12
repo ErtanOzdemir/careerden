@@ -3,6 +3,35 @@ import { richDocumentFromText, type ScrapeBundle } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {
+  it("updates and clears salary tracking fields", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({ profileId: "profile-1" });
+
+    const updated = await repository.updateTracking(job.id, {
+      salaryMinAmount: 90_000,
+      salaryMaxAmount: 120_000,
+      salaryCurrency: "EUR",
+      salaryPeriod: "yearly",
+    });
+    expect(updated.tracking).toMatchObject({
+      salaryMinAmount: 90_000,
+      salaryMaxAmount: 120_000,
+      salaryCurrency: "EUR",
+      salaryPeriod: "yearly",
+    });
+
+    const cleared = await repository.updateTracking(job.id, {
+      salaryMinAmount: null,
+      salaryMaxAmount: null,
+      salaryCurrency: null,
+      salaryPeriod: null,
+    });
+    expect(cleared.tracking.salaryMinAmount).toBeUndefined();
+    expect(cleared.tracking.salaryMaxAmount).toBeUndefined();
+    expect(cleared.tracking.salaryCurrency).toBeUndefined();
+    expect(cleared.tracking.salaryPeriod).toBeUndefined();
+  });
+
   it("stores the latest editable document content", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({

@@ -52,6 +52,10 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
         priority: input.priority ?? "medium",
         tags: input.tags ?? [],
         lastResponseAt: input.lastResponseAt,
+        salaryMinAmount: input.salaryMinAmount,
+        salaryMaxAmount: input.salaryMaxAmount,
+        salaryCurrency: input.salaryCurrency,
+        salaryPeriod: input.salaryPeriod,
         metadata: input.metadata ?? {},
       },
       createdAt: now,
@@ -380,6 +384,22 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
           input.lastResponseAt === undefined
             ? existing.tracking.lastResponseAt
             : (input.lastResponseAt ?? undefined),
+        salaryMinAmount:
+          input.salaryMinAmount === undefined
+            ? existing.tracking.salaryMinAmount
+            : (input.salaryMinAmount ?? undefined),
+        salaryMaxAmount:
+          input.salaryMaxAmount === undefined
+            ? existing.tracking.salaryMaxAmount
+            : (input.salaryMaxAmount ?? undefined),
+        salaryCurrency:
+          input.salaryCurrency === undefined
+            ? existing.tracking.salaryCurrency
+            : (input.salaryCurrency ?? undefined),
+        salaryPeriod:
+          input.salaryPeriod === undefined
+            ? existing.tracking.salaryPeriod
+            : (input.salaryPeriod ?? undefined),
       },
       updatedAt: new Date(),
     };

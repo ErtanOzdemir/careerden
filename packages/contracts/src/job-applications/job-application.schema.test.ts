@@ -59,6 +59,43 @@ describe("job application schemas", () => {
     expect(result.applicationStatus).toBe("ghosted");
   });
 
+  it("accepts salary ranges, one-sided salaries, and clearing salary details", () => {
+    expect(
+      updateJobApplicationSchema.parse({
+        salaryMinAmount: 90_000,
+        salaryMaxAmount: 120_000,
+        salaryCurrency: "EUR",
+        salaryPeriod: "yearly",
+      }),
+    ).toMatchObject({ salaryMinAmount: 90_000, salaryMaxAmount: 120_000 });
+    expect(
+      updateJobApplicationSchema.safeParse({
+        salaryMinAmount: null,
+        salaryMaxAmount: 50,
+        salaryCurrency: "USD",
+        salaryPeriod: "hourly",
+      }).success,
+    ).toBe(true);
+    expect(
+      updateJobApplicationSchema.safeParse({
+        salaryMinAmount: null,
+        salaryMaxAmount: null,
+        salaryCurrency: null,
+        salaryPeriod: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    [{ salaryMinAmount: -1, salaryCurrency: "USD", salaryPeriod: "yearly" }],
+    [{ salaryMinAmount: 100, salaryMaxAmount: 90, salaryCurrency: "USD", salaryPeriod: "yearly" }],
+    [{ salaryMinAmount: 100, salaryPeriod: "yearly" }],
+    [{ salaryMinAmount: 100, salaryCurrency: "USD" }],
+    [{ salaryMinAmount: 100, salaryCurrency: "ZZZ", salaryPeriod: "yearly" }],
+  ])("rejects invalid salary details: %o", (input) => {
+    expect(updateJobApplicationSchema.safeParse(input).success).toBe(false);
+  });
+
   it("accepts contact payloads for key contacts", () => {
     const created = createJobApplicationContactSchema.parse({
       name: "Sarah Hughes",

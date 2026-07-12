@@ -149,6 +149,14 @@ export interface ApiJobApplication {
   updatedAt: string;
 }
 
+export interface ApiJobApplicationsPage {
+  items: ApiJobApplication[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
 export interface ApiJobApplicationEvent {
   body?: string;
   createdAt: string;

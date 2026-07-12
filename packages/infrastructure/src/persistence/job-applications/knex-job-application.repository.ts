@@ -199,14 +199,28 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async listByProfileId(
     profileId: string,
     filter: ListJobApplicationsFilter = {},
-  ): Promise<JobApplication[]> {
-    const query = this.db("job_applications")
+  ): Promise<{ items: JobApplication[]; totalItems: number }> {
+    const page = filter.page ?? 1;
+    const pageSize = filter.pageSize;
+    const baseQuery = this.db("job_applications")
       .where({ profile_id: profileId })
-      .modify((builder) => applyFilters(builder, filter))
-      .orderBy(toColumnName(filter.sortBy ?? "updatedAt"), filter.sortDirection ?? "desc");
-    const rows = await query;
+      .modify((builder) => applyFilters(builder, filter));
+    const countQuery = baseQuery
+      .clone()
+      .clearSelect()
+      .clearOrder()
+      .count<{ count: string }>("* as count")
+      .first();
+    const itemsQuery = baseQuery.clone().modify((builder) => applySort(builder, filter));
+    if (pageSize !== undefined) {
+      itemsQuery.limit(pageSize).offset((page - 1) * pageSize);
+    }
+    const [countRow, rows] = await Promise.all([countQuery, itemsQuery]);
 
-    return rows.map(toJobApplication);
+    return {
+      items: rows.map(toJobApplication),
+      totalItems: Number(countRow?.count ?? 0),
+    };
   }
 
   async listByStatus(status: JobApplicationStatus): Promise<JobApplication[]> {
@@ -690,6 +704,7 @@ function nullableString(value: unknown): string | undefined {
 function applyFilters(query: Knex.QueryBuilder, filter: ListJobApplicationsFilter): void {
   if (filter.applicationStatus) query.where("application_status", filter.applicationStatus);
   if (filter.processingStatus) query.where("status", filter.processingStatus);
+  if (filter.processingStatuses) query.whereIn("status", filter.processingStatuses);
   if (filter.priority) query.where("priority", filter.priority);
   if (filter.roleType) query.where("role_type", filter.roleType);
   if (filter.tag)
@@ -708,6 +723,19 @@ function applyFilters(query: Knex.QueryBuilder, filter: ListJobApplicationsFilte
         .orWhereRaw("tags LIKE ?", [`%${filter.search}%`]);
     });
   }
+}
+
+function applySort(query: Knex.QueryBuilder, filter: ListJobApplicationsFilter): void {
+  const sortBy = filter.sortBy ?? "updatedAt";
+  const direction = filter.sortDirection ?? "desc";
+
+  if (sortBy === "matchScore") {
+    query.orderByRaw(`(match_analysis->>'matchScore')::numeric ${direction} nulls last`);
+  } else {
+    query.orderBy(toColumnName(sortBy), direction);
+  }
+
+  query.orderBy("id", direction);
 }
 
 function toColumnName(sortBy: ListJobApplicationsFilter["sortBy"]): string {

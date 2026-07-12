@@ -39,11 +39,13 @@ export type JobApplicationSortField =
   | "companyName"
   | "roleTitle"
   | "applicationStatus"
+  | "matchScore"
   | "updatedAt";
 
 export interface ListJobApplicationsFilter {
   applicationStatus?: ApplicationStatus;
   processingStatus?: JobApplicationStatus;
+  processingStatuses?: JobApplicationStatus[];
   company?: string;
   role?: string;
   roleType?: string;
@@ -52,8 +54,15 @@ export interface ListJobApplicationsFilter {
   dateFrom?: string;
   dateTo?: string;
   search?: string;
+  page?: number;
+  pageSize?: number;
   sortBy?: JobApplicationSortField;
   sortDirection?: "asc" | "desc";
+}
+
+export interface PaginatedJobApplications {
+  items: JobApplication[];
+  totalItems: number;
 }
 
 export interface ClaimNextScrapeJobInput {
@@ -84,7 +93,10 @@ export interface JobApplicationRepository {
   recordScrapeFailure(id: string, input: RecordScrapeFailureInput): Promise<JobApplication | null>;
   deleteById(id: string): Promise<void>;
   findById(id: string): Promise<JobApplication | null>;
-  listByProfileId(profileId: string, filter?: ListJobApplicationsFilter): Promise<JobApplication[]>;
+  listByProfileId(
+    profileId: string,
+    filter?: ListJobApplicationsFilter,
+  ): Promise<PaginatedJobApplications>;
   listByStatus(status: JobApplicationStatus): Promise<JobApplication[]>;
   resetProcessing(id: string): Promise<JobApplication>;
   resetAnalysis(id: string): Promise<JobApplication>;

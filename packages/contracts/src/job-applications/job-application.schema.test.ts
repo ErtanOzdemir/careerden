@@ -4,6 +4,7 @@ import {
   createJobApplicationContactSchema,
   createJobApplicationFollowUpSchema,
   createJobApplicationSchema,
+  listJobApplicationsQuerySchema,
   updateJobApplicationContactSchema,
   updateJobApplicationFollowUpSchema,
   updateJobApplicationSchema,
@@ -29,6 +30,36 @@ describe("job application schemas", () => {
     });
 
     expect(result).toEqual({ claimedBy: "desktop-installation:runtime" });
+  });
+
+  it("parses paginated list defaults and grouped processing statuses", () => {
+    expect(
+      listJobApplicationsQuerySchema.parse({
+        profileId: "profile-1",
+        processingStatuses: "queued,scraping,analyzing",
+        sortBy: "matchScore",
+      }),
+    ).toMatchObject({
+      page: 1,
+      pageSize: 20,
+      processingStatuses: ["queued", "scraping", "analyzing"],
+      sortBy: "matchScore",
+    });
+  });
+
+  it("rejects invalid list page boundaries and processing statuses", () => {
+    expect(
+      listJobApplicationsQuerySchema.safeParse({ profileId: "profile-1", page: 0 }).success,
+    ).toBe(false);
+    expect(
+      listJobApplicationsQuerySchema.safeParse({ profileId: "profile-1", pageSize: 101 }).success,
+    ).toBe(false);
+    expect(
+      listJobApplicationsQuerySchema.safeParse({
+        profileId: "profile-1",
+        processingStatuses: "queued,unknown",
+      }).success,
+    ).toBe(false);
   });
 
   it("requires company and role for manual submissions", () => {

@@ -3,6 +3,51 @@ import { richDocumentFromText, type ScrapeBundle } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {
+  it("filters, sorts, and paginates applications with a total count", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const lowMatch = await repository.create({
+      profileId: "profile-1",
+      companyName: "Acme",
+      roleTitle: "Engineer",
+    });
+    const highMatch = await repository.create({
+      profileId: "profile-1",
+      companyName: "Beta",
+      roleTitle: "Engineer",
+    });
+    await repository.create({ profileId: "profile-2", companyName: "Other" });
+    await repository.saveMatchAnalysis(lowMatch.id, {
+      matchScore: 45,
+      missingSkills: [],
+      strongSkills: [],
+      suggestedSummary: "",
+    });
+    await repository.saveMatchAnalysis(highMatch.id, {
+      matchScore: 90,
+      missingSkills: [],
+      strongSkills: [],
+      suggestedSummary: "",
+    });
+
+    const firstPage = await repository.listByProfileId("profile-1", {
+      processingStatuses: ["completed"],
+      sortBy: "matchScore",
+      sortDirection: "desc",
+      page: 1,
+      pageSize: 1,
+    });
+    const secondPage = await repository.listByProfileId("profile-1", {
+      processingStatuses: ["completed"],
+      sortBy: "matchScore",
+      sortDirection: "desc",
+      page: 2,
+      pageSize: 1,
+    });
+
+    expect(firstPage).toMatchObject({ totalItems: 2, items: [{ id: highMatch.id }] });
+    expect(secondPage).toMatchObject({ totalItems: 2, items: [{ id: lowMatch.id }] });
+  });
+
   it("creates applications without interest and supports setting and clearing it", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({ profileId: "profile-1" });

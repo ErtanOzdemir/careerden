@@ -11,7 +11,7 @@ describe("ListJobApplicationsUseCase", () => {
   it("returns list read models with documents, logo URL, and match score", async () => {
     const job = createTestJobApplication();
     const repository = createJobApplicationRepository({
-      listByProfileId: vi.fn(async () => [job]),
+      listByProfileId: vi.fn(async () => ({ items: [job], totalItems: 1 })),
       listGeneratedDocuments: vi.fn(async () => [{ id: "document-1" }] as never),
       getCompanyLogoFileId: vi.fn(async () => "logo-1"),
       getMatchAnalysis: vi.fn(async () => ({ matchScore: 82 }) as never),
@@ -24,14 +24,15 @@ describe("ListJobApplicationsUseCase", () => {
       storage,
     ).execute("profile-1", "user-1");
 
-    expect(result[0]).toMatchObject({ companyLogoUrl: "signed-logo", matchScore: 82 });
-    expect(result[0]?.documents).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ companyLogoUrl: "signed-logo", matchScore: 82 });
+    expect(result.items[0]?.documents).toHaveLength(1);
+    expect(result).toMatchObject({ page: 1, pageSize: 20, totalItems: 1, totalPages: 1 });
   });
 
   it("uses scraped location in list read models when tracking location is missing", async () => {
     const job = createTestJobApplication();
     const repository = createJobApplicationRepository({
-      listByProfileId: vi.fn(async () => [job]),
+      listByProfileId: vi.fn(async () => ({ items: [job], totalItems: 1 })),
       getScrapeBundle: vi.fn(async () => ({
         job: {
           title: "Backend Engineer",
@@ -50,6 +51,6 @@ describe("ListJobApplicationsUseCase", () => {
       createStorage(),
     ).execute("profile-1", "user-1");
 
-    expect(result[0]?.tracking.roleType).toBe("Berlin, Germany");
+    expect(result.items[0]?.tracking.roleType).toBe("Berlin, Germany");
   });
 });

@@ -241,6 +241,26 @@ export const listJobApplicationsQuerySchema = z.object({
       "failed",
     ])
     .optional(),
+  processingStatuses: z
+    .string()
+    .transform((value) => value.split(","))
+    .pipe(
+      z
+        .array(
+          z.enum([
+            "queued",
+            "scraping",
+            "scraped",
+            "analyzing",
+            "review_ready",
+            "generating_documents",
+            "completed",
+            "failed",
+          ]),
+        )
+        .min(1),
+    )
+    .optional(),
   applicationStatus: applicationStatusSchema.optional(),
   company: z.string().min(1).optional(),
   role: z.string().min(1).optional(),
@@ -250,8 +270,17 @@ export const listJobApplicationsQuerySchema = z.object({
   dateFrom: z.string().min(1).optional(),
   dateTo: z.string().min(1).optional(),
   search: z.string().min(1).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
   sortBy: z
-    .enum(["dateApplied", "companyName", "roleTitle", "applicationStatus", "updatedAt"])
+    .enum([
+      "dateApplied",
+      "companyName",
+      "roleTitle",
+      "applicationStatus",
+      "matchScore",
+      "updatedAt",
+    ])
     .default("updatedAt"),
   sortDirection: z.enum(["asc", "desc"]).default("desc"),
 });

@@ -42,13 +42,11 @@ export default function Dashboard() {
       try {
         setIsLoading(true);
         const profile = await profilesApi.me();
-        const [list, analytics] = await Promise.all([
-          jobApplicationsApi.list({ profileId: profile.id }),
+        const [listPage, analytics] = await Promise.all([
+          jobApplicationsApi.list({ profileId: profile.id, pageSize: 25 }),
           jobApplicationsApi.analytics(profile.id),
         ]);
-        const details = await Promise.all(
-          list.slice(0, 25).map((a) => jobApplicationsApi.get(a.id)),
-        );
+        const details = await Promise.all(listPage.items.map((a) => jobApplicationsApi.get(a.id)));
         const mappedDetails = details.map((d) => mapApiJobApplicationToUi(d));
 
         if (isMounted) {

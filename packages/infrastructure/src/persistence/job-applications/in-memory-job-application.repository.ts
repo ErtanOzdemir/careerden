@@ -179,11 +179,27 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   async listByProfileId(
     profileId: string,
     filter: ListJobApplicationsFilter = {},
-  ): Promise<JobApplication[]> {
-    return [...this.jobApplications.values()]
+  ): Promise<{ items: JobApplication[]; totalItems: number }> {
+    const page = filter.page ?? 1;
+    const pageSize = filter.pageSize;
+    const filtered = [...this.jobApplications.values()]
       .filter((job) => job.profileId === profileId)
       .filter((job) => matchesFilter(job, filter))
-      .sort((left, right) => compareJobs(left, right, filter));
+      .sort((left, right) =>
+        compareJobs(
+          left,
+          right,
+          filter,
+          this.matchAnalyses.get(left.id),
+          this.matchAnalyses.get(right.id),
+        ),
+      );
+
+    return {
+      items:
+        pageSize === undefined ? filtered : filtered.slice((page - 1) * pageSize, page * pageSize),
+      totalItems: filtered.length,
+    };
   }
 
   async listByStatus(status: JobApplicationStatus): Promise<JobApplication[]> {
@@ -678,6 +694,10 @@ function matchesFilter(job: JobApplication, filter: ListJobApplicationsFilter): 
     return false;
   }
 
+  if (filter.processingStatuses && !filter.processingStatuses.includes(job.status)) {
+    return false;
+  }
+
   if (filter.priority && job.tracking.priority !== filter.priority) {
     return false;
   }
@@ -729,12 +749,14 @@ function compareJobs(
   left: JobApplication,
   right: JobApplication,
   filter: ListJobApplicationsFilter,
+  leftMatch?: MatchAnalysisResult,
+  rightMatch?: MatchAnalysisResult,
 ): number {
   const sortBy = filter.sortBy ?? "updatedAt";
   const direction = filter.sortDirection ?? "desc";
   const modifier = direction === "asc" ? 1 : -1;
-  const leftValue = sortableValue(left, sortBy);
-  const rightValue = sortableValue(right, sortBy);
+  const leftValue = sortableValue(left, sortBy, leftMatch);
+  const rightValue = sortableValue(right, sortBy, rightMatch);
 
   if (leftValue < rightValue) {
     return -1 * modifier;
@@ -744,13 +766,17 @@ function compareJobs(
     return 1 * modifier;
   }
 
-  return 0;
+  return left.id.localeCompare(right.id) * modifier;
 }
 
 function sortableValue(
   job: JobApplication,
   sortBy: NonNullable<ListJobApplicationsFilter["sortBy"]>,
+  match?: MatchAnalysisResult,
 ) {
+  if (sortBy === "matchScore") {
+    return match?.matchScore ?? -1;
+  }
   if (sortBy === "updatedAt") {
     return job.updatedAt.toISOString();
   }

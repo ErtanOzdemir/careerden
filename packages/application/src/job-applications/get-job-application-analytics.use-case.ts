@@ -24,7 +24,8 @@ export class GetJobApplicationAnalyticsUseCase {
 
   async execute(profileId: string, userId: string): Promise<JobApplicationAnalytics> {
     await getAccessibleProfile(this.profiles, profileId, userId);
-    return calculateJobApplicationAnalytics(await this.jobApplications.listByProfileId(profileId));
+    const applications = await this.jobApplications.listByProfileId(profileId);
+    return calculateJobApplicationAnalytics(applications.items);
   }
 }
 

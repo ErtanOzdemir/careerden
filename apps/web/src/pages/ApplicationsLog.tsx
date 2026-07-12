@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
 import { InterestTag, StatusBadge } from "../components/link2cv/status-badge.js";
 import type { DisplayStatus } from "../components/link2cv/status-badge.js";
@@ -11,11 +11,21 @@ import {
   type JobApplicationChange,
 } from "../api/jobApplicationChanges.js";
 import { cn } from "../lib/utils.js";
-import { Search, ArrowUpDown, EllipsisVertical, SlidersHorizontal, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpDown,
+  EllipsisVertical,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
 import type { JobApplication } from "../types.js";
 import type { ApiApplicationStatus } from "../api/types.js";
 
 type SortKey = "recent" | "match" | "company";
+const PAGE_SIZE = 20;
+const processingStatuses = ["queued", "scraping", "analyzing", "generating_documents"];
 
 const filters: { id: DisplayStatus | "all"; label: string }[] = [
   { id: "all", label: "All" },
@@ -30,14 +40,43 @@ const filters: { id: DisplayStatus | "all"; label: string }[] = [
 
 export default function ApplicationsLog() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<DisplayStatus | "all">("all");
-  const [sort, setSort] = useState<SortKey>("recent");
+  const filter = parseFilter(searchParams.get("status"));
+  const sort = parseSort(searchParams.get("sort"));
+  const page = parsePage(searchParams.get("page"));
+  const urlQuery = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(urlQuery);
   const loadSequence = useRef(0);
+
+  const updateSearchParams = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        for (const [key, value] of Object.entries(updates)) {
+          if (value) next.set(key, value);
+          else next.delete(key);
+        }
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
+
+  useEffect(() => setQuery(urlQuery), [urlQuery]);
+
+  useEffect(() => {
+    if (query === urlQuery) return;
+    const timer = window.setTimeout(() => {
+      updateSearchParams({ q: query.trim() || undefined, page: undefined });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [query, updateSearchParams, urlQuery]);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,23 +110,32 @@ export default function ApplicationsLog() {
         else if (filter === "offer") apiStatus = "offer" as ApiApplicationStatus;
         else if (filter === "rejected") apiStatus = "rejected" as ApiApplicationStatus;
         else if (filter === "ghosted") apiStatus = "ghosted";
-        const items = await jobApplicationsApi.list({
+        const result = await jobApplicationsApi.list({
           profileId,
           applicationStatus: apiStatus,
+          processingStatuses:
+            filter === "processing"
+              ? processingStatuses.join(",")
+              : filter === "ready"
+                ? "review_ready"
+                : undefined,
+          search: urlQuery || undefined,
+          page,
+          pageSize: PAGE_SIZE,
+          sortBy:
+            sort === "match" ? "matchScore" : sort === "company" ? "companyName" : "updatedAt",
+          sortDirection: sort === "company" ? "asc" : "desc",
         });
         if (sequence === loadSequence.current) {
-          const mapped = items.map((item) => mapApiJobApplicationToUi(item));
-          let filtered = mapped;
-          if (filter === "processing") {
-            filtered = mapped.filter((a) =>
-              ["queued", "scraping", "analyzing", "generating_documents"].includes(
-                a.processingStatus ?? "",
-              ),
-            );
-          } else if (filter === "ready") {
-            filtered = mapped.filter((a) => a.processingStatus === "review_ready");
+          if (page > Math.max(result.totalPages, 1)) {
+            updateSearchParams({
+              page: result.totalPages > 1 ? String(result.totalPages) : undefined,
+            });
+            return;
           }
-          setApplications(filtered);
+          setApplications(result.items.map((item) => mapApiJobApplicationToUi(item)));
+          setTotalItems(result.totalItems);
+          setTotalPages(result.totalPages);
         }
       } catch (e) {
         if (sequence === loadSequence.current) {
@@ -97,7 +145,7 @@ export default function ApplicationsLog() {
         if (showLoading && sequence === loadSequence.current) setIsLoading(false);
       }
     },
-    [filter, profileId],
+    [filter, page, profileId, sort, updateSearchParams, urlQuery],
   );
 
   useEffect(() => {
@@ -113,24 +161,7 @@ export default function ApplicationsLog() {
   }, [loadApplications]);
 
   useJobApplicationChanges(profileId ?? undefined, {
-    onChange: async (change: JobApplicationChange) => {
-      if (change.type === "application.deleted") {
-        setApplications((c) => c.filter((a) => a.id !== change.applicationId));
-        return;
-      }
-      try {
-        const detail = await jobApplicationsApi.get(change.applicationId);
-        const updated = mapApiJobApplicationToUi(detail);
-        setApplications((c) => {
-          const without = c.filter((a) => a.id !== updated.id);
-          return [...without, updated].sort((a, b) =>
-            (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""),
-          );
-        });
-      } catch {
-        /* ignore realtime race */
-      }
-    },
+    onChange: async (_change: JobApplicationChange) => loadApplications(false),
     onReconnect: () => loadApplications(false),
   });
 
@@ -151,28 +182,20 @@ export default function ApplicationsLog() {
     };
   }, [openMenuId]);
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await jobApplicationsApi.delete(id);
-      setOpenMenuId(null);
-      setApplications((c) => c.filter((a) => a.id !== id));
-    } catch {
-      // keep row visible on error
-    }
-  }, []);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await jobApplicationsApi.delete(id);
+        setOpenMenuId(null);
+        await loadApplications(false);
+      } catch {
+        // keep row visible on error
+      }
+    },
+    [loadApplications],
+  );
 
-  const rows = useMemo(() => {
-    let list = applications.filter((a) => {
-      const q = query.toLowerCase();
-      return !q || a.company.toLowerCase().includes(q) || a.role.toLowerCase().includes(q);
-    });
-    list = [...list].sort((a, b) => {
-      if (sort === "match") return (b.matchScore ?? 0) - (a.matchScore ?? 0);
-      if (sort === "company") return a.company.localeCompare(b.company);
-      return (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
-    });
-    return list;
-  }, [applications, query, sort]);
+  const rows = useMemo(() => applications, [applications]);
 
   return (
     <div className="space-y-5">
@@ -192,7 +215,12 @@ export default function ApplicationsLog() {
             <ArrowUpDown className="size-3.5 text-muted-foreground" />
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+              onChange={(e) =>
+                updateSearchParams({
+                  sort: e.target.value === "recent" ? undefined : e.target.value,
+                  page: undefined,
+                })
+              }
               className="bg-transparent text-sm text-foreground outline-none"
             >
               <option value="recent">Most recent</option>
@@ -211,7 +239,12 @@ export default function ApplicationsLog() {
         {filters.map((f) => (
           <button
             key={f.id}
-            onClick={() => setFilter(f.id)}
+            onClick={() =>
+              updateSearchParams({
+                status: f.id === "all" ? undefined : f.id,
+                page: undefined,
+              })
+            }
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               filter === f.id
                 ? "border-primary/30 bg-accent text-accent-foreground"
@@ -360,11 +393,90 @@ export default function ApplicationsLog() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Showing {rows.length} of {applications.length} applications
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted-foreground">
+          {totalItems === 0
+            ? "Showing 0 applications"
+            : `Showing ${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, totalItems)} of ${totalItems} applications`}
+        </p>
+        {totalPages > 1 && (
+          <nav className="flex items-center gap-1" aria-label="Applications pagination">
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page <= 1 || isLoading}
+              onClick={() =>
+                updateSearchParams({ page: page === 2 ? undefined : String(page - 1) })
+              }
+              aria-label="Previous page"
+            >
+              <ArrowLeft className="size-4" />
+            </Button>
+            {paginationItems(page, totalPages).map((item, index) =>
+              item === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="flex size-9 items-center justify-center text-sm text-muted-foreground"
+                >
+                  ...
+                </span>
+              ) : (
+                <Button
+                  key={item}
+                  variant={item === page ? "default" : "outline"}
+                  size="icon"
+                  disabled={isLoading}
+                  onClick={() =>
+                    updateSearchParams({ page: item === 1 ? undefined : String(item) })
+                  }
+                  aria-label={`Page ${item}`}
+                  aria-current={item === page ? "page" : undefined}
+                >
+                  {item}
+                </Button>
+              ),
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page >= totalPages || isLoading}
+              onClick={() => updateSearchParams({ page: String(page + 1) })}
+              aria-label="Next page"
+            >
+              <ArrowRight className="size-4" />
+            </Button>
+          </nav>
+        )}
+      </div>
     </div>
   );
+}
+
+function parseFilter(value: string | null): DisplayStatus | "all" {
+  return filters.some((filter) => filter.id === value) ? (value as DisplayStatus | "all") : "all";
+}
+
+function parseSort(value: string | null): SortKey {
+  return value === "match" || value === "company" ? value : "recent";
+}
+
+function parsePage(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function paginationItems(page: number, totalPages: number): Array<number | "ellipsis"> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  const pages = new Set([1, totalPages, page - 1, page, page + 1]);
+  const sorted = [...pages].filter((item) => item > 0 && item <= totalPages).sort((a, b) => a - b);
+  const result: Array<number | "ellipsis"> = [];
+  for (const item of sorted) {
+    const previous = result.at(-1);
+    if (typeof previous === "number" && item - previous > 1) result.push("ellipsis");
+    result.push(item);
+  }
+  return result;
 }
 
 function mapUiStatusToDisplay(app: JobApplication): DisplayStatus {

@@ -12,18 +12,21 @@ import {
 describe("GetJobApplicationAnalyticsUseCase", () => {
   it("calculates tracker analytics for an owned profile", async () => {
     const repository = createJobApplicationRepository({
-      listByProfileId: vi.fn(async () => [
-        createTestJobApplication({
-          tracking: {
-            applicationStatus: "interview",
-            priority: "medium",
-            tags: [],
-            metadata: {},
-            dateApplied: "2026-06-01",
-            lastResponseAt: new Date("2026-06-04T00:00:00.000Z"),
-          },
-        }),
-      ]),
+      listByProfileId: vi.fn(async () => ({
+        items: [
+          createTestJobApplication({
+            tracking: {
+              applicationStatus: "interview",
+              priority: "medium",
+              tags: [],
+              metadata: {},
+              dateApplied: "2026-06-01",
+              lastResponseAt: new Date("2026-06-04T00:00:00.000Z"),
+            },
+          }),
+        ],
+        totalItems: 1,
+      })),
     });
 
     const result = await new GetJobApplicationAnalyticsUseCase(

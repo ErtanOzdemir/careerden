@@ -7,6 +7,7 @@ import type {
   ApiJobApplicationAnalytics,
   ApiJobApplicationDetail,
   ApiJobApplicationFollowUp,
+  ApiJobApplicationsPage,
   ApiDocumentContent,
   ApiScrapeBundle,
 } from "./types";
@@ -15,8 +16,18 @@ export interface ListJobApplicationsParams {
   applicationStatus?: ApiApplicationStatus;
   priority?: ApiApplicationPriority;
   processingStatus?: string;
+  processingStatuses?: string;
   profileId: string;
-  sortBy?: "applicationStatus" | "companyName" | "dateApplied" | "roleTitle" | "updatedAt";
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  sortBy?:
+    | "applicationStatus"
+    | "companyName"
+    | "dateApplied"
+    | "matchScore"
+    | "roleTitle"
+    | "updatedAt";
   sortDirection?: "asc" | "desc";
 }
 
@@ -72,10 +83,12 @@ export interface UpdateFollowUpInput {
 }
 
 export const jobApplicationsApi = {
-  list(params: ListJobApplicationsParams): Promise<ApiJobApplication[]> {
-    return requestJson<ApiJobApplication[]>("/job-applications", {
+  list(params: ListJobApplicationsParams): Promise<ApiJobApplicationsPage> {
+    return requestJson<ApiJobApplicationsPage>("/job-applications", {
       query: {
         ...params,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 20,
         sortBy: params.sortBy ?? "updatedAt",
         sortDirection: params.sortDirection ?? "desc",
       },

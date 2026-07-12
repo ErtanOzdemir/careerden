@@ -237,13 +237,13 @@ export function createJobApplicationRouter(dependencies: {
         return;
       }
 
-      const jobApplicationsWithDocuments = await dependencies.listJobApplications.execute(
+      const page = await dependencies.listJobApplications.execute(
         result.data.profileId,
         currentUser(request).id,
         result.data,
       );
 
-      response.json(jobApplicationsWithDocuments);
+      response.json(page);
     } catch (error) {
       next(error);
     }

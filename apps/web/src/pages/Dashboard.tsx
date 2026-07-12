@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/link2cv/panel.js";
 import { StatusBadge } from "../components/link2cv/status-badge.js";
+import { ApplicationPipelineSankey } from "../components/ApplicationPipelineSankey.js";
 import type { DisplayStatus } from "../components/link2cv/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
@@ -256,7 +257,10 @@ export default function Dashboard() {
           </div>
         </Panel>
       </div>
-
+      <Panel>
+        <PanelHeader title="Application pipeline" />
+        <ApplicationPipelineSankey data={stats?.sankey ?? { nodes: [], links: [] }} />
+      </Panel>
       <Panel>
         <PanelHeader title="Recent activity" />
         <ul className="border-t border-border">

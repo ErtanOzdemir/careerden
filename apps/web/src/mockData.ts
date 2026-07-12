@@ -687,6 +687,21 @@ export const mockDashboardStats: DashboardStats = {
     rejectionRate: { value: 15, label: "-3% improvement", positive: true },
   },
   statusDistributionTotal: 42,
+  sankey: {
+    nodes: [
+      { id: "all-applications", label: "All applications", count: 42 },
+      { id: "applied", label: "Applied", count: 24 },
+      { id: "interview", label: "Interview", count: 5 },
+      { id: "offer", label: "Offer", count: 2 },
+      { id: "rejected", label: "Rejected", count: 11 },
+    ],
+    links: [
+      { source: "all-applications", target: "applied", value: 24 },
+      { source: "all-applications", target: "interview", value: 5 },
+      { source: "all-applications", target: "offer", value: 2 },
+      { source: "all-applications", target: "rejected", value: 11 },
+    ],
+  },
   upcomingInterviews: [
     {
       month: "Jun",

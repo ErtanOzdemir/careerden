@@ -258,7 +258,40 @@ export function mapApiDashboardStats(
       },
     },
     statusDistributionTotal: analytics.total,
+    sankey: mapDashboardSankey(analytics),
     upcomingInterviews: mapUpcomingInterviews(details),
+  };
+}
+
+const dashboardSankeyStatuses: Array<{ id: ApiApplicationStatus; label: string }> = [
+  { id: "saved", label: "Saved" },
+  { id: "applied", label: "Applied" },
+  { id: "phone_screen", label: "Phone screen" },
+  { id: "interview", label: "Interview" },
+  { id: "offer", label: "Offer" },
+  { id: "rejected", label: "Rejected" },
+  { id: "ghosted", label: "Ghosted" },
+];
+
+function mapDashboardSankey(analytics: ApiJobApplicationAnalytics): DashboardStats["sankey"] {
+  if (analytics.total === 0) {
+    return { nodes: [], links: [] };
+  }
+
+  const statuses = dashboardSankeyStatuses
+    .map(({ id, label }) => ({ id, label, count: analytics.byStatus[id] ?? 0 }))
+    .filter((status) => status.count > 0);
+
+  return {
+    nodes: [
+      { id: "all-applications", label: "All applications", count: analytics.total },
+      ...statuses,
+    ],
+    links: statuses.map((status) => ({
+      source: "all-applications",
+      target: status.id,
+      value: status.count,
+    })),
   };
 }
 

@@ -217,6 +217,23 @@ export interface UpcomingInterview {
   meetLabel: string;
 }
 
+export interface DashboardSankeyNode {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface DashboardSankeyLink {
+  source: string;
+  target: string;
+  value: number;
+}
+
+export interface DashboardSankeyData {
+  nodes: DashboardSankeyNode[];
+  links: DashboardSankeyLink[];
+}
+
 export interface DashboardStats {
   totalApplications: number;
   activeInterviews: number;
@@ -231,5 +248,6 @@ export interface DashboardStats {
     rejectionRate: KpiTrend;
   };
   statusDistributionTotal: number;
+  sankey: DashboardSankeyData;
   upcomingInterviews: UpcomingInterview[];
 }

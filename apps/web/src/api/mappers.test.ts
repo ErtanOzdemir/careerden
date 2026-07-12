@@ -108,6 +108,71 @@ describe("API mappers", () => {
     expect(stats.rejectionRate).toBe(25);
     expect(stats.weeklyTrend).toEqual([1, 2]);
     expect(stats.upcomingInterviews).toHaveLength(1);
+    expect(stats.sankey).toEqual({
+      nodes: [
+        { id: "all-applications", label: "All applications", count: 4 },
+        { id: "applied", label: "Applied", count: 1 },
+        { id: "interview", label: "Interview", count: 1 },
+        { id: "offer", label: "Offer", count: 1 },
+        { id: "rejected", label: "Rejected", count: 1 },
+      ],
+      links: [
+        { source: "all-applications", target: "applied", value: 1 },
+        { source: "all-applications", target: "interview", value: 1 },
+        { source: "all-applications", target: "offer", value: 1 },
+        { source: "all-applications", target: "rejected", value: 1 },
+      ],
+    });
+  });
+
+  it("maps every current application status into Sankey data in canonical order", () => {
+    const analytics: ApiJobApplicationAnalytics = {
+      applicationsOverTime: {},
+      averageTimeToResponseDays: null,
+      byStatus: {
+        saved: 1,
+        applied: 2,
+        phone_screen: 3,
+        interview: 4,
+        offer: 5,
+        rejected: 6,
+        ghosted: 7,
+      },
+      interviewConversionRate: 0,
+      offers: 5,
+      rejections: 6,
+      responseRate: 0,
+      total: 28,
+    };
+
+    const stats = mapApiDashboardStats(analytics, []);
+
+    expect(stats.sankey.nodes.map((node) => node.label)).toEqual([
+      "All applications",
+      "Saved",
+      "Applied",
+      "Phone screen",
+      "Interview",
+      "Offer",
+      "Rejected",
+      "Ghosted",
+    ]);
+    expect(stats.sankey.links.map((link) => link.value)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("returns empty Sankey data when there are no applications", () => {
+    const analytics: ApiJobApplicationAnalytics = {
+      applicationsOverTime: {},
+      averageTimeToResponseDays: null,
+      byStatus: {},
+      interviewConversionRate: 0,
+      offers: 0,
+      rejections: 0,
+      responseRate: 0,
+      total: 0,
+    };
+
+    expect(mapApiDashboardStats(analytics, []).sankey).toEqual({ nodes: [], links: [] });
   });
 
   it("falls back to legacy skill buckets when requirement evaluations are absent", () => {

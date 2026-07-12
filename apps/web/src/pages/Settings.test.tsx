@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Settings from "./Settings";
+import { THEME_STORAGE_KEY } from "../theme.js";
 
 vi.mock("../api/profiles.js", () => ({
   profilesApi: {
@@ -13,6 +14,13 @@ import { profilesApi } from "../api/profiles.js";
 import type { ApiProfile } from "../api/types.js";
 
 describe("Settings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+    document.documentElement.classList.remove("light", "dark");
+    delete window.electronAPI;
+  });
+
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
@@ -50,7 +58,75 @@ describe("Settings", () => {
     });
     expect(toggle).toHaveAttribute("aria-checked", "false");
   });
+
+  it("synchronizes every theme selection with storage, renderer classes, and Electron", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    const setNativeThemeSource = installElectronApi();
+
+    render(<Settings />);
+    await screen.findByDisplayValue("Ada Lovelace");
+
+    for (const theme of ["light", "dark", "system"] as const) {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(theme, "i") }));
+
+      expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe(theme);
+      expect(document.documentElement.classList.contains("light")).toBe(theme === "light");
+      expect(document.documentElement.classList.contains("dark")).toBe(theme === "dark");
+      expect(screen.getByRole("button", { name: new RegExp(theme, "i") })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(setNativeThemeSource).toHaveBeenLastCalledWith(theme);
+    }
+  });
+
+  it("applies theme selections in a browser without an Electron bridge", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+
+    render(<Settings />);
+    await screen.findByDisplayValue("Ada Lovelace");
+    fireEvent.click(screen.getByRole("button", { name: "Dark" }));
+
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+    expect(document.documentElement).toHaveClass("dark");
+    expect(screen.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("synchronizes cross-window theme storage changes", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    const setNativeThemeSource = installElectronApi();
+
+    render(<Settings />);
+    await screen.findByDisplayValue("Ada Lovelace");
+
+    window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: THEME_STORAGE_KEY,
+        oldValue: "system",
+        newValue: "dark",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(document.documentElement).toHaveClass("dark");
+    expect(setNativeThemeSource).toHaveBeenCalledWith("dark");
+  });
 });
+
+function installElectronApi() {
+  const setNativeThemeSource = vi.fn().mockResolvedValue(undefined);
+  window.electronAPI = {
+    getLinkedInSessionStatus: vi.fn(),
+    startLinkedInSession: vi.fn(),
+    saveLinkedInSession: vi.fn(),
+    notifyJobApplicationQueued: vi.fn(),
+    setNativeThemeSource,
+  };
+  return setNativeThemeSource;
+}
 
 function createProfile(overrides: Partial<ApiProfile> = {}): ApiProfile {
   return {

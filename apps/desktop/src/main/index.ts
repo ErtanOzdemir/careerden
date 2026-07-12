@@ -1,8 +1,9 @@
-import { app, BrowserWindow, session, shell } from "electron";
+import { app, BrowserWindow, nativeTheme, session, shell } from "electron";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { getMainWindowOptions } from "./main-window-options.js";
+import { setNativeThemeSource } from "./native-theme-source.js";
 import { DesktopApiClient } from "./scraping/desktop-api-client.js";
 import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
 import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
@@ -91,6 +92,9 @@ void app.whenReady().then(async () => {
     .register("linkedin-session-start", async () => startLinkedInSession.execute())
     .register("linkedin-session-save", async () => saveLinkedInSession.execute())
     .register("job-application-queued", () => localScrapingWorker?.wake())
+    .register("set-native-theme-source", (_event, source: unknown) => {
+      setNativeThemeSource(nativeTheme, source);
+    })
     .register("window-control", (event, action: WindowControlAction) => {
       const window = BrowserWindow.fromWebContents(event.sender);
       if (!window) {

@@ -7,6 +7,12 @@ import { cn } from "../lib/utils.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiProfile } from "../api/types.js";
 import {
+  getStoredTheme,
+  setThemePreference,
+  subscribeToThemeChanges,
+  type Theme,
+} from "../theme.js";
+import {
   Download,
   Sparkles,
   Bell,
@@ -17,26 +23,6 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-
-type Theme = "light" | "system" | "dark";
-
-function getStoredTheme(): Theme {
-  if (typeof localStorage === "undefined") {
-    return "system";
-  }
-
-  return (localStorage.getItem("link2cv-theme") as Theme | null) ?? "system";
-}
-
-function applyTheme(theme: Theme) {
-  const root = document.documentElement;
-  root.classList.remove("light", "dark");
-  if (theme === "dark") root.classList.add("dark");
-  else if (theme === "light") root.classList.add("light");
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem("link2cv-theme", theme);
-  }
-}
 
 function Toggle({
   checked,
@@ -135,18 +121,12 @@ export default function Settings() {
   }, []);
 
   useEffect(() => {
-    function handleStorage(event: StorageEvent) {
-      if (event.key === "link2cv-theme") {
-        setTheme((event.newValue as Theme) ?? "system");
-      }
-    }
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    return subscribeToThemeChanges(setTheme);
   }, []);
 
   function handleThemeChange(next: Theme) {
     setTheme(next);
-    applyTheme(next);
+    setThemePreference(next);
   }
 
   async function handleAutoRunMatchAnalysisChange(next: boolean) {
@@ -274,6 +254,7 @@ export default function Settings() {
               <button
                 key={t.id}
                 onClick={() => handleThemeChange(t.id)}
+                aria-pressed={theme === t.id}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
                   theme === t.id

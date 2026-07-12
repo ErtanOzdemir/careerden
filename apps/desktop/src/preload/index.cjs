@@ -8,6 +8,7 @@ const electronAPI = {
   startLinkedInSession: () => ipcRenderer.invoke("linkedin-session-start"),
   saveLinkedInSession: () => ipcRenderer.invoke("linkedin-session-save"),
   notifyJobApplicationQueued: () => ipcRenderer.invoke("job-application-queued"),
+  setNativeThemeSource: (source) => ipcRenderer.invoke("set-native-theme-source", source),
   minimizeWindow: () => ipcRenderer.invoke("window-control", "minimize"),
   maximizeWindow: () => ipcRenderer.invoke("window-control", "toggle-maximize"),
   closeWindow: () => ipcRenderer.invoke("window-control", "close"),

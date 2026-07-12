@@ -175,7 +175,7 @@
 @layer base {
   html,
   #root {
-    background-color: #ffffff;
+    background-color: var(--background);
   }
 
   * {

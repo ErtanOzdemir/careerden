@@ -56,6 +56,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
         salaryMaxAmount: input.salaryMaxAmount,
         salaryCurrency: input.salaryCurrency,
         salaryPeriod: input.salaryPeriod,
+        salaryType: input.salaryType,
         metadata: input.metadata ?? {},
       },
       createdAt: now,
@@ -402,6 +403,10 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
           input.salaryPeriod === undefined
             ? existing.tracking.salaryPeriod
             : (input.salaryPeriod ?? undefined),
+        salaryType:
+          input.salaryType === undefined
+            ? existing.tracking.salaryType
+            : (input.salaryType ?? undefined),
       },
       updatedAt: new Date(),
     };

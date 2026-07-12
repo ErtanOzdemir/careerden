@@ -54,14 +54,52 @@ describe("JobDetailsPanel", () => {
 
     await waitFor(() => expect(onSaveInterest).toHaveBeenCalledWith(null));
   });
+
+  it("updates salary as gross or net", async () => {
+    const onSaveSalary = vi.fn(async () => undefined);
+    renderPanel({
+      app: {
+        ...createApplication(),
+        salaryMinAmount: 90_000,
+        salaryCurrency: "EUR",
+        salaryPeriod: "yearly",
+        salaryType: "gross",
+      },
+      onSaveSalary,
+    });
+
+    expect(screen.getByText("90,000 EUR / year · Gross")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit salary" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open salary type options" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Net" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(onSaveSalary).toHaveBeenCalledWith({
+        salaryMinAmount: 90_000,
+        salaryMaxAmount: null,
+        salaryCurrency: "EUR",
+        salaryPeriod: "yearly",
+        salaryType: "net",
+      }),
+    );
+  });
 });
 
 function renderPanel({
   app = createApplication(),
   onSaveInterest = vi.fn(async () => undefined),
+  onSaveSalary = vi.fn(async () => undefined),
 }: {
   app?: JobApplication;
   onSaveInterest?: (interestLevel: "high" | "low" | "medium" | null) => Promise<void>;
+  onSaveSalary?: (input: {
+    salaryCurrency: string | null;
+    salaryMaxAmount: number | null;
+    salaryMinAmount: number | null;
+    salaryPeriod: "hourly" | "monthly" | "yearly" | null;
+    salaryType: "gross" | "net" | null;
+  }) => Promise<void>;
 } = {}) {
   return render(
     <JobDetailsPanel
@@ -69,7 +107,7 @@ function renderPanel({
       isSavingInterest={false}
       isSavingSalary={false}
       onSaveInterest={onSaveInterest}
-      onSaveSalary={vi.fn(async () => undefined)}
+      onSaveSalary={onSaveSalary}
     />,
   );
 }

@@ -35,6 +35,7 @@ describe("API mappers", () => {
     expect(mapped.salaryMaxAmount).toBe(120_000);
     expect(mapped.salaryCurrency).toBe("EUR");
     expect(mapped.salaryPeriod).toBe("yearly");
+    expect(mapped.salaryType).toBe("gross");
     expect(mapped.contacts).toEqual([
       {
         email: "sarah.hughes@example.com",
@@ -291,6 +292,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
       salaryMaxAmount: 120_000,
       salaryCurrency: "EUR",
       salaryPeriod: "yearly",
+      salaryType: "gross",
       tags: ["Remote"],
     },
     followUps: [

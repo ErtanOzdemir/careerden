@@ -40,6 +40,7 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
         salaryMinAmount: 90_000,
         salaryCurrency: "EUR",
         salaryPeriod: "yearly",
+        salaryType: "gross",
       },
     });
     const repository = createJobApplicationRepository({
@@ -55,6 +56,7 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
         salaryMinAmount: 90_000,
         salaryCurrency: "EUR",
         salaryPeriod: "yearly",
+        salaryType: "gross",
       },
     );
 
@@ -62,6 +64,7 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
       salaryMinAmount: 90_000,
       salaryCurrency: "EUR",
       salaryPeriod: "yearly",
+      salaryType: "gross",
     });
     expect(repository.addEvent).not.toHaveBeenCalled();
     expect(recordChanged).toHaveBeenCalledOnce();

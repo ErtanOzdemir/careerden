@@ -46,6 +46,7 @@ export interface UpdateJobApplicationInput {
   salaryMaxAmount?: number | null;
   salaryMinAmount?: number | null;
   salaryPeriod?: "hourly" | "monthly" | "yearly" | null;
+  salaryType?: "gross" | "net" | null;
 }
 
 export interface CreateJobApplicationContactInput {

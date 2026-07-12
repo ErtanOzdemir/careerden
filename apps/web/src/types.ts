@@ -109,6 +109,7 @@ export interface JobApplication {
   salaryMaxAmount?: number;
   salaryMinAmount?: number;
   salaryPeriod?: "hourly" | "monthly" | "yearly";
+  salaryType?: "gross" | "net";
   metadata?: Record<string, unknown>;
   contacts?: Contact[];
   followUps?: FollowUp[];

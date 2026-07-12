@@ -43,6 +43,7 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
       salaryMaxAmount: nullableNumber(row.salary_max_amount),
       salaryCurrency: nullableString(row.salary_currency),
       salaryPeriod: nullableString(row.salary_period) as JobApplication["tracking"]["salaryPeriod"],
+      salaryType: nullableString(row.salary_type) as JobApplication["tracking"]["salaryType"],
       metadata: record(row.metadata),
     },
   };

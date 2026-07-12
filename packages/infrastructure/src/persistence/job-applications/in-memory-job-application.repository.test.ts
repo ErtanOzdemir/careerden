@@ -25,12 +25,14 @@ describe("InMemoryJobApplicationRepository", () => {
       salaryMaxAmount: 120_000,
       salaryCurrency: "EUR",
       salaryPeriod: "yearly",
+      salaryType: "gross",
     });
     expect(updated.tracking).toMatchObject({
       salaryMinAmount: 90_000,
       salaryMaxAmount: 120_000,
       salaryCurrency: "EUR",
       salaryPeriod: "yearly",
+      salaryType: "gross",
     });
 
     const cleared = await repository.updateTracking(job.id, {
@@ -38,11 +40,13 @@ describe("InMemoryJobApplicationRepository", () => {
       salaryMaxAmount: null,
       salaryCurrency: null,
       salaryPeriod: null,
+      salaryType: null,
     });
     expect(cleared.tracking.salaryMinAmount).toBeUndefined();
     expect(cleared.tracking.salaryMaxAmount).toBeUndefined();
     expect(cleared.tracking.salaryCurrency).toBeUndefined();
     expect(cleared.tracking.salaryPeriod).toBeUndefined();
+    expect(cleared.tracking.salaryType).toBeUndefined();
   });
 
   it("stores the latest editable document content", async () => {

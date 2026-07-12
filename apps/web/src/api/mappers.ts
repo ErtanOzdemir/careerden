@@ -92,6 +92,7 @@ export function mapApiJobApplicationToUi(
     salaryMaxAmount: application.tracking.salaryMaxAmount,
     salaryMinAmount: application.tracking.salaryMinAmount,
     salaryPeriod: application.tracking.salaryPeriod,
+    salaryType: application.tracking.salaryType,
     followUps: detail?.followUps.map(mapFollowUp),
     matchScore: application.matchScore ?? detail?.matchAnalysis?.matchScore,
     metadata: application.tracking.metadata,

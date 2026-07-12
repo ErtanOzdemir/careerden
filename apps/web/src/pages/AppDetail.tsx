@@ -253,6 +253,7 @@ export default function AppDetail() {
     salaryMaxAmount: number | null;
     salaryMinAmount: number | null;
     salaryPeriod: "hourly" | "monthly" | "yearly" | null;
+    salaryType: "gross" | "net" | null;
   }) {
     if (!id) return;
     try {
@@ -595,6 +596,7 @@ function OverviewTab({
     salaryMaxAmount: number | null;
     salaryMinAmount: number | null;
     salaryPeriod: "hourly" | "monthly" | "yearly" | null;
+    salaryType: "gross" | "net" | null;
   }) => Promise<void>;
 }) {
   return (
@@ -667,6 +669,10 @@ const salaryPeriodOptions: UnifiedSelectOption[] = [
   { value: "monthly", label: "Monthly" },
   { value: "yearly", label: "Yearly" },
 ];
+const salaryTypeOptions: UnifiedSelectOption[] = [
+  { value: "gross", label: "Gross" },
+  { value: "net", label: "Net" },
+];
 const interestOptions: UnifiedSelectOption[] = [
   { value: "not_set", label: "Not set" },
   { value: "low", label: "Low interest", leading: "🤔" },
@@ -691,6 +697,7 @@ export function JobDetailsPanel({
   const [maximum, setMaximum] = useState("");
   const [currency, setCurrency] = useState("");
   const [period, setPeriod] = useState("");
+  const [salaryType, setSalaryType] = useState("");
   const [interestLevel, setInterestLevel] = useState("");
   const [editingField, setEditingField] = useState<"interest" | "salary" | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -700,7 +707,15 @@ export function JobDetailsPanel({
     setMaximum(app.salaryMaxAmount?.toString() ?? "");
     setCurrency(app.salaryCurrency ?? "");
     setPeriod(app.salaryPeriod ?? "");
-  }, [app.id, app.salaryCurrency, app.salaryMaxAmount, app.salaryMinAmount, app.salaryPeriod]);
+    setSalaryType(app.salaryType ?? "");
+  }, [
+    app.id,
+    app.salaryCurrency,
+    app.salaryMaxAmount,
+    app.salaryMinAmount,
+    app.salaryPeriod,
+    app.salaryType,
+  ]);
 
   useEffect(() => {
     setInterestLevel(app.interestLevel ?? "not_set");
@@ -710,7 +725,7 @@ export function JobDetailsPanel({
     event.preventDefault();
     const hasMinimum = minimum.trim() !== "";
     const hasMaximum = maximum.trim() !== "";
-    const isClear = !hasMinimum && !hasMaximum && !currency && !period;
+    const isClear = !hasMinimum && !hasMaximum && !currency && !period && !salaryType;
     const parsedMinimum = hasMinimum ? Number(minimum) : null;
     const parsedMaximum = hasMaximum ? Number(maximum) : null;
 
@@ -724,6 +739,10 @@ export function JobDetailsPanel({
     }
     if (!isClear && !period) {
       setValidationError("Choose a pay period.");
+      return;
+    }
+    if (!isClear && !salaryType) {
+      setValidationError("Choose gross or net salary.");
       return;
     }
     if (
@@ -752,6 +771,7 @@ export function JobDetailsPanel({
         salaryMaxAmount: isClear ? null : parsedMaximum,
         salaryCurrency: isClear ? null : currency,
         salaryPeriod: isClear ? null : (period as "hourly" | "monthly" | "yearly"),
+        salaryType: isClear ? null : (salaryType as "gross" | "net"),
       });
       setEditingField(null);
     } catch {
@@ -799,6 +819,13 @@ export function JobDetailsPanel({
               value={period}
               onChange={setPeriod}
             />
+            <UnifiedSelect
+              label="Salary type"
+              options={salaryTypeOptions}
+              placeholder="Select gross or net"
+              value={salaryType}
+              onChange={setSalaryType}
+            />
             {validationError && <p className="text-xs text-destructive">{validationError}</p>}
             <div className="flex gap-2">
               <Button
@@ -812,6 +839,7 @@ export function JobDetailsPanel({
                   setMaximum(app.salaryMaxAmount?.toString() ?? "");
                   setCurrency(app.salaryCurrency ?? "");
                   setPeriod(app.salaryPeriod ?? "");
+                  setSalaryType(app.salaryType ?? "");
                   setValidationError(null);
                   setEditingField(null);
                 }}
@@ -895,6 +923,7 @@ export function JobDetailsPanel({
                   setMaximum(app.salaryMaxAmount?.toString() ?? "");
                   setCurrency(app.salaryCurrency ?? "");
                   setPeriod(app.salaryPeriod ?? "");
+                  setSalaryType(app.salaryType ?? "");
                   setValidationError(null);
                   setEditingField("interest");
                 }}
@@ -925,7 +954,8 @@ function formatSalary(app: JobApplication): string {
     .join(" – ");
   const currency = app.salaryCurrency ? ` ${app.salaryCurrency}` : "";
   const period = app.salaryPeriod ? ` / ${app.salaryPeriod.replace("ly", "")}` : "";
-  return `${amounts}${currency}${period}`;
+  const salaryType = app.salaryType ? ` · ${app.salaryType === "gross" ? "Gross" : "Net"}` : "";
+  return `${amounts}${currency}${period}${salaryType}`;
 }
 
 function currencyFlag(currencyCode: string): string {

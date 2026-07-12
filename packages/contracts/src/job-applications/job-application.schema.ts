@@ -106,6 +106,7 @@ const salaryCurrencySchema = z
   .refine((value) => salaryCurrencyCodes.includes(value), "Unsupported ISO 4217 currency code");
 const salaryAmountSchema = z.number().finite().nonnegative();
 const salaryPeriodSchema = z.enum(["hourly", "monthly", "yearly"]);
+const salaryTypeSchema = z.enum(["gross", "net"]);
 
 export const updateJobApplicationSchema = z
   .object({
@@ -122,6 +123,7 @@ export const updateJobApplicationSchema = z
     salaryMaxAmount: salaryAmountSchema.nullable().optional(),
     salaryCurrency: salaryCurrencySchema.nullable().optional(),
     salaryPeriod: salaryPeriodSchema.nullable().optional(),
+    salaryType: salaryTypeSchema.nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .superRefine((value, context) => {
@@ -130,6 +132,7 @@ export const updateJobApplicationSchema = z
       "salaryMaxAmount",
       "salaryCurrency",
       "salaryPeriod",
+      "salaryType",
     ] as const;
     if (!salaryKeys.some((key) => key in value)) return;
 
@@ -157,6 +160,13 @@ export const updateJobApplicationSchema = z
         code: z.ZodIssueCode.custom,
         path: ["salaryPeriod"],
         message: "Pay period is required when salary is set",
+      });
+    }
+    if (!value.salaryType) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["salaryType"],
+        message: "Gross or net salary type is required when salary is set",
       });
     }
     if (hasMinimum && hasMaximum && value.salaryMinAmount! > value.salaryMaxAmount!) {

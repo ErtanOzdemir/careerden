@@ -71,6 +71,7 @@ describe("job application schemas", () => {
         salaryMaxAmount: 120_000,
         salaryCurrency: "EUR",
         salaryPeriod: "yearly",
+        salaryType: "gross",
       }),
     ).toMatchObject({ salaryMinAmount: 90_000, salaryMaxAmount: 120_000 });
     expect(
@@ -79,6 +80,7 @@ describe("job application schemas", () => {
         salaryMaxAmount: 50,
         salaryCurrency: "USD",
         salaryPeriod: "hourly",
+        salaryType: "net",
       }).success,
     ).toBe(true);
     expect(
@@ -87,16 +89,26 @@ describe("job application schemas", () => {
         salaryMaxAmount: null,
         salaryCurrency: null,
         salaryPeriod: null,
+        salaryType: null,
       }).success,
     ).toBe(true);
   });
 
   it.each([
-    [{ salaryMinAmount: -1, salaryCurrency: "USD", salaryPeriod: "yearly" }],
-    [{ salaryMinAmount: 100, salaryMaxAmount: 90, salaryCurrency: "USD", salaryPeriod: "yearly" }],
-    [{ salaryMinAmount: 100, salaryPeriod: "yearly" }],
-    [{ salaryMinAmount: 100, salaryCurrency: "USD" }],
-    [{ salaryMinAmount: 100, salaryCurrency: "ZZZ", salaryPeriod: "yearly" }],
+    [{ salaryMinAmount: -1, salaryCurrency: "USD", salaryPeriod: "yearly", salaryType: "gross" }],
+    [
+      {
+        salaryMinAmount: 100,
+        salaryMaxAmount: 90,
+        salaryCurrency: "USD",
+        salaryPeriod: "yearly",
+        salaryType: "gross",
+      },
+    ],
+    [{ salaryMinAmount: 100, salaryPeriod: "yearly", salaryType: "gross" }],
+    [{ salaryMinAmount: 100, salaryCurrency: "USD", salaryType: "gross" }],
+    [{ salaryMinAmount: 100, salaryCurrency: "ZZZ", salaryPeriod: "yearly", salaryType: "gross" }],
+    [{ salaryMinAmount: 100, salaryCurrency: "USD", salaryPeriod: "yearly" }],
   ])("rejects invalid salary details: %o", (input) => {
     expect(updateJobApplicationSchema.safeParse(input).success).toBe(false);
   });

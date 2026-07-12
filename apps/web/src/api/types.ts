@@ -23,6 +23,7 @@ export interface ApiJobApplicationTracking {
   salaryMaxAmount?: number;
   salaryMinAmount?: number;
   salaryPeriod?: "hourly" | "monthly" | "yearly";
+  salaryType?: "gross" | "net";
   tags: string[];
 }
 

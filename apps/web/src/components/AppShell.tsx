@@ -6,7 +6,7 @@ import { AddJobDialog } from "./AddJobDialog.js";
 
 const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
   "/": {
-    title: "Good morning",
+    title: "Dashboard",
     subtitle: "Here's a calm overview of your job search.",
   },
   "/applications": {
@@ -29,8 +29,14 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
 
 export default function AppShell() {
   const [addJobOpen, setAddJobOpen] = useState(false);
+  const [greeting, setGreeting] = useState(() => getLocalGreeting());
   const location = useLocation();
   const params = useParams();
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setGreeting(getLocalGreeting()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     function handleOpenAddJob() {
@@ -41,6 +47,9 @@ export default function AppShell() {
   }, []);
 
   const header = useMemo(() => {
+    if (location.pathname === "/") {
+      return { ...routeHeaders["/"], title: greeting };
+    }
     if (routeHeaders[location.pathname]) {
       return routeHeaders[location.pathname];
     }
@@ -48,7 +57,7 @@ export default function AppShell() {
       return { title: "Application", subtitle: "Review, generate, and track." };
     }
     return { title: "Link2CV", subtitle: undefined };
-  }, [location.pathname, params.id]);
+  }, [greeting, location.pathname, params.id]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -71,4 +80,11 @@ export default function AppShell() {
       <AddJobDialog open={addJobOpen} onClose={() => setAddJobOpen(false)} />
     </div>
   );
+}
+
+export function getLocalGreeting(date = new Date()): string {
+  const hour = date.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }

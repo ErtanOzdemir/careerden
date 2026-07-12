@@ -136,7 +136,7 @@ export default function AppDetail() {
       setError(null);
       await jobApplicationsApi.update(id, {
         applicationStatus: mapUiStatusToApi(
-          newStatus as "Applied" | "Interviewing" | "Offer" | "Rejected",
+          newStatus as "Saved" | "Applied" | "Interviewing" | "Offer" | "Rejected" | "Ghosted",
         ),
       });
       await refresh();
@@ -351,7 +351,7 @@ export default function AppDetail() {
                 disabled={isUpdatingStatus}
                 className="rounded-lg border border-input bg-card px-2 py-0.5 text-xs font-medium text-foreground outline-none focus:border-ring"
               >
-                {["Applied", "Interviewing", "Offer", "Rejected"].map((s) => (
+                {["Saved", "Applied", "Interviewing", "Offer", "Rejected", "Ghosted"].map((s) => (
                   <option key={s} value={s}>
                     {s === app.status ? `${s} (current)` : `→ ${s}`}
                   </option>
@@ -972,6 +972,8 @@ function mapStatus(app: JobApplication): DisplayStatus {
       return "offer";
     case "Rejected":
       return "rejected";
+    case "Ghosted":
+      return "ghosted";
     default:
       return "saved";
   }

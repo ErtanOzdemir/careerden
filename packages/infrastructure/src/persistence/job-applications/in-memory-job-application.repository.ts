@@ -48,7 +48,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
         roleType: input.roleType,
         jobUrl: input.jobUrl ?? input.sourceUrl,
         dateApplied: input.dateApplied,
-        applicationStatus: input.applicationStatus ?? "applied",
+        applicationStatus: input.applicationStatus ?? "saved",
         priority: input.priority ?? "medium",
         tags: input.tags ?? [],
         lastResponseAt: input.lastResponseAt,

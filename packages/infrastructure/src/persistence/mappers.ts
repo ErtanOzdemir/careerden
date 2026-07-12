@@ -35,7 +35,7 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
       jobUrl: nullableString(row.job_url),
       dateApplied: nullableString(row.date_applied),
       applicationStatus: (nullableString(row.application_status) ??
-        "applied") as JobApplication["tracking"]["applicationStatus"],
+        "saved") as JobApplication["tracking"]["applicationStatus"],
       priority: (nullableString(row.priority) ??
         "medium") as JobApplication["tracking"]["priority"],
       tags: stringArray(row.tags),

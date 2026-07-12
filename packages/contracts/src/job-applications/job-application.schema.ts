@@ -9,11 +9,13 @@ export const linkedInJobUrlSchema = z
   }, "Expected a LinkedIn job URL");
 
 export const applicationStatusSchema = z.enum([
+  "saved",
   "applied",
   "phone_screen",
   "interview",
   "offer",
   "rejected",
+  "ghosted",
 ]);
 
 export const applicationPrioritySchema = z.enum(["low", "medium", "high"]);
@@ -30,7 +32,7 @@ export const createJobApplicationSchema = z
     roleType: z.string().min(1).optional(),
     jobUrl: z.string().url().optional(),
     dateApplied: z.string().min(1).optional(),
-    applicationStatus: applicationStatusSchema.default("applied"),
+    applicationStatus: applicationStatusSchema.default("saved"),
     priority: applicationPrioritySchema.default("medium"),
     tags: tagsSchema,
     lastResponseAt: z.coerce.date().optional(),
@@ -91,7 +93,7 @@ export const createJobApplicationFromScrapeSchema = z.object({
   sourceUrl: linkedInJobUrlSchema,
   scrapeBundle: scrapeBundleSchema,
   dateApplied: z.string().min(1).optional(),
-  applicationStatus: applicationStatusSchema.default("applied"),
+  applicationStatus: applicationStatusSchema.default("saved"),
   priority: applicationPrioritySchema.default("medium"),
   tags: tagsSchema,
   metadata: metadataSchema,

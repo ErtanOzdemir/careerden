@@ -4,7 +4,10 @@ import {
   createProfiles,
   createTestJobApplication,
 } from "./job-application-test-helpers.js";
-import { GetJobApplicationAnalyticsUseCase } from "./get-job-application-analytics.use-case.js";
+import {
+  calculateJobApplicationAnalytics,
+  GetJobApplicationAnalyticsUseCase,
+} from "./get-job-application-analytics.use-case.js";
 
 describe("GetJobApplicationAnalyticsUseCase", () => {
   it("calculates tracker analytics for an owned profile", async () => {
@@ -30,5 +33,17 @@ describe("GetJobApplicationAnalyticsUseCase", () => {
 
     expect(result.interviewConversionRate).toBe(1);
     expect(result.averageTimeToResponseDays).toBe(3);
+  });
+
+  it("keeps ghosted applications separate from rejection metrics", () => {
+    const result = calculateJobApplicationAnalytics([
+      createTestJobApplication({
+        tracking: { ...createTestJobApplication().tracking, applicationStatus: "ghosted" },
+      }),
+    ]);
+
+    expect(result.byStatus.ghosted).toBe(1);
+    expect(result.rejections).toBe(0);
+    expect(result.responseRate).toBe(0);
   });
 });

@@ -7,7 +7,8 @@ export type DisplayStatus =
   | "applied"
   | "interview"
   | "offer"
-  | "rejected";
+  | "rejected"
+  | "ghosted";
 
 export type DisplayPriority = "low" | "medium" | "high";
 
@@ -19,6 +20,7 @@ const statusLabels: Record<DisplayStatus, string> = {
   interview: "Interviewing",
   offer: "Offer",
   rejected: "Rejected",
+  ghosted: "Ghosted",
 };
 
 const priorityLabels: Record<DisplayPriority, string> = {
@@ -35,6 +37,7 @@ const statusStyles: Record<DisplayStatus, string> = {
   interview: "bg-warning-soft text-warning-foreground",
   offer: "bg-success-soft text-success",
   rejected: "bg-muted text-muted-foreground",
+  ghosted: "bg-muted text-muted-foreground",
 };
 
 const statusDot: Record<DisplayStatus, string> = {
@@ -45,6 +48,7 @@ const statusDot: Record<DisplayStatus, string> = {
   interview: "bg-warning",
   offer: "bg-success",
   rejected: "bg-muted-foreground/50",
+  ghosted: "bg-muted-foreground/50",
 };
 
 export function StatusBadge({ status, className }: { status: DisplayStatus; className?: string }) {

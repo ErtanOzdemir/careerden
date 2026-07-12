@@ -21,9 +21,11 @@ const filters: { id: DisplayStatus | "all"; label: string }[] = [
   { id: "all", label: "All" },
   { id: "processing", label: "Processing" },
   { id: "ready", label: "Ready" },
+  { id: "saved", label: "Saved" },
   { id: "applied", label: "Applied" },
   { id: "interview", label: "Interviewing" },
   { id: "rejected", label: "Not selected" },
+  { id: "ghosted", label: "Ghosted" },
 ];
 
 export default function ApplicationsLog() {
@@ -63,10 +65,12 @@ export default function ApplicationsLog() {
         if (showLoading) setIsLoading(true);
         setError(null);
         let apiStatus: ApiApplicationStatus | undefined;
-        if (filter === "applied") apiStatus = "applied" as ApiApplicationStatus;
+        if (filter === "saved") apiStatus = "saved";
+        else if (filter === "applied") apiStatus = "applied";
         else if (filter === "interview") apiStatus = "interview" as ApiApplicationStatus;
         else if (filter === "offer") apiStatus = "offer" as ApiApplicationStatus;
         else if (filter === "rejected") apiStatus = "rejected" as ApiApplicationStatus;
+        else if (filter === "ghosted") apiStatus = "ghosted";
         const items = await jobApplicationsApi.list({
           profileId,
           applicationStatus: apiStatus,
@@ -373,6 +377,8 @@ function mapUiStatusToDisplay(app: JobApplication): DisplayStatus {
       return "offer";
     case "Rejected":
       return "rejected";
+    case "Ghosted":
+      return "ghosted";
     default:
       return "saved";
   }

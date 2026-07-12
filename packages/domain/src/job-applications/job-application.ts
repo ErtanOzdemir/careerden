@@ -1,6 +1,13 @@
 import type { JobApplicationStatus } from "./workflow-status.js";
 
-export type ApplicationStatus = "applied" | "phone_screen" | "interview" | "offer" | "rejected";
+export type ApplicationStatus =
+  | "saved"
+  | "applied"
+  | "phone_screen"
+  | "interview"
+  | "offer"
+  | "rejected"
+  | "ghosted";
 
 export type ApplicationPriority = "low" | "medium" | "high";
 

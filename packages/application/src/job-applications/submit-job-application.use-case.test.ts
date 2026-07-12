@@ -33,6 +33,7 @@ describe("SubmitJobApplicationUseCase", () => {
     );
 
     expect(jobApplication.status).toBe("queued");
+    expect(jobApplication.tracking.applicationStatus).toBe("saved");
     expect(jobApplication.sourceUrl).toBe("https://www.linkedin.com/jobs/view/123");
     expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
     expect(changes).toHaveLength(1);
@@ -72,6 +73,7 @@ describe("SubmitJobApplicationUseCase", () => {
     const scrape = await jobApplications.getScrapeBundle(jobApplication.id);
 
     expect(jobApplication.status).toBe("scraped");
+    expect(jobApplication.tracking.applicationStatus).toBe("saved");
     expect(jobApplication.sourceUrl).toBeUndefined();
     expect(jobApplication.tracking.companyName).toBe("Example Inc");
     expect(jobApplication.tracking.roleTitle).toBe("Backend Engineer");

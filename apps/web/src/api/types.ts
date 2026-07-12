@@ -1,4 +1,11 @@
-export type ApiApplicationStatus = "applied" | "interview" | "offer" | "phone_screen" | "rejected";
+export type ApiApplicationStatus =
+  | "saved"
+  | "applied"
+  | "interview"
+  | "offer"
+  | "phone_screen"
+  | "rejected"
+  | "ghosted";
 
 export type ApiApplicationPriority = "high" | "low" | "medium";
 

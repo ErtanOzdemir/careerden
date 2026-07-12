@@ -1,6 +1,12 @@
 import type { ApiDocumentContent } from "./api/types";
 
-export type ApplicationStatus = "Applied" | "Interviewing" | "Offer" | "Rejected";
+export type ApplicationStatus =
+  | "Saved"
+  | "Applied"
+  | "Interviewing"
+  | "Offer"
+  | "Rejected"
+  | "Ghosted";
 
 export type Priority = "High" | "Mid" | "Low";
 

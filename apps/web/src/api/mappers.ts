@@ -23,10 +23,14 @@ import type {
 
 export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
   switch (status) {
+    case "saved":
+      return "Saved";
     case "offer":
       return "Offer";
     case "rejected":
       return "Rejected";
+    case "ghosted":
+      return "Ghosted";
     case "interview":
     case "phone_screen":
       return "Interviewing";
@@ -37,10 +41,14 @@ export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatu
 
 export function mapUiStatusToApi(status: ApplicationStatus): ApiApplicationStatus {
   switch (status) {
+    case "Saved":
+      return "saved";
     case "Offer":
       return "offer";
     case "Rejected":
       return "rejected";
+    case "Ghosted":
+      return "ghosted";
     case "Interviewing":
       return "interview";
     case "Applied":
@@ -234,6 +242,7 @@ export function mapApiDashboardStats(
     rejectionRate,
     weeklyTrend: paddedWeeklyTrend,
     applicationsByStatus: [
+      { status: "Saved", count: analytics.byStatus.saved ?? 0 },
       { status: "Applied", count: analytics.byStatus.applied ?? 0 },
       {
         status: "Interviewing",
@@ -241,6 +250,7 @@ export function mapApiDashboardStats(
       },
       { status: "Offer", count: analytics.byStatus.offer ?? 0 },
       { status: "Rejected", count: analytics.byStatus.rejected ?? 0 },
+      { status: "Ghosted", count: analytics.byStatus.ghosted ?? 0 },
     ],
     kpis: {
       totalApplications: {

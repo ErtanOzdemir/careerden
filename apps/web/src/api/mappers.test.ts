@@ -10,11 +10,13 @@ import type { ApiJobApplicationAnalytics, ApiJobApplicationDetail, ApiProfile } 
 
 describe("API mappers", () => {
   it("maps API status and priority values to UI labels", () => {
+    expect(mapApiStatusToUi("saved")).toBe("Saved");
     expect(mapApiStatusToUi("applied")).toBe("Applied");
     expect(mapApiStatusToUi("phone_screen")).toBe("Interviewing");
     expect(mapApiStatusToUi("interview")).toBe("Interviewing");
     expect(mapApiStatusToUi("offer")).toBe("Offer");
     expect(mapApiStatusToUi("rejected")).toBe("Rejected");
+    expect(mapApiStatusToUi("ghosted")).toBe("Ghosted");
     expect(mapApiPriorityToUi("high")).toBe("High");
     expect(mapApiPriorityToUi("medium")).toBe("Mid");
     expect(mapApiPriorityToUi("low")).toBe("Low");

@@ -17,7 +17,7 @@ describe("job application schemas", () => {
       sourceUrl: "https://www.linkedin.com/jobs/view/123",
     });
 
-    expect(result.applicationStatus).toBe("applied");
+    expect(result.applicationStatus).toBe("saved");
     expect(result.priority).toBe("medium");
     expect(result.tags).toEqual([]);
     expect(result.metadata).toEqual({});
@@ -51,6 +51,12 @@ describe("job application schemas", () => {
     });
 
     expect(result.applicationStatus).toBe("interview");
+  });
+
+  it("accepts ghosted tracker status", () => {
+    const result = updateJobApplicationSchema.parse({ applicationStatus: "ghosted" });
+
+    expect(result.applicationStatus).toBe("ghosted");
   });
 
   it("accepts contact payloads for key contacts", () => {

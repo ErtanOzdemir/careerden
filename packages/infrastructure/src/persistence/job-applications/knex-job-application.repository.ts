@@ -46,7 +46,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
           role_type: input.roleType ?? null,
           job_url: input.jobUrl ?? input.sourceUrl ?? null,
           date_applied: input.dateApplied ?? null,
-          application_status: input.applicationStatus ?? "applied",
+          application_status: input.applicationStatus ?? "saved",
           priority: input.priority ?? "medium",
           tags: JSON.stringify(input.tags ?? []),
           last_response_at: input.lastResponseAt ?? null,

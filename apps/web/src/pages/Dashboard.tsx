@@ -25,6 +25,7 @@ const activityIcon = {
   match: Sparkles,
   added: FilePlus2,
   applied: Send,
+  ghosted: FileCheck2,
 };
 
 export default function Dashboard() {
@@ -71,7 +72,7 @@ export default function Dashboard() {
     return <div className="py-16 text-center text-muted-foreground">Loading dashboard...</div>;
   if (error) return <div className="py-16 text-center text-destructive">{error}</div>;
 
-  const active = applications.filter((a) => a.status !== "Rejected");
+  const active = applications.filter((a) => !["Rejected", "Ghosted"].includes(a.status));
   const interviewingCount = applications.filter((a) => a.status === "Interviewing").length;
   const readyCount = applications.filter((a) => a.processingStatus === "review_ready").length;
   const matchScores = applications.filter((a) => (a.matchScore ?? 0) > 0);
@@ -100,18 +101,22 @@ export default function Dashboard() {
             ? "Application submitted"
             : app.status === "Rejected"
               ? "Not selected"
-              : app.matchScore
-                ? "Match analysis completed"
-                : "Job added",
+              : app.status === "Ghosted"
+                ? "No response"
+                : app.matchScore
+                  ? "Match analysis completed"
+                  : "Job added",
       meta: `${app.company} · ${app.role}`,
       time: app.dateLabel,
       kind: (app.status === "Interviewing"
         ? "interview"
         : app.status === "Applied"
           ? "applied"
-          : app.matchScore
-            ? "match"
-            : "added") as keyof typeof activityIcon,
+          : app.status === "Ghosted"
+            ? "ghosted"
+            : app.matchScore
+              ? "match"
+              : "added") as keyof typeof activityIcon,
     }));
 
   const followUps = (() => {
@@ -296,6 +301,8 @@ function mapStatus(app: JobApplication): DisplayStatus {
       return "offer";
     case "Rejected":
       return "rejected";
+    case "Ghosted":
+      return "ghosted";
     default:
       return "saved";
   }

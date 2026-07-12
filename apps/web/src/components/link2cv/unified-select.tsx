@@ -14,12 +14,14 @@ export function UnifiedSelect({
   placeholder,
   value,
   onChange,
+  disabled = false,
 }: {
   label: string;
   options: UnifiedSelectOption[];
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
   const selected = options.find((option) => option.value === value) ?? null;
 
@@ -29,6 +31,7 @@ export function UnifiedSelect({
       <Combobox.Root
         items={options}
         value={selected}
+        disabled={disabled}
         onValueChange={(option) => onChange(option?.value ?? "")}
         itemToStringLabel={(option) => option.label}
         isItemEqualToValue={(option, selectedOption) => option.value === selectedOption.value}

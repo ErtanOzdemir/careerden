@@ -45,6 +45,7 @@ import {
   UpdateJobApplicationFollowUpUseCase,
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
+  SubmitSupportRequestUseCase,
 } from "@link2cv/application";
 import {
   DocxtemplaterTemplateRenderer,
@@ -59,6 +60,7 @@ import {
   RustFsStorage,
   createPostgresDb,
   runPostgresMigrations,
+  MockSupportRequestNotifier,
 } from "@link2cv/infrastructure";
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
@@ -70,6 +72,7 @@ import { errorHandler } from "./middleware/error-handler.js";
 import { traceIdMiddleware } from "./middleware/trace-id.middleware.js";
 import { createNotificationRouter } from "./notifications/notifications.routes.js";
 import { createProfileRouter } from "./profiles/profiles.routes.js";
+import { createSupportRouter } from "./support/support.routes.js";
 
 export interface ApiRuntime {
   app: Express;
@@ -231,6 +234,12 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         notifications,
         getCurrentProfile,
       ),
+    }),
+  );
+  app.use(
+    "/support",
+    createSupportRouter({
+      submitSupportRequest: new SubmitSupportRequestUseCase(new MockSupportRequestNotifier()),
     }),
   );
   app.use(errorHandler);

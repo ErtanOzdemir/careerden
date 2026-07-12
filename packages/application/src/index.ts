@@ -53,3 +53,4 @@ export * from "./matching/extract-job-requirements.use-case.js";
 export * from "./matching/run-match-analysis.use-case.js";
 export * from "./documents/generate-documents.use-case.js";
 export * from "./application-error.js";
+export * from "./support/submit-support-request.use-case.js";

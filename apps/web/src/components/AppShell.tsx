@@ -25,6 +25,10 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
     title: "Settings",
     subtitle: "Preferences, account, and app updates.",
   },
+  "/support": {
+    title: "Help & support",
+    subtitle: "Tell us how we can help.",
+  },
 };
 
 export default function AppShell() {

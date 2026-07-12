@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import TemplateManager from "./pages/TemplateManager";
 import Settings from "./pages/Settings";
+import Support from "./pages/Support";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/templates" element={<TemplateManager />} />
         <Route path="/linkedin" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/support" element={<Support />} />
       </Route>
     </Routes>
   );

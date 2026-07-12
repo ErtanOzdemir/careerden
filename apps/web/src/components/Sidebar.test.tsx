@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar";
 
 vi.mock("../api/profiles.js", () => ({
@@ -17,6 +17,8 @@ vi.mock("../api/auth.js", () => ({
 }));
 
 describe("Sidebar", () => {
+  afterEach(cleanup);
+
   it("reserves top-left space for native macOS window controls", () => {
     render(
       <MemoryRouter>
@@ -35,5 +37,18 @@ describe("Sidebar", () => {
     );
 
     expect(screen.queryByRole("link", { name: /linkedin session/i })).not.toBeInTheDocument();
+  });
+
+  it("links to the help and support page", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: /help & support/i })).toHaveAttribute(
+      "href",
+      "/support",
+    );
   });
 });

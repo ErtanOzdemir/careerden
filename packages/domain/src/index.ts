@@ -28,3 +28,4 @@ export * from "./documents/generated-document.js";
 export * from "./documents/rich-document.js";
 export * from "./documents/template-renderer.js";
 export * from "./storage/file-storage.js";
+export * from "./support/support-request-notifier.js";

@@ -7,3 +7,4 @@ export * from "./scraping/linkedin-session.schema.js";
 export * from "./profiles/profile.schema.js";
 export * from "./notifications/notification.schema.js";
 export * from "./http/api-error.schema.js";
+export * from "./support/support-request.schema.js";

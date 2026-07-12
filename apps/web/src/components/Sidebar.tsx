@@ -93,10 +93,20 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-3 pb-4">
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground">
+        <NavLink
+          to="/support"
+          className={({ isActive }) =>
+            cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+            )
+          }
+        >
           <CircleHelp className="size-4 shrink-0" />
           Help & support
-        </button>
+        </NavLink>
         <button
           onClick={() => authClient.signOut()}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"

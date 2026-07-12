@@ -55,6 +55,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
           salary_currency: input.salaryCurrency ?? null,
           salary_period: input.salaryPeriod ?? null,
           salary_type: input.salaryType ?? null,
+          work_style: input.workStyle ?? null,
           metadata: JSON.stringify(input.metadata ?? {}),
           scrape_attempt_count: 0,
         })
@@ -399,6 +400,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     if ("salaryCurrency" in input) update.salary_currency = input.salaryCurrency ?? null;
     if ("salaryPeriod" in input) update.salary_period = input.salaryPeriod ?? null;
     if ("salaryType" in input) update.salary_type = input.salaryType ?? null;
+    if ("workStyle" in input) update.work_style = input.workStyle ?? null;
     if ("metadata" in input) update.metadata = JSON.stringify(input.metadata ?? {});
 
     const [row] = await this.db("job_applications").where({ id }).update(update).returning("*");

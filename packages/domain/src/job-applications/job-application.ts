@@ -12,6 +12,7 @@ export type ApplicationStatus =
 export type ApplicationPriority = "low" | "medium" | "high";
 export type SalaryPeriod = "hourly" | "monthly" | "yearly";
 export type SalaryType = "gross" | "net";
+export type WorkStyle = "remote" | "hybrid" | "on_site";
 
 export interface JobApplicationTrackingFields {
   companyName?: string;
@@ -28,6 +29,7 @@ export interface JobApplicationTrackingFields {
   salaryCurrency?: string;
   salaryPeriod?: SalaryPeriod;
   salaryType?: SalaryType;
+  workStyle?: WorkStyle;
   metadata: Record<string, unknown>;
 }
 
@@ -62,6 +64,7 @@ export interface CreateJobApplicationInput extends Partial<
     | "salaryCurrency"
     | "salaryPeriod"
     | "salaryType"
+    | "workStyle"
     | "metadata"
   >
 > {
@@ -85,6 +88,7 @@ export interface UpdateJobApplicationTrackingInput {
   salaryCurrency?: string | null;
   salaryPeriod?: SalaryPeriod | null;
   salaryType?: SalaryType | null;
+  workStyle?: WorkStyle | null;
   metadata?: Record<string, unknown>;
 }
 

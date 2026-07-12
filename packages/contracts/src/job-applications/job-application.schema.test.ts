@@ -64,6 +64,14 @@ describe("job application schemas", () => {
     expect(updateJobApplicationSchema.parse({ priority: null }).priority).toBeNull();
   });
 
+  it("accepts setting and clearing work style", () => {
+    expect(updateJobApplicationSchema.parse({ workStyle: "remote" }).workStyle).toBe("remote");
+    expect(updateJobApplicationSchema.parse({ workStyle: "hybrid" }).workStyle).toBe("hybrid");
+    expect(updateJobApplicationSchema.parse({ workStyle: "on_site" }).workStyle).toBe("on_site");
+    expect(updateJobApplicationSchema.parse({ workStyle: null }).workStyle).toBeNull();
+    expect(updateJobApplicationSchema.safeParse({ workStyle: "office" }).success).toBe(false);
+  });
+
   it("accepts salary ranges, one-sided salaries, and clearing salary details", () => {
     expect(
       updateJobApplicationSchema.parse({

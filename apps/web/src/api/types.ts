@@ -24,6 +24,7 @@ export interface ApiJobApplicationTracking {
   salaryMinAmount?: number;
   salaryPeriod?: "hourly" | "monthly" | "yearly";
   salaryType?: "gross" | "net";
+  workStyle?: "hybrid" | "on_site" | "remote";
   tags: string[];
 }
 

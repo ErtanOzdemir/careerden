@@ -57,6 +57,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
         salaryCurrency: input.salaryCurrency,
         salaryPeriod: input.salaryPeriod,
         salaryType: input.salaryType,
+        workStyle: input.workStyle,
         metadata: input.metadata ?? {},
       },
       createdAt: now,
@@ -407,6 +408,10 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
           input.salaryType === undefined
             ? existing.tracking.salaryType
             : (input.salaryType ?? undefined),
+        workStyle:
+          input.workStyle === undefined
+            ? existing.tracking.workStyle
+            : (input.workStyle ?? undefined),
       },
       updatedAt: new Date(),
     };

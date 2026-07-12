@@ -107,6 +107,7 @@ const salaryCurrencySchema = z
 const salaryAmountSchema = z.number().finite().nonnegative();
 const salaryPeriodSchema = z.enum(["hourly", "monthly", "yearly"]);
 const salaryTypeSchema = z.enum(["gross", "net"]);
+const workStyleSchema = z.enum(["remote", "hybrid", "on_site"]);
 
 export const updateJobApplicationSchema = z
   .object({
@@ -124,6 +125,7 @@ export const updateJobApplicationSchema = z
     salaryCurrency: salaryCurrencySchema.nullable().optional(),
     salaryPeriod: salaryPeriodSchema.nullable().optional(),
     salaryType: salaryTypeSchema.nullable().optional(),
+    workStyle: workStyleSchema.nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .superRefine((value, context) => {

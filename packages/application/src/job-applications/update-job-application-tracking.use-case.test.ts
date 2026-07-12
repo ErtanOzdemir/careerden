@@ -93,4 +93,27 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
     expect(recordChanged).toHaveBeenCalledOnce();
     expect(result.tracking.priority).toBe("high");
   });
+
+  it("updates work style without creating a status event", async () => {
+    const job = createTestJobApplication();
+    const updated = createTestJobApplication({
+      tracking: { ...job.tracking, workStyle: "hybrid" },
+    });
+    const repository = createJobApplicationRepository({
+      findById: vi.fn(async () => job),
+      updateTracking: vi.fn(async () => updated),
+    });
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
+
+    const result = await new UpdateJobApplicationTrackingUseCase(unitOfWork).execute(
+      job.id,
+      "user-1",
+      { workStyle: "hybrid" },
+    );
+
+    expect(repository.updateTracking).toHaveBeenCalledWith(job.id, { workStyle: "hybrid" });
+    expect(repository.addEvent).not.toHaveBeenCalled();
+    expect(recordChanged).toHaveBeenCalledOnce();
+    expect(result.tracking.workStyle).toBe("hybrid");
+  });
 });

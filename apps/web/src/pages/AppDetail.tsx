@@ -61,6 +61,7 @@ export default function AppDetail() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isSavingSalary, setIsSavingSalary] = useState(false);
   const [isSavingInterest, setIsSavingInterest] = useState(false);
+  const [isSavingWorkStyle, setIsSavingWorkStyle] = useState(false);
   const [followUpForm, setFollowUpForm] = useState({
     id: "",
     title: "",
@@ -281,6 +282,21 @@ export default function AppDetail() {
       throw e;
     } finally {
       setIsSavingInterest(false);
+    }
+  }
+
+  async function handleSaveWorkStyle(workStyle: "hybrid" | "on_site" | "remote" | null) {
+    if (!id) return;
+    try {
+      setIsSavingWorkStyle(true);
+      setError(null);
+      await jobApplicationsApi.update(id, { workStyle });
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save work style.");
+      throw e;
+    } finally {
+      setIsSavingWorkStyle(false);
     }
   }
 
@@ -514,8 +530,10 @@ export default function AppDetail() {
           app={app}
           isSavingInterest={isSavingInterest}
           isSavingSalary={isSavingSalary}
+          isSavingWorkStyle={isSavingWorkStyle}
           onSaveInterest={handleSaveInterest}
           onSaveSalary={handleSaveSalary}
+          onSaveWorkStyle={handleSaveWorkStyle}
         />
       )}
       {tab === "analysis" &&
@@ -584,12 +602,15 @@ function OverviewTab({
   app,
   isSavingInterest,
   isSavingSalary,
+  isSavingWorkStyle,
   onSaveInterest,
   onSaveSalary,
+  onSaveWorkStyle,
 }: {
   app: JobApplication;
   isSavingInterest: boolean;
   isSavingSalary: boolean;
+  isSavingWorkStyle: boolean;
   onSaveInterest: (interestLevel: InterestLevel | null) => Promise<void>;
   onSaveSalary: (input: {
     salaryCurrency: string | null;
@@ -598,6 +619,7 @@ function OverviewTab({
     salaryPeriod: "hourly" | "monthly" | "yearly" | null;
     salaryType: "gross" | "net" | null;
   }) => Promise<void>;
+  onSaveWorkStyle: (workStyle: "hybrid" | "on_site" | "remote" | null) => Promise<void>;
 }) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -648,8 +670,10 @@ function OverviewTab({
           app={app}
           isSavingInterest={isSavingInterest}
           isSavingSalary={isSavingSalary}
+          isSavingWorkStyle={isSavingWorkStyle}
           onSaveInterest={onSaveInterest}
           onSaveSalary={onSaveSalary}
+          onSaveWorkStyle={onSaveWorkStyle}
         />
       </div>
     </div>
@@ -673,6 +697,12 @@ const salaryTypeOptions: UnifiedSelectOption[] = [
   { value: "gross", label: "Gross" },
   { value: "net", label: "Net" },
 ];
+const workStyleOptions: UnifiedSelectOption[] = [
+  { value: "not_set", label: "Not set" },
+  { value: "remote", label: "Remote" },
+  { value: "hybrid", label: "Hybrid" },
+  { value: "on_site", label: "On-site" },
+];
 const interestOptions: UnifiedSelectOption[] = [
   { value: "not_set", label: "Not set" },
   { value: "low", label: "Low interest", leading: "🤔" },
@@ -684,14 +714,18 @@ export function JobDetailsPanel({
   app,
   isSavingInterest,
   isSavingSalary,
+  isSavingWorkStyle,
   onSaveInterest,
   onSaveSalary,
+  onSaveWorkStyle,
 }: {
   app: JobApplication;
   isSavingInterest: boolean;
   isSavingSalary: boolean;
+  isSavingWorkStyle: boolean;
   onSaveInterest: Parameters<typeof OverviewTab>[0]["onSaveInterest"];
   onSaveSalary: Parameters<typeof OverviewTab>[0]["onSaveSalary"];
+  onSaveWorkStyle: Parameters<typeof OverviewTab>[0]["onSaveWorkStyle"];
 }) {
   const [minimum, setMinimum] = useState("");
   const [maximum, setMaximum] = useState("");
@@ -699,7 +733,10 @@ export function JobDetailsPanel({
   const [period, setPeriod] = useState("");
   const [salaryType, setSalaryType] = useState("");
   const [interestLevel, setInterestLevel] = useState("");
-  const [editingField, setEditingField] = useState<"interest" | "salary" | null>(null);
+  const [workStyle, setWorkStyle] = useState("");
+  const [editingField, setEditingField] = useState<"interest" | "salary" | "workStyle" | null>(
+    null,
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -720,6 +757,10 @@ export function JobDetailsPanel({
   useEffect(() => {
     setInterestLevel(app.interestLevel ?? "not_set");
   }, [app.id, app.interestLevel]);
+
+  useEffect(() => {
+    setWorkStyle(app.workStyle ?? "not_set");
+  }, [app.id, app.workStyle]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -784,6 +825,19 @@ export function JobDetailsPanel({
     if (!interestLevel) return;
     try {
       await onSaveInterest(interestLevel === "not_set" ? null : (interestLevel as InterestLevel));
+      setEditingField(null);
+    } catch {
+      // The page-level error message is shown while the draft remains editable.
+    }
+  }
+
+  async function handleWorkStyleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!workStyle) return;
+    try {
+      await onSaveWorkStyle(
+        workStyle === "not_set" ? null : (workStyle as "hybrid" | "on_site" | "remote"),
+      );
       setEditingField(null);
     } catch {
       // The page-level error message is shown while the draft remains editable.
@@ -872,6 +926,63 @@ export function JobDetailsPanel({
           </div>
         )}
 
+        {editingField === "workStyle" ? (
+          <form
+            onSubmit={(event) => void handleWorkStyleSubmit(event)}
+            className="space-y-4 px-5 py-4"
+          >
+            <UnifiedSelect
+              label="Work style"
+              options={workStyleOptions}
+              placeholder="Select work style"
+              value={workStyle}
+              onChange={setWorkStyle}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSavingWorkStyle}
+                className="flex-1"
+                onClick={() => {
+                  setWorkStyle(app.workStyle ?? "not_set");
+                  setEditingField(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSavingWorkStyle || !workStyle}
+                className="flex-1"
+              >
+                {isSavingWorkStyle && <Loader2 className="size-4 animate-spin" />}
+                {isSavingWorkStyle ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex items-center justify-between gap-4 px-5 py-2.5">
+            <span className="text-muted-foreground">Work style</span>
+            <span className="flex items-center gap-2 text-right font-medium text-foreground">
+              <span>{formatWorkStyle(app.workStyle)}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Edit work style"
+                onClick={() => {
+                  setWorkStyle(app.workStyle ?? "not_set");
+                  setEditingField("workStyle");
+                }}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            </span>
+          </div>
+        )}
+
         {editingField === "interest" ? (
           <form
             onSubmit={(event) => void handleInterestSubmit(event)}
@@ -941,6 +1052,10 @@ export function JobDetailsPanel({
 function formatInterestLevel(interestLevel?: InterestLevel): string {
   const option = interestOptions.find((item) => item.value === interestLevel);
   return option ? `${option.leading} ${option.label}` : "Not set";
+}
+
+function formatWorkStyle(workStyle?: JobApplication["workStyle"]): string {
+  return workStyleOptions.find((item) => item.value === workStyle)?.label ?? "Not set";
 }
 
 function formatSalary(app: JobApplication): string {

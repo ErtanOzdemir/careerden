@@ -16,6 +16,17 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(cleared.tracking.priority).toBeUndefined();
   });
 
+  it("updates and clears work style tracking", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({ profileId: "profile-1" });
+
+    const updated = await repository.updateTracking(job.id, { workStyle: "remote" });
+    expect(updated.tracking.workStyle).toBe("remote");
+
+    const cleared = await repository.updateTracking(job.id, { workStyle: null });
+    expect(cleared.tracking.workStyle).toBeUndefined();
+  });
+
   it("updates and clears salary tracking fields", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({ profileId: "profile-1" });

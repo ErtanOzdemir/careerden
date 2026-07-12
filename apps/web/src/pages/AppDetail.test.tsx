@@ -10,9 +10,11 @@ describe("JobDetailsPanel", () => {
     renderPanel();
 
     expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.getByText("Work style")).toBeInTheDocument();
     expect(screen.getByText("Interest level")).toBeInTheDocument();
-    expect(screen.getAllByText("Not set")).toHaveLength(2);
+    expect(screen.getAllByText("Not set")).toHaveLength(3);
     expect(screen.getByRole("button", { name: "Edit salary" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit work style" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit interest level" })).toBeInTheDocument();
   });
 
@@ -24,7 +26,7 @@ describe("JobDetailsPanel", () => {
     expect(screen.queryByRole("button", { name: "Edit salary" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.getAllByText("Not set")).toHaveLength(2);
+    expect(screen.getAllByText("Not set")).toHaveLength(3);
   });
 
   it("saves a selected interest level", async () => {
@@ -84,12 +86,36 @@ describe("JobDetailsPanel", () => {
       }),
     );
   });
+
+  it("updates and clears work style", async () => {
+    const onSaveWorkStyle = vi.fn(async () => undefined);
+    renderPanel({
+      app: { ...createApplication(), workStyle: "remote" },
+      onSaveWorkStyle,
+    });
+
+    expect(screen.getByText("Remote")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit work style" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open work style options" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Hybrid" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSaveWorkStyle).toHaveBeenCalledWith("hybrid"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit work style" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open work style options" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Not set" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSaveWorkStyle).toHaveBeenCalledWith(null));
+  });
 });
 
 function renderPanel({
   app = createApplication(),
   onSaveInterest = vi.fn(async () => undefined),
   onSaveSalary = vi.fn(async () => undefined),
+  onSaveWorkStyle = vi.fn(async () => undefined),
 }: {
   app?: JobApplication;
   onSaveInterest?: (interestLevel: "high" | "low" | "medium" | null) => Promise<void>;
@@ -100,14 +126,17 @@ function renderPanel({
     salaryPeriod: "hourly" | "monthly" | "yearly" | null;
     salaryType: "gross" | "net" | null;
   }) => Promise<void>;
+  onSaveWorkStyle?: (workStyle: "hybrid" | "on_site" | "remote" | null) => Promise<void>;
 } = {}) {
   return render(
     <JobDetailsPanel
       app={app}
       isSavingInterest={false}
       isSavingSalary={false}
+      isSavingWorkStyle={false}
       onSaveInterest={onSaveInterest}
       onSaveSalary={onSaveSalary}
+      onSaveWorkStyle={onSaveWorkStyle}
     />,
   );
 }

@@ -47,6 +47,7 @@ export interface UpdateJobApplicationInput {
   salaryMinAmount?: number | null;
   salaryPeriod?: "hourly" | "monthly" | "yearly" | null;
   salaryType?: "gross" | "net" | null;
+  workStyle?: "hybrid" | "on_site" | "remote" | null;
 }
 
 export interface CreateJobApplicationContactInput {

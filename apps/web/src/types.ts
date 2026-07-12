@@ -110,6 +110,7 @@ export interface JobApplication {
   salaryMinAmount?: number;
   salaryPeriod?: "hourly" | "monthly" | "yearly";
   salaryType?: "gross" | "net";
+  workStyle?: "hybrid" | "on_site" | "remote";
   metadata?: Record<string, unknown>;
   contacts?: Contact[];
   followUps?: FollowUp[];

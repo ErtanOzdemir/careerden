@@ -10,7 +10,7 @@ export type DisplayStatus =
   | "rejected"
   | "ghosted";
 
-export type DisplayPriority = "low" | "medium" | "high";
+export type DisplayInterestLevel = "low" | "medium" | "high";
 
 const statusLabels: Record<DisplayStatus, string> = {
   saved: "Saved",
@@ -23,10 +23,10 @@ const statusLabels: Record<DisplayStatus, string> = {
   ghosted: "Ghosted",
 };
 
-const priorityLabels: Record<DisplayPriority, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
+const interestLabels: Record<DisplayInterestLevel, string> = {
+  low: "🤔 Low interest",
+  medium: "👀 Interested",
+  high: "🔥 Highly interested",
 };
 
 const statusStyles: Record<DisplayStatus, string> = {
@@ -72,16 +72,18 @@ export function StatusBadge({ status, className }: { status: DisplayStatus; clas
   );
 }
 
-const priorityStyles: Record<DisplayPriority, string> = {
+const interestStyles: Record<DisplayInterestLevel, string> = {
   low: "text-muted-foreground",
   medium: "text-foreground",
   high: "text-warning-foreground",
 };
 
-export function PriorityTag({ priority }: { priority: DisplayPriority }) {
+export function InterestTag({ interestLevel }: { interestLevel?: DisplayInterestLevel }) {
+  if (!interestLevel) return <span className="text-xs text-muted-foreground">—</span>;
+
   return (
-    <span className={cn("text-xs font-medium", priorityStyles[priority])}>
-      {priorityLabels[priority]}
+    <span className={cn("whitespace-nowrap text-xs font-medium", interestStyles[interestLevel])}>
+      {interestLabels[interestLevel]}
     </span>
   );
 }

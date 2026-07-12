@@ -19,7 +19,7 @@ export interface JobApplicationTrackingFields {
   jobUrl?: string;
   dateApplied?: string;
   applicationStatus: ApplicationStatus;
-  priority: ApplicationPriority;
+  priority?: ApplicationPriority;
   tags: string[];
   lastResponseAt?: Date;
   salaryMinAmount?: number;
@@ -74,7 +74,7 @@ export interface UpdateJobApplicationTrackingInput {
   jobUrl?: string;
   dateApplied?: string;
   applicationStatus?: ApplicationStatus;
-  priority?: ApplicationPriority;
+  priority?: ApplicationPriority | null;
   tags?: string[];
   lastResponseAt?: Date | null;
   salaryMinAmount?: number | null;

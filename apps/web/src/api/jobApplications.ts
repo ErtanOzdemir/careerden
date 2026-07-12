@@ -41,6 +41,7 @@ export interface SubmitScrapeDataInput {
 export interface UpdateJobApplicationInput {
   applicationStatus?: ApiApplicationStatus;
   metadata?: Record<string, unknown>;
+  priority?: ApiApplicationPriority | null;
   salaryCurrency?: string | null;
   salaryMaxAmount?: number | null;
   salaryMinAmount?: number | null;

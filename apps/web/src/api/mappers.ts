@@ -1,5 +1,4 @@
 import type {
-  ApiApplicationPriority,
   ApiApplicationStatus,
   ApiJobApplication,
   ApiJobApplicationAnalytics,
@@ -14,7 +13,7 @@ import type {
   DashboardStats,
   FollowUp,
   JobApplication,
-  Priority,
+  InterestLevel,
   ProcessingLogItem,
   Profile,
   TimelineMilestone,
@@ -56,28 +55,6 @@ export function mapUiStatusToApi(status: ApplicationStatus): ApiApplicationStatu
   }
 }
 
-export function mapApiPriorityToUi(priority: ApiApplicationPriority): Priority {
-  switch (priority) {
-    case "high":
-      return "High";
-    case "low":
-      return "Low";
-    case "medium":
-      return "Mid";
-  }
-}
-
-export function mapUiPriorityToApi(priority: Priority): ApiApplicationPriority {
-  switch (priority) {
-    case "High":
-      return "high";
-    case "Low":
-      return "low";
-    case "Mid":
-      return "medium";
-  }
-}
-
 export function mapApiJobApplicationToUi(
   application: ApiJobApplication | ApiJobApplicationDetail,
   profile?: ApiProfile,
@@ -100,7 +77,7 @@ export function mapApiJobApplicationToUi(
     dateApplied: formatDate(dateSource),
     dateLabel: formatRelativeDate(dateSource),
     status: mapApiStatusToUi(application.tracking.applicationStatus),
-    priority: mapApiPriorityToUi(application.tracking.priority),
+    interestLevel: application.tracking.priority as InterestLevel | undefined,
     tags: application.tracking.tags,
     description: scrapeJob?.description,
     descriptionHtml: scrapeJob?.descriptionHtml,

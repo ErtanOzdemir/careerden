@@ -18,7 +18,7 @@ describe("job application schemas", () => {
     });
 
     expect(result.applicationStatus).toBe("saved");
-    expect(result.priority).toBe("medium");
+    expect(result.priority).toBeUndefined();
     expect(result.tags).toEqual([]);
     expect(result.metadata).toEqual({});
   });
@@ -57,6 +57,11 @@ describe("job application schemas", () => {
     const result = updateJobApplicationSchema.parse({ applicationStatus: "ghosted" });
 
     expect(result.applicationStatus).toBe("ghosted");
+  });
+
+  it("accepts setting and clearing interest priority", () => {
+    expect(updateJobApplicationSchema.parse({ priority: "high" }).priority).toBe("high");
+    expect(updateJobApplicationSchema.parse({ priority: null }).priority).toBeNull();
   });
 
   it("accepts salary ranges, one-sided salaries, and clearing salary details", () => {

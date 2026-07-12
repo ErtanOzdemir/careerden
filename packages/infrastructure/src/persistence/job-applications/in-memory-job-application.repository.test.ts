@@ -3,6 +3,19 @@ import { richDocumentFromText, type ScrapeBundle } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {
+  it("creates applications without interest and supports setting and clearing it", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({ profileId: "profile-1" });
+
+    expect(job.tracking.priority).toBeUndefined();
+
+    const interested = await repository.updateTracking(job.id, { priority: "high" });
+    expect(interested.tracking.priority).toBe("high");
+
+    const cleared = await repository.updateTracking(job.id, { priority: null });
+    expect(cleared.tracking.priority).toBeUndefined();
+  });
+
   it("updates and clears salary tracking fields", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({ profileId: "profile-1" });

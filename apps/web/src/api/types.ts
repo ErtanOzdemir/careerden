@@ -16,7 +16,7 @@ export interface ApiJobApplicationTracking {
   jobUrl?: string;
   lastResponseAt?: string;
   metadata: Record<string, unknown>;
-  priority: ApiApplicationPriority;
+  priority?: ApiApplicationPriority;
   roleTitle?: string;
   roleType?: string;
   salaryCurrency?: string;

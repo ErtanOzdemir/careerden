@@ -8,7 +8,7 @@ export type ApplicationStatus =
   | "Rejected"
   | "Ghosted";
 
-export type Priority = "High" | "Mid" | "Low";
+export type InterestLevel = "high" | "low" | "medium";
 
 export type MilestoneStatus = "cancelled" | "completed" | "upcoming";
 
@@ -94,7 +94,7 @@ export interface JobApplication {
   dateApplied: string;
   dateLabel: string;
   status: ApplicationStatus;
-  priority: Priority;
+  interestLevel?: InterestLevel;
   tags: string[];
   description?: string;
   descriptionHtml?: string;

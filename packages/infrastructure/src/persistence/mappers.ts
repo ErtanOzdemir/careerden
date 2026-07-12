@@ -36,8 +36,7 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
       dateApplied: nullableString(row.date_applied),
       applicationStatus: (nullableString(row.application_status) ??
         "saved") as JobApplication["tracking"]["applicationStatus"],
-      priority: (nullableString(row.priority) ??
-        "medium") as JobApplication["tracking"]["priority"],
+      priority: nullableString(row.priority) as JobApplication["tracking"]["priority"],
       tags: stringArray(row.tags),
       lastResponseAt: nullableDate(row.last_response_at),
       salaryMinAmount: nullableNumber(row.salary_min_amount),

@@ -10,7 +10,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 24, 2023",
     dateLabel: "2 days ago",
     status: "Applied",
-    priority: "High",
+    interestLevel: "high",
     tags: ["Remote", "Full-time"],
     description:
       "We are looking for a Senior Product Designer to own the design of our developer platform. You'll shape how thousands of developers build and deploy web applications.",
@@ -128,7 +128,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 22, 2023",
     dateLabel: "4 days ago",
     status: "Interviewing",
-    priority: "High",
+    interestLevel: "high",
     tags: ["Hybrid", "Contract"],
     description:
       "We are looking for a Senior Product Designer to join our Checkout team. You will lead the design for high-scale payment flows used by millions of businesses globally.",
@@ -251,7 +251,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 20, 2023",
     dateLabel: "6 days ago",
     status: "Rejected",
-    priority: "Low",
+    interestLevel: "low",
     tags: ["Remote"],
     description:
       "HealthTap is seeking a UX Researcher to drive user insights for our telehealth platform. You'll work closely with product and clinical teams.",
@@ -326,7 +326,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 18, 2023",
     dateLabel: "8 days ago",
     status: "Offer",
-    priority: "High",
+    interestLevel: "high",
     tags: ["Remote", "Stock Options"],
     description:
       "Linear is hiring a Frontend Engineer to build the next generation of issue tracking and project management tools. You'll work on a fast, performant React + TypeScript codebase.",
@@ -410,7 +410,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 15, 2023",
     dateLabel: "11 days ago",
     status: "Interviewing",
-    priority: "High",
+    interestLevel: "high",
     tags: ["Remote", "Full-time"],
     description:
       "Notion is looking for a Product Designer to reimagine how teams collaborate with docs, wikings, and projects in one unified workspace.",
@@ -499,7 +499,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 12, 2023",
     dateLabel: "14 days ago",
     status: "Rejected",
-    priority: "Mid",
+    interestLevel: "medium",
     tags: ["On-site"],
   },
   {
@@ -511,7 +511,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 10, 2023",
     dateLabel: "16 days ago",
     status: "Applied",
-    priority: "High",
+    interestLevel: "high",
     tags: ["Remote", "Full-time"],
   },
   {
@@ -523,7 +523,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 8, 2023",
     dateLabel: "18 days ago",
     status: "Interviewing",
-    priority: "Mid",
+    interestLevel: "medium",
     tags: ["Remote", "Open Source"],
   },
   {
@@ -535,7 +535,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 5, 2023",
     dateLabel: "21 days ago",
     status: "Applied",
-    priority: "Mid",
+    interestLevel: "medium",
     tags: ["Hybrid", "Full-time"],
   },
   {
@@ -547,7 +547,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Oct 2, 2023",
     dateLabel: "24 days ago",
     status: "Rejected",
-    priority: "Low",
+    interestLevel: "low",
     tags: ["Remote", "Small Team"],
   },
   {
@@ -559,7 +559,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Sep 28, 2023",
     dateLabel: "28 days ago",
     status: "Offer",
-    priority: "Mid",
+    interestLevel: "medium",
     tags: ["Remote", "Open Source"],
   },
   {
@@ -571,7 +571,7 @@ export const mockApplications: JobApplication[] = [
     dateApplied: "Sep 25, 2023",
     dateLabel: "1 month ago",
     status: "Interviewing",
-    priority: "High",
+    interestLevel: "high",
     tags: ["Remote", "Benefits"],
   },
 ];

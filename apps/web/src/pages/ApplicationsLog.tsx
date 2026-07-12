@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
-import { StatusBadge, PriorityTag } from "../components/link2cv/status-badge.js";
-import type { DisplayStatus, DisplayPriority } from "../components/link2cv/status-badge.js";
+import { InterestTag, StatusBadge } from "../components/link2cv/status-badge.js";
+import type { DisplayStatus } from "../components/link2cv/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
 import { mapApiJobApplicationToUi } from "../api/mappers.js";
@@ -231,10 +231,10 @@ export default function ApplicationsLog() {
 
       <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="hidden grid-cols-12 gap-4 border-b border-border px-5 py-2.5 text-xs font-medium text-muted-foreground md:grid">
-          <div className="col-span-4">Company & role</div>
+          <div className="col-span-3">Company & role</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-2">Match</div>
-          <div className="col-span-1">Priority</div>
+          <div className="col-span-2">Interest</div>
           <div className="col-span-1">Follow-up</div>
           <div className="col-span-1 text-right">Added</div>
           <div className="col-span-1 text-center">Actions</div>
@@ -274,7 +274,7 @@ export default function ApplicationsLog() {
                   isFailed && "bg-danger-soft hover:bg-danger-soft/70",
                 )}
               >
-                <div className="col-span-4 flex items-center gap-3">
+                <div className="col-span-3 flex items-center gap-3">
                   <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xs font-semibold text-secondary-foreground">
                     {app.logo ? (
                       <img src={app.logo} alt="" className="size-full object-contain" />
@@ -317,8 +317,8 @@ export default function ApplicationsLog() {
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </div>
-                <div className="col-span-1">
-                  <PriorityTag priority={mapUiPriorityToDisplay(app.priority)} />
+                <div className="col-span-2">
+                  <InterestTag interestLevel={app.interestLevel} />
                 </div>
                 <div className="col-span-1 text-xs text-muted-foreground">
                   {app.dateLabel || "—"}
@@ -381,19 +381,6 @@ function mapUiStatusToDisplay(app: JobApplication): DisplayStatus {
       return "ghosted";
     default:
       return "saved";
-  }
-}
-
-function mapUiPriorityToDisplay(priority: string): DisplayPriority {
-  switch (priority) {
-    case "High":
-      return "high";
-    case "Low":
-      return "low";
-    case "Mid":
-      return "medium";
-    default:
-      return "medium";
   }
 }
 

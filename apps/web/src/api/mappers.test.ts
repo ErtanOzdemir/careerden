@@ -2,14 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   mapApiDashboardStats,
   mapApiJobApplicationToUi,
-  mapApiPriorityToUi,
   mapApiProfileToUi,
   mapApiStatusToUi,
 } from "./mappers";
 import type { ApiJobApplicationAnalytics, ApiJobApplicationDetail, ApiProfile } from "./types";
 
 describe("API mappers", () => {
-  it("maps API status and priority values to UI labels", () => {
+  it("maps API status values to UI labels", () => {
     expect(mapApiStatusToUi("saved")).toBe("Saved");
     expect(mapApiStatusToUi("applied")).toBe("Applied");
     expect(mapApiStatusToUi("phone_screen")).toBe("Interviewing");
@@ -17,9 +16,6 @@ describe("API mappers", () => {
     expect(mapApiStatusToUi("offer")).toBe("Offer");
     expect(mapApiStatusToUi("rejected")).toBe("Rejected");
     expect(mapApiStatusToUi("ghosted")).toBe("Ghosted");
-    expect(mapApiPriorityToUi("high")).toBe("High");
-    expect(mapApiPriorityToUi("medium")).toBe("Mid");
-    expect(mapApiPriorityToUi("low")).toBe("Low");
   });
 
   it("maps job application detail into the existing UI shape", () => {
@@ -34,7 +30,7 @@ describe("API mappers", () => {
     expect(mapped.descriptionHtml).toBe("<p>Build <strong>product</strong> UI.</p>");
     expect(mapped.domain).toBe("linkedin.com");
     expect(mapped.status).toBe("Interviewing");
-    expect(mapped.priority).toBe("High");
+    expect(mapped.interestLevel).toBe("high");
     expect(mapped.salaryMinAmount).toBe(90_000);
     expect(mapped.salaryMaxAmount).toBe(120_000);
     expect(mapped.salaryCurrency).toBe("EUR");
@@ -82,6 +78,13 @@ describe("API mappers", () => {
         reason: "Covers Node.js fundamentals for backend JavaScript work.",
       },
     ]);
+  });
+
+  it("maps an unset priority to an unset interest level", () => {
+    const application = createApplicationDetail();
+    application.tracking.priority = undefined;
+
+    expect(mapApiJobApplicationToUi(application).interestLevel).toBeUndefined();
   });
 
   it("maps analytics and details into dashboard stats", () => {

@@ -11,7 +11,7 @@ import {
   useJobApplicationChanges,
   type JobApplicationChange,
 } from "../api/jobApplicationChanges.js";
-import type { JobApplication, Profile } from "../types.js";
+import type { InterestLevel, JobApplication, Profile } from "../types.js";
 import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import AiMatchCard from "../components/AiMatchCard.js";
@@ -60,6 +60,7 @@ export default function AppDetail() {
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isSavingSalary, setIsSavingSalary] = useState(false);
+  const [isSavingInterest, setIsSavingInterest] = useState(false);
   const [followUpForm, setFollowUpForm] = useState({
     id: "",
     title: "",
@@ -264,6 +265,21 @@ export default function AppDetail() {
       throw e;
     } finally {
       setIsSavingSalary(false);
+    }
+  }
+
+  async function handleSaveInterest(interestLevel: InterestLevel | null) {
+    if (!id) return;
+    try {
+      setIsSavingInterest(true);
+      setError(null);
+      await jobApplicationsApi.update(id, { priority: interestLevel });
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save interest level.");
+      throw e;
+    } finally {
+      setIsSavingInterest(false);
     }
   }
 
@@ -493,7 +509,13 @@ export default function AppDetail() {
       </div>
 
       {tab === "overview" && (
-        <OverviewTab app={app} isSavingSalary={isSavingSalary} onSaveSalary={handleSaveSalary} />
+        <OverviewTab
+          app={app}
+          isSavingInterest={isSavingInterest}
+          isSavingSalary={isSavingSalary}
+          onSaveInterest={handleSaveInterest}
+          onSaveSalary={handleSaveSalary}
+        />
       )}
       {tab === "analysis" &&
         (app.aiMatch && app.documentContent ? (
@@ -559,11 +581,15 @@ export default function AppDetail() {
 
 function OverviewTab({
   app,
+  isSavingInterest,
   isSavingSalary,
+  onSaveInterest,
   onSaveSalary,
 }: {
   app: JobApplication;
+  isSavingInterest: boolean;
   isSavingSalary: boolean;
+  onSaveInterest: (interestLevel: InterestLevel | null) => Promise<void>;
   onSaveSalary: (input: {
     salaryCurrency: string | null;
     salaryMaxAmount: number | null;
@@ -616,7 +642,13 @@ function OverviewTab({
             ))}
           </dl>
         </Panel>
-        <SalaryDetailsPanel app={app} isSaving={isSavingSalary} onSave={onSaveSalary} />
+        <JobDetailsPanel
+          app={app}
+          isSavingInterest={isSavingInterest}
+          isSavingSalary={isSavingSalary}
+          onSaveInterest={onSaveInterest}
+          onSaveSalary={onSaveSalary}
+        />
       </div>
     </div>
   );
@@ -635,21 +667,32 @@ const salaryPeriodOptions: UnifiedSelectOption[] = [
   { value: "monthly", label: "Monthly" },
   { value: "yearly", label: "Yearly" },
 ];
+const interestOptions: UnifiedSelectOption[] = [
+  { value: "not_set", label: "Not set" },
+  { value: "low", label: "Low interest", leading: "🤔" },
+  { value: "medium", label: "Interested", leading: "👀" },
+  { value: "high", label: "Highly interested", leading: "🔥" },
+];
 
-function SalaryDetailsPanel({
+export function JobDetailsPanel({
   app,
-  isSaving,
-  onSave,
+  isSavingInterest,
+  isSavingSalary,
+  onSaveInterest,
+  onSaveSalary,
 }: {
   app: JobApplication;
-  isSaving: boolean;
-  onSave: Parameters<typeof OverviewTab>[0]["onSaveSalary"];
+  isSavingInterest: boolean;
+  isSavingSalary: boolean;
+  onSaveInterest: Parameters<typeof OverviewTab>[0]["onSaveInterest"];
+  onSaveSalary: Parameters<typeof OverviewTab>[0]["onSaveSalary"];
 }) {
   const [minimum, setMinimum] = useState("");
   const [maximum, setMaximum] = useState("");
   const [currency, setCurrency] = useState("");
   const [period, setPeriod] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
+  const [interestLevel, setInterestLevel] = useState("");
+  const [editingField, setEditingField] = useState<"interest" | "salary" | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -657,8 +700,11 @@ function SalaryDetailsPanel({
     setMaximum(app.salaryMaxAmount?.toString() ?? "");
     setCurrency(app.salaryCurrency ?? "");
     setPeriod(app.salaryPeriod ?? "");
-    setIsEditing(false);
   }, [app.id, app.salaryCurrency, app.salaryMaxAmount, app.salaryMinAmount, app.salaryPeriod]);
+
+  useEffect(() => {
+    setInterestLevel(app.interestLevel ?? "not_set");
+  }, [app.id, app.interestLevel]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -701,13 +747,24 @@ function SalaryDetailsPanel({
 
     setValidationError(null);
     try {
-      await onSave({
+      await onSaveSalary({
         salaryMinAmount: isClear ? null : parsedMinimum,
         salaryMaxAmount: isClear ? null : parsedMaximum,
         salaryCurrency: isClear ? null : currency,
         salaryPeriod: isClear ? null : (period as "hourly" | "monthly" | "yearly"),
       });
-      setIsEditing(false);
+      setEditingField(null);
+    } catch {
+      // The page-level error message is shown while the draft remains editable.
+    }
+  }
+
+  async function handleInterestSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!interestLevel) return;
+    try {
+      await onSaveInterest(interestLevel === "not_set" ? null : (interestLevel as InterestLevel));
+      setEditingField(null);
     } catch {
       // The page-level error message is shown while the draft remains editable.
     }
@@ -718,77 +775,143 @@ function SalaryDetailsPanel({
   return (
     <Panel>
       <PanelHeader title="Job details" />
-      {!isEditing ? (
-        <dl className="divide-y divide-border border-t border-border text-sm">
+      <div className="divide-y divide-border border-t border-border text-sm">
+        {editingField === "salary" ? (
+          <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4 px-5 py-4">
+            <div>
+              <p className="mb-3 text-sm font-medium text-foreground">Salary</p>
+              <div className="grid grid-cols-2 gap-3">
+                <SalaryInput label="Minimum" value={minimum} onChange={setMinimum} />
+                <SalaryInput label="Maximum" value={maximum} onChange={setMaximum} />
+              </div>
+            </div>
+            <UnifiedSelect
+              label="Currency"
+              options={currencyOptions}
+              placeholder="Select currency"
+              value={currency}
+              onChange={setCurrency}
+            />
+            <UnifiedSelect
+              label="Pay period"
+              options={salaryPeriodOptions}
+              placeholder="Select period"
+              value={period}
+              onChange={setPeriod}
+            />
+            {validationError && <p className="text-xs text-destructive">{validationError}</p>}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSavingSalary}
+                className="flex-1"
+                onClick={() => {
+                  setMinimum(app.salaryMinAmount?.toString() ?? "");
+                  setMaximum(app.salaryMaxAmount?.toString() ?? "");
+                  setCurrency(app.salaryCurrency ?? "");
+                  setPeriod(app.salaryPeriod ?? "");
+                  setValidationError(null);
+                  setEditingField(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSavingSalary} className="flex-1">
+                {isSavingSalary && <Loader2 className="size-4 animate-spin" />}
+                {isSavingSalary ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </form>
+        ) : (
           <div className="flex items-center justify-between gap-4 px-5 py-2.5">
-            <dt className="text-muted-foreground">Salary</dt>
-            <dd className="flex items-center gap-2 text-right font-medium text-foreground">
+            <span className="text-muted-foreground">Salary</span>
+            <span className="flex items-center gap-2 text-right font-medium text-foreground">
               <span>{salaryValue}</span>
               <Button
                 variant="ghost"
                 size="icon"
                 aria-label="Edit salary"
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  setInterestLevel(app.interestLevel ?? "not_set");
+                  setEditingField("salary");
+                }}
               >
                 <Pencil className="size-3.5" />
               </Button>
-            </dd>
+            </span>
           </div>
-        </dl>
-      ) : (
-        <form
-          onSubmit={(event) => void handleSubmit(event)}
-          className="space-y-4 border-t border-border px-5 py-4"
-        >
-          <div>
-            <p className="mb-3 text-sm font-medium text-foreground">Salary</p>
-            <div className="grid grid-cols-2 gap-3">
-              <SalaryInput label="Minimum" value={minimum} onChange={setMinimum} />
-              <SalaryInput label="Maximum" value={maximum} onChange={setMaximum} />
+        )}
+
+        {editingField === "interest" ? (
+          <form
+            onSubmit={(event) => void handleInterestSubmit(event)}
+            className="space-y-4 px-5 py-4"
+          >
+            <UnifiedSelect
+              label="Interest level"
+              options={interestOptions}
+              placeholder="Select interest level"
+              value={interestLevel}
+              onChange={setInterestLevel}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSavingInterest}
+                className="flex-1"
+                onClick={() => {
+                  setInterestLevel(app.interestLevel ?? "not_set");
+                  setEditingField(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSavingInterest || !interestLevel}
+                className="flex-1"
+              >
+                {isSavingInterest && <Loader2 className="size-4 animate-spin" />}
+                {isSavingInterest ? "Saving..." : "Save"}
+              </Button>
             </div>
+          </form>
+        ) : (
+          <div className="flex items-center justify-between gap-4 px-5 py-2.5">
+            <span className="text-muted-foreground">Interest level</span>
+            <span className="flex items-center gap-2 text-right font-medium text-foreground">
+              <span>{formatInterestLevel(app.interestLevel)}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Edit interest level"
+                onClick={() => {
+                  setMinimum(app.salaryMinAmount?.toString() ?? "");
+                  setMaximum(app.salaryMaxAmount?.toString() ?? "");
+                  setCurrency(app.salaryCurrency ?? "");
+                  setPeriod(app.salaryPeriod ?? "");
+                  setValidationError(null);
+                  setEditingField("interest");
+                }}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            </span>
           </div>
-          <UnifiedSelect
-            label="Currency"
-            options={currencyOptions}
-            placeholder="Select currency"
-            value={currency}
-            onChange={setCurrency}
-          />
-          <UnifiedSelect
-            label="Pay period"
-            options={salaryPeriodOptions}
-            placeholder="Select period"
-            value={period}
-            onChange={setPeriod}
-          />
-          {validationError && <p className="text-xs text-destructive">{validationError}</p>}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isSaving}
-              className="flex-1"
-              onClick={() => {
-                setMinimum(app.salaryMinAmount?.toString() ?? "");
-                setMaximum(app.salaryMaxAmount?.toString() ?? "");
-                setCurrency(app.salaryCurrency ?? "");
-                setPeriod(app.salaryPeriod ?? "");
-                setValidationError(null);
-                setIsEditing(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={isSaving} className="flex-1">
-              {isSaving && <Loader2 className="size-4 animate-spin" />}
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </form>
-      )}
+        )}
+      </div>
     </Panel>
   );
+}
+
+function formatInterestLevel(interestLevel?: InterestLevel): string {
+  const option = interestOptions.find((item) => item.value === interestLevel);
+  return option ? `${option.leading} ${option.label}` : "Not set";
 }
 
 function formatSalary(app: JobApplication): string {

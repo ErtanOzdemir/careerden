@@ -49,7 +49,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
         jobUrl: input.jobUrl ?? input.sourceUrl,
         dateApplied: input.dateApplied,
         applicationStatus: input.applicationStatus ?? "saved",
-        priority: input.priority ?? "medium",
+        priority: input.priority,
         tags: input.tags ?? [],
         lastResponseAt: input.lastResponseAt,
         salaryMinAmount: input.salaryMinAmount,
@@ -384,6 +384,8 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
           input.lastResponseAt === undefined
             ? existing.tracking.lastResponseAt
             : (input.lastResponseAt ?? undefined),
+        priority:
+          input.priority === undefined ? existing.tracking.priority : (input.priority ?? undefined),
         salaryMinAmount:
           input.salaryMinAmount === undefined
             ? existing.tracking.salaryMinAmount

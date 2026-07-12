@@ -60,6 +60,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
           await jobApplications.updateTracking(jobApplicationId, {
             companyName: logo.scrape.job.companyName,
             roleTitle: logo.scrape.job.title,
+            ...(logo.scrape.job.location ? { roleType: logo.scrape.job.location } : {}),
           });
           await jobApplications.updateStatus(jobApplicationId, "scraped");
           await jobApplications.addEvent({

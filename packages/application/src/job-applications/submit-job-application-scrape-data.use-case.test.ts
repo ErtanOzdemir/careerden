@@ -30,12 +30,16 @@ describe("SubmitJobApplicationScrapeDataUseCase", () => {
         getDetail,
       ).execute(job.id, "user-1", {
         claimedBy: "desktop-a",
-        scrapeBundle: createScrapeBundle(),
+        scrapeBundle: {
+          ...createScrapeBundle(),
+          job: { ...createScrapeBundle().job, location: "Remote" },
+        },
       }),
     ).resolves.toBe(detail);
     expect(repository.updateTracking).toHaveBeenCalledWith(job.id, {
       companyName: "Acme",
       roleTitle: "Backend Engineer",
+      roleType: "Remote",
     });
     expect(repository.updateStatus).toHaveBeenCalledWith(job.id, "scraped");
     expect(addOutboxEvent).toHaveBeenCalledWith(

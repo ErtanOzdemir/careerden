@@ -64,14 +64,21 @@ export async function addDocumentsToJobApplications(
 ): Promise<JobApplicationWithDocuments[]> {
   return Promise.all(
     jobs.map(async (jobApplication) => {
-      const [documents, companyLogoUrl, matchAnalysis] = await Promise.all([
+      const [documents, companyLogoUrl, matchAnalysis, scrapeBundle] = await Promise.all([
         jobApplications.listGeneratedDocuments(jobApplication.id),
         getCompanyLogoUrl(jobApplications, storage, jobApplication.id),
         jobApplications.getMatchAnalysis(jobApplication.id),
+        jobApplications.getScrapeBundle(jobApplication.id),
       ]);
 
       return {
         ...jobApplication,
+        tracking: {
+          ...jobApplication.tracking,
+          ...(jobApplication.tracking.roleType || !scrapeBundle?.job.location
+            ? {}
+            : { roleType: scrapeBundle.job.location }),
+        },
         documents,
         ...(companyLogoUrl ? { companyLogoUrl } : {}),
         ...(matchAnalysis ? { matchScore: matchAnalysis.matchScore } : {}),

@@ -15,4 +15,77 @@ describe("UpdateProfileUseCase", () => {
       }),
     ).resolves.toBe(updated);
   });
+
+  it("derives plain profile text from rich summary and descriptions", async () => {
+    const profile = createTestProfile();
+    const profiles = createProfileRepository(profile);
+    const summaryRichText = {
+      version: 1 as const,
+      blocks: [
+        {
+          type: "paragraph" as const,
+          children: [{ type: "text" as const, text: "Backend engineer" }],
+        },
+      ],
+    };
+    const descriptionRichText = {
+      version: 1 as const,
+      blocks: [
+        {
+          type: "bulletList" as const,
+          items: [
+            {
+              blocks: [
+                {
+                  type: "paragraph" as const,
+                  children: [{ type: "text" as const, text: "Built reliable services" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    await new UpdateProfileUseCase(profiles).execute(profile.id, "user-1", {
+      summaryRichText,
+      experience: [
+        {
+          company: "Link2CV",
+          title: "Engineer",
+          descriptionRichText,
+        },
+      ],
+      projects: [
+        {
+          name: "Link2CV",
+          descriptionRichText,
+          skills: [],
+          achievements: [],
+        },
+      ],
+    });
+
+    expect(profiles.update).toHaveBeenCalledWith(profile.id, {
+      summary: "Backend engineer",
+      summaryRichText,
+      experience: [
+        {
+          company: "Link2CV",
+          title: "Engineer",
+          description: "Built reliable services",
+          descriptionRichText,
+        },
+      ],
+      projects: [
+        {
+          name: "Link2CV",
+          description: "Built reliable services",
+          descriptionRichText,
+          skills: [],
+          achievements: [],
+        },
+      ],
+    });
+  });
 });

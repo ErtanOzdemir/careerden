@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { richDocumentFromText } from "@link2cv/domain";
 import type { AiGenerateParams, AiProvider, UserProfile } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
 import { RunMatchAnalysisUseCase } from "./run-match-analysis.use-case.js";
@@ -90,6 +91,10 @@ describe("RunMatchAnalysisUseCase", () => {
       missingSkillResourceGuidance?: Record<string, unknown>;
       matchingMethodology?: string[];
       requiredOutput?: Record<string, string>;
+      userProfile?: {
+        summaryRichText?: unknown;
+        experience?: Array<{ descriptionRichText?: unknown }>;
+      };
     };
 
     expect(prompt.currentSystemOutputMapping).toMatchObject({
@@ -124,6 +129,8 @@ describe("RunMatchAnalysisUseCase", () => {
     expect(prompt.missingSkillResourceGuidance?.constraints).toContain(
       "Do not invent fake URLs or citations.",
     );
+    expect(prompt.userProfile).not.toHaveProperty("summaryRichText");
+    expect(prompt.userProfile?.experience?.[0]).not.toHaveProperty("descriptionRichText");
   });
 
   it("removes AI-generated duration claims that are not present in the profile", async () => {
@@ -269,6 +276,7 @@ function createProfile(
     autoRunMatchAnalysis: true,
     links: [],
     summary: overrides.summary,
+    summaryRichText: richDocumentFromText(overrides.summary ?? ""),
     skills: ["TypeScript"],
     experience: [
       {
@@ -277,11 +285,16 @@ function createProfile(
         description:
           overrides.experienceDescription ??
           "Built TypeScript automation for production workflows. Worked with product partners.",
+        descriptionRichText: richDocumentFromText(
+          overrides.experienceDescription ??
+            "Built TypeScript automation for production workflows. Worked with product partners.",
+        ),
       },
       {
         company: "Babbage Events",
         title: "Event Coordinator",
         description: "Organized local community events.",
+        descriptionRichText: richDocumentFromText("Organized local community events."),
       },
     ],
     education: [],

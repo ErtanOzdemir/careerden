@@ -9,6 +9,7 @@ import type {
   MatchAnalysisResult,
   ProfileEducation,
   ProfileExperience,
+  ProfileProject,
   ScrapeBundle,
   TemplateRenderer,
   UserProfile,
@@ -239,6 +240,7 @@ function toTemplateData(
 ): Record<string, unknown> {
   const scrapedJob = scrape?.job;
   const enhancedExperiences = toSelectedExperiences(profile.experience, documentContent);
+  const selectedProjects = toSelectedProjects(profile.projects, documentContent);
 
   return {
     company_name: jobApplication.tracking.companyName ?? scrapedJob?.companyName ?? "",
@@ -253,9 +255,9 @@ function toTemplateData(
     role_title: jobApplication.tracking.roleTitle ?? scrapedJob?.title ?? "",
     summary:
       documentContent.selections?.customizedSummary === "original"
-        ? profile.summary
-          ? documentContentFromText(profile.summary)
-          : documentContent.customizedSummary
+        ? (profile.summaryRichText ??
+          (profile.summary ? documentContentFromText(profile.summary) : undefined) ??
+          documentContent.customizedSummary)
         : documentContent.customizedSummary,
     raw_summary: profile.summary ?? "",
     skills:
@@ -269,6 +271,7 @@ function toTemplateData(
     experience_list: enhancedExperiences,
     raw_experience_list: profile.experience,
     selected_experiences: enhancedExperiences,
+    selected_projects: selectedProjects,
     match_score: analysis.matchScore,
     missing_skills: analysis.missingSkills,
     strong_skills: analysis.strongSkills,
@@ -277,6 +280,41 @@ function toTemplateData(
     interview_tips: analysis.interviewTips,
     cover_letter_guidance: analysis.coverLetterGuidance ?? [],
   };
+}
+
+function toSelectedProjects(
+  projects: ProfileProject[],
+  documentContent: DocumentContent,
+): Record<string, unknown>[] {
+  return projects.map((project, index) => {
+    const enhancement = documentContent.projectEnhancements?.find(
+      (item) => item.projectIndex === index,
+    );
+    const selection = documentContent.selections?.projects?.[String(index)];
+    const originalDescription =
+      project.descriptionRichText ??
+      (project.description ? documentContentFromText(project.description) : undefined);
+    const description =
+      selection?.description === "original"
+        ? originalDescription
+        : (enhancement?.description ?? originalDescription);
+    const achievements = project.achievements.map((achievement, achievementIndex) => {
+      const selected = selection?.achievements[String(achievementIndex)];
+      const enhanced = enhancement?.achievements[achievementIndex];
+
+      return selected === "original"
+        ? documentContentFromText(achievement)
+        : (enhanced ?? documentContentFromText(achievement));
+    });
+
+    return {
+      name: project.name,
+      url: project.url ?? "",
+      skills: project.skills,
+      achievements,
+      ...(description ? { description } : {}),
+    };
+  });
 }
 
 function toSelectedEducation(
@@ -322,10 +360,10 @@ function toSelectedExperiences(
 
     const description =
       selection?.description === "original"
-        ? experience.description
-          ? documentContentFromText(experience.description)
-          : undefined
+        ? (experience.descriptionRichText ??
+          (experience.description ? documentContentFromText(experience.description) : undefined))
         : (enhancement?.description ??
+          experience.descriptionRichText ??
           (experience.description ? documentContentFromText(experience.description) : undefined));
 
     return {

@@ -29,7 +29,7 @@ export class RunMatchAnalysisUseCase {
         "Return only valid JSON matching the provided output schema. Do not include markdown or commentary outside the JSON.",
       ].join(" "),
       prompt: JSON.stringify({
-        userProfile: input.profile,
+        userProfile: toPlainTextProfile(input.profile),
         scrapedJob: input.scrape.job,
         scrapedCompany: {
           linkedIn: input.scrape.companyLinkedIn,
@@ -169,6 +169,18 @@ export class RunMatchAnalysisUseCase {
 
     return deterministicResult;
   }
+}
+
+function toPlainTextProfile(profile: UserProfile) {
+  const { summaryRichText: _summaryRichText, ...plainProfile } = profile;
+
+  return {
+    ...plainProfile,
+    experience: profile.experience.map(
+      ({ descriptionRichText: _richText, ...experience }) => experience,
+    ),
+    projects: profile.projects.map(({ descriptionRichText: _richText, ...project }) => project),
+  };
 }
 
 function calculateMatchScore(result: MatchAnalysisResult): number {

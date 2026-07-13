@@ -249,6 +249,15 @@ describe("API mappers", () => {
       items: [
         {
           actual: "Built product experiences for SaaS teams.",
+          actualRichText: {
+            version: 1,
+            blocks: [
+              {
+                type: "paragraph",
+                children: [{ type: "text", text: "Built product experiences for SaaS teams." }],
+              },
+            ],
+          },
           enhanced: "Enhanced role description.",
           kind: "description",
         },

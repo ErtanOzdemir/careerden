@@ -95,6 +95,7 @@ describe("AiMatchCard", () => {
     expect(screen.getByText("AI Enhanced Version")).toBeInTheDocument();
     expect(screen.queryByText("Original Profile Summary")).not.toBeInTheDocument();
     expect(screen.queryByText("Tailored CV Summary")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Original Profile Summary")).toBeInTheDocument();
   });
 
   it("stores experience description selection for document generation", async () => {
@@ -195,6 +196,15 @@ function createAiMatch(): NonNullable<JobApplication["aiMatch"]> {
     ],
     recommendation: "Review before applying",
     currentSummary: "Frontend engineer.",
+    currentSummaryRichText: {
+      version: 1,
+      blocks: [
+        {
+          type: "paragraph",
+          children: [{ type: "text", text: "Frontend engineer.", marks: [{ type: "bold" }] }],
+        },
+      ],
+    },
     enhancedSummary: "Frontend engineer with React experience.",
     bulletOptimizations: [],
     experienceOptimizations: [],

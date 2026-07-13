@@ -18,4 +18,39 @@ describe("profile schemas", () => {
 
     expect(result.autoRunMatchAnalysis).toBe(false);
   });
+
+  it("accepts rich text for summaries and experience and project descriptions", () => {
+    const richText = {
+      version: 1 as const,
+      blocks: [
+        {
+          type: "paragraph" as const,
+          children: [{ type: "text" as const, text: "Built reliable systems" }],
+        },
+      ],
+    };
+
+    const result = updateProfileSchema.parse({
+      summaryRichText: richText,
+      experience: [
+        {
+          company: "Link2CV",
+          title: "Engineer",
+          descriptionRichText: richText,
+        },
+      ],
+      projects: [
+        {
+          name: "Link2CV",
+          descriptionRichText: richText,
+          skills: [],
+          achievements: [],
+        },
+      ],
+    });
+
+    expect(result.summaryRichText).toEqual(richText);
+    expect(result.experience?.[0]?.descriptionRichText).toEqual(richText);
+    expect(result.projects?.[0]?.descriptionRichText).toEqual(richText);
+  });
 });

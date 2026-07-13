@@ -1,9 +1,13 @@
+import type { RichDocument } from "../documents/rich-document.js";
+import { richDocumentFromText, richDocumentToPlainText } from "../documents/rich-document.js";
+
 export interface ProfileExperience {
   company: string;
   title: string;
   startDate?: string;
   endDate?: string;
   description?: string;
+  descriptionRichText?: RichDocument;
 }
 
 export interface ProfileEducation {
@@ -17,6 +21,7 @@ export interface ProfileEducation {
 export interface ProfileProject {
   name: string;
   description?: string;
+  descriptionRichText?: RichDocument;
   url?: string;
   skills: string[];
   achievements: string[];
@@ -33,6 +38,7 @@ export interface UserProfile {
   location?: string;
   links: string[];
   summary?: string;
+  summaryRichText?: RichDocument;
   skills: string[];
   experience: ProfileExperience[];
   education: ProfileEducation[];
@@ -67,3 +73,51 @@ export type CreateUserProfileInput = Omit<
   >;
 
 export type UpdateUserProfileInput = Partial<CreateUserProfileInput>;
+
+export function normalizeCreateUserProfileInput(
+  input: CreateUserProfileInput,
+): CreateUserProfileInput {
+  return normalizeUserProfileInput(input) as CreateUserProfileInput;
+}
+
+export function normalizeUpdateUserProfileInput(
+  input: UpdateUserProfileInput,
+): UpdateUserProfileInput {
+  return normalizeUserProfileInput(input);
+}
+
+function normalizeUserProfileInput(input: UpdateUserProfileInput): UpdateUserProfileInput {
+  const summaryChanged = input.summary !== undefined || input.summaryRichText !== undefined;
+
+  return {
+    ...input,
+    ...(summaryChanged ? normalizeSummary(input.summary, input.summaryRichText) : {}),
+    ...(input.experience ? { experience: input.experience.map(normalizeDescriptionRichText) } : {}),
+    ...(input.projects ? { projects: input.projects.map(normalizeDescriptionRichText) } : {}),
+  };
+}
+
+function normalizeSummary(summary?: string, richText?: RichDocument) {
+  const document = richText ?? richDocumentFromText(summary ?? "");
+
+  return {
+    summary: richDocumentToPlainText(document).trim(),
+    summaryRichText: document,
+  };
+}
+
+function normalizeDescriptionRichText<
+  T extends { description?: string; descriptionRichText?: RichDocument },
+>(item: T): T {
+  if (item.description === undefined && item.descriptionRichText === undefined) {
+    return item;
+  }
+
+  const document = item.descriptionRichText ?? richDocumentFromText(item.description ?? "");
+
+  return {
+    ...item,
+    description: richDocumentToPlainText(document).trim(),
+    descriptionRichText: document,
+  };
+}

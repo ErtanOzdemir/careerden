@@ -1,7 +1,8 @@
-import type {
-  UpdateUserProfileInput,
-  UserProfile,
-  UserProfileAccountRepository,
+import {
+  normalizeUpdateUserProfileInput,
+  type UpdateUserProfileInput,
+  type UserProfile,
+  type UserProfileAccountRepository,
 } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleProfile } from "./profile-access.js";
@@ -11,7 +12,7 @@ export class UpdateProfileUseCase {
 
   async execute(id: string, userId: string, input: UpdateUserProfileInput): Promise<UserProfile> {
     await getAccessibleProfile(this.profiles, id, userId);
-    const profile = await this.profiles.update(id, input);
+    const profile = await this.profiles.update(id, normalizeUpdateUserProfileInput(input));
 
     if (!profile) {
       throw new ApplicationError("not_found", "Profile not found");

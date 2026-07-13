@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { cn } from "../../lib/utils.js";
 
 const inputClass =
@@ -22,10 +23,15 @@ export function Field({
   type?: string;
   className?: string;
 }) {
+  const id = useId();
+
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="text-sm font-medium text-foreground">{label}</label>
+      <label htmlFor={id} className="text-sm font-medium text-foreground">
+        {label}
+      </label>
       <input
+        id={id}
         type={type}
         defaultValue={value !== undefined || onChange ? undefined : defaultValue}
         value={value !== undefined || onChange ? value : undefined}
@@ -55,10 +61,15 @@ export function TextAreaField({
   rows?: number;
   className?: string;
 }) {
+  const id = useId();
+
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="text-sm font-medium text-foreground">{label}</label>
+      <label htmlFor={id} className="text-sm font-medium text-foreground">
+        {label}
+      </label>
       <textarea
+        id={id}
         defaultValue={onChange ? undefined : defaultValue}
         value={onChange ? value : undefined}
         onChange={onChange}

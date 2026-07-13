@@ -19,6 +19,7 @@ import type {
   TimelineMilestone,
   UpcomingInterview,
 } from "../types";
+import { richDocumentFromText } from "../lib/rich-document.js";
 
 export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
   switch (status) {
@@ -148,20 +149,6 @@ function mapInitialDocumentContent(match: ApiMatchAnalysis) {
       education: {},
       projects: {},
     },
-  };
-}
-
-function richDocumentFromText(text: string) {
-  return {
-    version: 1 as const,
-    blocks: text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => ({
-        type: "paragraph" as const,
-        children: [{ type: "text" as const, text: line }],
-      })),
   };
 }
 
@@ -387,6 +374,7 @@ function mapMatchAnalysis(
     requirements: mapRequirementMatches(match),
     recommendation: match.matchScore >= 70 ? "Apply to CV" : "Review before applying",
     currentSummary,
+    currentSummaryRichText: profile?.summaryRichText ?? richDocumentFromText(currentSummary),
     enhancedSummary: match.customizedSummary,
     missingSkillResources: (match.missingSkillResources ?? []).filter((resource) =>
       isHttpUrl(resource.url),
@@ -408,6 +396,8 @@ function mapMatchAnalysis(
             ? [
                 {
                   actual: experience.description,
+                  actualRichText:
+                    experience.descriptionRichText ?? richDocumentFromText(experience.description),
                   enhanced: enhancement?.enhancedDescription ?? recommendationQueue.shift(),
                   kind: "description" as const,
                 },
@@ -445,6 +435,8 @@ function mapMatchAnalysis(
             ? [
                 {
                   actual: project.description,
+                  actualRichText:
+                    project.descriptionRichText ?? richDocumentFromText(project.description),
                   enhanced: enhancement?.enhancedDescription,
                   kind: "description" as const,
                 },

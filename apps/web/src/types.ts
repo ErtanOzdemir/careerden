@@ -1,4 +1,4 @@
-import type { ApiDocumentContent } from "./api/types";
+import type { ApiDocumentContent, RichDocument } from "./api/types";
 
 export type ApplicationStatus =
   | "Saved"
@@ -70,6 +70,7 @@ export interface BulletOptimization {
 
 export interface ExperienceOptimizationItem {
   actual: string;
+  actualRichText?: RichDocument;
   enhanced?: string;
   kind: "achievement" | "description";
 }
@@ -124,6 +125,7 @@ export interface JobApplication {
     requirements?: RequirementMatch[];
     recommendation: string;
     currentSummary: string;
+    currentSummaryRichText?: RichDocument;
     enhancedSummary: string;
     bulletOptimizations: BulletOptimization[];
     experienceOptimizations?: {

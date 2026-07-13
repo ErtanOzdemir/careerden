@@ -29,6 +29,7 @@ export class PostgresUserProfileRepository extends KnexUserProfileRepository {
         location: input.location ?? null,
         links: JSON.stringify(input.links ?? []),
         summary: input.summary ?? null,
+        summary_rich_text: input.summaryRichText ? JSON.stringify(input.summaryRichText) : null,
         skills: JSON.stringify(input.skills),
         experience: JSON.stringify(input.experience),
         education: JSON.stringify(input.education ?? []),

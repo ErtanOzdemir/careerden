@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button.js";
 import { Panel } from "../components/link2cv/panel.js";
-import { Field, TextAreaField } from "../components/link2cv/field.js";
+import { Field } from "../components/link2cv/field.js";
+import RichTextEditor, { RichTextViewer } from "../components/RichTextEditor.js";
 import { profilesApi } from "../api/profiles.js";
+import { emptyRichDocument, richDocumentFromText } from "../lib/rich-document.js";
 import type {
   ApiProfile,
   ApiUpdateProfilePayload,
   ApiProfileExperience,
   ApiProfileEducation,
   ApiProfileProject,
+  RichDocument,
 } from "../api/types.js";
 import {
   UserRound,
@@ -58,13 +61,17 @@ export default function ProfileManager() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [isEditingBasics, setIsEditingBasics] = useState(false);
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [isEditingSkills, setIsEditingSkills] = useState(false);
+  const [isEditingCertifications, setIsEditingCertifications] = useState(false);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [profession, setProfession] = useState("");
   const [location, setLocation] = useState("");
   const [headline, setHeadline] = useState("");
-  const [summary, setSummary] = useState("");
+  const [summaryRichText, setSummaryRichText] = useState(emptyRichDocument);
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
   const [experience, setExperience] = useState<ApiProfileExperience[]>([]);
@@ -85,7 +92,7 @@ export default function ProfileManager() {
           setProfession(p.profession ?? "");
           setLocation(p.location ?? "");
           setHeadline(p.headline ?? "");
-          setSummary(p.summary ?? "");
+          setSummaryRichText(p.summaryRichText ?? richDocumentFromText(p.summary ?? ""));
           setSkills(p.skills ?? []);
           setExperience(p.experience ?? []);
           setEducation(p.education ?? []);
@@ -104,33 +111,44 @@ export default function ProfileManager() {
     };
   }, []);
 
-  async function handleSave() {
-    if (!profile) return;
+  async function savePartial(payload: ApiUpdateProfilePayload): Promise<ApiProfile | null> {
+    if (!profile) return null;
     try {
       setIsSaving(true);
       setError(null);
       setSaved(false);
-      const payload: ApiUpdateProfilePayload = {
-        fullName: fullName.trim() || undefined,
-        email: email.trim() || undefined,
-        profession: profession.trim() || undefined,
-        location: location.trim() || undefined,
-        headline: headline.trim() || undefined,
-        summary: summary.trim() || undefined,
-        skills: skills.filter(Boolean),
-        experience,
-        education,
-        projects,
-        certifications: certifications.filter(Boolean),
-      };
-      await profilesApi.update(profile.id, payload);
+      const updated = await profilesApi.update(profile.id, payload);
+      setProfile(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      return updated;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save.");
+      return null;
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function saveBasics() {
+    const updated = await savePartial({
+      fullName: fullName.trim(),
+      email: email.trim(),
+      profession: profession.trim(),
+      location: location.trim(),
+      headline: headline.trim(),
+    });
+    if (updated) setIsEditingBasics(false);
+  }
+
+  function cancelBasics() {
+    if (!profile) return;
+    setFullName(profile.fullName ?? "");
+    setEmail(profile.email ?? "");
+    setProfession(profile.profession ?? "");
+    setLocation(profile.location ?? "");
+    setHeadline(profile.headline ?? "");
+    setIsEditingBasics(false);
   }
 
   function addSkill() {
@@ -205,84 +223,170 @@ export default function ProfileManager() {
 
         <section id="basics" className="scroll-mt-24">
           <Panel className="p-6">
-            <SectionTitle icon={UserRound} title="Basic information" />
-            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field
-                label="Full name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-              <Field
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <Field
-                label="Profession"
-                value={profession}
-                onChange={(e) => setProfession(e.target.value)}
-              />
-              <Field
-                label="Location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-              <Field
-                label="Headline"
-                value={headline}
-                onChange={(e) => setHeadline(e.target.value)}
-                className="sm:col-span-2"
+            <div className="flex items-center justify-between gap-3">
+              <SectionTitle icon={UserRound} title="Basic information" />
+              <SectionEditActions
+                editing={isEditingBasics}
+                isSaving={isSaving}
+                label="basic information"
+                onCancel={cancelBasics}
+                onEdit={() => setIsEditingBasics(true)}
+                onSave={() => void saveBasics()}
               />
             </div>
+            {isEditingBasics ? (
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field
+                  label="Full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+                <Field
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <Field
+                  label="Profession"
+                  value={profession}
+                  onChange={(e) => setProfession(e.target.value)}
+                />
+                <Field
+                  label="Location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+                <Field
+                  label="Headline"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  className="sm:col-span-2"
+                />
+              </div>
+            ) : (
+              <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+                <ProfileValue label="Full name" value={fullName} />
+                <ProfileValue label="Email" value={email} />
+                <ProfileValue label="Profession" value={profession} />
+                <ProfileValue label="Location" value={location} />
+                <ProfileValue className="sm:col-span-2" label="Headline" value={headline} />
+              </div>
+            )}
           </Panel>
         </section>
 
         <section id="summary" className="scroll-mt-24">
           <Panel className="p-6">
-            <SectionTitle icon={FileText} title="Professional summary" />
-            <div className="mt-5">
-              <TextAreaField
-                label="Summary"
-                rows={4}
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+            <div className="flex items-center justify-between gap-3">
+              <SectionTitle icon={FileText} title="Professional summary" />
+              <SectionEditActions
+                editing={isEditingSummary}
+                isSaving={isSaving}
+                label="professional summary"
+                onCancel={() => {
+                  setSummaryRichText(
+                    profile.summaryRichText ?? richDocumentFromText(profile.summary ?? ""),
+                  );
+                  setIsEditingSummary(false);
+                }}
+                onEdit={() => setIsEditingSummary(true)}
+                onSave={() => {
+                  void savePartial({ summaryRichText }).then((updated) => {
+                    if (updated) {
+                      setSummaryRichText(
+                        updated.summaryRichText ?? richDocumentFromText(updated.summary ?? ""),
+                      );
+                      setIsEditingSummary(false);
+                    }
+                  });
+                }}
               />
+            </div>
+            <div className="mt-5">
+              {isEditingSummary ? (
+                <RichTextField
+                  label="Summary"
+                  value={summaryRichText}
+                  onChange={setSummaryRichText}
+                />
+              ) : profile.summary ? (
+                <RichTextViewer ariaLabel="Professional summary" value={summaryRichText} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No professional summary added yet.</p>
+              )}
             </div>
           </Panel>
         </section>
 
         <section id="skills" className="scroll-mt-24">
           <Panel className="p-6">
-            <SectionTitle icon={Award} title="Skills" />
+            <div className="flex items-center justify-between gap-3">
+              <SectionTitle icon={Award} title="Skills" />
+              <SectionEditActions
+                editing={isEditingSkills}
+                isSaving={isSaving}
+                label="skills"
+                onCancel={() => {
+                  setSkills(profile.skills);
+                  setNewSkill("");
+                  setIsEditingSkills(false);
+                }}
+                onEdit={() => setIsEditingSkills(true)}
+                onSave={() => {
+                  void savePartial({ skills: skills.filter(Boolean) }).then((updated) => {
+                    if (updated) {
+                      setSkills(updated.skills);
+                      setNewSkill("");
+                      setIsEditingSkills(false);
+                    }
+                  });
+                }}
+              />
+            </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              {skills.map((skill) => (
-                <button
-                  key={skill}
-                  onClick={() => removeSkill(skill)}
-                  className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
-                  type="button"
-                >
-                  {skill} <X className="inline size-3" />
-                </button>
-              ))}
-              <div className="flex items-center gap-1">
-                <input
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addSkill()}
-                  placeholder="Add skill"
-                  className="w-24 rounded-full border border-dashed border-border bg-transparent px-3 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
-                />
-                <button
-                  onClick={addSkill}
-                  className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                  type="button"
-                >
-                  <Plus className="size-3" />
-                  Add
-                </button>
-              </div>
+              {skills.map((skill) =>
+                isEditingSkills ? (
+                  <button
+                    key={skill}
+                    onClick={() => removeSkill(skill)}
+                    className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+                    type="button"
+                  >
+                    {skill} <X className="inline size-3" />
+                  </button>
+                ) : (
+                  <span
+                    key={skill}
+                    className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
+                  >
+                    {skill}
+                  </span>
+                ),
+              )}
+              {isEditingSkills && (
+                <div className="flex items-center gap-1">
+                  <input
+                    aria-label="New skill"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addSkill()}
+                    placeholder="Add skill"
+                    className="w-24 rounded-full border border-dashed border-border bg-transparent px-3 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+                  />
+                  <button
+                    onClick={addSkill}
+                    className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    type="button"
+                  >
+                    <Plus className="size-3" />
+                    Add
+                  </button>
+                </div>
+              )}
+              {!isEditingSkills && skills.length === 0 && (
+                <p className="text-sm text-muted-foreground">No skills added yet.</p>
+              )}
             </div>
           </Panel>
         </section>
@@ -304,10 +408,29 @@ export default function ProfileManager() {
                   <ExperienceEditor
                     key={i}
                     experience={exp}
+                    isSaving={isSaving}
                     onChange={(updated) =>
                       setExperience((prev) => prev.map((e, idx) => (idx === i ? updated : e)))
                     }
-                    onRemove={() => setExperience((prev) => prev.filter((_, idx) => idx !== i))}
+                    onCancel={() => {
+                      const persisted = profile.experience[i];
+                      setExperience((prev) =>
+                        persisted
+                          ? prev.map((item, idx) => (idx === i ? persisted : item))
+                          : prev.filter((_, idx) => idx !== i),
+                      );
+                    }}
+                    onSave={async () => {
+                      const updated = await savePartial({ experience });
+                      if (updated) setExperience(updated.experience);
+                      return Boolean(updated);
+                    }}
+                    onRemove={() => {
+                      const next = experience.filter((_, idx) => idx !== i);
+                      void savePartial({ experience: next }).then((updated) => {
+                        if (updated) setExperience(updated.experience);
+                      });
+                    }}
                   />
                 ))
               ) : (
@@ -331,10 +454,29 @@ export default function ProfileManager() {
                   <EducationEditor
                     key={i}
                     education={edu}
+                    isSaving={isSaving}
                     onChange={(updated) =>
                       setEducation((prev) => prev.map((e, idx) => (idx === i ? updated : e)))
                     }
-                    onRemove={() => setEducation((prev) => prev.filter((_, idx) => idx !== i))}
+                    onCancel={() => {
+                      const persisted = profile.education[i];
+                      setEducation((prev) =>
+                        persisted
+                          ? prev.map((item, idx) => (idx === i ? persisted : item))
+                          : prev.filter((_, idx) => idx !== i),
+                      );
+                    }}
+                    onSave={async () => {
+                      const updated = await savePartial({ education });
+                      if (updated) setEducation(updated.education);
+                      return Boolean(updated);
+                    }}
+                    onRemove={() => {
+                      const next = education.filter((_, idx) => idx !== i);
+                      void savePartial({ education: next }).then((updated) => {
+                        if (updated) setEducation(updated.education);
+                      });
+                    }}
                   />
                 ))
               ) : (
@@ -367,10 +509,29 @@ export default function ProfileManager() {
                       <ProjectEditor
                         key={i}
                         project={proj}
+                        isSaving={isSaving}
                         onChange={(updated) =>
                           setProjects((prev) => prev.map((p, idx) => (idx === i ? updated : p)))
                         }
-                        onRemove={() => setProjects((prev) => prev.filter((_, idx) => idx !== i))}
+                        onCancel={() => {
+                          const persisted = profile.projects[i];
+                          setProjects((prev) =>
+                            persisted
+                              ? prev.map((item, idx) => (idx === i ? persisted : item))
+                              : prev.filter((_, idx) => idx !== i),
+                          );
+                        }}
+                        onSave={async () => {
+                          const updated = await savePartial({ projects });
+                          if (updated) setProjects(updated.projects);
+                          return Boolean(updated);
+                        }}
+                        onRemove={() => {
+                          const next = projects.filter((_, idx) => idx !== i);
+                          void savePartial({ projects: next }).then((updated) => {
+                            if (updated) setProjects(updated.projects);
+                          });
+                        }}
                       />
                     ))
                   ) : (
@@ -380,47 +541,79 @@ export default function ProfileManager() {
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Certifications</h3>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-foreground">Certifications</h3>
+                  <SectionEditActions
+                    editing={isEditingCertifications}
+                    isSaving={isSaving}
+                    label="certifications"
+                    onCancel={() => {
+                      setCertifications(profile.certifications);
+                      setNewCert("");
+                      setIsEditingCertifications(false);
+                    }}
+                    onEdit={() => setIsEditingCertifications(true)}
+                    onSave={() => {
+                      void savePartial({
+                        certifications: certifications.filter(Boolean),
+                      }).then((updated) => {
+                        if (updated) {
+                          setCertifications(updated.certifications);
+                          setNewCert("");
+                          setIsEditingCertifications(false);
+                        }
+                      });
+                    }}
+                  />
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {certifications.map((cert) => (
-                    <button
-                      key={cert}
-                      onClick={() => removeCert(cert)}
-                      className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
-                      type="button"
-                    >
-                      {cert} <X className="inline size-3" />
-                    </button>
-                  ))}
-                  <div className="flex items-center gap-1">
-                    <input
-                      value={newCert}
-                      onChange={(e) => setNewCert(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addCert()}
-                      placeholder="Add certification"
-                      className="w-36 rounded-full border border-dashed border-border bg-transparent px-3 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
-                    />
-                    <button
-                      onClick={addCert}
-                      className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                      type="button"
-                    >
-                      <Plus className="size-3" />
-                      Add
-                    </button>
-                  </div>
+                  {certifications.map((cert) =>
+                    isEditingCertifications ? (
+                      <button
+                        key={cert}
+                        onClick={() => removeCert(cert)}
+                        className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+                        type="button"
+                      >
+                        {cert} <X className="inline size-3" />
+                      </button>
+                    ) : (
+                      <span
+                        key={cert}
+                        className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
+                      >
+                        {cert}
+                      </span>
+                    ),
+                  )}
+                  {isEditingCertifications && (
+                    <div className="flex items-center gap-1">
+                      <input
+                        aria-label="New certification"
+                        value={newCert}
+                        onChange={(e) => setNewCert(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && addCert()}
+                        placeholder="Add certification"
+                        className="w-36 rounded-full border border-dashed border-border bg-transparent px-3 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+                      />
+                      <button
+                        onClick={addCert}
+                        className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                        type="button"
+                      >
+                        <Plus className="size-3" />
+                        Add
+                      </button>
+                    </div>
+                  )}
+                  {!isEditingCertifications && certifications.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No certifications added yet.</p>
+                  )}
                 </div>
               </div>
             </div>
           </Panel>
         </section>
-
-        <div className="flex justify-end gap-2 pb-2">
-          <Button variant="ghost">Discard changes</Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save profile"}
-          </Button>
-        </div>
       </div>
     </div>
   );
@@ -428,12 +621,18 @@ export default function ProfileManager() {
 
 function ExperienceEditor({
   experience,
+  isSaving,
+  onCancel,
   onChange,
   onRemove,
+  onSave,
 }: {
   experience: ApiProfileExperience;
+  isSaving: boolean;
+  onCancel: () => void;
   onChange: (e: ApiProfileExperience) => void;
   onRemove: () => void;
+  onSave: () => Promise<boolean>;
 }) {
   const [isEditing, setIsEditing] = useState(!experience.title);
 
@@ -471,13 +670,13 @@ function ExperienceEditor({
                   placeholder="Present"
                 />
               </div>
-              <TextAreaField
+              <RichTextField
                 label="Description"
-                rows={3}
-                value={experience.description ?? ""}
-                onChange={(e) =>
-                  onChange({ ...experience, description: e.target.value || undefined })
+                value={
+                  experience.descriptionRichText ??
+                  richDocumentFromText(experience.description ?? "")
                 }
+                onChange={(descriptionRichText) => onChange({ ...experience, descriptionRichText })}
               />
             </div>
           ) : (
@@ -488,27 +687,63 @@ function ExperienceEditor({
                 {[experience.startDate, experience.endDate].filter(Boolean).join(" — ") ||
                   "Dates not set"}
               </span>
-              {experience.description && (
-                <p className="mt-1 text-sm text-muted-foreground">{experience.description}</p>
+              {(experience.descriptionRichText || experience.description) && (
+                <div className="mt-1">
+                  <RichTextViewer
+                    ariaLabel={`${experience.title} description`}
+                    value={
+                      experience.descriptionRichText ??
+                      richDocumentFromText(experience.description ?? "")
+                    }
+                  />
+                </div>
               )}
             </div>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setIsEditing((v) => !v)}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
-            type="button"
-          >
-            {isEditing ? <Save className="size-4" /> : <Pencil className="size-4" />}
-          </button>
-          <button
-            onClick={onRemove}
-            className="p-1.5 rounded-md hover:bg-danger-soft text-muted-foreground hover:text-destructive"
-            type="button"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {isEditing ? (
+            <>
+              <button
+                aria-label="Cancel experience changes"
+                onClick={() => {
+                  onCancel();
+                  setIsEditing(false);
+                }}
+                className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+                type="button"
+              >
+                <X className="size-4" />
+              </button>
+              <button
+                aria-label="Delete experience"
+                disabled={isSaving}
+                onClick={onRemove}
+                className="p-1.5 rounded-md hover:bg-danger-soft text-muted-foreground hover:text-destructive disabled:opacity-50"
+                type="button"
+              >
+                <Trash2 className="size-4" />
+              </button>
+              <button
+                aria-label="Save experience"
+                disabled={isSaving}
+                onClick={() => void onSave().then((didSave) => didSave && setIsEditing(false))}
+                className="p-1.5 rounded-md hover:bg-muted text-primary disabled:opacity-50"
+                type="button"
+              >
+                <Save className="size-4" />
+              </button>
+            </>
+          ) : (
+            <button
+              aria-label="Edit experience"
+              onClick={() => setIsEditing(true)}
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+              type="button"
+            >
+              <Pencil className="size-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -517,12 +752,18 @@ function ExperienceEditor({
 
 function EducationEditor({
   education,
+  isSaving,
+  onCancel,
   onChange,
   onRemove,
+  onSave,
 }: {
   education: ApiProfileEducation;
+  isSaving: boolean;
+  onCancel: () => void;
   onChange: (e: ApiProfileEducation) => void;
   onRemove: () => void;
+  onSave: () => Promise<boolean>;
 }) {
   const [isEditing, setIsEditing] = useState(!education.institution);
 
@@ -578,20 +819,48 @@ function EducationEditor({
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setIsEditing((v) => !v)}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
-            type="button"
-          >
-            {isEditing ? <Save className="size-4" /> : <Pencil className="size-4" />}
-          </button>
-          <button
-            onClick={onRemove}
-            className="p-1.5 rounded-md hover:bg-danger-soft text-muted-foreground hover:text-destructive"
-            type="button"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {isEditing ? (
+            <>
+              <button
+                aria-label="Cancel education changes"
+                onClick={() => {
+                  onCancel();
+                  setIsEditing(false);
+                }}
+                className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+                type="button"
+              >
+                <X className="size-4" />
+              </button>
+              <button
+                aria-label="Delete education"
+                disabled={isSaving}
+                onClick={onRemove}
+                className="p-1.5 rounded-md hover:bg-danger-soft text-muted-foreground hover:text-destructive disabled:opacity-50"
+                type="button"
+              >
+                <Trash2 className="size-4" />
+              </button>
+              <button
+                aria-label="Save education"
+                disabled={isSaving}
+                onClick={() => void onSave().then((didSave) => didSave && setIsEditing(false))}
+                className="p-1.5 rounded-md hover:bg-muted text-primary disabled:opacity-50"
+                type="button"
+              >
+                <Save className="size-4" />
+              </button>
+            </>
+          ) : (
+            <button
+              aria-label="Edit education"
+              onClick={() => setIsEditing(true)}
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+              type="button"
+            >
+              <Pencil className="size-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -600,12 +869,18 @@ function EducationEditor({
 
 function ProjectEditor({
   project,
+  isSaving,
+  onCancel,
   onChange,
   onRemove,
+  onSave,
 }: {
   project: ApiProfileProject;
+  isSaving: boolean;
+  onCancel: () => void;
   onChange: (p: ApiProfileProject) => void;
   onRemove: () => void;
+  onSave: () => Promise<boolean>;
 }) {
   const [isEditing, setIsEditing] = useState(!project.name);
 
@@ -620,11 +895,12 @@ function ProjectEditor({
                 value={project.name}
                 onChange={(e) => onChange({ ...project, name: e.target.value })}
               />
-              <TextAreaField
+              <RichTextField
                 label="Description"
-                rows={2}
-                value={project.description ?? ""}
-                onChange={(e) => onChange({ ...project, description: e.target.value || undefined })}
+                value={
+                  project.descriptionRichText ?? richDocumentFromText(project.description ?? "")
+                }
+                onChange={(descriptionRichText) => onChange({ ...project, descriptionRichText })}
               />
               <Field
                 label="URL"
@@ -636,28 +912,63 @@ function ProjectEditor({
           ) : (
             <div>
               <p className="text-sm font-medium text-foreground">{project.name}</p>
-              {project.description && (
-                <p className="mt-1 text-xs text-muted-foreground">{project.description}</p>
+              {(project.descriptionRichText || project.description) && (
+                <div className="mt-1 text-xs">
+                  <RichTextViewer
+                    ariaLabel={`${project.name} description`}
+                    value={
+                      project.descriptionRichText ?? richDocumentFromText(project.description ?? "")
+                    }
+                  />
+                </div>
               )}
               {project.url && <p className="mt-1 text-xs text-primary truncate">{project.url}</p>}
             </div>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setIsEditing((v) => !v)}
-            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
-            type="button"
-          >
-            {isEditing ? <Save className="size-4" /> : <Pencil className="size-4" />}
-          </button>
-          <button
-            onClick={onRemove}
-            className="p-1.5 rounded-md hover:bg-danger-soft text-muted-foreground hover:text-destructive"
-            type="button"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {isEditing ? (
+            <>
+              <button
+                aria-label="Cancel project changes"
+                onClick={() => {
+                  onCancel();
+                  setIsEditing(false);
+                }}
+                className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+                type="button"
+              >
+                <X className="size-4" />
+              </button>
+              <button
+                aria-label="Delete project"
+                disabled={isSaving}
+                onClick={onRemove}
+                className="p-1.5 rounded-md hover:bg-danger-soft text-muted-foreground hover:text-destructive disabled:opacity-50"
+                type="button"
+              >
+                <Trash2 className="size-4" />
+              </button>
+              <button
+                aria-label="Save project"
+                disabled={isSaving}
+                onClick={() => void onSave().then((didSave) => didSave && setIsEditing(false))}
+                className="p-1.5 rounded-md hover:bg-muted text-primary disabled:opacity-50"
+                type="button"
+              >
+                <Save className="size-4" />
+              </button>
+            </>
+          ) : (
+            <button
+              aria-label="Edit project"
+              onClick={() => setIsEditing(true)}
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+              type="button"
+            >
+              <Pencil className="size-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -671,6 +982,79 @@ function SectionTitle({ icon: Icon, title }: { icon: typeof UserRound; title: st
         <Icon className="size-4" />
       </span>
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+    </div>
+  );
+}
+
+function SectionEditActions({
+  editing,
+  isSaving,
+  label,
+  onCancel,
+  onEdit,
+  onSave,
+}: {
+  editing: boolean;
+  isSaving: boolean;
+  label: string;
+  onCancel: () => void;
+  onEdit: () => void;
+  onSave: () => void;
+}) {
+  return editing ? (
+    <div className="flex items-center gap-1.5">
+      <Button
+        aria-label={`Cancel ${label} changes`}
+        size="xs"
+        variant="ghost"
+        onClick={onCancel}
+        disabled={isSaving}
+      >
+        Cancel
+      </Button>
+      <Button aria-label={`Save ${label}`} size="xs" onClick={onSave} disabled={isSaving}>
+        <Save className="size-3.5" />
+        {isSaving ? "Saving..." : "Save"}
+      </Button>
+    </div>
+  ) : (
+    <Button aria-label={`Edit ${label}`} size="xs" variant="ghost" onClick={onEdit}>
+      <Pencil className="size-3.5" />
+      Edit
+    </Button>
+  );
+}
+
+function ProfileValue({
+  className,
+  label,
+  value,
+}: {
+  className?: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm text-foreground">{value || "Not added"}</p>
+    </div>
+  );
+}
+
+function RichTextField({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: RichDocument) => void;
+  value: RichDocument;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <RichTextEditor ariaLabel={label} onChange={onChange} value={value} />
     </div>
   );
 }

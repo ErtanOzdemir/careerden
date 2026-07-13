@@ -29,6 +29,7 @@ export class KnexUserProfileRepository implements UserProfileRepository {
         location: input.location ?? null,
         links: JSON.stringify(input.links ?? []),
         summary: input.summary ?? null,
+        summary_rich_text: input.summaryRichText ? JSON.stringify(input.summaryRichText) : null,
         skills: JSON.stringify(input.skills),
         experience: JSON.stringify(input.experience),
         education: JSON.stringify(input.education ?? []),
@@ -63,6 +64,9 @@ export class KnexUserProfileRepository implements UserProfileRepository {
     if (input.location !== undefined) patch.location = input.location ?? null;
     if (input.links !== undefined) patch.links = JSON.stringify(input.links);
     if (input.summary !== undefined) patch.summary = input.summary ?? null;
+    if (input.summaryRichText !== undefined) {
+      patch.summary_rich_text = JSON.stringify(input.summaryRichText);
+    }
     if (input.skills !== undefined) patch.skills = JSON.stringify(input.skills);
     if (input.experience !== undefined) patch.experience = JSON.stringify(input.experience);
     if (input.education !== undefined) patch.education = JSON.stringify(input.education);

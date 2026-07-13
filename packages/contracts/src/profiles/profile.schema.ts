@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { richDocumentSchema } from "../documents/rich-document.schema.js";
 
 export const profileExperienceSchema = z.object({
   company: z.string().min(1),
@@ -6,6 +7,7 @@ export const profileExperienceSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   description: z.string().optional(),
+  descriptionRichText: richDocumentSchema.optional(),
 });
 
 export const profileEducationSchema = z.object({
@@ -19,6 +21,7 @@ export const profileEducationSchema = z.object({
 export const profileProjectSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
+  descriptionRichText: richDocumentSchema.optional(),
   url: z.string().url().optional(),
   skills: z.array(z.string().min(1)).default([]),
   achievements: z.array(z.string().min(1)).default([]),
@@ -34,6 +37,7 @@ export const createProfileSchema = z.object({
   location: z.string().optional(),
   links: z.array(z.string().url()).default([]),
   summary: z.string().optional(),
+  summaryRichText: richDocumentSchema.optional(),
   skills: z.array(z.string().min(1)).default([]),
   experience: z.array(profileExperienceSchema).default([]),
   education: z.array(profileEducationSchema).default([]),

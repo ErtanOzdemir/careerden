@@ -155,6 +155,7 @@ export default function AiMatchCard({
             <div className="space-y-6">
               <ComparisonRow
                 actual={aiMatch.currentSummary}
+                actualRichText={aiMatch.currentSummaryRichText}
                 document={draftContent.customizedSummary}
                 icon="summary"
                 isSaving={isSavingContent}
@@ -299,6 +300,7 @@ export default function AiMatchCard({
                       <EnhancedFieldRow
                         label="Description"
                         original={descriptionItem.actual}
+                        originalRichText={descriptionItem.actualRichText}
                         enhanced={enhancement?.description}
                         selection={
                           draftContent.selections?.projects?.[String(projectIndex)]?.description
@@ -690,6 +692,7 @@ function ExperienceStep({
             company: "Current profile",
             items: aiMatch.bulletOptimizations.map((item) => ({
               actual: item.original,
+              actualRichText: undefined,
               enhanced: item.enhanced,
               kind: "achievement" as const,
             })),
@@ -730,6 +733,7 @@ function ExperienceStep({
                   <ComparisonRow
                     key={`${item.kind}-${item.actual}-${index}`}
                     actual={item.actual}
+                    actualRichText={item.actualRichText}
                     document={document}
                     icon={item.kind}
                     isSaving={isSaving}
@@ -843,6 +847,7 @@ function ApprovalStep({
 
 function ComparisonRow({
   actual,
+  actualRichText,
   document,
   icon,
   isSaving,
@@ -852,6 +857,7 @@ function ComparisonRow({
   selection,
 }: {
   actual: string;
+  actualRichText?: RichDocument;
   document?: RichDocument;
   icon: "achievement" | "description" | "summary";
   isSaving: boolean;
@@ -883,7 +889,11 @@ function ComparisonRow({
           <span className="text-xs font-semibold uppercase text-muted-foreground">
             Actual Version
           </span>
-          <p className="text-sm text-muted-foreground">{actual}</p>
+          {actualRichText ? (
+            <RichTextViewer ariaLabel={`Original ${label}`} value={actualRichText} />
+          ) : (
+            <p className="text-sm text-muted-foreground">{actual}</p>
+          )}
         </div>
         <div className="space-y-1 md:pl-4">
           <span className="text-xs font-semibold uppercase text-primary">AI Enhanced Version</span>

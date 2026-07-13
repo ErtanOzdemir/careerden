@@ -369,6 +369,7 @@ export interface ApiJobApplicationAnalytics {
 export interface ApiProfileExperience {
   company: string;
   description?: string;
+  descriptionRichText?: RichDocument;
   endDate?: string;
   startDate?: string;
   title: string;
@@ -385,6 +386,7 @@ export interface ApiProfileEducation {
 export interface ApiProfileProject {
   achievements: string[];
   description?: string;
+  descriptionRichText?: RichDocument;
   name: string;
   skills: string[];
   url?: string;
@@ -407,6 +409,7 @@ export interface ApiProfile {
   projects: ApiProfileProject[];
   skills: string[];
   summary?: string;
+  summaryRichText?: RichDocument;
   updatedAt: string;
 }
 
@@ -427,6 +430,7 @@ export type ApiUpdateProfilePayload = Partial<
     | "projects"
     | "skills"
     | "summary"
+    | "summaryRichText"
   >
 >;
 

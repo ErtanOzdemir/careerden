@@ -1,3 +1,4 @@
+import { richDocumentFromText } from "@link2cv/domain";
 import type {
   DocumentTemplate,
   DocumentTemplateField,
@@ -12,6 +13,7 @@ import type {
   ProfileEducation,
   ProfileExperience,
   ProfileProject,
+  RichDocument,
   UserProfile,
 } from "@link2cv/domain";
 
@@ -114,6 +116,8 @@ export function toJobApplicationFollowUp(row: Record<string, unknown>): JobAppli
 }
 
 export function toUserProfile(row: Record<string, unknown>): UserProfile {
+  const summary = nullableString(row.summary);
+
   return {
     id: String(row.id),
     fullName: String(row.full_name),
@@ -124,15 +128,39 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     headline: nullableString(row.headline),
     location: nullableString(row.location),
     links: stringArray(row.links),
-    summary: nullableString(row.summary),
+    summary,
+    summaryRichText:
+      toRichDocument(row.summary_rich_text) ??
+      (summary !== undefined ? richDocumentFromText(summary) : undefined),
     skills: stringArray(row.skills),
-    experience: jsonArray<ProfileExperience>(row.experience),
+    experience: jsonArray<ProfileExperience>(row.experience).map(withDescriptionRichText),
     education: jsonArray<ProfileEducation>(row.education),
     certifications: stringArray(row.certifications),
-    projects: jsonArray<ProfileProject>(row.projects),
+    projects: jsonArray<ProfileProject>(row.projects).map(withDescriptionRichText),
     createdAt: new Date(String(row.created_at)),
     updatedAt: new Date(String(row.updated_at)),
   };
+}
+
+function withDescriptionRichText<
+  T extends { description?: string; descriptionRichText?: RichDocument },
+>(item: T): T {
+  if (toRichDocument(item.descriptionRichText) || item.description === undefined) {
+    return item;
+  }
+
+  return {
+    ...item,
+    descriptionRichText: richDocumentFromText(item.description),
+  };
+}
+
+function toRichDocument(value: unknown): RichDocument | undefined {
+  const document = record(value);
+
+  return document.version === 1 && Array.isArray(document.blocks)
+    ? (document as unknown as RichDocument)
+    : undefined;
 }
 
 export function toNotification(row: Record<string, unknown>): Notification {

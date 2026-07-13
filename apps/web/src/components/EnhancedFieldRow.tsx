@@ -11,6 +11,7 @@ const aiOptions = [
 export interface EnhancedFieldRowProps {
   label: string;
   original: string;
+  originalRichText?: RichDocument;
   enhanced?: RichDocument;
   selection?: "ai" | "original";
   onSelectionChange: (selection: "ai" | "original") => void;
@@ -20,6 +21,7 @@ export interface EnhancedFieldRowProps {
 export default function EnhancedFieldRow({
   label,
   original,
+  originalRichText,
   enhanced,
   selection = "ai",
   onSelectionChange,
@@ -77,7 +79,11 @@ export default function EnhancedFieldRow({
         )
       ) : (
         <div className="bg-muted rounded-lg p-4 text-xs text-muted-foreground">
-          {original || "No original content available."}
+          {originalRichText ? (
+            <RichTextViewer ariaLabel={`Original ${label}`} value={originalRichText} />
+          ) : (
+            original || "No original content available."
+          )}
         </div>
       )}
     </div>

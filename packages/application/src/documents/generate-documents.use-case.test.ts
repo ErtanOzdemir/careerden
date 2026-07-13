@@ -13,12 +13,39 @@ import {
 import { GenerateDocumentsUseCase } from "./generate-documents.use-case.js";
 
 describe("GenerateDocumentsUseCase", () => {
-  it("passes AI-enhanced selected experiences with dates to DOCX templates", async () => {
+  it("passes original rich summary, experience, and project selections to DOCX templates", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
+    const originalSummary = richDocumentFromText("Original summary.");
+    const originalDescription = {
+      version: 1 as const,
+      blocks: [
+        {
+          type: "bulletList" as const,
+          items: [
+            {
+              blocks: [
+                {
+                  type: "paragraph" as const,
+                  children: [
+                    {
+                      type: "text" as const,
+                      text: "Built automation.",
+                      marks: [{ type: "bold" as const }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
+      summary: "Original summary.",
+      summaryRichText: originalSummary,
       skills: ["TypeScript"],
       experience: [
         {
@@ -26,6 +53,16 @@ describe("GenerateDocumentsUseCase", () => {
           title: "Engineer",
           startDate: "2022",
           description: "Built automation.",
+          descriptionRichText: originalDescription,
+        },
+      ],
+      projects: [
+        {
+          name: "Link2CV",
+          description: "Built profile-aware documents.",
+          descriptionRichText: originalDescription,
+          skills: ["TypeScript"],
+          achievements: [],
         },
       ],
     });
@@ -96,6 +133,23 @@ describe("GenerateDocumentsUseCase", () => {
             achievements: [richDocumentFromText("User-edited backend reliability achievement.")],
           },
         ],
+        projectEnhancements: [
+          {
+            projectIndex: 0,
+            description: richDocumentFromText("AI-enhanced project description."),
+            achievements: [],
+          },
+        ],
+        selections: {
+          customizedSummary: "original",
+          experience: {
+            "0": { description: "original", achievements: {} },
+          },
+          education: {},
+          projects: {
+            "0": { description: "original", achievements: {} },
+          },
+        },
       },
     });
 
@@ -106,10 +160,19 @@ describe("GenerateDocumentsUseCase", () => {
         start_date: "2022",
         end_date: "Present",
         period: "2022 - Present",
-        description: richDocumentFromText("User-edited TypeScript automation for backend systems."),
+        description: originalDescription,
       },
     ]);
-    expect(capturedDocxData[0]?.summary).toEqual(richDocumentFromText("User-edited summary."));
+    expect(capturedDocxData[0]?.selected_projects).toEqual([
+      {
+        name: "Link2CV",
+        url: "",
+        skills: ["TypeScript"],
+        achievements: [],
+        description: originalDescription,
+      },
+    ]);
+    expect(capturedDocxData[0]?.summary).toEqual(originalSummary);
     expect(capturedDocxData[0]?.experience_list).toEqual(capturedDocxData[0]?.selected_experiences);
     expect(capturedDocxData[0]?.raw_experience_list).toEqual([
       {
@@ -117,9 +180,10 @@ describe("GenerateDocumentsUseCase", () => {
         title: "Engineer",
         startDate: "2022",
         description: "Built automation.",
+        descriptionRichText: originalDescription,
       },
     ]);
-    expect(capturedDocxData[0]?.raw_summary).toBe("");
+    expect(capturedDocxData[0]?.raw_summary).toBe("Original summary.");
     expect(generated.map(({ format, kind }) => ({ format, kind }))).toEqual([
       { format: "docx", kind: "cv" },
       { format: "pdf", kind: "cover_letter" },

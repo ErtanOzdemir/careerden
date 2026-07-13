@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import type { FormEvent } from "react";
 import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/link2cv/panel.js";
 import { Modal } from "../components/link2cv/modal.js";
@@ -6,6 +7,7 @@ import { Field } from "../components/link2cv/field.js";
 import { cn } from "../lib/utils.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiProfile } from "../api/types.js";
+import { authClient } from "../api/auth.js";
 import {
   getStoredTheme,
   setThemePreference,
@@ -22,6 +24,9 @@ import {
   Monitor,
   Sun,
   Moon,
+  Eye,
+  EyeOff,
+  LockKeyhole,
 } from "lucide-react";
 
 function Toggle({
@@ -92,6 +97,15 @@ export default function Settings() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmedPassword, setConfirmedPassword] = useState("");
+  const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] = useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isConfirmedPasswordVisible, setIsConfirmedPasswordVisible] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -167,6 +181,40 @@ export default function Settings() {
     }
   }
 
+  async function handlePasswordChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      setPasswordError("New password must be between 8 and 128 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmedPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const result = await authClient.changePassword({
+      currentPassword,
+      newPassword,
+      revokeOtherSessions: true,
+    });
+    setIsChangingPassword(false);
+
+    if (result.error) {
+      setPasswordError(result.error.message ?? "Could not update your password.");
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmedPassword("");
+    setPasswordSuccess("Password updated. Other sessions have been signed out.");
+  }
+
   return (
     <div className="space-y-6">
       <Panel className="flex flex-col gap-4 border-info/20 bg-info-soft/40 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -209,6 +257,62 @@ export default function Settings() {
             {profileError}
           </p>
         )}
+      </Panel>
+
+      <Panel>
+        <div className="flex items-center gap-2.5 px-5 py-4">
+          <LockKeyhole className="size-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Security</h2>
+        </div>
+        <form
+          className="space-y-4 border-t border-border px-5 py-4"
+          onSubmit={(event) => void handlePasswordChange(event)}
+        >
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <SettingsPasswordField
+              autoComplete="current-password"
+              isVisible={isCurrentPasswordVisible}
+              label="Current password"
+              onChange={setCurrentPassword}
+              onToggleVisibility={() => setIsCurrentPasswordVisible((value) => !value)}
+              value={currentPassword}
+            />
+            <SettingsPasswordField
+              autoComplete="new-password"
+              isVisible={isNewPasswordVisible}
+              label="New password"
+              onChange={setNewPassword}
+              onToggleVisibility={() => setIsNewPasswordVisible((value) => !value)}
+              value={newPassword}
+            />
+            <SettingsPasswordField
+              autoComplete="new-password"
+              isVisible={isConfirmedPasswordVisible}
+              label="Confirm new password"
+              onChange={setConfirmedPassword}
+              onToggleVisibility={() => setIsConfirmedPasswordVisible((value) => !value)}
+              value={confirmedPassword}
+            />
+          </div>
+          {passwordError && (
+            <p role="alert" className="text-sm text-destructive">
+              {passwordError}
+            </p>
+          )}
+          {passwordSuccess && (
+            <p role="status" className="text-sm text-success">
+              {passwordSuccess}
+            </p>
+          )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Use between 8 and 128 characters. Updating your password signs out other sessions.
+            </p>
+            <Button type="submit" disabled={isChangingPassword}>
+              {isChangingPassword ? "Updating..." : "Update password"}
+            </Button>
+          </div>
+        </form>
       </Panel>
 
       <Panel>
@@ -287,6 +391,59 @@ export default function Settings() {
           <Button onClick={() => setUpdateOpen(false)}>OK</Button>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function SettingsPasswordField({
+  autoComplete,
+  isVisible,
+  label,
+  onChange,
+  onToggleVisibility,
+  value,
+}: {
+  autoComplete: string;
+  isVisible: boolean;
+  label: string;
+  onChange: (value: string) => void;
+  onToggleVisibility: () => void;
+  value: string;
+}) {
+  const id = useId();
+
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-foreground">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          autoComplete={autoComplete}
+          className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20"
+          maxLength={128}
+          minLength={8}
+          onChange={(event) => onChange(event.target.value)}
+          required
+          type={isVisible ? "text" : "password"}
+          value={value}
+        />
+        <Button
+          aria-label={`${isVisible ? "Hide" : "Show"} ${label.toLowerCase()}`}
+          className="absolute inset-y-0 right-2 my-auto size-8 rounded-full"
+          size="icon"
+          type="button"
+          variant="ghost"
+          onClick={onToggleVisibility}
+        >
+          {isVisible ? (
+            <EyeOff className="size-4 text-muted-foreground" aria-hidden="true" />
+          ) : (
+            <Eye className="size-4 text-muted-foreground" aria-hidden="true" />
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

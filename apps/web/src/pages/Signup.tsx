@@ -109,6 +109,7 @@ export default function Signup() {
       {step === "details" ? (
         <form className="space-y-4" onSubmit={(event) => void handleDetailsSubmit(event)}>
           <AuthInput
+            autoComplete="name"
             label="Name"
             onChange={setName}
             type="text"
@@ -116,6 +117,7 @@ export default function Signup() {
             placeholder="Enter your name..."
           />
           <AuthInput
+            autoComplete="email"
             label="Email address"
             onChange={setEmail}
             type="email"
@@ -123,6 +125,7 @@ export default function Signup() {
             placeholder="workmail@gmail.com"
           />
           <AuthInput
+            autoComplete="new-password"
             label="Password"
             onChange={setPassword}
             type={isPasswordVisible ? "text" : "password"}

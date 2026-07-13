@@ -9,12 +9,16 @@ import Signup from "./pages/Signup";
 import TemplateManager from "./pages/TemplateManager";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<AuthenticatedLayout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/applications" element={<ApplicationsLog />} />

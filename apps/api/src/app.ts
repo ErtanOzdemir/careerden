@@ -65,7 +65,7 @@ import {
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";
-import { createSmtpOtpEmailSender } from "./auth/email-otp-mailer.js";
+import { createSmtpAuthEmailSender } from "./auth/auth-email-sender.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -85,13 +85,13 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   await runPostgresMigrations(db);
 
   const auth = createAuth({
-    baseUrl: env.BETTER_AUTH_URL,
-    databaseUrl: env.DATABASE_URL,
-    otpEmailSender: createSmtpOtpEmailSender({
+    authEmailSender: createSmtpAuthEmailSender({
       from: env.SMTP_FROM,
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
     }),
+    baseUrl: env.BETTER_AUTH_URL,
+    databaseUrl: env.DATABASE_URL,
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
   });

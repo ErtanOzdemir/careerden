@@ -3,6 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Settings from "./Settings";
 import { THEME_STORAGE_KEY } from "../theme.js";
 
+const authMocks = vi.hoisted(() => ({
+  changePassword: vi.fn(),
+}));
+
+vi.mock("../api/auth.js", () => ({
+  authClient: authMocks,
+}));
+
 vi.mock("../api/profiles.js", () => ({
   profilesApi: {
     me: vi.fn(),
@@ -57,6 +65,59 @@ describe("Settings", () => {
       });
     });
     expect(toggle).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("updates the password, revokes other sessions, and clears the form", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    authMocks.changePassword.mockResolvedValue({ data: { user: {} }, error: null });
+
+    render(<Settings />);
+    await screen.findByDisplayValue("Ada Lovelace");
+    fillPasswordFields("oldpassword123", "newpassword123", "newpassword123");
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+
+    await waitFor(() => {
+      expect(authMocks.changePassword).toHaveBeenCalledWith({
+        currentPassword: "oldpassword123",
+        newPassword: "newpassword123",
+        revokeOtherSessions: true,
+      });
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Password updated. Other sessions have been signed out.",
+    );
+    expect(screen.getByLabelText("Current password")).toHaveValue("");
+    expect(screen.getByLabelText("New password")).toHaveValue("");
+    expect(screen.getByLabelText("Confirm new password")).toHaveValue("");
+  });
+
+  it("validates password confirmation before calling Better Auth", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+
+    render(<Settings />);
+    await screen.findByDisplayValue("Ada Lovelace");
+    fillPasswordFields("oldpassword123", "newpassword123", "different123");
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("New passwords do not match.");
+    expect(authMocks.changePassword).not.toHaveBeenCalled();
+  });
+
+  it("shows Better Auth password-change errors and toggles visibility", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    authMocks.changePassword.mockResolvedValue({
+      data: null,
+      error: { message: "Current password is incorrect" },
+    });
+
+    render(<Settings />);
+    await screen.findByDisplayValue("Ada Lovelace");
+    fireEvent.click(screen.getByRole("button", { name: "Show current password" }));
+    expect(screen.getByLabelText("Current password")).toHaveAttribute("type", "text");
+    fillPasswordFields("wrongpassword", "newpassword123", "newpassword123");
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Current password is incorrect");
   });
 
   it("synchronizes every theme selection with storage, renderer classes, and Electron", async () => {
@@ -144,4 +205,12 @@ function createProfile(overrides: Partial<ApiProfile> = {}): ApiProfile {
     updatedAt: "2026-07-04T00:00:00.000Z",
     ...overrides,
   };
+}
+
+function fillPasswordFields(current: string, next: string, confirmation: string) {
+  fireEvent.change(screen.getByLabelText("Current password"), { target: { value: current } });
+  fireEvent.change(screen.getByLabelText("New password"), { target: { value: next } });
+  fireEvent.change(screen.getByLabelText("Confirm new password"), {
+    target: { value: confirmation },
+  });
 }

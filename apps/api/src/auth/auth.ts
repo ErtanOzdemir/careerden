@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import { Pool } from "pg";
-import type { OtpEmailSender } from "./email-otp-mailer.js";
+import type { AuthEmailSender } from "./auth-email-sender.js";
 
 type VerificationOtpType = "sign-in" | "email-verification" | "forget-password" | "change-email";
 
@@ -12,9 +12,9 @@ interface VerificationOtpInput {
 }
 
 export interface AuthConfig {
+  authEmailSender: AuthEmailSender;
   baseUrl: string;
   databaseUrl: string;
-  otpEmailSender: OtpEmailSender;
   secret: string;
   trustedOrigins: string[];
 }
@@ -44,6 +44,8 @@ export function createAuth(config: AuthConfig): Link2CvAuth {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: createPasswordResetHandler(config.authEmailSender),
     },
     emailVerification: {
       autoSignInAfterVerification: true,
@@ -52,18 +54,28 @@ export function createAuth(config: AuthConfig): Link2CvAuth {
     plugins: [
       emailOTP({
         overrideDefaultEmailVerification: true,
-        sendVerificationOTP: createRegistrationOtpHandler(config.otpEmailSender),
+        sendVerificationOTP: createRegistrationOtpHandler(config.authEmailSender),
       }),
     ],
   });
 }
 
-export function createRegistrationOtpHandler(otpEmailSender: OtpEmailSender) {
+export function createRegistrationOtpHandler(authEmailSender: AuthEmailSender) {
   return async function sendVerificationOTP({ email, otp, type }: VerificationOtpInput) {
     if (type !== "email-verification") {
       return;
     }
 
-    await otpEmailSender.sendRegistrationOtp({ email, otp });
+    await authEmailSender.sendRegistrationOtp({ email, otp });
+  };
+}
+
+export function createPasswordResetHandler(authEmailSender: AuthEmailSender) {
+  return async function sendResetPassword({ user, url }: { user: { email: string }; url: string }) {
+    void authEmailSender
+      .sendPasswordResetLink({ email: user.email, url })
+      .catch((error: unknown) => {
+        console.error("Failed to send password-reset email", error);
+      });
   };
 }

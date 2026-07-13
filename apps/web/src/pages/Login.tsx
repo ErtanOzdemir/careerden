@@ -132,6 +132,7 @@ export default function Login() {
       {step === "credentials" ? (
         <form className="space-y-4" onSubmit={(event) => void handleCredentialsSubmit(event)}>
           <AuthInput
+            autoComplete="email"
             label="Email address"
             onChange={setEmail}
             type="email"
@@ -139,6 +140,7 @@ export default function Login() {
             placeholder="workmail@gmail.com"
           />
           <AuthInput
+            autoComplete="current-password"
             label="Password"
             onChange={setPassword}
             type={isPasswordVisible ? "text" : "password"}
@@ -161,6 +163,14 @@ export default function Login() {
               </Button>
             }
           />
+          <div className="text-right">
+            <Link
+              className="text-sm font-medium text-primary hover:underline"
+              to="/forgot-password"
+            >
+              Forgot password?
+            </Link>
+          </div>
           {error && (
             <div className="rounded-lg border border-destructive/20 bg-danger-soft px-4 py-2.5 text-sm text-destructive">
               {error}
@@ -337,14 +347,20 @@ export function AuthShell({
 }
 
 export function AuthInput({
+  autoComplete,
   label,
+  maxLength,
+  minLength,
   onChange,
   type,
   value,
   placeholder,
   trailing,
 }: {
+  autoComplete?: string;
   label: string;
+  maxLength?: number;
+  minLength?: number;
   onChange: (value: string) => void;
   type: string;
   value: string;
@@ -359,7 +375,10 @@ export function AuthInput({
       <span className="mb-1.5 block text-xs font-semibold text-foreground">{label}</span>
       <span className="relative block">
         <input
+          autoComplete={autoComplete}
           className={cn(inputClass, trailing ? "pr-12" : undefined)}
+          maxLength={maxLength}
+          minLength={minLength}
           onChange={(event) => onChange(event.target.value)}
           required
           type={type}

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRegistrationOtpHandler } from "./auth.js";
-import type { OtpEmailSender } from "./email-otp-mailer.js";
+import { createPasswordResetHandler, createRegistrationOtpHandler } from "./auth.js";
+import type { AuthEmailSender } from "./auth-email-sender.js";
 
 describe("createRegistrationOtpHandler", () => {
   it("sends email verification OTPs", async () => {
-    const otpEmailSender = createOtpEmailSender();
-    const sendVerificationOTP = createRegistrationOtpHandler(otpEmailSender);
+    const authEmailSender = createAuthEmailSender();
+    const sendVerificationOTP = createRegistrationOtpHandler(authEmailSender);
 
     await sendVerificationOTP({
       email: "ada@example.com",
@@ -13,15 +13,15 @@ describe("createRegistrationOtpHandler", () => {
       type: "email-verification",
     });
 
-    expect(otpEmailSender.sendRegistrationOtp).toHaveBeenCalledWith({
+    expect(authEmailSender.sendRegistrationOtp).toHaveBeenCalledWith({
       email: "ada@example.com",
       otp: "123456",
     });
   });
 
   it("does not send OTP emails for non-registration flows", async () => {
-    const otpEmailSender = createOtpEmailSender();
-    const sendVerificationOTP = createRegistrationOtpHandler(otpEmailSender);
+    const authEmailSender = createAuthEmailSender();
+    const sendVerificationOTP = createRegistrationOtpHandler(authEmailSender);
 
     await sendVerificationOTP({ email: "ada@example.com", otp: "123456", type: "sign-in" });
     await sendVerificationOTP({
@@ -35,12 +35,30 @@ describe("createRegistrationOtpHandler", () => {
       type: "change-email",
     });
 
-    expect(otpEmailSender.sendRegistrationOtp).not.toHaveBeenCalled();
+    expect(authEmailSender.sendRegistrationOtp).not.toHaveBeenCalled();
   });
 });
 
-function createOtpEmailSender(): OtpEmailSender {
+describe("createPasswordResetHandler", () => {
+  it("dispatches the Better Auth reset URL without awaiting email delivery", () => {
+    const authEmailSender = createAuthEmailSender();
+    const sendResetPassword = createPasswordResetHandler(authEmailSender);
+
+    void sendResetPassword({
+      user: { email: "ada@example.com" },
+      url: "http://localhost:3000/auth/reset-password/token",
+    });
+
+    expect(authEmailSender.sendPasswordResetLink).toHaveBeenCalledWith({
+      email: "ada@example.com",
+      url: "http://localhost:3000/auth/reset-password/token",
+    });
+  });
+});
+
+function createAuthEmailSender(): AuthEmailSender {
   return {
     sendRegistrationOtp: vi.fn(async () => undefined),
+    sendPasswordResetLink: vi.fn(async () => undefined),
   };
 }

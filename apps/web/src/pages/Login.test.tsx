@@ -117,6 +117,17 @@ describe("Login", () => {
     expect(screen.getByRole("button", { name: /hide password/i })).toBeInTheDocument();
   });
 
+  it("links to the forgot-password flow", () => {
+    authMocks.useSession.mockReturnValue({ data: null, isPending: false });
+
+    renderLogin();
+
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute(
+      "href",
+      "/forgot-password",
+    );
+  });
+
   it("returns from the OTP step so the user can correct the email address", async () => {
     authMocks.useSession.mockReturnValue({ data: null, isPending: false });
     authMocks.signInEmail.mockResolvedValue({

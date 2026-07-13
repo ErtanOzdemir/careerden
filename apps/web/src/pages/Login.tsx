@@ -256,7 +256,7 @@ export function AuthShell({
             <div className="mt-12 max-w-sm">
               <p className="text-sm text-white/65 dark:text-black/60">You can easily</p>
               <h2 className="mt-3 text-4xl font-semibold leading-tight text-white dark:text-black">
-                Speed up your work with smart CV tools
+                Turn every job into a tailored application
               </h2>
             </div>
             <div className="mt-auto">

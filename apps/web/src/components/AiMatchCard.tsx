@@ -149,7 +149,7 @@ export default function AiMatchCard({
           </div>
         </div>
 
-        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+        <div className="p-4 sm:p-6">
           {activeStep === 0 && <MatchStep aiMatch={aiMatch} />}
           {activeStep === 1 && (
             <div className="space-y-6">

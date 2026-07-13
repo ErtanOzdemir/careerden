@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <clipPath id="icon-shape">
+      <rect width="1024" height="1024" rx="180"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#icon-shape)">
+    <rect width="1024" height="1024" fill="#ffffff"/>
+
+    <g transform="translate(190 286) scale(2)">
+      <path fill="#000000" d="
+        M 160 45
+        L 121 84
+        C 117 88 117 91 121 95
+        L 136 110
+        C 140 114 143 114 147 110
+        L 172 85
+        C 174 83 177 83 180 86
+        L 244 151
+        L 189 206
+        C 173 222 145 222 129 206
+        L 10 85
+        L 73 20
+        C 90 3 116 3 136 21
+        Z"/>
+      <path fill="#000000" d="
+        M 160 45
+        L 187 18
+        C 199 6 229 6 244 18
+        L 311 85
+        L 255 140
+        Z"/>
+    </g>
+
+    <g transform="rotate(45 870 145)">
+      <rect x="300" y="65" width="1200" height="160" fill="#facc15"/>
+      <text
+        x="870"
+        y="164"
+        fill="#000000"
+        font-family="Arial, sans-serif"
+        font-size="64"
+        font-weight="700"
+        letter-spacing="4"
+        text-anchor="middle">DEV</text>
+    </g>
+  </g>
+</svg>

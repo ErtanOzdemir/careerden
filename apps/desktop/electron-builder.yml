@@ -2,14 +2,18 @@ appId: com.link2cv.desktop
 productName: Link2CV
 directories:
   output: release
+icon: build/icon
 files:
   - dist/**/*
   - node_modules/**/*
   - package.json
 mac:
   category: public.app-category.business
+  icon: build/link2cv.icon
   target:
     - dmg
+dmg:
+  icon: build/icon.icns
 win:
   target:
     - nsis

@@ -53,6 +53,10 @@ async function createWindow(): Promise<void> {
 }
 
 void app.whenReady().then(async () => {
+  if (process.platform === "darwin" && !app.isPackaged && app.dock) {
+    app.dock.setIcon(join(__dirname, "..", "..", "build", "icon-dev.png"));
+  }
+
   registerAuthCookiePersistence();
 
   const sessionDirectory = join(app.getPath("userData"), "linkedin-session");

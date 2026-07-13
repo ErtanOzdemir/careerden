@@ -251,6 +251,23 @@
   }
 }
 
+@keyframes auth-feature-title-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+.auth-feature-title-in {
+  animation: auth-feature-title-in 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }

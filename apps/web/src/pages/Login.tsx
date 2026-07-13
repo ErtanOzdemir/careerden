@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authClient } from "../api/auth";
@@ -17,6 +17,12 @@ import {
 import { BrandLogo } from "../components/BrandLogo.js";
 
 type LoginStep = "credentials" | "otp";
+
+const authFeatureTitles = [
+  "Track every job application with ease",
+  "Match your experience to the right roles",
+  "Create tailored CVs and cover letters",
+] as const;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -101,6 +107,7 @@ export default function Login() {
 
   return (
     <AuthShell
+      animateFeatureTitle
       headerAction={
         step === "otp" ? (
           <Button
@@ -224,14 +231,30 @@ function isEmailNotVerifiedError(error: { code?: string; message?: string }) {
 export function AuthShell({
   children,
   headerAction,
+  animateFeatureTitle = false,
   subtitle,
   title,
 }: {
   children: ReactNode;
   headerAction?: ReactNode;
+  animateFeatureTitle?: boolean;
   subtitle: string;
   title: string;
 }) {
+  const [featureTitleIndex, setFeatureTitleIndex] = useState(0);
+
+  useEffect(() => {
+    if (!animateFeatureTitle) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setFeatureTitleIndex((index) => (index + 1) % authFeatureTitles.length);
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [animateFeatureTitle]);
+
   return (
     <main
       data-testid="auth-page-shell"
@@ -255,24 +278,32 @@ export function AuthShell({
             </div>
             <div className="mt-12 max-w-sm">
               <p className="text-sm text-white/65 dark:text-black/60">You can easily</p>
-              <h2 className="mt-3 text-4xl font-semibold leading-tight text-white dark:text-black">
-                Turn every job into a tailored application
+              <h2
+                key={animateFeatureTitle ? authFeatureTitles[featureTitleIndex] : "static"}
+                aria-live="polite"
+                className="auth-feature-title-in mt-3 text-4xl font-semibold leading-tight text-white dark:text-black"
+              >
+                {animateFeatureTitle
+                  ? authFeatureTitles[featureTitleIndex]
+                  : "Turn every job into a tailored application"}
               </h2>
             </div>
             <div className="mt-auto">
-              <p className="text-center text-xs text-white/45 dark:text-black/45">Your workspace</p>
+              <p className="text-center text-xs text-white/45 dark:text-black/45">
+                Your application toolkit
+              </p>
               <div className="mt-5 grid grid-cols-3 gap-3 text-xs font-medium text-white/55 dark:text-black/55">
                 <span className="flex items-center gap-2">
                   <BriefcaseBusiness className="size-4" />
-                  Applications
+                  Track applications
                 </span>
                 <span className="flex items-center justify-center gap-2">
                   <Sparkles className="size-4" />
-                  Matching
+                  Match your skills
                 </span>
                 <span className="flex items-center justify-end gap-2">
                   <Link2 className="size-4" />
-                  Documents
+                  Create documents
                 </span>
               </div>
             </div>

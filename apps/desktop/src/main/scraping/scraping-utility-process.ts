@@ -34,7 +34,7 @@ async function handleMessage(message: unknown): Promise<void> {
     );
     const scrapeLinkedInJob = new ScrapeLinkedInJobUseCase(
       new LinkedInJobScraper(sessionManager),
-      new LinkedInCompanyScraper(sessionManager),
+      new LinkedInCompanyScraper(sessionManager, { strategy: "guest" }),
     );
     const scrapeBundle = await scrapeLinkedInJob.execute(request.sourceUrl);
 

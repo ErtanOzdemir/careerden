@@ -118,6 +118,7 @@ export class LinkedInJobScraper implements JobSiteScraper {
         ...(descriptionHtml ? { descriptionHtml } : {}),
         requirements: [],
         companyLinkedInUrl,
+        ...(companyLogoUrl ? { companyLogoUrl } : {}),
         raw: {
           sourceUrl: url,
           finalUrl: page.url(),
@@ -249,6 +250,7 @@ export function parseLinkedInGuestJobDetailHtml(
   const description = rawDescriptionHtml
     ? htmlToLinkedInJobDescriptionText(rawDescriptionHtml)
     : "";
+  const companyLogoUrl = extractLinkedInCompanyLogoUrlFromHtml(html);
 
   if (!description || title.toLowerCase().includes("sign in")) {
     throw new Error("LinkedIn public job details were not exposed");
@@ -262,6 +264,7 @@ export function parseLinkedInGuestJobDetailHtml(
     ...(descriptionHtml ? { descriptionHtml } : {}),
     requirements: [],
     ...(companyLinkedInUrl ? { companyLinkedInUrl } : {}),
+    ...(companyLogoUrl ? { companyLogoUrl } : {}),
     raw: {
       sourceUrl: input.sourceUrl,
       finalUrl: input.finalUrl,
@@ -272,7 +275,7 @@ export function parseLinkedInGuestJobDetailHtml(
       scrapedAt: new Date().toISOString(),
       html,
       ...(rawDescriptionHtml ? { descriptionHtml: rawDescriptionHtml } : {}),
-      companyLogoUrl: extractLinkedInCompanyLogoUrlFromHtml(html),
+      companyLogoUrl,
       criteria: extractLinkedInJobCriteria(html),
     },
   };

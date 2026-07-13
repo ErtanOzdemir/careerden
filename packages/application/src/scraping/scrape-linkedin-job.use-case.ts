@@ -12,11 +12,13 @@ export class ScrapeLinkedInJobUseCase {
   ) {}
 
   async execute(sourceUrl: string): Promise<ScrapeLinkedInJobResult> {
-    const job = await this.jobScraper.scrapeJob(sourceUrl);
+    const scrapedJob = await this.jobScraper.scrapeJob(sourceUrl);
     const companyLinkedIn = await this.companyScraper.scrapeCompany({
-      companyName: job.companyName,
-      linkedInUrl: job.companyLinkedInUrl,
+      companyName: scrapedJob.companyName,
+      linkedInUrl: scrapedJob.companyLinkedInUrl,
+      logoUrl: scrapedJob.companyLogoUrl,
     });
+    const { companyLogoUrl: _companyLogoUrl, ...job } = scrapedJob;
 
     return { job, companyLinkedIn };
   }

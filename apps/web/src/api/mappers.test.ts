@@ -24,6 +24,7 @@ describe("API mappers", () => {
     const mapped = mapApiJobApplicationToUi(application);
 
     expect(mapped.company).toBe("Acme");
+    expect(mapped.companyWebsiteUrl).toBe("https://www.acme.example/careers");
     expect(mapped.logo).toBe("http://localhost:9000/signed-logo");
     expect(mapped.matchScore).toBe(82);
     expect(mapped.role).toBe("Frontend Engineer");
@@ -87,6 +88,17 @@ describe("API mappers", () => {
     application.tracking.priority = undefined;
 
     expect(mapApiJobApplicationToUi(application).interestLevel).toBeUndefined();
+  });
+
+  it("does not expose a non-HTTP company website URL", () => {
+    const application = createApplicationDetail();
+    application.scrapeBundle.companyLinkedIn = {
+      name: "Acme",
+      raw: {},
+      websiteUrl: "javascript:alert(1)",
+    };
+
+    expect(mapApiJobApplicationToUi(application).companyWebsiteUrl).toBeUndefined();
   });
 
   it("maps analytics and details into dashboard stats", () => {
@@ -344,6 +356,11 @@ function createApplicationDetail(): ApiJobApplicationDetail {
     },
     profileId: "profile-1",
     scrapeBundle: {
+      companyLinkedIn: {
+        name: "Acme",
+        raw: {},
+        websiteUrl: "https://www.acme.example/careers",
+      },
       job: {
         companyName: "Acme",
         description: "Build product UI.",

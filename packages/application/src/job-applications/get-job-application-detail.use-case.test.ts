@@ -20,7 +20,13 @@ describe("GetJobApplicationDetailUseCase", () => {
           requirements: [],
           raw: {},
         },
-        companyLinkedIn: { name: "Acme", logoFileId: "logo-1", logoUrl: "remote", raw: {} },
+        companyLinkedIn: {
+          name: "Acme",
+          logoFileId: "logo-1",
+          logoUrl: "remote",
+          raw: {},
+          websiteUrl: "https://www.acme.example/careers",
+        },
       })),
       getCompanyLogoFileId: vi.fn(async () => "logo-1"),
     });
@@ -32,6 +38,10 @@ describe("GetJobApplicationDetailUseCase", () => {
     ).execute(job.id, "user-1");
 
     expect(detail.companyLogoUrl).toBe("signed-logo");
-    expect(detail.scrapeBundle?.companyLinkedIn).toEqual({ name: "Acme", raw: {} });
+    expect(detail.scrapeBundle?.companyLinkedIn).toEqual({
+      name: "Acme",
+      raw: {},
+      websiteUrl: "https://www.acme.example/careers",
+    });
   });
 });

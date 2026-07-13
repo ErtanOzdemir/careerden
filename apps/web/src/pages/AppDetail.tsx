@@ -850,6 +850,22 @@ export function JobDetailsPanel({
     <Panel>
       <PanelHeader title="Job details" />
       <div className="divide-y divide-border border-t border-border text-sm">
+        {app.companyWebsiteUrl && (
+          <div className="flex items-center justify-between gap-4 px-5 py-2.5">
+            <span className="shrink-0 text-muted-foreground">Company website</span>
+            <a
+              href={app.companyWebsiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={app.companyWebsiteUrl}
+              className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
+            >
+              <span className="truncate">{app.companyWebsiteUrl}</span>
+              <ExternalLink className="size-3.5 shrink-0" />
+            </a>
+          </div>
+        )}
+
         {editingField === "salary" ? (
           <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4 px-5 py-4">
             <div>

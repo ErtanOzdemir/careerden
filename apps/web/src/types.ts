@@ -88,6 +88,7 @@ export interface JobApplication {
   profileId?: string;
   updatedAt?: string;
   company: string;
+  companyWebsiteUrl?: string;
   domain: string;
   logo?: string;
   role: string;

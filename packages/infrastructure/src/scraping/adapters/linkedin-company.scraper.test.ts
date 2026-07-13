@@ -4,7 +4,10 @@ import {
   chooseLinkedInAboutWebsiteUrl,
   chooseLinkedInCompanyLogoUrl,
   LinkedInCompanyScraper,
+  linkedInGuestCompanyParserVersion,
   normalizeLinkedInCompanyAboutUrl,
+  normalizeLinkedInCompanyUrl,
+  parseLinkedInGuestCompanyHtml,
 } from "./linkedin-company.scraper.js";
 
 describe("LinkedInCompanyScraper", () => {
@@ -47,6 +50,14 @@ describe("LinkedInCompanyScraper", () => {
     expect(
       normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun/about/"),
     ).toBe("https://www.linkedin.com/company/ogretmenbulun/about/");
+  });
+
+  it("normalizes LinkedIn company URLs to the public company root", () => {
+    expect(
+      normalizeLinkedInCompanyUrl(
+        "https://www.linkedin.com/company/ogretmenbulun/about/?trk=public_jobs",
+      ),
+    ).toBe("https://www.linkedin.com/company/ogretmenbulun/");
   });
 
   it("ignores missing or non-LinkedIn company URLs", () => {
@@ -142,8 +153,86 @@ describe("LinkedInCompanyScraper", () => {
     });
   });
 
-  it("requires a saved LinkedIn session before opening a company about page", async () => {
-    const scraper = new LinkedInCompanyScraper();
+  it("uses the public company root as the default guest strategy", async () => {
+    const fetchCalls: string[] = [];
+    const html = `
+      <html>
+        <head>
+          <meta property="og:title" content="Acme | LinkedIn">
+          <script type="application/ld+json">
+            ${JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  name: "Acme",
+                  url: "https://www.linkedin.com/company/acme",
+                },
+                {
+                  "@type": "Organization",
+                  name: "Acme Corporation",
+                  description: "Acme builds reliable products.",
+                  url: "https://www.linkedin.com/company/acme",
+                  sameAs: "https://acme.example.com",
+                  logo: {
+                    "@type": "ImageObject",
+                    contentUrl: "https://media.licdn.com/dms/image/company-page-logo",
+                  },
+                },
+              ],
+            })}
+          </script>
+        </head>
+      </html>
+    `;
+    const scraper = new LinkedInCompanyScraper(undefined, {
+      fetch: async (request) => {
+        fetchCalls.push(String(request));
+        return new Response(html, { status: 200 });
+      },
+    });
+
+    const result = await scraper.scrapeCompany({
+      companyName: "Acme",
+      linkedInUrl: "https://www.linkedin.com/company/acme?trk=public_jobs",
+      logoUrl: "https://media.licdn.com/dms/image/job-post-logo",
+    });
+
+    expect(fetchCalls).toEqual(["https://www.linkedin.com/company/acme/"]);
+    expect(result).toMatchObject({
+      name: "Acme Corporation",
+      linkedInUrl: "https://www.linkedin.com/company/acme/",
+      websiteUrl: "https://acme.example.com/",
+      description: "Acme builds reliable products.",
+      logoUrl: "https://media.licdn.com/dms/image/job-post-logo",
+      raw: {
+        adapter: "linkedin-company",
+        strategy: "guest",
+        parserVersion: linkedInGuestCompanyParserVersion,
+        companyUrl: "https://www.linkedin.com/company/acme/",
+        html,
+      },
+    });
+  });
+
+  it("rejects a guest response that redirects to LinkedIn authentication", async () => {
+    const scraper = new LinkedInCompanyScraper(undefined, {
+      fetch: async () =>
+        new Response("<html><title>Sign Up | LinkedIn</title></html>", { status: 200 }),
+    });
+
+    await expect(
+      scraper.scrapeCompany({
+        companyName: "Acme",
+        linkedInUrl: "https://www.linkedin.com/company/acme",
+      }),
+    ).rejects.toThrow("linkedin_guest_company_unavailable");
+  });
+
+  it("keeps the saved-session company strategy available explicitly", async () => {
+    const scraper = new LinkedInCompanyScraper(undefined, {
+      strategy: "browser-session",
+    });
 
     await expect(
       scraper.scrapeCompany({
@@ -151,5 +240,37 @@ describe("LinkedInCompanyScraper", () => {
         linkedInUrl: "https://www.linkedin.com/company/ogretmenbulun/about/",
       }),
     ).rejects.toThrow("linkedin_session_required");
+  });
+});
+
+describe("parseLinkedInGuestCompanyHtml", () => {
+  it("falls back to public meta tags and the Website definition", () => {
+    const html = `
+      <meta property="og:title" content="Acme | LinkedIn">
+      <meta property="og:description" content="Acme makes useful tools.">
+      <meta property="og:image" content="https://media.licdn.com/dms/image/acme-logo">
+      <div data-test-id="about-us__website">
+        <dt>Website</dt>
+        <dd><a href="https://acme.example.com">Visit website</a></dd>
+      </div>
+    `;
+
+    expect(
+      parseLinkedInGuestCompanyHtml(html, {
+        companyUrl: "https://www.linkedin.com/company/acme/",
+        finalUrl: "https://www.linkedin.com/company/acme/",
+        input: {
+          companyName: "Acme fallback",
+          linkedInUrl: "https://www.linkedin.com/company/acme",
+          logoUrl: "https://media.licdn.com/dms/image/job-post-logo",
+        },
+        strategy: "guest",
+      }),
+    ).toMatchObject({
+      name: "Acme",
+      websiteUrl: "https://acme.example.com/",
+      description: "Acme makes useful tools.",
+      logoUrl: "https://media.licdn.com/dms/image/job-post-logo",
+    });
   });
 });

@@ -10,12 +10,24 @@ describe("JobDetailsPanel", () => {
     renderPanel();
 
     expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.getByText("Company website")).toBeInTheDocument();
     expect(screen.getByText("Work style")).toBeInTheDocument();
     expect(screen.getByText("Interest level")).toBeInTheDocument();
     expect(screen.getAllByText("Not set")).toHaveLength(3);
     expect(screen.getByRole("button", { name: "Edit salary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit work style" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit interest level" })).toBeInTheDocument();
+  });
+
+  it("links to the company website in a new tab", () => {
+    renderPanel();
+
+    const companyWebsite = screen.getByRole("link", {
+      name: "https://www.acme.example/careers",
+    });
+    expect(companyWebsite).toHaveAttribute("href", "https://www.acme.example/careers");
+    expect(companyWebsite).toHaveAttribute("target", "_blank");
+    expect(companyWebsite).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("opens and cancels the interest editor without changing the value", () => {
@@ -145,6 +157,7 @@ function createApplication(): JobApplication {
   return {
     id: "job-1",
     company: "Acme",
+    companyWebsiteUrl: "https://www.acme.example/careers",
     domain: "linkedin.com",
     role: "Engineer",
     location: "Remote",

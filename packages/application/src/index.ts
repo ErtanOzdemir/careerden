@@ -19,7 +19,6 @@ export * from "./notifications/mark-all-notifications-read.use-case.js";
 export * from "./notifications/deliver-follow-up-reminder.use-case.js";
 export * from "./job-applications/submit-job-application.use-case.js";
 export * from "./job-applications/analyze-scraped-job.use-case.js";
-export * from "./job-applications/process-job-application.use-case.js";
 export * from "./job-applications/generate-job-application-documents.use-case.js";
 export * from "./job-applications/delete-job-application.use-case.js";
 export * from "./job-applications/retry-job-application.use-case.js";

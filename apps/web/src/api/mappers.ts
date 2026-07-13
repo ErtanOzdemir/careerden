@@ -65,12 +65,18 @@ export function mapApiJobApplicationToUi(
   const company = application.tracking.companyName ?? scrapeJob?.companyName ?? "Unknown company";
   const role = application.tracking.roleTitle ?? scrapeJob?.title ?? "Untitled role";
   const dateSource = application.tracking.dateApplied ?? application.createdAt;
+  const scrapedCompanyWebsiteUrl =
+    detail?.scrapeBundle?.companyLinkedIn?.websiteUrl ??
+    detail?.scrapeBundle?.companyWebsite?.websiteUrl;
+  const companyWebsiteUrl = scrapedCompanyWebsiteUrl?.trim();
 
   return {
     id: application.id,
     profileId: application.profileId,
     updatedAt: application.updatedAt,
     company,
+    companyWebsiteUrl:
+      companyWebsiteUrl && isHttpUrl(companyWebsiteUrl) ? companyWebsiteUrl : undefined,
     logo: application.companyLogoUrl,
     domain: getDomain(application.tracking.jobUrl ?? application.sourceUrl),
     role,

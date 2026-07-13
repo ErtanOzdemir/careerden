@@ -97,6 +97,7 @@ describe("parseLinkedInGuestJobDetailHtml", () => {
         "<p>Build <strong>TypeScript</strong> services.</p><ul><li>Own public APIs</li></ul>",
       requirements: [],
       companyLinkedInUrl: "https://www.linkedin.com/company/acme/",
+      companyLogoUrl: "https://media.licdn.com/dms/image/logo.png",
     });
     expect(job.raw).toMatchObject({
       adapter: "linkedin-job",

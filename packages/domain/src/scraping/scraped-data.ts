@@ -6,12 +6,14 @@ export interface ScrapedJob {
   descriptionHtml?: string;
   requirements: string[];
   companyLinkedInUrl?: string;
+  companyLogoUrl?: string;
   raw: unknown;
 }
 
 export interface CompanyLookupInput {
   companyName: string;
   linkedInUrl?: string;
+  logoUrl?: string;
   websiteUrl?: string;
 }
 

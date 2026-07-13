@@ -1,4 +1,4 @@
-import { Link } from "@tiptap/extension-link";
+import { isAllowedUri, Link } from "@tiptap/extension-link";
 import { Table } from "@tiptap/extension-table";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
@@ -29,17 +29,22 @@ export function createRichTextExtensions() {
 }
 
 export function applyLink(editor: Editor, href: string): boolean {
+  const trimmedHref = href.trim();
+  if (!trimmedHref || !isAllowedUri(trimmedHref)) {
+    return false;
+  }
+
   if (editor.isActive("link")) {
-    return editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
+    return editor.chain().extendMarkRange("link").setLink({ href: trimmedHref }).run();
   }
 
   if (editor.state.selection.empty) {
     return editor.commands.insertContent({
       type: "text",
-      text: href,
-      marks: [{ type: "link", attrs: { href } }],
+      text: trimmedHref,
+      marks: [{ type: "link", attrs: { href: trimmedHref } }],
     });
   }
 
-  return editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
+  return editor.chain().extendMarkRange("link").setLink({ href: trimmedHref }).run();
 }

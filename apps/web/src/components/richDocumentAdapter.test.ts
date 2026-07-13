@@ -32,6 +32,19 @@ describe("richDocumentAdapter", () => {
             },
           ],
         },
+        {
+          type: "orderedList",
+          items: [
+            {
+              blocks: [
+                {
+                  type: "paragraph",
+                  children: [{ type: "text", text: "Documented the rollout" }],
+                },
+              ],
+            },
+          ],
+        },
       ],
     };
 

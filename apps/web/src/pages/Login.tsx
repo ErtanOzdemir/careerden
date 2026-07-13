@@ -14,6 +14,7 @@ import {
   RotateCw,
   Sparkles,
 } from "lucide-react";
+import { BrandLogo } from "../components/BrandLogo.js";
 
 type LoginStep = "credentials" | "otp";
 
@@ -159,7 +160,7 @@ export default function Login() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -183,7 +184,7 @@ export default function Login() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -192,7 +193,7 @@ export default function Login() {
             <ArrowRight className="size-4" />
           </Button>
           <Button
-            className="w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="button"
             variant="outline"
@@ -247,11 +248,9 @@ export function AuthShell({
           <div className="relative z-10 flex h-full flex-col">
             <div
               data-testid="auth-wave-brand"
-              className="flex h-24 items-end gap-2 pb-4 text-sm text-white/70 dark:text-black/65"
+              className="flex h-24 items-center gap-2 pb-4 text-sm text-white/70 dark:text-black/65"
             >
-              <span className="flex size-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 dark:border-black/15 dark:bg-black/5">
-                <Link2 className="size-4" />
-              </span>
+              <BrandLogo variant="inverse" className="size-9 rounded-lg object-contain" />
               Link2CV
             </div>
             <div className="mt-12 max-w-sm">
@@ -287,9 +286,7 @@ export function AuthShell({
           >
             <div className="mb-8 pt-10 md:hidden">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <span className="flex size-9 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black">
-                  <Link2 className="size-4" />
-                </span>
+                <BrandLogo className="size-9 rounded-lg object-contain" />
                 Link2CV
               </div>
             </div>

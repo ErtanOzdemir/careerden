@@ -8,12 +8,12 @@ import {
   FileText,
   Settings,
   CircleHelp,
-  Link2,
   LogOut,
 } from "lucide-react";
 import { profilesApi, profileUpdatedEvent } from "../api/profiles.js";
 import { authClient } from "../api/auth.js";
 import type { ApiProfile } from "../api/types.js";
+import { BrandLogo } from "./BrandLogo.js";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -56,9 +56,7 @@ export default function Sidebar() {
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <div data-testid="sidebar-brand" className="flex h-24 items-end gap-2.5 px-5 pb-4">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Link2 className="size-4" />
-        </div>
+        <BrandLogo className="size-8 object-contain" />
         <div className="leading-tight">
           <p className="text-sm font-semibold text-sidebar-foreground">Link2CV</p>
           <p className="text-xs text-muted-foreground">Career workspace</p>

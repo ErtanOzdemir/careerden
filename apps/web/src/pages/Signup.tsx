@@ -151,7 +151,7 @@ export default function Signup() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -175,7 +175,7 @@ export default function Signup() {
             </div>
           )}
           <Button
-            className="mt-2 w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="mt-2 w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="submit"
             disabled={isSubmitting}
@@ -184,7 +184,7 @@ export default function Signup() {
             <ArrowRight className="size-4" />
           </Button>
           <Button
-            className="w-full rounded-lg bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            className="w-full rounded-lg bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             size="lg"
             type="button"
             variant="outline"

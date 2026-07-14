@@ -34,7 +34,7 @@ const statusStyles: Record<DisplayStatus, string> = {
   processing: "bg-info-soft text-info",
   ready: "bg-accent text-accent-foreground",
   applied: "bg-info-soft text-info",
-  interview: "bg-warning-soft text-warning-foreground",
+  interview: "bg-warning-soft text-warning-emphasis",
   offer: "bg-success-soft text-success",
   rejected: "bg-muted text-muted-foreground",
   ghosted: "bg-muted text-muted-foreground",
@@ -75,7 +75,7 @@ export function StatusBadge({ status, className }: { status: DisplayStatus; clas
 const interestStyles: Record<DisplayInterestLevel, string> = {
   low: "text-muted-foreground",
   medium: "text-foreground",
-  high: "text-warning-foreground",
+  high: "text-warning-emphasis",
 };
 
 export function InterestTag({ interestLevel }: { interestLevel?: DisplayInterestLevel }) {

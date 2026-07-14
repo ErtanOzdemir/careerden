@@ -213,7 +213,7 @@ export default function Dashboard() {
                       (app.matchScore ?? 0) >= 70
                         ? "text-success"
                         : (app.matchScore ?? 0) >= 50
-                          ? "text-warning-foreground"
+                          ? "text-warning-emphasis"
                           : "text-destructive",
                     )}
                   >

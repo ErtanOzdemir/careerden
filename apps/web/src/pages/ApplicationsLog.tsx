@@ -308,13 +308,7 @@ export default function ApplicationsLog() {
                 )}
               >
                 <div className="col-span-3 flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xs font-semibold text-secondary-foreground">
-                    {app.logo ? (
-                      <img src={app.logo} alt="" className="size-full object-contain" />
-                    ) : (
-                      app.company.slice(0, 2)
-                    )}
-                  </div>
+                  <ApplicationCompanyLogo company={app.company} logo={app.logo} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{app.role}</p>
                     <p className="truncate text-xs text-muted-foreground">
@@ -504,6 +498,38 @@ function matchScoreBarColor(score: number): string {
 
 function matchScoreTextColor(score: number): string {
   if (score >= 70) return "text-success";
-  if (score >= 50) return "text-warning-foreground";
+  if (score >= 50) return "text-warning-emphasis";
   return "text-destructive";
+}
+
+function ApplicationCompanyLogo({ company, logo }: { company: string; logo?: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [logo]);
+
+  const showLogo = Boolean(logo) && !hasError;
+
+  return (
+    <div
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-xs font-semibold",
+        showLogo
+          ? "border border-black/10 bg-white p-0.5"
+          : "bg-secondary text-secondary-foreground",
+      )}
+    >
+      {showLogo ? (
+        <img
+          src={logo}
+          alt={`${company} logo`}
+          className="size-full object-contain"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <span aria-hidden="true">{company.slice(0, 2).toUpperCase()}</span>
+      )}
+    </div>
+  );
 }

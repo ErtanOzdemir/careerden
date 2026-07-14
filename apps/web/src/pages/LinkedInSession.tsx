@@ -64,7 +64,7 @@ const toneClasses: Record<string, { wrap: string; icon: string; dot: string }> =
   },
   warning: {
     wrap: "border-warning/30 bg-warning-soft/50",
-    icon: "bg-warning-soft text-warning-foreground",
+    icon: "bg-warning-soft text-warning-emphasis",
     dot: "bg-warning",
   },
   muted: {

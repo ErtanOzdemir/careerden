@@ -66,4 +66,47 @@ describe("ApplicationsLog", () => {
       expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })),
     );
   });
+
+  it("places company logos on a light tile and falls back to company initials", async () => {
+    mocks.me.mockResolvedValue({ id: "profile-1" });
+    mocks.list.mockResolvedValue({
+      items: [
+        {
+          companyLogoUrl: "https://example.com/acme-logo.svg",
+          createdAt: "2026-07-13T09:00:00.000Z",
+          id: "application-1",
+          profileId: "profile-1",
+          status: "review_ready",
+          tracking: {
+            applicationStatus: "saved",
+            companyName: "Acme",
+            metadata: {},
+            roleTitle: "Software Engineer",
+            tags: [],
+          },
+          updatedAt: "2026-07-13T09:00:00.000Z",
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      totalItems: 1,
+      totalPages: 1,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/applications"]}>
+        <Routes>
+          <Route path="/applications" element={<ApplicationsLog />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const logo = await screen.findByRole("img", { name: "Acme logo" });
+    expect(logo.parentElement).toHaveClass("bg-white", "border-black/10");
+
+    fireEvent.error(logo);
+
+    expect(await screen.findByText("AC")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Acme logo" })).not.toBeInTheDocument();
+  });
 });

@@ -23,8 +23,12 @@ export function BrandLogo({
 
   return (
     <>
-      <img src={logoUrl} alt="Link2CV" className={`dark:hidden ${className ?? ""}`} />
-      <img src={whiteLogoUrl} alt="Link2CV" className={`hidden dark:block ${className ?? ""}`} />
+      <img src={logoUrl} alt="Link2CV" className={`brand-logo-theme-light ${className ?? ""}`} />
+      <img
+        src={whiteLogoUrl}
+        alt="Link2CV"
+        className={`brand-logo-theme-dark ${className ?? ""}`}
+      />
     </>
   );
 }

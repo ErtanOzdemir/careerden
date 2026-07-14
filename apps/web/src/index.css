@@ -192,6 +192,26 @@
     --info-soft: oklch(0.26 0.04 245);
     --danger-soft: oklch(0.26 0.05 20);
   }
+
+  :root:not(.light) .brand-logo-theme-light {
+    display: none;
+  }
+
+  :root:not(.light) .brand-logo-theme-dark {
+    display: block;
+  }
+}
+
+.brand-logo-theme-dark {
+  display: none;
+}
+
+.dark .brand-logo-theme-light {
+  display: none;
+}
+
+.dark .brand-logo-theme-dark {
+  display: block;
 }
 
 @layer base {

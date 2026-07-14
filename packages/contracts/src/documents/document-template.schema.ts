@@ -3,6 +3,7 @@ import { z } from "zod";
 export const documentTemplateFieldSchema = z.enum([
   "certifications",
   "company_name",
+  "cover_letter_content",
   "customized_summary",
   "education_list",
   "email",

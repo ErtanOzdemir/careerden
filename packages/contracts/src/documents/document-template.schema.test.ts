@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { documentTemplateVariableAliasesSchema } from "./document-template.schema";
+import {
+  documentTemplateFieldSchema,
+  documentTemplateVariableAliasesSchema,
+} from "./document-template.schema";
 
 describe("document template schema", () => {
+  it("accepts the dedicated cover letter content mapping field", () => {
+    expect(documentTemplateFieldSchema.parse("cover_letter_content")).toBe("cover_letter_content");
+  });
+
   it("accepts summary as a profile template variable field", () => {
     expect(
       documentTemplateVariableAliasesSchema.parse({

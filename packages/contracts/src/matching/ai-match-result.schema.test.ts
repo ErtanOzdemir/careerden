@@ -5,6 +5,7 @@ describe("aiMatchResultSchema", () => {
   it("accepts the required AI matching payload", () => {
     expect(() =>
       aiMatchResultSchema.parse({
+        coverLetterContent: "Dear hiring team, I am excited to apply.",
         matchScore: 82,
         missingSkills: ["Kubernetes"],
         strongSkills: ["TypeScript"],
@@ -46,6 +47,7 @@ describe("aiMatchResultSchema", () => {
   it("rejects scores outside the 0-100 range", () => {
     expect(() =>
       aiMatchResultSchema.parse({
+        coverLetterContent: "Dear hiring team, I am excited to apply.",
         matchScore: 101,
         missingSkills: [],
         strongSkills: [],
@@ -59,6 +61,7 @@ describe("aiMatchResultSchema", () => {
   it("rejects unknown requirement evaluation statuses", () => {
     expect(() =>
       aiMatchResultSchema.parse({
+        coverLetterContent: "Dear hiring team, I am excited to apply.",
         matchScore: 82,
         missingSkills: [],
         strongSkills: ["TypeScript"],
@@ -79,6 +82,7 @@ describe("aiMatchResultSchema", () => {
   it("rejects invalid missing skill resource links", () => {
     expect(() =>
       aiMatchResultSchema.parse({
+        coverLetterContent: "Dear hiring team, I am excited to apply.",
         matchScore: 82,
         missingSkills: ["Kubernetes"],
         strongSkills: ["TypeScript"],

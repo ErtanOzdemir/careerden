@@ -89,6 +89,7 @@ describe("GenerateDocumentsUseCase", () => {
     const htmlToPdf = vi.fn(async () => Buffer.from("pdf"));
     const docxTemplates: DocxTemplateRenderer = {
       extractPlaceholders: vi.fn(),
+      isPlaceholderStandalone: vi.fn(async () => true),
       render: vi.fn(async (input) => {
         capturedDocxData.push(input.data);
         return Buffer.from("docx");
@@ -123,6 +124,7 @@ describe("GenerateDocumentsUseCase", () => {
         ],
       },
       documentContent: {
+        coverLetterContent: richDocumentFromText("Reviewed cover letter."),
         customizedSummary: richDocumentFromText("User-edited summary."),
         experienceEnhancements: [
           {
@@ -198,6 +200,12 @@ describe("GenerateDocumentsUseCase", () => {
       expect.objectContaining({ fileName: "cover-letter.pdf" }),
     );
     expect(htmlTemplates.render).toHaveBeenCalledOnce();
+    expect(htmlTemplates.render).toHaveBeenCalledWith(
+      "cover-letter.default",
+      expect.objectContaining({
+        cover_letter_content: richDocumentFromText("Reviewed cover letter."),
+      }),
+    );
     expect(htmlToPdf).toHaveBeenCalledOnce();
 
     const staged = await useCase.stage({
@@ -218,6 +226,92 @@ describe("GenerateDocumentsUseCase", () => {
       `job-applications/${jobApplication.id}/document-generations/attempt-1/cv.docx`,
       `job-applications/${jobApplication.id}/document-generations/attempt-1/cover-letter.pdf`,
     ]);
+  });
+
+  it("renders a selected cover letter template as DOCX with the reviewed Content body", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: ["TypeScript"],
+      experience: [],
+    });
+    await profiles.createDocumentTemplate({
+      profileId: profile.id,
+      kind: "cv",
+      format: "docx",
+      fileId: "templates/cv.docx",
+      fileName: "cv.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 10,
+      placeholders: ["full_name"],
+      fieldMappings: { full_name: "full_name" },
+      isDefault: true,
+    });
+    await profiles.createDocumentTemplate({
+      profileId: profile.id,
+      kind: "cover_letter",
+      format: "docx",
+      fileId: "templates/cover-letter.docx",
+      fileName: "cover-letter.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 10,
+      placeholders: ["letter_body"],
+      fieldMappings: { letter_body: "cover_letter_content" },
+      isDefault: false,
+    });
+    const jobApplication = await jobApplications.create({ profileId: profile.id });
+    const storage = createStorage();
+    const docxTemplates: DocxTemplateRenderer = {
+      extractPlaceholders: vi.fn(),
+      isPlaceholderStandalone: vi.fn(async () => true),
+      render: vi.fn(async () => Buffer.from("docx")),
+    };
+    const useCase = new GenerateDocumentsUseCase(
+      createHtmlTemplates(),
+      { htmlToPdf: vi.fn() },
+      storage,
+      jobApplications,
+      profiles,
+      docxTemplates,
+    );
+    const coverLetterContent = richDocumentFromText("Dear hiring team,\nI am ready to contribute.");
+
+    const generated = await useCase.execute({
+      jobApplicationId: jobApplication.id,
+      jobApplication,
+      profile,
+      analysis: {
+        matchScore: 90,
+        missingSkills: [],
+        strongSkills: ["TypeScript"],
+        recommendedAchievements: [],
+        customizedSummary: "Summary",
+        interviewTips: [],
+      },
+      documentContent: {
+        coverLetterContent,
+        customizedSummary: richDocumentFromText("Summary"),
+        experienceEnhancements: [],
+      },
+    });
+
+    expect(generated.map(({ format, kind }) => ({ format, kind }))).toEqual([
+      { format: "docx", kind: "cv" },
+      { format: "docx", kind: "cover_letter" },
+    ]);
+    expect(docxTemplates.render).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        template: expect.objectContaining({ kind: "cover_letter" }),
+        data: expect.objectContaining({ cover_letter_content: coverLetterContent }),
+      }),
+    );
+    expect(storage.put).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ fileName: "cover-letter.docx" }),
+    );
   });
 });
 

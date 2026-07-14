@@ -124,6 +124,7 @@ const documentContentSelectionsSchema = z
 
 export const documentContentSchema = z
   .object({
+    coverLetterContent: richDocumentSchema.optional(),
     customizedSummary: richDocumentSchema,
     experienceEnhancements: z
       .array(

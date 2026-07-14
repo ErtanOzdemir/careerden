@@ -111,6 +111,7 @@ describe("documentContentSchema", () => {
 
     expect(
       documentContentSchema.parse({
+        coverLetterContent: paragraph,
         customizedSummary: paragraph,
         experienceEnhancements: [
           {
@@ -121,6 +122,7 @@ describe("documentContentSchema", () => {
         ],
       }),
     ).toEqual({
+      coverLetterContent: paragraph,
       customizedSummary: paragraph,
       experienceEnhancements: [
         {

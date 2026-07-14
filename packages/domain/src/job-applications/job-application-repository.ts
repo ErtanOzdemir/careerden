@@ -34,6 +34,8 @@ export interface AttachGeneratedDocumentInput {
   contentType: string;
 }
 
+export type ReplaceGeneratedDocumentInput = Omit<AttachGeneratedDocumentInput, "jobApplicationId">;
+
 export type JobApplicationSortField =
   | "dateApplied"
   | "companyName"
@@ -143,5 +145,9 @@ export interface JobApplicationRepository {
   ): Promise<JobApplicationFollowUp>;
   deleteFollowUp(id: string): Promise<void>;
   attachGeneratedDocument(input: AttachGeneratedDocumentInput): Promise<GeneratedDocument>;
+  replaceGeneratedDocuments(
+    jobApplicationId: string,
+    inputs: ReplaceGeneratedDocumentInput[],
+  ): Promise<GeneratedDocument[]>;
   listGeneratedDocuments(jobApplicationId: string): Promise<GeneratedDocument[]>;
 }

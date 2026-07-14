@@ -19,9 +19,14 @@ export const profilesApi = {
   listDocumentTemplates(id: string): Promise<ApiDocumentTemplate[]> {
     return requestJson<ApiDocumentTemplate[]>(`/profiles/${id}/document-templates`);
   },
-  async uploadDocumentTemplate(id: string, file: File): Promise<ApiDocumentTemplate> {
+  async uploadDocumentTemplate(
+    id: string,
+    kind: ApiDocumentTemplate["kind"],
+    file: File,
+  ): Promise<ApiDocumentTemplate> {
     const body = new FormData();
     body.set("file", file);
+    body.set("kind", kind);
 
     return requestForm<ApiDocumentTemplate>(`/profiles/${id}/document-templates`, body);
   },

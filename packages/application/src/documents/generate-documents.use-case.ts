@@ -15,7 +15,8 @@ import type {
   UserProfile,
   UserProfileRepository,
 } from "@link2cv/domain";
-import { documentContentFromMatchAnalysis } from "@link2cv/domain";
+import { documentContentFromMatchAnalysis, richDocumentFromText } from "@link2cv/domain";
+import { hasValidCoverLetterContentMapping } from "../profiles/document-template-mapping.js";
 
 export interface GeneratedDocumentUpload {
   kind: "cover_letter" | "cv";
@@ -90,6 +91,13 @@ export class GenerateDocumentsUseCase {
     );
     const generated: T[] = [];
     const cvTemplate = await this.profiles.findDefaultDocumentTemplate(input.profile.id, "cv");
+    const defaultCoverLetterTemplate = await this.profiles.findDefaultDocumentTemplate(
+      input.profile.id,
+      "cover_letter",
+    );
+    const coverLetterTemplate =
+      defaultCoverLetterTemplate ??
+      soleReadyCoverLetterTemplate(await this.profiles.listDocumentTemplates(input.profile.id));
 
     if (cvTemplate) {
       if (!this.docxTemplates) {
@@ -125,17 +133,42 @@ export class GenerateDocumentsUseCase {
       );
     }
 
-    generated.push(
-      await this.renderHtmlPdf(
-        {
-          templateId: "cover-letter.default",
+    if (coverLetterTemplate) {
+      if (!this.docxTemplates) {
+        throw new Error("DOCX template rendering is not configured");
+      }
+      if (!hasValidCoverLetterContentMapping(coverLetterTemplate)) {
+        throw new Error("Default cover letter template does not have a valid content mapping");
+      }
+
+      const templateFile = await this.storage.get(coverLetterTemplate.fileId);
+      const docx = await this.docxTemplates.render({
+        template: coverLetterTemplate,
+        templateBody: templateFile.body,
+        data,
+      });
+      generated.push(
+        await store({
           kind: "cover_letter",
-          fileName: "cover-letter.pdf",
-          data,
-        },
-        store,
-      ),
-    );
+          format: "docx",
+          fileName: "cover-letter.docx",
+          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          body: docx,
+        }),
+      );
+    } else {
+      generated.push(
+        await this.renderHtmlPdf(
+          {
+            templateId: "cover-letter.default",
+            kind: "cover_letter",
+            fileName: "cover-letter.pdf",
+            data,
+          },
+          store,
+        ),
+      );
+    }
 
     return generated;
   }
@@ -214,6 +247,16 @@ export class GenerateDocumentsUseCase {
   }
 }
 
+function soleReadyCoverLetterTemplate(
+  templates: Awaited<ReturnType<UserProfileRepository["listDocumentTemplates"]>>,
+) {
+  const ready = templates.filter(
+    (template) => template.kind === "cover_letter" && hasValidCoverLetterContentMapping(template),
+  );
+
+  return ready.length === 1 ? ready[0] : null;
+}
+
 export function generatedDocumentFileId(
   jobApplicationId: string,
   generationAttemptId: string,
@@ -226,7 +269,7 @@ export function generatedDocumentFileIds(
   jobApplicationId: string,
   generationAttemptId: string,
 ): string[] {
-  return ["cv.docx", "cv.pdf", "cover-letter.pdf"].map((fileName) =>
+  return ["cv.docx", "cv.pdf", "cover-letter.docx", "cover-letter.pdf"].map((fileName) =>
     generatedDocumentFileId(jobApplicationId, generationAttemptId, fileName),
   );
 }
@@ -243,6 +286,7 @@ function toTemplateData(
   const selectedProjects = toSelectedProjects(profile.projects, documentContent);
 
   return {
+    cover_letter_content: documentContent.coverLetterContent ?? richDocumentFromText(""),
     company_name: jobApplication.tracking.companyName ?? scrapedJob?.companyName ?? "",
     full_name: profile.fullName,
     email: profile.email,

@@ -1,9 +1,10 @@
-export type DocumentTemplateKind = "cv";
+export type DocumentTemplateKind = "cover_letter" | "cv";
 export type DocumentTemplateFormat = "docx";
 
 export type DocumentTemplateField =
   | "certifications"
   | "company_name"
+  | "cover_letter_content"
   | "customized_summary"
   | "education_list"
   | "email"

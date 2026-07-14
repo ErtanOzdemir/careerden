@@ -104,13 +104,9 @@ export class GenerateDocumentsWithAiUseCase {
           }
           await jobApplications.saveMatchAnalysis(input.jobApplicationId, result.matchAnalysis);
           await jobApplications.saveDocumentContent(input.jobApplicationId, result.documentContent);
-          const attached = await Promise.all(
-            uploads.map((upload) =>
-              jobApplications.attachGeneratedDocument({
-                jobApplicationId: input.jobApplicationId,
-                ...upload,
-              }),
-            ),
+          const attached = await jobApplications.replaceGeneratedDocuments(
+            input.jobApplicationId,
+            uploads,
           );
           await enqueueStorageDeletions(
             outbox,

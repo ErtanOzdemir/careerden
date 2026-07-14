@@ -21,6 +21,12 @@ export class UpdateDocumentTemplateVariableAliasesUseCase {
       templateId,
       userId,
     );
+    if (variableAliases.fields.cover_letter_content) {
+      throw new ApplicationError(
+        "validation",
+        "Cover letter content must be configured through placeholder mappings",
+      );
+    }
     const updated = await this.profiles.updateDocumentTemplateVariableAliases(
       template.id,
       variableAliases,

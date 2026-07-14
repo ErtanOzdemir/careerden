@@ -25,6 +25,7 @@ export class RunMatchAnalysisUseCase {
         "Matching methodology: extract the most important requirements from scrapedJob.requirements, classify every requirement, link every CV recommendation to one or more job requirements, include exact profile evidence for every recommendation, never recommend unsupported claims, and omit enhancements for unrelated profile experiences.",
         "Tone and positioning: write in a confident, professional, recruiter-facing style; prefer concise, high-signal language and active verbs; prioritize clarity over buzzwords; avoid generic phrases such as hard-working, team player, passionate, or fast learner unless grounded in specific evidence; make the candidate look relevant, focused, and credible without overselling beyond the evidence.",
         "CV optimization rules: prioritize the most job-relevant skills near the top; mirror job posting terminology when truthful; make technical bullets outcome-oriented where the profile supports an outcome; keep bullets specific and concrete; do not include unrelated experience unless it demonstrates a transferable requirement; do not recommend adding missing skills as if the user has them.",
+        "Cover letter rules: write a complete, concise, professional cover letter body grounded only in the saved profile and scraped job; do not include markdown; do not add unsupported claims; address the target role and company when available; make the result ready for the user to review and edit.",
         "LinkedIn optimization rules: Suggest headline improvements only using supported role, skills, and domain facts. Suggest About section improvements that align the user's existing background with the job. Suggest Skills section ordering based on job relevance and profile support. Do not add skills to LinkedIn unless they are present in userProfile or clearly supported by project or experience descriptions.",
         "Return only valid JSON matching the provided output schema. Do not include markdown or commentary outside the JSON.",
       ].join(" "),
@@ -67,6 +68,7 @@ export class RunMatchAnalysisUseCase {
           "jobSummary.importantKeywords":
             "Use this internally to choose skillSuggestions and strongSkills; do not return jobSummary.",
           "suggestedRewrite.cvSummary": "Use customizedSummary.",
+          "suggestedRewrite.coverLetter": "Use coverLetterContent.",
           "suggestedRewrite.skillsOrder": "Use skillSuggestions.",
           "suggestedRewrite.experienceBullets":
             "Use experienceEnhancements keyed by zero-based userProfile.experience index.",
@@ -144,6 +146,8 @@ export class RunMatchAnalysisUseCase {
           strongSkills: "Profile skills that strongly match the job",
           recommendedAchievements: "Existing profile achievements to emphasize",
           customizedSummary: "2-3 sentences for the CV summary",
+          coverLetterContent:
+            "A complete professional cover letter body grounded in the profile and job posting, ready for user review and without markdown",
           interviewTips: "Practical tips for this interview",
           coverLetterGuidance: "Optional guidance for the cover letter",
           experienceEnhancements:
@@ -207,6 +211,10 @@ function sanitizeUnsupportedDurationClaims(
 
   return {
     ...result,
+    coverLetterContent:
+      result.coverLetterContent && isSafeText(result.coverLetterContent)
+        ? result.coverLetterContent
+        : "",
     customizedSummary: isSafeText(result.customizedSummary)
       ? result.customizedSummary
       : (profile.summary ?? profile.headline ?? ""),

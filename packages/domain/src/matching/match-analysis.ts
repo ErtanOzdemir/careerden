@@ -7,6 +7,7 @@ export interface MatchAnalysisInput {
 }
 
 export interface MatchAnalysisResult {
+  coverLetterContent?: string;
   matchScore: number;
   requirementEvaluations?: RequirementEvaluation[];
   missingSkills: string[];

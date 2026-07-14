@@ -87,6 +87,62 @@ afterEach(() => {
 });
 
 describe("TemplateVariableMapping", () => {
+  it("maps cover letter Content together with profile, job, and experience fields", async () => {
+    const coverLetterTemplate: ApiDocumentTemplate = {
+      ...mockTemplate,
+      kind: "cover_letter",
+      fileName: "cover-letter.docx",
+      placeholders: ["letter_body", "footer"],
+      isDefault: false,
+    };
+    const updated = {
+      ...coverLetterTemplate,
+      fieldMappings: { letter_body: "cover_letter_content" as const },
+    };
+    (profilesApi.updateDocumentTemplateMappings as ReturnType<typeof vi.fn>).mockResolvedValue(
+      updated,
+    );
+    (
+      profilesApi.updateDocumentTemplateVariableAliases as ReturnType<typeof vi.fn>
+    ).mockResolvedValue(updated);
+    const onUpdated = vi.fn();
+
+    render(
+      <TemplateVariableMapping
+        template={coverLetterTemplate}
+        profile={mockProfile}
+        onUpdated={onUpdated}
+      />,
+    );
+
+    expect(screen.getByText("Content")).toBeDefined();
+    expect(screen.getByText("Full Name")).toBeDefined();
+    expect(screen.getByText("Target Company")).toBeDefined();
+    expect(screen.getAllByText("Selected Experiences").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByText(
+        "Content supports rich formatting, so its DOCX placeholder must be the only text in its paragraph.",
+      ),
+    ).toBeDefined();
+    fireEvent.click(screen.getAllByRole("button", { name: "Unmapped" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "{{letter_body}}" }));
+    fireEvent.click(screen.getByText("Save Mapping").closest("button")!);
+
+    await waitFor(() => {
+      expect(profilesApi.updateDocumentTemplateMappings).toHaveBeenCalledWith(
+        "profile-1",
+        "template-1",
+        { letter_body: "cover_letter_content" },
+      );
+    });
+    expect(profilesApi.updateDocumentTemplateVariableAliases).toHaveBeenCalledWith(
+      "profile-1",
+      "template-1",
+      expect.objectContaining({ fields: {} }),
+    );
+    expect(onUpdated).toHaveBeenCalledWith(updated);
+  });
+
   it("renders all flat fields with dropdowns", () => {
     render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
 

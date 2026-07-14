@@ -39,6 +39,8 @@ describe("RunMatchAnalysisUseCase", () => {
           missingSkills: ["Kubernetes operations"],
           strongSkills: ["TypeScript"],
           recommendedAchievements: ["Built TypeScript automation"],
+          coverLetterContent:
+            "I am applying for the Backend Engineer role with production TypeScript experience.",
           customizedSummary: "Backend engineer with production TypeScript experience.",
           interviewTips: ["Prepare TypeScript service examples."],
           experienceEnhancements: [
@@ -104,6 +106,7 @@ describe("RunMatchAnalysisUseCase", () => {
       unclear:
         "Use requirementEvaluations.status = missing and explain the uncertainty in evidence text.",
       "suggestedRewrite.cvSummary": "Use customizedSummary.",
+      "suggestedRewrite.coverLetter": "Use coverLetterContent.",
       "suggestedRewrite.skillsOrder": "Use skillSuggestions.",
     });
     expect(prompt.deterministicScoringGuidance?.rule).toContain("matched = 1.0");
@@ -156,6 +159,7 @@ describe("RunMatchAnalysisUseCase", () => {
           recommendedAchievements: [
             "Delivered backend services with 1 year of TypeScript experience.",
           ],
+          coverLetterContent: "I offer 1 year of TypeScript experience building backend services.",
           customizedSummary: "Backend engineer with 1 year of TypeScript experience.",
           interviewTips: ["Explain 1 year of backend delivery."],
           coverLetterGuidance: ["Mention 1 year of TypeScript experience."],
@@ -191,6 +195,7 @@ describe("RunMatchAnalysisUseCase", () => {
     expect(result.customizedSummary).toBe(
       "Backend engineer with 4 years of TypeScript experience.",
     );
+    expect(result.coverLetterContent).toBe("");
     expect(result.recommendedAchievements).toEqual([]);
     expect(result.interviewTips).toEqual([]);
     expect(result.coverLetterGuidance).toEqual([]);
@@ -218,6 +223,7 @@ describe("RunMatchAnalysisUseCase", () => {
           missingSkills: [],
           strongSkills: ["TypeScript"],
           recommendedAchievements: ["Delivered backend services with 4 years of TypeScript work."],
+          coverLetterContent: "I offer 4 years of TypeScript experience building backend services.",
           customizedSummary: "Backend engineer with 4 years of TypeScript experience.",
           interviewTips: ["Explain 4 years of backend delivery."],
           coverLetterGuidance: ["Mention 4 years of TypeScript experience."],
@@ -252,6 +258,7 @@ describe("RunMatchAnalysisUseCase", () => {
     expect(result.customizedSummary).toBe(
       "Backend engineer with 4 years of TypeScript experience.",
     );
+    expect(result.coverLetterContent).toContain("4 years of TypeScript experience");
     expect(result.recommendedAchievements).toEqual([
       "Delivered backend services with 4 years of TypeScript work.",
     ]);

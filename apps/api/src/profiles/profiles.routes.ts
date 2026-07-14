@@ -120,7 +120,17 @@ export function createProfileRouter(dependencies: {
         return;
       }
 
+      const kind = request.body.kind;
+      if (kind !== "cv" && kind !== "cover_letter") {
+        response.status(400).json({
+          code: "validation",
+          error: "Template kind must be cv or cover_letter",
+        });
+        return;
+      }
+
       const template = await dependencies.uploadDocumentTemplate.execute({
+        kind,
         profileId: request.params.id,
         userId: currentUser(request).id,
         fileName: request.file.originalname,

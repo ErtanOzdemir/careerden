@@ -13,6 +13,7 @@ import type {
 
 const placeholderPattern = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 const sectionPattern = /\{\{\s*#([a-zA-Z0-9_]+)\s*\}\}([\s\S]*?)\{\{\s*\/\1\s*\}\}/g;
+const paragraphPattern = /<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g;
 const selectedExperienceAliasFields = new Set<string>([
   "company",
   "description",
@@ -53,6 +54,35 @@ export class DocxtemplaterTemplateRenderer implements DocxTemplateRenderer {
     }
 
     return [...placeholders].sort((left, right) => left.localeCompare(right));
+  }
+
+  async isPlaceholderStandalone(template: Buffer, placeholder: string): Promise<boolean> {
+    const documentXml = new PizZip(template).file("word/document.xml")?.asText();
+
+    if (!documentXml) {
+      return false;
+    }
+
+    const escapedPlaceholder = escapeRegExp(placeholder);
+    const placeholderInText = new RegExp(`\\{\\{\\s*${escapedPlaceholder}\\s*\\}\\}`);
+    const standalonePlaceholder = new RegExp(`^\\{\\{\\s*${escapedPlaceholder}\\s*\\}\\}$`);
+    let found = false;
+
+    for (const match of documentXml.matchAll(paragraphPattern)) {
+      const text = extractParagraphText(match[0]);
+
+      if (!placeholderInText.test(text)) {
+        continue;
+      }
+
+      if (!standalonePlaceholder.test(text.trim())) {
+        return false;
+      }
+
+      found = true;
+    }
+
+    return found;
   }
 
   async render(input: {
@@ -338,7 +368,7 @@ function renderRichDocuments(
 
   for (const [token, value] of richDocuments) {
     let replaced = false;
-    documentXml = documentXml.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g, (paragraph) => {
+    documentXml = documentXml.replace(paragraphPattern, (paragraph) => {
       const text = extractParagraphText(paragraph);
 
       if (!text.includes(token)) {
@@ -368,6 +398,10 @@ function extractParagraphText(paragraph: string): string {
   return [...paragraph.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)]
     .map((match) => decodeXml(match[1]))
     .join("");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function renderRichBlock(block: RichBlock, numbering?: { id: number; level: number }): string {

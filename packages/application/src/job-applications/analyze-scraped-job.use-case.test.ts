@@ -165,6 +165,8 @@ function createAiProvider(): AiProvider {
   return {
     async generate<T>(params: AiGenerateParams<T>): Promise<T> {
       return params.outputSchema.parse({
+        coverLetterContent:
+          "Dear hiring team, I am excited to apply my TypeScript backend experience.",
         matchScore: 91,
         missingSkills: [],
         strongSkills: ["TypeScript"],

@@ -167,6 +167,28 @@ describe("AiMatchCard", () => {
       );
     });
   });
+
+  it("opens an empty editable cover letter for legacy document content", async () => {
+    render(
+      <AiMatchCard
+        aiMatch={createAiMatch()}
+        canCreateCv
+        documentContent={createDocumentContent()}
+        hasGeneratedDocuments={false}
+        isCreatingCv={false}
+        isSavingContent={false}
+        onCreateCv={vi.fn()}
+        onSaveContent={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Cover Letter/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Cover letter content")).toBeInTheDocument();
+    });
+  });
 });
 
 function createAiMatch(): NonNullable<JobApplication["aiMatch"]> {

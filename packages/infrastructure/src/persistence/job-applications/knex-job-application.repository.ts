@@ -343,7 +343,9 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
       const row = await transaction("job_applications").where({ id }).forUpdate().first();
       if (
         !row ||
-        !["review_ready", "generating_documents", "completed"].includes(String(row.status))
+        !["review_ready", "generating_documents", "completed", "failed"].includes(
+          String(row.status),
+        )
       ) {
         return { started: false };
       }
@@ -686,6 +688,37 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
       .returning("*");
 
     return toGeneratedDocument(row);
+  }
+
+  async replaceGeneratedDocuments(
+    jobApplicationId: string,
+    inputs: Omit<AttachGeneratedDocumentInput, "jobApplicationId">[],
+  ): Promise<GeneratedDocument[]> {
+    return this.db.transaction(async (transaction) => {
+      await transaction("generated_documents")
+        .where({ job_application_id: jobApplicationId })
+        .delete();
+
+      if (inputs.length === 0) {
+        return [];
+      }
+
+      const rows = await transaction("generated_documents")
+        .insert(
+          inputs.map((input) => ({
+            id: randomUUID(),
+            job_application_id: jobApplicationId,
+            kind: input.kind,
+            format: input.format,
+            file_id: input.fileId,
+            file_name: input.fileName,
+            content_type: input.contentType,
+          })),
+        )
+        .returning("*");
+
+      return rows.map(toGeneratedDocument);
+    });
   }
 
   async listGeneratedDocuments(jobApplicationId: string): Promise<GeneratedDocument[]> {

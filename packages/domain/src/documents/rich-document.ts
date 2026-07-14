@@ -100,6 +100,7 @@ export interface DocumentContentSelections {
 }
 
 export interface DocumentContent {
+  coverLetterContent?: RichDocument;
   customizedSummary: RichDocument;
   experienceEnhancements: DocumentContentExperienceEnhancement[];
   skillSuggestions?: string[];
@@ -124,6 +125,7 @@ export function richDocumentFromText(text: string): RichDocument {
 }
 
 export function documentContentFromMatchAnalysis(input: {
+  coverLetterContent?: string;
   customizedSummary: string;
   experienceEnhancements?: Array<{
     experienceIndex: number;
@@ -144,6 +146,7 @@ export function documentContentFromMatchAnalysis(input: {
   certificationSuggestions?: string[];
 }): DocumentContent {
   return {
+    coverLetterContent: richDocumentFromText(input.coverLetterContent ?? ""),
     customizedSummary: richDocumentFromText(input.customizedSummary),
     experienceEnhancements: (input.experienceEnhancements ?? []).map((enhancement) => ({
       experienceIndex: enhancement.experienceIndex,

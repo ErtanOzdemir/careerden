@@ -322,7 +322,9 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
-      !["review_ready", "generating_documents", "completed"].includes(jobApplication.status)
+      !["review_ready", "generating_documents", "completed", "failed"].includes(
+        jobApplication.status,
+      )
     ) {
       return { started: false };
     }
@@ -331,7 +333,11 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
         ? this.documentGenerationAttempts.get(id)
         : undefined;
     this.documentGenerationAttempts.set(id, attemptId);
-    this.jobApplications.set(id, { ...jobApplication, status: "generating_documents" });
+    this.jobApplications.set(id, {
+      ...jobApplication,
+      status: "generating_documents",
+      failureReason: undefined,
+    });
     return { started: true, ...(supersededAttemptId ? { supersededAttemptId } : {}) };
   }
 
@@ -664,6 +670,27 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
 
     this.documents.set(input.jobApplicationId, next);
     return document;
+  }
+
+  async replaceGeneratedDocuments(
+    jobApplicationId: string,
+    inputs: Omit<AttachGeneratedDocumentInput, "jobApplicationId">[],
+  ): Promise<GeneratedDocument[]> {
+    const current = this.documents.get(jobApplicationId) ?? [];
+    const documents = inputs.map((input) => {
+      const existing = current.find(
+        (document) => document.kind === input.kind && document.format === input.format,
+      );
+      return {
+        id: existing?.id ?? randomUUID(),
+        jobApplicationId,
+        ...input,
+        createdAt: new Date(),
+      };
+    });
+
+    this.documents.set(jobApplicationId, documents);
+    return documents;
   }
 
   async listGeneratedDocuments(jobApplicationId: string): Promise<GeneratedDocument[]> {

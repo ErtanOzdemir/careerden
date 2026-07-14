@@ -42,6 +42,7 @@ export interface ApiGeneratedDocument {
 export type ApiDocumentTemplateField =
   | "certifications"
   | "company_name"
+  | "cover_letter_content"
   | "customized_summary"
   | "education_list"
   | "email"
@@ -127,7 +128,7 @@ export interface ApiDocumentTemplate {
   format: "docx";
   id: string;
   isDefault: boolean;
-  kind: "cv";
+  kind: "cover_letter" | "cv";
   placeholders: string[];
   profileId: string;
   size: number;
@@ -221,6 +222,7 @@ export interface ApiScrapedCompany {
 }
 
 export interface ApiMatchAnalysis {
+  coverLetterContent?: string;
   coverLetterGuidance?: string[];
   customizedSummary: string;
   experienceEnhancements?: {
@@ -325,6 +327,7 @@ export interface ApiDocumentContentSelections {
 }
 
 export interface ApiDocumentContent {
+  coverLetterContent?: RichDocument;
   customizedSummary: RichDocument;
   experienceEnhancements: Array<{
     experienceIndex: number;

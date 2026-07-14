@@ -188,6 +188,20 @@ describe("buildDocxAliasData", () => {
 });
 
 describe("DocxtemplaterTemplateRenderer", () => {
+  it("identifies whether a placeholder occupies its own paragraph", async () => {
+    const renderer = new DocxtemplaterTemplateRenderer();
+
+    await expect(
+      renderer.isPlaceholderStandalone(createMinimalDocx("{{ description }}"), "description"),
+    ).resolves.toBe(true);
+    await expect(
+      renderer.isPlaceholderStandalone(
+        createMinimalDocx("{{work_title_1}} - {{company_name_1}}"),
+        "company_name_1",
+      ),
+    ).resolves.toBe(false);
+  });
+
   it("renders a standalone rich placeholder as native Word content", async () => {
     const renderer = new DocxtemplaterTemplateRenderer();
     const template = createTemplate({

@@ -157,7 +157,11 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         docxTemplates,
         unitOfWork,
       ),
-      updateDocumentTemplateMappings: new UpdateDocumentTemplateMappingsUseCase(profiles),
+      updateDocumentTemplateMappings: new UpdateDocumentTemplateMappingsUseCase(
+        profiles,
+        storage,
+        docxTemplates,
+      ),
       updateDocumentTemplateVariableAliases: new UpdateDocumentTemplateVariableAliasesUseCase(
         profiles,
       ),

@@ -65,12 +65,14 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
       ...input,
       fieldMappings: input.fieldMappings ?? {},
       variableAliases: input.variableAliases ?? { fields: {} },
-      isDefault: input.isDefault ?? existing.length === 0,
+      isDefault: input.isDefault ?? existing.every((item) => item.kind !== input.kind),
       createdAt: now,
       updatedAt: now,
     };
     const next = template.isDefault
-      ? existing.map((item) => ({ ...item, isDefault: false, updatedAt: now }))
+      ? existing.map((item) =>
+          item.kind === template.kind ? { ...item, isDefault: false, updatedAt: now } : item,
+        )
       : existing;
 
     this.documentTemplates.set(input.profileId, [...next, template]);
@@ -110,11 +112,15 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
     }
 
     const now = new Date();
-    const updated = templates.map((template) => ({
-      ...template,
-      isDefault: template.id === id,
-      updatedAt: template.id === id ? now : template.updatedAt,
-    }));
+    const updated = templates.map((template) =>
+      template.kind === selected.kind
+        ? {
+            ...template,
+            isDefault: template.id === id,
+            updatedAt: template.id === id ? now : template.updatedAt,
+          }
+        : template,
+    );
 
     this.documentTemplates.set(profileId, updated);
     return updated.find((template) => template.id === id) ?? null;

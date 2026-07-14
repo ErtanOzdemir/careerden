@@ -126,6 +126,7 @@ export function mapApiJobApplicationToUi(
 
 function mapInitialDocumentContent(match: ApiMatchAnalysis) {
   return {
+    coverLetterContent: richDocumentFromText(match.coverLetterContent ?? ""),
     customizedSummary: richDocumentFromText(match.customizedSummary),
     experienceEnhancements: (match.experienceEnhancements ?? []).map((enhancement) => ({
       experienceIndex: enhancement.experienceIndex,

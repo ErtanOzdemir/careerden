@@ -15,6 +15,7 @@ import {
   ExternalLink,
   FileText,
   GraduationCap,
+  Mail,
   Package,
   Pencil,
   Rocket,
@@ -43,8 +44,11 @@ const wizardSteps = [
   { label: "Education", Icon: GraduationCap },
   { label: "Projects", Icon: Rocket },
   { label: "Certifications", Icon: BadgeCheck },
+  { label: "Cover Letter", Icon: Mail },
   { label: "Approval", Icon: CheckCircle },
 ] as const;
+
+const emptyRichDocument: RichDocument = { version: 1, blocks: [] };
 
 export default function AiMatchCard({
   aiMatch,
@@ -411,6 +415,19 @@ export default function AiMatchCard({
             </div>
           )}
           {activeStep === 7 && (
+            <div className="rounded-lg bg-card p-4">
+              <EditableRichDocumentField
+                ariaLabel="Cover letter content"
+                document={draftContent.coverLetterContent ?? emptyRichDocument}
+                isSaving={isSavingContent}
+                onSave={(value) =>
+                  handleSaveContent({ ...draftContent, coverLetterContent: value })
+                }
+                title="Cover Letter"
+              />
+            </div>
+          )}
+          {activeStep === 8 && (
             <ApprovalStep
               canCreateCv={canCreateCv}
               hasGeneratedDocuments={hasGeneratedDocuments}

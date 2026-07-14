@@ -192,6 +192,20 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
   });
 
+  it("starts document regeneration from failed and clears the failure reason", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({ profileId: "profile-1" });
+    await repository.updateStatus(job.id, "failed", "DOCX rendering failed");
+
+    const result = await repository.beginDocumentGeneration(job.id, "attempt-2");
+
+    expect(result).toEqual({ started: true });
+    expect(await repository.findById(job.id)).toMatchObject({
+      status: "generating_documents",
+      failureReason: undefined,
+    });
+  });
+
   it("claims one queued scrape job and prevents concurrent claims until the lease expires", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const first = await repository.create({
@@ -405,6 +419,34 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(second.id).toBe(first.id);
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([second, docx]);
     expect(second.fileId).toBe("files/regenerated-cv.pdf");
+  });
+
+  it("replaces obsolete generated formats when a template choice changes", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({ profileId: "profile-1" });
+    await repository.attachGeneratedDocument({
+      jobApplicationId: job.id,
+      kind: "cover_letter",
+      format: "pdf",
+      fileId: "files/cover-letter.pdf",
+      fileName: "cover-letter.pdf",
+      contentType: "application/pdf",
+    });
+
+    const replacements = await repository.replaceGeneratedDocuments(job.id, [
+      {
+        kind: "cover_letter",
+        format: "docx",
+        fileId: "files/cover-letter.docx",
+        fileName: "cover-letter.docx",
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      },
+    ]);
+
+    expect(await repository.listGeneratedDocuments(job.id)).toEqual(replacements);
+    expect(replacements).toEqual([
+      expect.objectContaining({ kind: "cover_letter", format: "docx" }),
+    ]);
   });
 
   it("manages follow-ups for a job application", async () => {

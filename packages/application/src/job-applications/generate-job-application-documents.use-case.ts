@@ -87,10 +87,9 @@ export class GenerateJobApplicationDocumentsUseCase {
             );
             return null;
           }
-          const attached = await Promise.all(
-            uploads.map((upload) =>
-              jobApplications.attachGeneratedDocument({ jobApplicationId, ...upload }),
-            ),
+          const attached = await jobApplications.replaceGeneratedDocuments(
+            jobApplicationId,
+            uploads,
           );
           await enqueueStorageDeletions(
             outbox,

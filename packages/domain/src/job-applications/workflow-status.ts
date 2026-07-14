@@ -19,7 +19,7 @@ const allowedTransitions: Record<JobApplicationStatus, JobApplicationStatus[]> =
   review_ready: ["generating_documents", "failed"],
   generating_documents: ["completed", "failed"],
   completed: ["generating_documents"],
-  failed: [],
+  failed: ["generating_documents"],
 };
 
 export function canTransitionJobApplicationStatus(

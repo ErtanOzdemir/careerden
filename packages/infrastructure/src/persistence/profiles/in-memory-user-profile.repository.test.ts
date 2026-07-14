@@ -119,4 +119,40 @@ describe("InMemoryUserProfileRepository", () => {
       (await repository.listDocumentTemplates(profile.id)).filter((item) => item.isDefault),
     ).toHaveLength(1);
   });
+
+  it("keeps independent CV and cover letter defaults", async () => {
+    const repository = new InMemoryUserProfileRepository();
+    const profile = await repository.create({
+      email: "ada@example.com",
+      experience: [],
+      fullName: "Ada Lovelace",
+      skills: [],
+    });
+    const cv = await repository.createDocumentTemplate({
+      profileId: profile.id,
+      kind: "cv",
+      format: "docx",
+      fileId: "templates/cv.docx",
+      fileName: "cv.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 100,
+      placeholders: ["summary"],
+    });
+    const coverLetter = await repository.createDocumentTemplate({
+      profileId: profile.id,
+      kind: "cover_letter",
+      format: "docx",
+      fileId: "templates/cover-letter.docx",
+      fileName: "cover-letter.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 100,
+      placeholders: ["letter_body"],
+    });
+
+    expect(cv.isDefault).toBe(true);
+    expect(coverLetter.isDefault).toBe(true);
+    expect(
+      (await repository.listDocumentTemplates(profile.id)).filter((item) => item.isDefault),
+    ).toHaveLength(2);
+  });
 });

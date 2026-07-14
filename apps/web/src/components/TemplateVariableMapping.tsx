@@ -13,7 +13,7 @@ import type {
 import { cn } from "../lib/utils.js";
 import { ChevronDown, ChevronRight, Save, AlertCircle } from "lucide-react";
 
-const FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
+const CV_FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
   { field: "full_name", label: "Full Name" },
   { field: "email", label: "Email" },
   { field: "profession", label: "Profession" },
@@ -21,6 +21,26 @@ const FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
   { field: "location", label: "Location" },
   { field: "summary", label: "Summary" },
   { field: "skills", label: "Skills" },
+  { field: "links", label: "Links" },
+];
+
+const COVER_LETTER_FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
+  { field: "cover_letter_content", label: "Content" },
+  { field: "full_name", label: "Full Name" },
+  { field: "email", label: "Email" },
+  { field: "profession", label: "Profession" },
+  { field: "headline", label: "Headline" },
+  { field: "location", label: "Location" },
+  { field: "company_name", label: "Target Company" },
+  { field: "role_title", label: "Target Role" },
+  { field: "job_location", label: "Job Location" },
+  { field: "job_description", label: "Job Description" },
+  { field: "summary", label: "Profile Summary" },
+  { field: "customized_summary", label: "Tailored Summary" },
+  { field: "skills", label: "Skills" },
+  { field: "strong_skills", label: "Strong Skills" },
+  { field: "missing_skills", label: "Missing Skills" },
+  { field: "recommended_achievements", label: "Recommended Achievements" },
   { field: "links", label: "Links" },
 ];
 
@@ -103,6 +123,17 @@ function getFieldPreview(field: ApiDocumentTemplateField, profile: ApiProfile): 
       return `${profile.education.length} item${profile.education.length !== 1 ? "s" : ""}`;
     case "selected_experiences":
       return `${profile.experience.length} item${profile.experience.length !== 1 ? "s" : ""}`;
+    case "cover_letter_content":
+      return "Reviewed cover-letter body";
+    case "company_name":
+    case "customized_summary":
+    case "job_description":
+    case "job_location":
+    case "missing_skills":
+    case "recommended_achievements":
+    case "role_title":
+    case "strong_skills":
+      return "Filled from this job application";
     default:
       return "--";
   }
@@ -243,10 +274,15 @@ function invertFieldMappings(
 
 function invertFlatMappings(
   flat: Record<string, string>,
+  currentMappings: Record<string, ApiDocumentTemplateField>,
+  flatFields: { field: ApiDocumentTemplateField }[],
 ): Record<string, ApiDocumentTemplateField> {
-  const fieldMappings: Record<string, ApiDocumentTemplateField> = {};
+  const displayedFields = new Set(flatFields.map(({ field }) => field));
+  const fieldMappings = Object.fromEntries(
+    Object.entries(currentMappings).filter(([, field]) => !displayedFields.has(field)),
+  ) as Record<string, ApiDocumentTemplateField>;
   for (const [field, placeholder] of Object.entries(flat)) {
-    if (placeholder && FLAT_FIELDS.some((f) => f.field === field)) {
+    if (placeholder && displayedFields.has(field as ApiDocumentTemplateField)) {
       fieldMappings[placeholder] = field as ApiDocumentTemplateField;
     }
   }
@@ -759,12 +795,25 @@ function LinksMappingGroup({
 interface TemplateVariableMappingProps {
   template: ApiDocumentTemplate;
   profile: ApiProfile;
+  onUpdated?: (template: ApiDocumentTemplate) => void;
 }
 
 export default function TemplateVariableMapping({
   template,
   profile,
+  onUpdated,
 }: TemplateVariableMappingProps) {
+  return (
+    <DocumentTemplateVariableMapping template={template} profile={profile} onUpdated={onUpdated} />
+  );
+}
+
+function DocumentTemplateVariableMapping({
+  template,
+  profile,
+  onUpdated,
+}: TemplateVariableMappingProps) {
+  const flatFields = template.kind === "cover_letter" ? COVER_LETTER_FLAT_FIELDS : CV_FLAT_FIELDS;
   const initialFlat = useMemo(
     () => invertFieldMappings(template.fieldMappings),
     [template.fieldMappings],
@@ -772,7 +821,7 @@ export default function TemplateVariableMapping({
 
   const [flatMappings, setFlatMappings] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
-    for (const { field } of FLAT_FIELDS) {
+    for (const { field } of flatFields) {
       init[field] = initialFlat[field] ?? "";
     }
     return init;
@@ -833,7 +882,7 @@ export default function TemplateVariableMapping({
   }, [flatMappings, variableAliases]);
 
   function hasChanges(): boolean {
-    for (const { field } of FLAT_FIELDS) {
+    for (const { field } of flatFields) {
       if ((flatMappings[field] ?? "") !== (initialFlat[field] ?? "")) return true;
     }
     return JSON.stringify(variableAliases) !== JSON.stringify(template.variableAliases);
@@ -849,7 +898,7 @@ export default function TemplateVariableMapping({
     setSaveError(null);
     setSaveSuccess(false);
 
-    const fieldMappings = invertFlatMappings(flatMappings);
+    const fieldMappings = invertFlatMappings(flatMappings, template.fieldMappings, flatFields);
 
     try {
       await profilesApi.updateDocumentTemplateMappings(
@@ -866,11 +915,12 @@ export default function TemplateVariableMapping({
     const sanitizedVariableAliases = sanitizeVariableAliases(variableAliases);
 
     try {
-      await profilesApi.updateDocumentTemplateVariableAliases(
+      const updated = await profilesApi.updateDocumentTemplateVariableAliases(
         template.profileId,
         template.id,
         sanitizedVariableAliases,
       );
+      onUpdated?.(updated);
     } catch (e) {
       setSaveError(
         `Field mappings saved, but variable aliases failed: ${e instanceof Error ? e.message : "unknown error"}`,
@@ -893,8 +943,14 @@ export default function TemplateVariableMapping({
 
   return (
     <div className="border-t border-border">
+      {template.kind === "cover_letter" && (
+        <div className="border-b border-border bg-muted/30 px-5 py-3 text-xs text-muted-foreground">
+          Content supports rich formatting, so its DOCX placeholder must be the only text in its
+          paragraph.
+        </div>
+      )}
       <div className="divide-y divide-border">
-        {FLAT_FIELDS.map(({ field, label }) => (
+        {flatFields.map(({ field, label }) => (
           <div key={field} className="flex items-center gap-3 px-5 py-2">
             <span className="w-36 shrink-0 text-xs text-muted-foreground">{label}</span>
             <span className="min-w-0 flex-1 truncate text-xs text-foreground">

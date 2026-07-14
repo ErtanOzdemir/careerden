@@ -7,6 +7,100 @@ import { GenerateJobApplicationDocumentsUseCase } from "./generate-job-applicati
 import { createUnitOfWork } from "./job-application-test-helpers.js";
 
 describe("GenerateJobApplicationDocumentsUseCase", () => {
+  it("regenerates documents after a previous generation failure", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: ["TypeScript"],
+      experience: [],
+    });
+    const jobApplication = await jobApplications.create({ profileId: profile.id });
+    await jobApplications.saveMatchAnalysis(jobApplication.id, {
+      matchScore: 90,
+      missingSkills: [],
+      strongSkills: ["TypeScript"],
+      recommendedAchievements: [],
+      customizedSummary: "Summary",
+      interviewTips: [],
+    });
+    await jobApplications.updateStatus(jobApplication.id, "failed", "DOCX rendering failed");
+    const { unitOfWork } = createUnitOfWork(jobApplications, profiles as never);
+    const documentGeneration = {
+      stage: vi.fn(async () => [
+        {
+          kind: "cover_letter",
+          format: "docx",
+          fileId: "files/attempt-2/cover-letter.docx",
+          fileName: "cover-letter.docx",
+          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        },
+      ]),
+    };
+
+    const documents = await new GenerateJobApplicationDocumentsUseCase(
+      jobApplications,
+      profiles,
+      documentGeneration as never,
+      unitOfWork,
+    ).execute(jobApplication.id);
+
+    expect(documents).toMatchObject([
+      { kind: "cover_letter", format: "docx", fileName: "cover-letter.docx" },
+    ]);
+    expect(await jobApplications.findById(jobApplication.id)).toMatchObject({
+      status: "completed",
+      failureReason: undefined,
+    });
+  });
+
+  it("allows another regeneration attempt after rendering fails again", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: ["TypeScript"],
+      experience: [],
+    });
+    const jobApplication = await jobApplications.create({ profileId: profile.id });
+    await jobApplications.saveMatchAnalysis(jobApplication.id, {
+      matchScore: 90,
+      missingSkills: [],
+      strongSkills: ["TypeScript"],
+      recommendedAchievements: [],
+      customizedSummary: "Summary",
+      interviewTips: [],
+    });
+    await jobApplications.updateStatus(jobApplication.id, "review_ready");
+    const { unitOfWork } = createUnitOfWork(jobApplications, profiles as never);
+    const documentGeneration = {
+      stage: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("DOCX rendering failed again"))
+        .mockResolvedValueOnce([]),
+    };
+    const useCase = new GenerateJobApplicationDocumentsUseCase(
+      jobApplications,
+      profiles,
+      documentGeneration as never,
+      unitOfWork,
+    );
+
+    await expect(useCase.execute(jobApplication.id)).rejects.toThrow("DOCX rendering failed again");
+    expect(await jobApplications.findById(jobApplication.id)).toMatchObject({
+      status: "failed",
+      failureReason: "DOCX rendering failed again",
+    });
+
+    await expect(useCase.execute(jobApplication.id)).resolves.toEqual([]);
+    expect(await jobApplications.findById(jobApplication.id)).toMatchObject({
+      status: "completed",
+      failureReason: undefined,
+    });
+  });
+
   it("rejects stale generated files and schedules their cleanup", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();

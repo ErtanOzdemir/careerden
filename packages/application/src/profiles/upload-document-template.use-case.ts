@@ -1,5 +1,6 @@
 import type {
   DocumentTemplate,
+  DocumentTemplateKind,
   DocxTemplateRenderer,
   FileStorage,
   PersistenceUnitOfWork,
@@ -13,6 +14,7 @@ import { getAccessibleProfile } from "./profile-access.js";
 const docxContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 export interface UploadDocumentTemplateInput {
+  kind: DocumentTemplateKind;
   profileId: string;
   userId: string;
   fileName: string;
@@ -45,7 +47,7 @@ export class UploadDocumentTemplateUseCase {
       fileName: input.fileName,
       contentType: docxContentType,
       body: input.body,
-      metadata: { kind: "cv_template", profileId: input.profileId },
+      metadata: { kind: `${input.kind}_template`, profileId: input.profileId },
     });
     try {
       return await this.unitOfWork.execute(async ({ profiles }) => {
@@ -53,14 +55,15 @@ export class UploadDocumentTemplateUseCase {
         const existing = await profiles.listDocumentTemplates(input.profileId);
         return profiles.createDocumentTemplate({
           profileId: input.profileId,
-          kind: "cv",
+          kind: input.kind,
           format: "docx",
           fileId: stored.id,
           fileName: input.fileName,
           contentType: docxContentType,
           size: input.size,
           placeholders,
-          isDefault: existing.length === 0,
+          isDefault:
+            input.kind === "cv" && existing.every((template) => template.kind !== input.kind),
         });
       });
     } catch (error) {

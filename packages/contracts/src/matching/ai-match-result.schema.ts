@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const aiMatchResultSchema = z.object({
+  coverLetterContent: z.string().min(1),
   matchScore: z.number().int().min(0).max(100),
   requirementEvaluations: z
     .array(

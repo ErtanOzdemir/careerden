@@ -1203,10 +1203,6 @@ function DocCard({
             Generated and ready. {doc.name}
           </div>
           <div className="mt-4 flex gap-2">
-            <Button variant="outline" size="sm">
-              <Pencil className="size-3.5" />
-              Edit
-            </Button>
             <Button variant="outline" size="sm" onClick={onGenerate} disabled={isGenerating}>
               <RefreshCw className="size-3.5" />
               Regenerate

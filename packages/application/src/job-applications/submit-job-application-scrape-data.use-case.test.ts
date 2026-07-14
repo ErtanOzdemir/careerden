@@ -15,7 +15,6 @@ describe("SubmitJobApplicationScrapeDataUseCase", () => {
     const job = createTestJobApplication({ status: "scraping", scrapeClaimedBy: "desktop-a" });
     const repository = createJobApplicationRepository({ findById: vi.fn(async () => job) });
     const profiles = createProfiles();
-    vi.mocked(profiles.findById).mockResolvedValue({ autoRunMatchAnalysis: true } as never);
     const detail = { ...job, documents: [] } as never;
     const getDetail = { execute: vi.fn(async () => detail) };
     const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(repository, profiles);

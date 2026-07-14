@@ -26,22 +26,6 @@ const CV_FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
 
 const COVER_LETTER_FLAT_FIELDS: { field: ApiDocumentTemplateField; label: string }[] = [
   { field: "cover_letter_content", label: "Content" },
-  { field: "full_name", label: "Full Name" },
-  { field: "email", label: "Email" },
-  { field: "profession", label: "Profession" },
-  { field: "headline", label: "Headline" },
-  { field: "location", label: "Location" },
-  { field: "company_name", label: "Target Company" },
-  { field: "role_title", label: "Target Role" },
-  { field: "job_location", label: "Job Location" },
-  { field: "job_description", label: "Job Description" },
-  { field: "summary", label: "Profile Summary" },
-  { field: "customized_summary", label: "Tailored Summary" },
-  { field: "skills", label: "Skills" },
-  { field: "strong_skills", label: "Strong Skills" },
-  { field: "missing_skills", label: "Missing Skills" },
-  { field: "recommended_achievements", label: "Recommended Achievements" },
-  { field: "links", label: "Links" },
 ];
 
 const EXPERIENCE_SUB_FIELDS: { key: ApiSelectedExperienceTemplateField; label: string }[] = [
@@ -60,6 +44,7 @@ const EDUCATION_SUB_FIELDS: { key: ApiSelectedEducationTemplateField; label: str
   { key: "start_date", label: "Start Date" },
   { key: "end_date", label: "End Date" },
   { key: "period", label: "Period" },
+  { key: "description", label: "Description" },
 ];
 
 const PROJECT_SUB_FIELDS: { key: ApiSelectedProjectTemplateField; label: string }[] = [
@@ -164,6 +149,10 @@ function getExperienceSubPreview(expIndex: number, subField: string, profile: Ap
 function getEducationSubPreview(eduIndex: number, subField: string, profile: ApiProfile): string {
   const edu = profile.education[eduIndex];
   if (!edu) return "--";
+
+  if (subField === "description") {
+    return "Tailored education details";
+  }
 
   if (subField === "start_date") {
     return edu.startDate || "--";
@@ -828,7 +817,9 @@ function DocumentTemplateVariableMapping({
   });
 
   const [variableAliases, setVariableAliases] = useState<ApiDocumentTemplateVariableAliases>(() =>
-    sanitizeVariableAliases(template.variableAliases),
+    template.kind === "cover_letter"
+      ? { fields: {} }
+      : sanitizeVariableAliases(template.variableAliases),
   );
 
   const [saving, setSaving] = useState(false);
@@ -882,6 +873,11 @@ function DocumentTemplateVariableMapping({
   }, [flatMappings, variableAliases]);
 
   function hasChanges(): boolean {
+    if (template.kind === "cover_letter") {
+      const nextMappings = invertFlatMappings(flatMappings, {}, flatFields);
+      if (JSON.stringify(nextMappings) !== JSON.stringify(template.fieldMappings)) return true;
+    }
+
     for (const { field } of flatFields) {
       if ((flatMappings[field] ?? "") !== (initialFlat[field] ?? "")) return true;
     }
@@ -898,7 +894,11 @@ function DocumentTemplateVariableMapping({
     setSaveError(null);
     setSaveSuccess(false);
 
-    const fieldMappings = invertFlatMappings(flatMappings, template.fieldMappings, flatFields);
+    const fieldMappings = invertFlatMappings(
+      flatMappings,
+      template.kind === "cover_letter" ? {} : template.fieldMappings,
+      flatFields,
+    );
 
     try {
       await profilesApi.updateDocumentTemplateMappings(
@@ -968,45 +968,49 @@ function DocumentTemplateVariableMapping({
         ))}
       </div>
 
-      <LinksMappingGroup
-        profile={profile}
-        placeholders={placeholders}
-        usedPlaceholders={usedPlaceholders}
-        aliases={variableAliases}
-        onChangeAliases={setVariableAliases}
-      />
+      {template.kind === "cv" && (
+        <>
+          <LinksMappingGroup
+            profile={profile}
+            placeholders={placeholders}
+            usedPlaceholders={usedPlaceholders}
+            aliases={variableAliases}
+            onChangeAliases={setVariableAliases}
+          />
 
-      <ExperienceMappingGroup
-        profile={profile}
-        placeholders={placeholders}
-        usedPlaceholders={usedPlaceholders}
-        aliases={variableAliases}
-        onChangeAliases={setVariableAliases}
-      />
+          <ExperienceMappingGroup
+            profile={profile}
+            placeholders={placeholders}
+            usedPlaceholders={usedPlaceholders}
+            aliases={variableAliases}
+            onChangeAliases={setVariableAliases}
+          />
 
-      <EducationMappingGroup
-        profile={profile}
-        placeholders={placeholders}
-        usedPlaceholders={usedPlaceholders}
-        aliases={variableAliases}
-        onChangeAliases={setVariableAliases}
-      />
+          <EducationMappingGroup
+            profile={profile}
+            placeholders={placeholders}
+            usedPlaceholders={usedPlaceholders}
+            aliases={variableAliases}
+            onChangeAliases={setVariableAliases}
+          />
 
-      <ProjectsMappingGroup
-        profile={profile}
-        placeholders={placeholders}
-        usedPlaceholders={usedPlaceholders}
-        aliases={variableAliases}
-        onChangeAliases={setVariableAliases}
-      />
+          <ProjectsMappingGroup
+            profile={profile}
+            placeholders={placeholders}
+            usedPlaceholders={usedPlaceholders}
+            aliases={variableAliases}
+            onChangeAliases={setVariableAliases}
+          />
 
-      <CertificationsMappingGroup
-        profile={profile}
-        placeholders={placeholders}
-        usedPlaceholders={usedPlaceholders}
-        aliases={variableAliases}
-        onChangeAliases={setVariableAliases}
-      />
+          <CertificationsMappingGroup
+            profile={profile}
+            placeholders={placeholders}
+            usedPlaceholders={usedPlaceholders}
+            aliases={variableAliases}
+            onChangeAliases={setVariableAliases}
+          />
+        </>
+      )}
 
       {unmappedPlaceholders.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border px-5 py-2 text-xs text-muted-foreground">

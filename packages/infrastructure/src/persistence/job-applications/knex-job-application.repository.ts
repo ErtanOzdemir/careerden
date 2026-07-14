@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 import type {
   AttachGeneratedDocumentInput,
+  ApplicationPackPreferences,
   ClaimNextScrapeJobInput,
   CreateJobApplicationContactInput,
   CreateJobApplicationEventInput,
@@ -39,6 +40,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         .insert({
           id,
           profile_id: input.profileId,
+          application_pack_preferences: JSON.stringify(input.applicationPackPreferences ?? {}),
           source_url: input.sourceUrl ?? null,
           status: input.sourceUrl ? "queued" : "completed",
           company_name: input.companyName ?? null,
@@ -420,6 +422,25 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     if ("metadata" in input) update.metadata = JSON.stringify(input.metadata ?? {});
 
     const [row] = await this.db("job_applications").where({ id }).update(update).returning("*");
+
+    if (!row) {
+      throw new Error(`Job application ${id} was not found`);
+    }
+
+    return toJobApplication(row);
+  }
+
+  async updateApplicationPackPreferences(
+    id: string,
+    preferences: ApplicationPackPreferences,
+  ): Promise<JobApplication> {
+    const [row] = await this.db("job_applications")
+      .where({ id })
+      .update({
+        application_pack_preferences: JSON.stringify(preferences),
+        updated_at: this.db.fn.now(),
+      })
+      .returning("*");
 
     if (!row) {
       throw new Error(`Job application ${id} was not found`);

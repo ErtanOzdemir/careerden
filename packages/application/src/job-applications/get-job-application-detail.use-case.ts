@@ -3,6 +3,8 @@ import type {
   JobApplicationRepository,
   UserProfileAccessRepository,
 } from "@link2cv/domain";
+import { assessProfileReadiness, normalizeDescriptionOnlyDocumentContent } from "@link2cv/domain";
+import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 import {
   buildJobApplicationDetail,
@@ -23,10 +25,24 @@ export class GetJobApplicationDetailUseCase {
       jobApplicationId,
       userId,
     );
-    return buildJobApplicationDetail({
+    const profile = await this.profiles.findById(jobApplication.profileId);
+
+    if (!profile) {
+      throw new ApplicationError("not_found", "Profile not found");
+    }
+
+    const detail = await buildJobApplicationDetail({
       jobApplications: this.jobApplications,
       storage: this.storage,
       jobApplication,
+      profileReadiness: assessProfileReadiness(profile),
     });
+
+    return {
+      ...detail,
+      documentContent: detail.documentContent
+        ? normalizeDescriptionOnlyDocumentContent(profile, detail.documentContent)
+        : null,
+    };
   }
 }

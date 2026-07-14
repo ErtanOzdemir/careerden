@@ -1,4 +1,4 @@
-import type { JobApplicationRepository, OutboxRepository } from "@link2cv/domain";
+import type { JobApplicationRepository, OutboxRepository, ProfileReadiness } from "@link2cv/domain";
 import { outboxEventTypes } from "@link2cv/domain";
 
 export async function enqueueMatchAnalysisIfEnabled(input: {
@@ -6,7 +6,19 @@ export async function enqueueMatchAnalysisIfEnabled(input: {
   outbox: OutboxRepository;
   jobApplicationId: string;
   autoRunMatchAnalysis: boolean;
+  profileReadiness?: ProfileReadiness;
 }): Promise<boolean> {
+  if (input.profileReadiness?.state === "blocked") {
+    await input.jobApplications.addEvent({
+      jobApplicationId: input.jobApplicationId,
+      type: "processing",
+      title: "Profile action required",
+      body: "Add positioning, skills, or career evidence before starting AI analysis.",
+      metadata: { warnings: input.profileReadiness.warnings },
+    });
+    return false;
+  }
+
   if (input.autoRunMatchAnalysis) {
     const event = await input.outbox.add({
       type: outboxEventTypes.jobApplicationAnalysisRequested,

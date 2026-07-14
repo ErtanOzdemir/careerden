@@ -9,6 +9,7 @@ import type {
   ApiJobApplicationFollowUp,
   ApiJobApplicationsPage,
   ApiDocumentContent,
+  ApiApplicationPackPreferences,
   ApiScrapeBundle,
 } from "./types";
 
@@ -32,9 +33,15 @@ export interface ListJobApplicationsParams {
 }
 
 export interface CreateJobApplicationInput {
+  applicationPackPreferences?: ApiApplicationPackPreferences;
   profileId: string;
   sourceUrl?: string;
   jobUrl?: string;
+}
+
+export interface RequestApplicationPackGenerationInput {
+  documentContent?: ApiDocumentContent;
+  preferences?: ApiApplicationPackPreferences;
 }
 
 export interface CreateJobApplicationFromScrapeInput {
@@ -162,6 +169,19 @@ export const jobApplicationsApi = {
     return requestJson<ApiJobApplicationDetail>(`/job-applications/${id}/documents/generate`, {
       method: "POST",
     });
+  },
+
+  requestApplicationPackGeneration(
+    id: string,
+    input: RequestApplicationPackGenerationInput,
+  ): Promise<{ generationAttemptId: string; application: ApiJobApplicationDetail }> {
+    return requestJson<{ generationAttemptId: string; application: ApiJobApplicationDetail }>(
+      `/job-applications/${id}/application-pack/generations`,
+      {
+        method: "POST",
+        body: input,
+      },
+    );
   },
 
   updateDocumentContent(

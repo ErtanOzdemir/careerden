@@ -54,6 +54,13 @@ describe("AddJobDialog", () => {
     fireEvent.change(screen.getByLabelText("Job posting URL"), {
       target: { value: "https://www.linkedin.com/jobs/view/123" },
     });
+    fireEvent.click(screen.getByText("Customize output"));
+    fireEvent.change(screen.getByLabelText("Application pack language"), {
+      target: { value: "tr" },
+    });
+    fireEvent.change(screen.getByLabelText("Application pack tone"), {
+      target: { value: "concise" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Add & process" }));
 
     expect(screen.getByRole("button", { name: "Adding..." })).toBeDisabled();
@@ -70,5 +77,10 @@ describe("AddJobDialog", () => {
     });
     expect(screen.getByRole("button", { name: "Add & process" })).toBeEnabled();
     expect(notifyJobApplicationQueued).toHaveBeenCalledOnce();
+    expect(jobApplicationsApi.create).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/123",
+      applicationPackPreferences: { language: "tr", tone: "concise" },
+    });
   });
 });

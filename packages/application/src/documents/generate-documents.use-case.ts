@@ -1,22 +1,29 @@
 import type {
   DocumentRenderer,
   DocumentContent,
+  DocumentTemplate,
+  DocumentTemplateKind,
+  DocxPdfRenderer,
   DocxTemplateRenderer,
   FileStorage,
   GeneratedDocument,
   JobApplicationRepository,
   JobApplication,
   MatchAnalysisResult,
-  ProfileEducation,
-  ProfileExperience,
-  ProfileProject,
+  RichDocument,
   ScrapeBundle,
   TemplateRenderer,
   UserProfile,
   UserProfileRepository,
 } from "@link2cv/domain";
-import { documentContentFromMatchAnalysis, richDocumentFromText } from "@link2cv/domain";
+import { documentContentFromMatchAnalysis } from "@link2cv/domain";
 import { hasValidCoverLetterContentMapping } from "../profiles/document-template-mapping.js";
+import {
+  resolveDocumentContent,
+  type ResolvedDocumentEducation,
+  type ResolvedDocumentExperience,
+  type ResolvedDocumentProject,
+} from "./resolve-document-content.js";
 
 export interface GeneratedDocumentUpload {
   kind: "cover_letter" | "cv";
@@ -42,6 +49,7 @@ export class GenerateDocumentsUseCase {
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
     private readonly docxTemplates?: DocxTemplateRenderer,
+    private readonly docxPdf?: DocxPdfRenderer,
   ) {}
 
   async execute(input: {
@@ -90,14 +98,24 @@ export class GenerateDocumentsUseCase {
       scrape,
     );
     const generated: T[] = [];
-    const cvTemplate = await this.profiles.findDefaultDocumentTemplate(input.profile.id, "cv");
+    const cvTemplate = await this.findTemplate(
+      input.profile.id,
+      "cv",
+      input.jobApplication.applicationPackPreferences.cvTemplateId,
+    );
     const defaultCoverLetterTemplate = await this.profiles.findDefaultDocumentTemplate(
       input.profile.id,
       "cover_letter",
     );
-    const coverLetterTemplate =
-      defaultCoverLetterTemplate ??
-      soleReadyCoverLetterTemplate(await this.profiles.listDocumentTemplates(input.profile.id));
+    const coverLetterTemplate = input.jobApplication.applicationPackPreferences
+      .coverLetterTemplateId
+      ? await this.findTemplate(
+          input.profile.id,
+          "cover_letter",
+          input.jobApplication.applicationPackPreferences.coverLetterTemplateId,
+        )
+      : (defaultCoverLetterTemplate ??
+        soleReadyCoverLetterTemplate(await this.profiles.listDocumentTemplates(input.profile.id)));
 
     if (cvTemplate) {
       if (!this.docxTemplates) {
@@ -119,6 +137,17 @@ export class GenerateDocumentsUseCase {
           body: docx,
         }),
       );
+      if (this.docxPdf) {
+        generated.push(
+          await store({
+            kind: "cv",
+            format: "pdf",
+            fileName: "cv.pdf",
+            contentType: "application/pdf",
+            body: await this.docxPdf.docxToPdf(docx),
+          }),
+        );
+      }
     } else {
       generated.push(
         await this.renderHtmlPdf(
@@ -156,6 +185,17 @@ export class GenerateDocumentsUseCase {
           body: docx,
         }),
       );
+      if (this.docxPdf) {
+        generated.push(
+          await store({
+            kind: "cover_letter",
+            format: "pdf",
+            fileName: "cover-letter.pdf",
+            contentType: "application/pdf",
+            body: await this.docxPdf.docxToPdf(docx),
+          }),
+        );
+      }
     } else {
       generated.push(
         await this.renderHtmlPdf(
@@ -171,6 +211,23 @@ export class GenerateDocumentsUseCase {
     }
 
     return generated;
+  }
+
+  private async findTemplate(
+    profileId: string,
+    kind: DocumentTemplateKind,
+    selectedTemplateId?: string,
+  ): Promise<DocumentTemplate | null> {
+    if (!selectedTemplateId) {
+      return this.profiles.findDefaultDocumentTemplate(profileId, kind);
+    }
+
+    const template = await this.profiles.findDocumentTemplateById(selectedTemplateId);
+    if (!template || template.profileId !== profileId || template.kind !== kind) {
+      throw new Error(`Selected ${kind === "cv" ? "CV" : "cover letter"} template is unavailable`);
+    }
+
+    return template;
   }
 
   private async renderHtmlPdf<T>(
@@ -282,147 +339,139 @@ function toTemplateData(
   scrape: ScrapeBundle | null,
 ): Record<string, unknown> {
   const scrapedJob = scrape?.job;
-  const enhancedExperiences = toSelectedExperiences(profile.experience, documentContent);
-  const selectedProjects = toSelectedProjects(profile.projects, documentContent);
+  const resolved = resolveDocumentContent(profile, documentContent);
+  const selectedExperiences = resolved.experiences.map(toSelectedExperience);
+  const selectedEducation = resolved.education.map(toSelectedEducation);
+  const selectedProjects = resolved.projects.map(toSelectedProject);
 
   return {
-    cover_letter_content: documentContent.coverLetterContent ?? richDocumentFromText(""),
+    cover_letter_content: resolved.coverLetterContent,
     company_name: jobApplication.tracking.companyName ?? scrapedJob?.companyName ?? "",
     full_name: profile.fullName,
     email: profile.email,
     profession: profile.profession ?? "",
     headline: profile.headline ?? "",
+    profile_title: profile.headline ?? profile.profession ?? "",
     job_description: scrapedJob?.description ?? "",
     job_location: scrapedJob?.location ?? jobApplication.tracking.roleType ?? "",
     location: profile.location ?? "",
     links: profile.links,
     role_title: jobApplication.tracking.roleTitle ?? scrapedJob?.title ?? "",
-    summary:
-      documentContent.selections?.customizedSummary === "original"
-        ? (profile.summaryRichText ??
-          (profile.summary ? documentContentFromText(profile.summary) : undefined) ??
-          documentContent.customizedSummary)
-        : documentContent.customizedSummary,
+    summary: resolved.summary,
     raw_summary: profile.summary ?? "",
-    skills:
-      documentContent.selections?.skills === "original"
-        ? profile.skills
-        : documentContent.skillSuggestions && documentContent.skillSuggestions.length > 0
-          ? documentContent.skillSuggestions
-          : profile.skills,
-    education_list: profile.education,
-    selected_education: toSelectedEducation(profile.education, documentContent),
-    experience_list: enhancedExperiences,
+    skills: resolved.skills,
+    certifications: resolved.certifications,
+    education_list: selectedEducation,
+    selected_education: selectedEducation,
+    experience_list: selectedExperiences,
     raw_experience_list: profile.experience,
-    selected_experiences: enhancedExperiences,
+    raw_education_list: profile.education,
+    raw_projects: profile.projects,
+    selected_experiences: selectedExperiences,
     selected_projects: selectedProjects,
+    projects: selectedProjects,
+    experience_content: resolved.experiences.map(toExperienceContent),
+    education_content: resolved.education.map(toEducationContent),
+    project_content: resolved.projects.map(toProjectContent),
     match_score: analysis.matchScore,
     missing_skills: analysis.missingSkills,
     strong_skills: analysis.strongSkills,
     recommended_achievements: analysis.recommendedAchievements,
-    customized_summary: documentContent.customizedSummary,
+    customized_summary: resolved.summary,
     interview_tips: analysis.interviewTips,
     cover_letter_guidance: analysis.coverLetterGuidance ?? [],
   };
 }
 
-function toSelectedProjects(
-  projects: ProfileProject[],
-  documentContent: DocumentContent,
-): Record<string, unknown>[] {
-  return projects.map((project, index) => {
-    const enhancement = documentContent.projectEnhancements?.find(
-      (item) => item.projectIndex === index,
-    );
-    const selection = documentContent.selections?.projects?.[String(index)];
-    const originalDescription =
-      project.descriptionRichText ??
-      (project.description ? documentContentFromText(project.description) : undefined);
-    const description =
-      selection?.description === "original"
-        ? originalDescription
-        : (enhancement?.description ?? originalDescription);
-    const achievements = project.achievements.map((achievement, achievementIndex) => {
-      const selected = selection?.achievements[String(achievementIndex)];
-      const enhanced = enhancement?.achievements[achievementIndex];
+function toSelectedExperience(experience: ResolvedDocumentExperience): Record<string, unknown> {
+  const startDate = experience.startDate ?? "";
+  const endDate = experience.endDate ?? "";
 
-      return selected === "original"
-        ? documentContentFromText(achievement)
-        : (enhanced ?? documentContentFromText(achievement));
-    });
-
-    return {
-      name: project.name,
-      url: project.url ?? "",
-      skills: project.skills,
-      achievements,
-      ...(description ? { description } : {}),
-    };
-  });
+  return {
+    title: experience.title,
+    company: experience.company,
+    start_date: startDate,
+    end_date: endDate || "Present",
+    period: formatPeriod(startDate, endDate),
+    ...(experience.description ? { description: experience.description } : {}),
+  };
 }
 
-function toSelectedEducation(
-  education: ProfileEducation[],
-  documentContent: DocumentContent,
-): Record<string, unknown>[] {
-  return education.map((item, index) => {
-    const enhancement = documentContent.educationEnhancements?.find(
-      (e) => e.educationIndex === index,
-    );
-    const selection = documentContent.selections?.education?.[String(index)];
-    const startDate = item.startDate ?? "";
-    const endDate = item.endDate ?? "";
+function toSelectedEducation(education: ResolvedDocumentEducation): Record<string, unknown> {
+  const startDate = education.startDate ?? "";
+  const endDate = education.endDate ?? "";
 
-    const description =
-      selection?.description === "ai" && enhancement?.description
-        ? enhancement.description
-        : undefined;
-
-    return {
-      institution: item.institution,
-      degree: item.degree ?? "",
-      field: item.field ?? "",
-      start_date: startDate,
-      end_date: endDate || "Present",
-      period: formatPeriod(startDate, endDate),
-      ...(description ? { description } : {}),
-    };
-  });
+  return {
+    institution: education.institution,
+    degree: education.degree ?? "",
+    field: education.field ?? "",
+    start_date: startDate,
+    end_date: endDate || "Present",
+    period: formatPeriod(startDate, endDate),
+    ...(education.description ? { description: education.description } : {}),
+  };
 }
 
-function toSelectedExperiences(
-  experiences: ProfileExperience[],
-  documentContent: DocumentContent,
-): Record<string, unknown>[] {
-  return experiences.map((experience, index) => {
-    const enhancement = documentContent.experienceEnhancements.find(
-      (item) => item.experienceIndex === index,
-    );
-    const selection = documentContent.selections?.experience?.[String(index)];
-    const startDate = experience.startDate ?? "";
-    const endDate = experience.endDate ?? "";
-
-    const description =
-      selection?.description === "original"
-        ? (experience.descriptionRichText ??
-          (experience.description ? documentContentFromText(experience.description) : undefined))
-        : (enhancement?.description ??
-          experience.descriptionRichText ??
-          (experience.description ? documentContentFromText(experience.description) : undefined));
-
-    return {
-      title: experience.title,
-      company: experience.company,
-      start_date: startDate,
-      end_date: endDate || "Present",
-      period: formatPeriod(startDate, endDate),
-      description,
-    };
-  });
+function toSelectedProject(project: ResolvedDocumentProject): Record<string, unknown> {
+  return {
+    name: project.name,
+    url: project.url ?? "",
+    skills: project.skills,
+    ...(project.description ? { description: project.description } : {}),
+  };
 }
 
-function documentContentFromText(value: string) {
-  return documentContentFromMatchAnalysis({ customizedSummary: value }).customizedSummary;
+function toExperienceContent(experience: ResolvedDocumentExperience): RichDocument {
+  return toItemContent(
+    `${experience.title} · ${experience.company}`,
+    formatPeriod(experience.startDate ?? "", experience.endDate ?? ""),
+    experience.description,
+  );
+}
+
+function toEducationContent(education: ResolvedDocumentEducation): RichDocument {
+  return toItemContent(
+    education.institution,
+    [
+      [education.degree, education.field].filter(Boolean).join(", "),
+      formatPeriod(education.startDate ?? "", education.endDate ?? ""),
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    education.description,
+  );
+}
+
+function toProjectContent(project: ResolvedDocumentProject): RichDocument {
+  return toItemContent(
+    project.name,
+    [project.url, project.skills.join(", ")].filter(Boolean).join(" · "),
+    project.description,
+  );
+}
+
+function toItemContent(title: string, metadata: string, description?: RichDocument): RichDocument {
+  return {
+    version: 1,
+    blocks: [
+      {
+        type: "heading",
+        level: 3,
+        children: [{ type: "text", text: title }],
+      },
+      ...(metadata
+        ? [
+            {
+              type: "paragraph" as const,
+              children: [
+                { type: "text" as const, text: metadata, marks: [{ type: "italic" as const }] },
+              ],
+            },
+          ]
+        : []),
+      ...(description?.blocks ?? []),
+    ],
+  };
 }
 
 function formatPeriod(startDate: string, endDate: string): string {

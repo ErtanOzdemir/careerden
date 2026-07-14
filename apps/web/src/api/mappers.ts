@@ -19,7 +19,7 @@ import type {
   TimelineMilestone,
   UpcomingInterview,
 } from "../types";
-import { richDocumentFromText } from "../lib/rich-document.js";
+import { mergeRichDocumentsAsProse, richDocumentFromText } from "../lib/rich-document.js";
 
 export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
   switch (status) {
@@ -71,6 +71,7 @@ export function mapApiJobApplicationToUi(
   const companyWebsiteUrl = scrapedCompanyWebsiteUrl?.trim();
 
   return {
+    applicationPackPreferences: application.applicationPackPreferences,
     id: application.id,
     profileId: application.profileId,
     updatedAt: application.updatedAt,
@@ -94,6 +95,7 @@ export function mapApiJobApplicationToUi(
     processingStatusLabel: formatProcessingStatus(application.status, application.failureReason),
     processingFailureReason: application.failureReason,
     processingLog: detail ? mapProcessingLog(detail.events) : undefined,
+    profileReadiness: detail?.profileReadiness,
     sourceUrl: application.sourceUrl,
     salaryCurrency: application.tracking.salaryCurrency,
     salaryMaxAmount: application.tracking.salaryMaxAmount,
@@ -128,28 +130,47 @@ function mapInitialDocumentContent(match: ApiMatchAnalysis) {
   return {
     coverLetterContent: richDocumentFromText(match.coverLetterContent ?? ""),
     customizedSummary: richDocumentFromText(match.customizedSummary),
-    experienceEnhancements: (match.experienceEnhancements ?? []).map((enhancement) => ({
-      experienceIndex: enhancement.experienceIndex,
-      ...(enhancement.enhancedDescription
-        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
-        : {}),
-      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
-    })),
+    formatVersion: 2 as const,
+    experienceEnhancements: (match.experienceEnhancements ?? []).map((enhancement) => {
+      const description = mergeRichDocumentsAsProse(
+        enhancement.enhancedDescription
+          ? richDocumentFromText(enhancement.enhancedDescription)
+          : undefined,
+        ...(enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+      );
+      return {
+        experienceIndex: enhancement.experienceIndex,
+        ...(description ? { description } : {}),
+        achievements: [],
+      };
+    }),
     skillSuggestions: match.skillSuggestions ?? [],
-    educationEnhancements: (match.educationEnhancements ?? []).map((enhancement) => ({
-      educationIndex: enhancement.educationIndex,
-      ...(enhancement.enhancedDescription
-        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
-        : {}),
-      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
-    })),
-    projectEnhancements: (match.projectEnhancements ?? []).map((enhancement) => ({
-      projectIndex: enhancement.projectIndex,
-      ...(enhancement.enhancedDescription
-        ? { description: richDocumentFromText(enhancement.enhancedDescription) }
-        : {}),
-      achievements: (enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
-    })),
+    educationEnhancements: (match.educationEnhancements ?? []).map((enhancement) => {
+      const description = mergeRichDocumentsAsProse(
+        enhancement.enhancedDescription
+          ? richDocumentFromText(enhancement.enhancedDescription)
+          : undefined,
+        ...(enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+      );
+      return {
+        educationIndex: enhancement.educationIndex,
+        ...(description ? { description } : {}),
+        achievements: [],
+      };
+    }),
+    projectEnhancements: (match.projectEnhancements ?? []).map((enhancement) => {
+      const description = mergeRichDocumentsAsProse(
+        enhancement.enhancedDescription
+          ? richDocumentFromText(enhancement.enhancedDescription)
+          : undefined,
+        ...(enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
+      );
+      return {
+        projectIndex: enhancement.projectIndex,
+        ...(description ? { description } : {}),
+        achievements: [],
+      };
+    }),
     certificationSuggestions: match.certificationSuggestions ?? [],
     selections: {
       experience: {},

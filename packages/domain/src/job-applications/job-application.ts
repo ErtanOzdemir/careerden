@@ -1,4 +1,5 @@
 import type { JobApplicationStatus } from "./workflow-status.js";
+import type { ApplicationPackPreferences } from "./application-pack.js";
 
 export type ApplicationStatus =
   | "saved"
@@ -36,9 +37,11 @@ export interface JobApplicationTrackingFields {
 export interface JobApplication {
   id: string;
   profileId: string;
+  applicationPackPreferences: ApplicationPackPreferences;
   sourceUrl?: string;
   status: JobApplicationStatus;
   failureReason?: string;
+  documentGenerationAttemptId?: string;
   scrapeClaimedBy?: string;
   scrapeClaimExpiresAt?: Date;
   scrapeAttemptCount: number;
@@ -69,6 +72,7 @@ export interface CreateJobApplicationInput extends Partial<
   >
 > {
   profileId: string;
+  applicationPackPreferences?: ApplicationPackPreferences;
   sourceUrl?: string;
   jobUrl?: string;
 }

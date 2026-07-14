@@ -2,46 +2,63 @@ import { describe, expect, it } from "vitest";
 import { aiMatchResultSchema } from "./ai-match-result.schema.js";
 
 describe("aiMatchResultSchema", () => {
-  it("accepts the required AI matching payload", () => {
+  it("accepts description-only enhancement payloads", () => {
+    const result = aiMatchResultSchema.parse({
+      coverLetterContent: "Dear hiring team, I am excited to apply.",
+      matchScore: 82,
+      missingSkills: ["Kubernetes"],
+      strongSkills: ["TypeScript"],
+      recommendedAchievements: ["Reduced processing time by 30%"],
+      customizedSummary: "A short profile-aware summary.",
+      interviewTips: ["Prepare a system design example."],
+      requirementEvaluations: [
+        {
+          requirement: "Production TypeScript experience",
+          status: "matched",
+          evidence: ["Built production TypeScript automation"],
+        },
+        {
+          requirement: "Kubernetes",
+          status: "missing",
+          evidence: [],
+        },
+      ],
+      missingSkillResources: [
+        {
+          skill: "Kubernetes",
+          title: "Kubernetes Basics",
+          url: "https://kubernetes.io/docs/tutorials/kubernetes-basics/",
+          type: "tutorial",
+          reason: "Introduces the core Kubernetes concepts required by the role.",
+        },
+      ],
+      experienceEnhancements: [
+        {
+          experienceIndex: 0,
+          enhancedDescription: "Built reliable TypeScript automation for production workflows.",
+        },
+      ],
+    });
+
+    expect(result.experienceEnhancements?.[0]).toEqual({
+      experienceIndex: 0,
+      enhancedDescription: "Built reliable TypeScript automation for production workflows.",
+    });
+  });
+
+  it("requires a description for every included enhancement", () => {
     expect(() =>
       aiMatchResultSchema.parse({
         coverLetterContent: "Dear hiring team, I am excited to apply.",
         matchScore: 82,
-        missingSkills: ["Kubernetes"],
+        missingSkills: [],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: ["Reduced processing time by 30%"],
+        recommendedAchievements: [],
         customizedSummary: "A short profile-aware summary.",
-        interviewTips: ["Prepare a system design example."],
-        requirementEvaluations: [
-          {
-            requirement: "Production TypeScript experience",
-            status: "matched",
-            evidence: ["Built production TypeScript automation"],
-          },
-          {
-            requirement: "Kubernetes",
-            status: "missing",
-            evidence: [],
-          },
-        ],
-        missingSkillResources: [
-          {
-            skill: "Kubernetes",
-            title: "Kubernetes Basics",
-            url: "https://kubernetes.io/docs/tutorials/kubernetes-basics/",
-            type: "tutorial",
-            reason: "Introduces the core Kubernetes concepts required by the role.",
-          },
-        ],
-        experienceEnhancements: [
-          {
-            experienceIndex: 0,
-            enhancedDescription: "Built reliable TypeScript automation for production workflows.",
-            enhancedAchievements: ["Reduced processing time by 30% using TypeScript."],
-          },
-        ],
+        interviewTips: [],
+        experienceEnhancements: [{ experienceIndex: 0 }],
       }),
-    ).not.toThrow();
+    ).toThrow();
   });
 
   it("rejects scores outside the 0-100 range", () => {

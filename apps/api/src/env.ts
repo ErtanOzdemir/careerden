@@ -18,6 +18,7 @@ export const apiEnvSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
+  GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
   RUSTFS_ENDPOINT: z.string().url().default("http://localhost:9000"),
   RUSTFS_BUCKET: z.string().min(1).default("link2cv"),
   RUSTFS_ACCESS_KEY_ID: z.string().min(1).default("rustfsadmin"),

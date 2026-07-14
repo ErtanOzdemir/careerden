@@ -126,6 +126,7 @@ export const documentContentSchema = z
   .object({
     coverLetterContent: richDocumentSchema.optional(),
     customizedSummary: richDocumentSchema,
+    formatVersion: z.literal(2).optional(),
     experienceEnhancements: z
       .array(
         z

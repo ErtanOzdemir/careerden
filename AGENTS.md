@@ -22,7 +22,7 @@ documents for review or download.
   migrations
 - Scraping and rendering: Playwright 1.49
 - AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
-- Document generation: HTML templates, Docxtemplater, LibreOffice/Playwright PDF rendering
+- Document generation: HTML templates, Docxtemplater, Gotenberg/Playwright PDF rendering
 - Storage: S3-compatible object storage via RustFS for generated files
 
 ## Naming Conventions

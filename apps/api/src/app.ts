@@ -27,6 +27,7 @@ import {
   GetJobApplicationDetailUseCase,
   ListJobApplicationsUseCase,
   RequestJobApplicationAnalysisUseCase,
+  RequestApplicationPackGenerationUseCase,
   UpdateJobApplicationStatusUseCase,
   UpdateJobApplicationTrackingUseCase,
   ClaimNextScrapeJobUseCase,
@@ -49,6 +50,7 @@ import {
 } from "@link2cv/application";
 import {
   DocxtemplaterTemplateRenderer,
+  GotenbergDocxPdfRenderer,
   HtmlTemplateRenderer,
   HttpRemoteImageFetcher,
   PlaywrightPdfRenderer,
@@ -117,6 +119,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     jobApplications,
     profiles,
     docxTemplates,
+    new GotenbergDocxPdfRenderer({ baseUrl: env.GOTENBERG_URL }),
   );
   const getCurrentProfile = new GetOrCreateCurrentProfileUseCase(profiles);
   const getProfile = new GetProfileUseCase(profiles);
@@ -188,6 +191,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       getJobApplicationDetail,
       updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(unitOfWork),
       requestJobApplicationAnalysis: new RequestJobApplicationAnalysisUseCase(unitOfWork),
+      requestApplicationPackGeneration: new RequestApplicationPackGenerationUseCase(unitOfWork),
       claimNextScrapeJob: new ClaimNextScrapeJobUseCase(getCurrentProfile, unitOfWork),
       createJobApplicationFromScrape: new CreateJobApplicationFromScrapeUseCase(
         getCurrentProfile,

@@ -6,18 +6,23 @@ import { StatusBadge } from "../components/link2cv/status-badge.js";
 import type { DisplayStatus } from "../components/link2cv/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
-import { mapApiJobApplicationToUi, mapApiProfileToUi } from "../api/mappers.js";
+import { mapApiJobApplicationToUi } from "../api/mappers.js";
 import {
   useJobApplicationChanges,
   type JobApplicationChange,
 } from "../api/jobApplicationChanges.js";
-import type { InterestLevel, JobApplication, Profile } from "../types.js";
+import type { InterestLevel, JobApplication } from "../types.js";
 import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
-import AiMatchCard from "../components/AiMatchCard.js";
+import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/link2cv/unified-select.js";
-import type { ApiDocumentContent } from "../api/types.js";
+import type {
+  ApiApplicationPackPreferences,
+  ApiDocumentContent,
+  ApiDocumentTemplate,
+  ApiProfile,
+} from "../api/types.js";
 import {
   ArrowLeft,
   MapPin,
@@ -25,8 +30,6 @@ import {
   Sparkles,
   ExternalLink,
   Check,
-  FileText,
-  Download,
   Pencil,
   RefreshCw,
   CalendarClock,
@@ -35,24 +38,23 @@ import {
   Trash2,
 } from "lucide-react";
 
-type Tab = "overview" | "analysis" | "documents" | "timeline";
+type Tab = "overview" | "pack" | "timeline";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
-  { id: "analysis", label: "AI match" },
-  { id: "documents", label: "Documents" },
+  { id: "pack", label: "Application pack" },
   { id: "timeline", label: "Follow-ups & notes" },
 ];
 
 export default function AppDetail() {
   const { id } = useParams();
   const [app, setApp] = useState<JobApplication | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ApiProfile | null>(null);
+  const [templates, setTemplates] = useState<ApiDocumentTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("overview");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSavingContent, setIsSavingContent] = useState(false);
+  const [tab, setTab] = useState<Tab>("pack");
+  const [isUpdatingPack, setIsUpdatingPack] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -87,10 +89,14 @@ export default function AppDetail() {
         setIsLoading(true);
         setError(null);
         const detail = await jobApplicationsApi.get(id!);
-        const profileData = await profilesApi.get(detail.profileId);
+        const [profileData, templateData] = await Promise.all([
+          profilesApi.get(detail.profileId),
+          profilesApi.listDocumentTemplates(detail.profileId),
+        ]);
         if (isMounted) {
           setApp(mapApiJobApplicationToUi(detail, profileData));
-          setProfile(mapApiProfileToUi(profileData));
+          setProfile(profileData);
+          setTemplates(templateData);
         }
       } catch (e) {
         if (isMounted) setError(e instanceof Error ? e.message : "Failed to load.");
@@ -128,7 +134,7 @@ export default function AppDetail() {
     const profileData = await profilesApi.get(detail.profileId);
     const mapped = mapApiJobApplicationToUi(detail, profileData);
     setApp(mapped);
-    setProfile(mapApiProfileToUi(profileData));
+    setProfile(profileData);
     const notesValue = mapped.metadata?.notes;
     setNotes(typeof notesValue === "string" ? notesValue : "");
   }
@@ -300,31 +306,23 @@ export default function AppDetail() {
     }
   }
 
-  async function handleGenerateDocuments() {
+  async function handleUpdateApplicationPack(
+    documentContent: ApiDocumentContent,
+    preferences: ApiApplicationPackPreferences,
+  ) {
     if (!id) return;
     try {
-      setIsGenerating(true);
+      setIsUpdatingPack(true);
       setError(null);
-      await jobApplicationsApi.generateDocuments(id);
+      await jobApplicationsApi.requestApplicationPackGeneration(id, {
+        documentContent,
+        preferences,
+      });
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed.");
+      setError(e instanceof Error ? e.message : "Failed to update application pack.");
     } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  async function handleSaveDocumentContent(content: ApiDocumentContent) {
-    if (!id) return;
-    try {
-      setIsSavingContent(true);
-      setError(null);
-      await jobApplicationsApi.updateDocumentContent(id, content);
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.");
-    } finally {
-      setIsSavingContent(false);
+      setIsUpdatingPack(false);
     }
   }
 
@@ -359,6 +357,11 @@ export default function AppDetail() {
     } finally {
       setDownloadingId(null);
     }
+  }
+
+  async function handleResolveDocumentUrl(docId: string): Promise<string> {
+    if (!id) throw new Error("Missing application ID");
+    return (await jobApplicationsApi.getDocumentDownloadUrl(id, { id: docId })).url;
   }
 
   if (isLoading) return <div className="py-16 text-center text-muted-foreground">Loading...</div>;
@@ -456,9 +459,9 @@ export default function AppDetail() {
             View on LinkedIn
           </Button>
           {app.aiMatch ? (
-            <Button size="sm" onClick={handleGenerateDocuments} disabled={isGenerating}>
+            <Button size="sm" onClick={() => setTab("pack")}>
               <Sparkles className="size-3.5" />
-              {app.generatedDocuments?.length ? "Regenerate" : "Generate documents"}
+              View application pack
             </Button>
           ) : (
             <Button size="sm" onClick={handleRetry} disabled={isRetrying}>
@@ -469,7 +472,7 @@ export default function AppDetail() {
         </div>
       </div>
 
-      {isProcessing && app.processingStatus !== "failed" && (
+      {tab !== "pack" && isProcessing && app.processingStatus !== "failed" && (
         <div className="rounded-xl border border-info/20 bg-info-soft/60 p-4">
           <div className="flex items-center gap-2.5">
             <Loader2 className="size-4 animate-spin text-info" />
@@ -490,7 +493,7 @@ export default function AppDetail() {
         </div>
       )}
 
-      {app.processingStatus === "failed" && (
+      {tab !== "pack" && app.processingStatus === "failed" && (
         <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 flex items-center justify-between">
           <p className="text-sm text-destructive">
             {app.processingFailureReason ?? "Processing failed"}
@@ -536,37 +539,16 @@ export default function AppDetail() {
           onSaveWorkStyle={handleSaveWorkStyle}
         />
       )}
-      {tab === "analysis" &&
-        (app.aiMatch && app.documentContent ? (
-          <AiMatchCard
-            aiMatch={app.aiMatch}
-            canCreateCv={["review_ready", "completed"].includes(app.processingStatus ?? "")}
-            hasGeneratedDocuments={(app.generatedDocuments?.length ?? 0) > 0}
-            isCreatingCv={isGenerating}
-            isSavingContent={isSavingContent}
-            documentContent={app.documentContent}
-            profile={profile ?? undefined}
-            onSaveContent={handleSaveDocumentContent}
-            onCreateCv={handleGenerateDocuments}
-          />
-        ) : (
-          <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
-            <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <Sparkles className="size-5" />
-            </div>
-            <p className="mt-4 text-sm font-medium text-foreground">Match analysis in progress</p>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-              Once we finish extracting the job details, the AI wizard will appear here.
-            </p>
-          </div>
-        ))}
-      {tab === "documents" && (
-        <DocumentsTab
+      {tab === "pack" && (
+        <ApplicationPackWorkspace
           app={app}
-          isGenerating={isGenerating}
           downloadingId={downloadingId}
-          onGenerate={handleGenerateDocuments}
+          isUpdating={isUpdatingPack}
           onDownload={handleDownload}
+          onResolveDocumentUrl={handleResolveDocumentUrl}
+          onUpdate={handleUpdateApplicationPack}
+          profile={profile ?? undefined}
+          templates={templates}
         />
       )}
       {tab === "timeline" && (
@@ -1125,111 +1107,6 @@ function SalaryInput({
   );
 }
 
-function DocumentsTab({
-  app,
-  isGenerating,
-  downloadingId,
-  onGenerate,
-  onDownload,
-}: {
-  app: JobApplication;
-  isGenerating: boolean;
-  downloadingId: string | null;
-  onGenerate: () => void;
-  onDownload: (id: string) => void;
-}) {
-  const docs = app.generatedDocuments ?? [];
-  const cvDoc = docs.find((d) => d.kind === "cv");
-  const coverDoc = docs.find((d) => d.kind === "cover_letter");
-  return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-      <DocCard
-        title="Tailored CV"
-        desc="Profile-aware resume optimized for this role"
-        ready={!!cvDoc}
-        doc={cvDoc}
-        isGenerating={isGenerating}
-        downloadingId={downloadingId}
-        onGenerate={onGenerate}
-        onDownload={onDownload}
-      />
-      <DocCard
-        title="Cover letter"
-        desc="Personalized letter referencing the job requirements"
-        ready={!!coverDoc}
-        doc={coverDoc}
-        isGenerating={isGenerating}
-        downloadingId={downloadingId}
-        onGenerate={onGenerate}
-        onDownload={onDownload}
-      />
-    </div>
-  );
-}
-
-function DocCard({
-  title,
-  desc,
-  ready,
-  doc,
-  isGenerating,
-  downloadingId,
-  onGenerate,
-  onDownload,
-}: {
-  title: string;
-  desc: string;
-  ready: boolean;
-  doc?: { id: string; name: string; createdAt: string };
-  isGenerating: boolean;
-  downloadingId: string | null;
-  onGenerate: () => void;
-  onDownload: (id: string) => void;
-}) {
-  return (
-    <Panel className="p-5">
-      <div className="flex items-start gap-3">
-        <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-          <FileText className="size-5" />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
-        </div>
-      </div>
-      {ready && doc ? (
-        <>
-          <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-            Generated and ready. {doc.name}
-          </div>
-          <div className="mt-4 flex gap-2">
-            <Button variant="outline" size="sm" onClick={onGenerate} disabled={isGenerating}>
-              <RefreshCw className="size-3.5" />
-              Regenerate
-            </Button>
-            <Button
-              size="sm"
-              className="ml-auto"
-              onClick={() => onDownload(doc.id)}
-              disabled={downloadingId === doc.id}
-            >
-              <Download className="size-3.5" />
-              {downloadingId === doc.id ? "..." : "Download"}
-            </Button>
-          </div>
-        </>
-      ) : (
-        <div className="mt-4 rounded-lg border border-dashed border-border p-5 text-center">
-          <p className="text-sm text-muted-foreground">Not generated yet</p>
-          <Button size="sm" className="mt-3" onClick={onGenerate} disabled={isGenerating}>
-            <Sparkles className="size-3.5" />
-            Generate {title.toLowerCase()}
-          </Button>
-        </div>
-      )}
-    </Panel>
-  );
-}
 function TimelineTab({
   app,
   followUpForm,

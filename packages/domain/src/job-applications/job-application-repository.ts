@@ -24,6 +24,7 @@ import type {
   UpdateJobApplicationFollowUpInput,
 } from "./job-application-follow-up.js";
 import type { JobApplicationStatus } from "./workflow-status.js";
+import type { ApplicationPackPreferences } from "./application-pack.js";
 
 export interface AttachGeneratedDocumentInput {
   jobApplicationId: string;
@@ -119,6 +120,10 @@ export interface JobApplicationRepository {
   failDocumentGeneration(id: string, attemptId: string, reason: string): Promise<boolean>;
   updateStatus(id: string, status: JobApplicationStatus, failureReason?: string): Promise<void>;
   updateTracking(id: string, input: UpdateJobApplicationTrackingInput): Promise<JobApplication>;
+  updateApplicationPackPreferences(
+    id: string,
+    preferences: ApplicationPackPreferences,
+  ): Promise<JobApplication>;
   saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void>;
   getScrapeBundle(id: string): Promise<ScrapeBundle | null>;
   getCompanyLogoFileId(id: string): Promise<string | null>;

@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   DocxTemplateRenderer,
   FileStorage,
+  RichDocument,
   StoredFileInput,
   TemplateRenderer,
 } from "@link2cv/domain";
-import { richDocumentFromText } from "@link2cv/domain";
+import { richDocumentFromText, richDocumentToPlainText } from "@link2cv/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
@@ -13,6 +14,64 @@ import {
 import { GenerateDocumentsUseCase } from "./generate-documents.use-case.js";
 
 describe("GenerateDocumentsUseCase", () => {
+  it("creates a PDF preview next to every custom DOCX document", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: ["TypeScript"],
+      experience: [],
+    });
+    await profiles.createDocumentTemplate({
+      profileId: profile.id,
+      kind: "cv",
+      format: "docx",
+      fileId: "templates/cv.docx",
+      fileName: "cv.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 10,
+      placeholders: ["full_name"],
+      fieldMappings: { full_name: "full_name" },
+    });
+    const jobApplication = await jobApplications.create({ profileId: profile.id });
+    const docxToPdf = vi.fn(async () => Buffer.from("docx-preview"));
+    const useCase = new GenerateDocumentsUseCase(
+      createHtmlTemplates(),
+      { htmlToPdf: vi.fn(async () => Buffer.from("html-pdf")) },
+      createStorage(),
+      jobApplications,
+      profiles,
+      {
+        extractPlaceholders: vi.fn(),
+        isPlaceholderStandalone: vi.fn(async () => true),
+        render: vi.fn(async () => Buffer.from("docx")),
+      },
+      { docxToPdf },
+    );
+
+    const generated = await useCase.execute({
+      jobApplicationId: jobApplication.id,
+      jobApplication,
+      profile,
+      analysis: {
+        matchScore: 90,
+        missingSkills: [],
+        strongSkills: ["TypeScript"],
+        recommendedAchievements: [],
+        customizedSummary: "Summary",
+        interviewTips: [],
+      },
+    });
+
+    expect(generated.map(({ kind, format }) => ({ kind, format }))).toEqual([
+      { kind: "cv", format: "docx" },
+      { kind: "cv", format: "pdf" },
+      { kind: "cover_letter", format: "pdf" },
+    ]);
+    expect(docxToPdf).toHaveBeenCalledWith(Buffer.from("docx"));
+  });
+
   it("passes original rich summary, experience, and project selections to DOCX templates", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
@@ -47,6 +106,16 @@ describe("GenerateDocumentsUseCase", () => {
       summary: "Original summary.",
       summaryRichText: originalSummary,
       skills: ["TypeScript"],
+      certifications: ["Azure Fundamentals"],
+      education: [
+        {
+          degree: "BSc",
+          field: "Computer Science",
+          institution: "Example University",
+          startDate: "2018",
+          endDate: "2022",
+        },
+      ],
       experience: [
         {
           company: "Analytical Engines",
@@ -62,7 +131,7 @@ describe("GenerateDocumentsUseCase", () => {
           description: "Built profile-aware documents.",
           descriptionRichText: originalDescription,
           skills: ["TypeScript"],
-          achievements: [],
+          achievements: ["Launched automated tailoring"],
         },
       ],
     });
@@ -119,7 +188,6 @@ describe("GenerateDocumentsUseCase", () => {
           {
             experienceIndex: 0,
             enhancedDescription: "Built TypeScript automation for backend systems.",
-            enhancedAchievements: ["Improved backend reliability with TypeScript."],
           },
         ],
       },
@@ -142,15 +210,28 @@ describe("GenerateDocumentsUseCase", () => {
             achievements: [],
           },
         ],
+        educationEnhancements: [
+          {
+            educationIndex: 0,
+            description: richDocumentFromText("Relevant computer science coursework."),
+            achievements: [richDocumentFromText("Completed systems research.")],
+          },
+        ],
+        skillSuggestions: ["TypeScript", "Node.js"],
+        certificationSuggestions: ["AWS Practitioner"],
         selections: {
+          certifications: "ai",
           customizedSummary: "original",
           experience: {
-            "0": { description: "original", achievements: {} },
+            "0": { description: "original", achievements: { "0": "original" } },
           },
-          education: {},
+          education: {
+            "0": { description: "ai", achievements: { "0": "ai" } },
+          },
           projects: {
             "0": { description: "original", achievements: {} },
           },
+          skills: "ai",
         },
       },
     });
@@ -162,7 +243,7 @@ describe("GenerateDocumentsUseCase", () => {
         start_date: "2022",
         end_date: "Present",
         period: "2022 - Present",
-        description: originalDescription,
+        description: richDocumentFromText("Built automation."),
       },
     ]);
     expect(capturedDocxData[0]?.selected_projects).toEqual([
@@ -170,11 +251,32 @@ describe("GenerateDocumentsUseCase", () => {
         name: "Link2CV",
         url: "",
         skills: ["TypeScript"],
-        achievements: [],
-        description: originalDescription,
+        description: richDocumentFromText("Built automation. Launched automated tailoring."),
       },
     ]);
     expect(capturedDocxData[0]?.summary).toEqual(originalSummary);
+    expect(capturedDocxData[0]?.customized_summary).toEqual(originalSummary);
+    expect(capturedDocxData[0]?.skills).toEqual(["TypeScript", "Node.js"]);
+    expect(capturedDocxData[0]?.certifications).toEqual(["AWS Practitioner"]);
+    expect(capturedDocxData[0]?.selected_education).toHaveLength(1);
+    const selectedEducation = capturedDocxData[0]?.selected_education as Array<{
+      description: RichDocument;
+    }>;
+    expect(richDocumentToPlainText(selectedEducation[0]!.description)).toBe(
+      "Relevant computer science coursework. Completed systems research.",
+    );
+    const educationContent = capturedDocxData[0]?.education_content as RichDocument[];
+    expect(richDocumentToPlainText(educationContent[0]!)).toBe(
+      "Example University\nBSc, Computer Science · 2018 - 2022\nRelevant computer science coursework. Completed systems research.",
+    );
+    const experienceContent = capturedDocxData[0]?.experience_content as RichDocument[];
+    expect(richDocumentToPlainText(experienceContent[0]!)).toBe(
+      "Engineer · Analytical Engines\n2022 - Present\nBuilt automation.",
+    );
+    const projectContent = capturedDocxData[0]?.project_content as RichDocument[];
+    expect(richDocumentToPlainText(projectContent[0]!)).toContain(
+      "Link2CV\nTypeScript\nBuilt automation. Launched automated tailoring.",
+    );
     expect(capturedDocxData[0]?.experience_list).toEqual(capturedDocxData[0]?.selected_experiences);
     expect(capturedDocxData[0]?.raw_experience_list).toEqual([
       {

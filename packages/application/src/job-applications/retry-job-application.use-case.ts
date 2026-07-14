@@ -1,4 +1,5 @@
 import type { JobApplication, PersistenceUnitOfWork } from "@link2cv/domain";
+import { assessProfileReadiness } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
@@ -69,11 +70,14 @@ export class RetryJobApplicationUseCase {
         await enqueueStorageDeletions(outbox, fileIds);
 
         if (mode === "analysis") {
+          const profile = await profiles.findById(reset.profileId);
+          if (!profile) throw new ApplicationError("not_found", "Profile not found");
           await enqueueMatchAnalysisIfEnabled({
             jobApplications,
             outbox,
             jobApplicationId,
             autoRunMatchAnalysis: true,
+            profileReadiness: assessProfileReadiness(profile),
           });
         }
 

@@ -35,23 +35,25 @@ describe("UpdateDocumentTemplateMappingsUseCase", () => {
     });
   });
 
-  it("accepts Content together with other cover letter fields", async () => {
+  it("rejects cover letter fields in addition to Content", async () => {
     const template = createTestTemplate({
       kind: "cover_letter",
       placeholders: ["letter_body", "name"],
       isDefault: false,
     });
     const profiles = createProfileRepository(undefined, template);
-    vi.mocked(profiles.updateDocumentTemplateMappings).mockImplementation(
-      async (_id, fieldMappings) => ({ ...template, fieldMappings }),
-    );
 
-    await createUseCase(profiles).execute("profile-1", "template-1", "user-1", {
-      letter_body: "cover_letter_content",
-      name: "full_name",
+    await expect(
+      createUseCase(profiles).execute("profile-1", "template-1", "user-1", {
+        letter_body: "cover_letter_content",
+        name: "full_name",
+      }),
+    ).rejects.toMatchObject({
+      code: "validation",
+      message: "Cover letter templates must map exactly one placeholder to cover letter content",
     });
 
-    expect(profiles.setDefaultDocumentTemplate).toHaveBeenCalledWith("profile-1", "template-1");
+    expect(profiles.updateDocumentTemplateMappings).not.toHaveBeenCalled();
   });
 
   it("rejects a cover letter mapping without Content", async () => {

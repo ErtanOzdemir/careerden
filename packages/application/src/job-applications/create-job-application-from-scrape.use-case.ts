@@ -5,6 +5,7 @@ import type {
   PersistenceUnitOfWork,
   ScrapeBundle,
 } from "@link2cv/domain";
+import { assessProfileReadiness } from "@link2cv/domain";
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 import type { AuthenticatedProfileUser } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
@@ -59,6 +60,7 @@ export class CreateJobApplicationFromScrapeUseCase {
         outbox,
         jobApplicationId: jobApplication.id,
         autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
+        profileReadiness: assessProfileReadiness(profile),
       });
       await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
       return jobApplication;

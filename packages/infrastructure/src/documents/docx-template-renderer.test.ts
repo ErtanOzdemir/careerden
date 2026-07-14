@@ -14,7 +14,15 @@ describe("buildDocxAliasData", () => {
         linkItems: [{ variableName: "linkedin_url" }, { variableName: "portfolio_url" }],
         selectedEducation: {
           fields: {},
-          items: [{ fields: { institution: "school_name", period: "school_dates" } }],
+          items: [
+            {
+              fields: {
+                description: "school_description",
+                institution: "school_name",
+                period: "school_dates",
+              },
+            },
+          ],
         },
         selectedExperiences: {
           fields: {},
@@ -33,6 +41,7 @@ describe("buildDocxAliasData", () => {
         {
           achievements: ["Honours"],
           degree: "BSc",
+          description: "Focused coursework",
           end_date: "2004",
           field: "Mathematics",
           institution: "University",
@@ -73,6 +82,7 @@ describe("buildDocxAliasData", () => {
       second_company: "Acme",
       second_role: "Lead",
       school_dates: "2000 - 2004",
+      school_description: "Focused coursework",
       school_name: "University",
     });
   });

@@ -203,6 +203,40 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@24.13.2)(jsdom@29.1.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)
 
+  apps/documents-worker:
+    dependencies:
+      '@link2cv/application':
+        specifier: workspace:*
+        version: link:../../packages/application
+      '@link2cv/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@link2cv/infrastructure':
+        specifier: workspace:*
+        version: link:../../packages/infrastructure
+      bullmq:
+        specifier: ^5.64.1
+        version: 5.79.1
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
+      knex:
+        specifier: ^3.1.0
+        version: 3.2.10(pg@8.22.0)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@24.13.2)(jsdom@29.1.1(@noble/hashes@2.2.0))(lightningcss@1.32.0)
+
   apps/llm-worker:
     dependencies:
       '@link2cv/application':

@@ -1,4 +1,9 @@
-import type { ApiDocumentContent, RichDocument } from "./api/types";
+import type {
+  ApiApplicationPackPreferences,
+  ApiDocumentContent,
+  ApiProfileReadiness,
+  RichDocument,
+} from "./api/types";
 
 export type ApplicationStatus =
   | "Saved"
@@ -84,6 +89,7 @@ export interface GeneratedApplicationDocument {
 }
 
 export interface JobApplication {
+  applicationPackPreferences?: ApiApplicationPackPreferences;
   id: string;
   profileId?: string;
   updatedAt?: string;
@@ -106,6 +112,7 @@ export interface JobApplication {
   processingStatusLabel?: string;
   processingFailureReason?: string;
   processingLog?: ProcessingLogItem[];
+  profileReadiness?: ApiProfileReadiness;
   sourceUrl?: string;
   salaryCurrency?: string;
   salaryMaxAmount?: number;

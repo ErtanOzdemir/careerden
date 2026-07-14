@@ -92,6 +92,7 @@ describe("document template schema", () => {
             {
               fields: {
                 degree: "education_degree",
+                description: "education_description",
                 end_date: "education_end",
                 field: "education_field",
                 institution: "education_institution",
@@ -110,6 +111,7 @@ describe("document template schema", () => {
           {
             fields: {
               degree: "education_degree",
+              description: "education_description",
               end_date: "education_end",
               field: "education_field",
               institution: "education_institution",

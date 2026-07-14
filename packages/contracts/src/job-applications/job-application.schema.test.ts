@@ -22,6 +22,30 @@ describe("job application schemas", () => {
     expect(result.priority).toBeUndefined();
     expect(result.tags).toEqual([]);
     expect(result.metadata).toEqual({});
+    expect(result.applicationPackPreferences).toEqual({
+      language: "auto",
+      tone: "professional",
+    });
+  });
+
+  it("accepts application-pack preferences for LinkedIn submissions", () => {
+    const result = createJobApplicationSchema.parse({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/123",
+      applicationPackPreferences: {
+        language: "tr-TR",
+        tone: "creative",
+        cvTemplateId: "cv-template",
+        coverLetterTemplateId: "cover-template",
+      },
+    });
+
+    expect(result.applicationPackPreferences).toEqual({
+      language: "tr-TR",
+      tone: "creative",
+      cvTemplateId: "cv-template",
+      coverLetterTemplateId: "cover-template",
+    });
   });
 
   it("accepts desktop scrape claims without a profile id", () => {

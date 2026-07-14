@@ -9,6 +9,7 @@ import type {
   JobApplicationRepository,
   MatchAnalysisResult,
   ScrapeBundle,
+  ProfileReadiness,
 } from "@link2cv/domain";
 
 export type JobApplicationWithDocuments = JobApplication & {
@@ -24,14 +25,16 @@ export type JobApplicationDetail = JobApplicationWithDocuments & {
   scrapeBundle: ScrapeBundle | null;
   matchAnalysis: MatchAnalysisResult | null;
   documentContent: DocumentContent | null;
+  profileReadiness: ProfileReadiness;
 };
 
 export async function buildJobApplicationDetail(input: {
   jobApplications: JobApplicationRepository;
   storage: FileStorage;
   jobApplication: JobApplication;
+  profileReadiness: ProfileReadiness;
 }): Promise<JobApplicationDetail> {
-  const { jobApplications, jobApplication, storage } = input;
+  const { jobApplications, jobApplication, profileReadiness, storage } = input;
   const [documents, events, contacts, followUps, scrapeBundle, matchAnalysis, documentContent] =
     await Promise.all([
       jobApplications.listGeneratedDocuments(jobApplication.id),
@@ -53,6 +56,7 @@ export async function buildJobApplicationDetail(input: {
     scrapeBundle: toPublicScrapeBundle(scrapeBundle),
     matchAnalysis,
     documentContent,
+    profileReadiness,
     ...(companyLogoUrl ? { companyLogoUrl } : {}),
   };
 }

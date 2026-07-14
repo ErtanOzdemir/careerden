@@ -24,6 +24,7 @@ const selectedExperienceAliasFields = new Set<string>([
 ]);
 const selectedEducationAliasFields = new Set<string>([
   "degree",
+  "description",
   "end_date",
   "field",
   "institution",

@@ -4,6 +4,7 @@ import { Panel, PanelHeader } from "../components/link2cv/panel.js";
 import TemplateVariableMapping from "../components/TemplateVariableMapping.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiDocumentTemplate, ApiProfile } from "../api/types.js";
+import { hasValidCoverLetterTemplateMapping } from "../lib/document-template.js";
 import { cn } from "../lib/utils.js";
 import { FileText, Upload, Check, MoreHorizontal } from "lucide-react";
 
@@ -209,10 +210,7 @@ function TemplateCard({
   onTemplateUpdated: (template: ApiDocumentTemplate) => void;
 }) {
   const [showMapping, setShowMapping] = useState(false);
-  const hasRequiredMapping =
-    template.kind === "cv" ||
-    Object.values(template.fieldMappings).filter((field) => field === "cover_letter_content")
-      .length === 1;
+  const hasRequiredMapping = template.kind === "cv" || hasValidCoverLetterTemplateMapping(template);
 
   return (
     <div>

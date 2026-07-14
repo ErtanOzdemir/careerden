@@ -12,7 +12,19 @@ describe("CreateJobApplicationFromScrapeUseCase", () => {
     const job = createTestJobApplication({ status: "queued" });
     const repository = createJobApplicationRepository({ create: vi.fn(async () => job) });
     const currentProfile = {
-      execute: vi.fn(async () => ({ id: "profile-1", autoRunMatchAnalysis: true }) as never),
+      execute: vi.fn(
+        async () =>
+          ({
+            id: "profile-1",
+            autoRunMatchAnalysis: true,
+            profession: "Software Engineer",
+            skills: ["TypeScript"],
+            experience: [],
+            projects: [],
+            education: [],
+            certifications: [],
+          }) as never,
+      ),
     };
     const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(repository);
 

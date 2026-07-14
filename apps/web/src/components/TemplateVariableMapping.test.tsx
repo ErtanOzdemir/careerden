@@ -87,17 +87,23 @@ afterEach(() => {
 });
 
 describe("TemplateVariableMapping", () => {
-  it("maps cover letter Content together with profile, job, and experience fields", async () => {
+  it("maps only cover letter Content and removes obsolete extra mappings", async () => {
     const coverLetterTemplate: ApiDocumentTemplate = {
       ...mockTemplate,
       kind: "cover_letter",
       fileName: "cover-letter.docx",
       placeholders: ["letter_body", "footer"],
+      fieldMappings: {
+        letter_body: "cover_letter_content",
+        footer: "full_name",
+      },
+      variableAliases: { fields: { email: "footer" } },
       isDefault: false,
     };
     const updated = {
       ...coverLetterTemplate,
       fieldMappings: { letter_body: "cover_letter_content" as const },
+      variableAliases: { fields: {} },
     };
     (profilesApi.updateDocumentTemplateMappings as ReturnType<typeof vi.fn>).mockResolvedValue(
       updated,
@@ -116,16 +122,14 @@ describe("TemplateVariableMapping", () => {
     );
 
     expect(screen.getByText("Content")).toBeDefined();
-    expect(screen.getByText("Full Name")).toBeDefined();
-    expect(screen.getByText("Target Company")).toBeDefined();
-    expect(screen.getAllByText("Selected Experiences").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Full Name")).toBeNull();
+    expect(screen.queryByText("Target Company")).toBeNull();
+    expect(screen.queryByText("Selected Experiences")).toBeNull();
     expect(
       screen.getByText(
         "Content supports rich formatting, so its DOCX placeholder must be the only text in its paragraph.",
       ),
     ).toBeDefined();
-    fireEvent.click(screen.getAllByRole("button", { name: "Unmapped" })[0]!);
-    fireEvent.click(screen.getByRole("button", { name: "{{letter_body}}" }));
     fireEvent.click(screen.getByText("Save Mapping").closest("button")!);
 
     await waitFor(() => {
@@ -138,7 +142,7 @@ describe("TemplateVariableMapping", () => {
     expect(profilesApi.updateDocumentTemplateVariableAliases).toHaveBeenCalledWith(
       "profile-1",
       "template-1",
-      expect.objectContaining({ fields: {} }),
+      { fields: {} },
     );
     expect(onUpdated).toHaveBeenCalledWith(updated);
   });
@@ -320,7 +324,7 @@ describe("TemplateVariableMapping", () => {
     expect(screen.queryByText("React, TypeScript")).toBeNull();
   });
 
-  it("shows selected education date and period previews", async () => {
+  it("shows selected education date, period, and description mapping", async () => {
     render(<TemplateVariableMapping template={mockTemplate} profile={mockProfile} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Selected Education/ }));
@@ -329,6 +333,8 @@ describe("TemplateVariableMapping", () => {
       expect(screen.getByText("2015-09")).toBeDefined();
       expect(screen.getByText("2019-06")).toBeDefined();
       expect(screen.getByText("2015-09 - 2019-06")).toBeDefined();
+      expect(screen.getByText("Description")).toBeDefined();
+      expect(screen.getByText("Tailored education details")).toBeDefined();
     });
   });
 

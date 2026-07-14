@@ -6,6 +6,7 @@ import type {
   CreateJobApplicationFollowUpInput,
   DocumentContent,
   GeneratedDocument,
+  ApplicationPackPreferences,
   JobApplication,
   JobApplicationContact,
   JobApplicationEvent,
@@ -20,6 +21,7 @@ import type {
 } from "@link2cv/domain";
 import type { CreateJobApplicationInput } from "@link2cv/domain";
 import type { JobApplicationStatus } from "@link2cv/domain";
+import { normalizeApplicationPackPreferences } from "@link2cv/domain";
 import { randomUUID } from "node:crypto";
 
 export class InMemoryJobApplicationRepository implements JobApplicationRepository {
@@ -39,6 +41,9 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication: JobApplication = {
       id: randomUUID(),
       profileId: input.profileId,
+      applicationPackPreferences: normalizeApplicationPackPreferences(
+        input.applicationPackPreferences,
+      ),
       sourceUrl: input.sourceUrl,
       status: input.sourceUrl ? "queued" : "completed",
       scrapeAttemptCount: 0,
@@ -221,6 +226,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       scrapeClaimExpiresAt: undefined,
       scrapeAttemptCount: 0,
       nextScrapeAttemptAt: undefined,
+      documentGenerationAttemptId: undefined,
       updatedAt: new Date(),
     };
 
@@ -248,6 +254,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       scrapeClaimedBy: undefined,
       scrapeClaimExpiresAt: undefined,
       nextScrapeAttemptAt: undefined,
+      documentGenerationAttemptId: undefined,
       updatedAt: new Date(),
     };
 
@@ -337,6 +344,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...jobApplication,
       status: "generating_documents",
       failureReason: undefined,
+      documentGenerationAttemptId: attemptId,
     });
     return { started: true, ...(supersededAttemptId ? { supersededAttemptId } : {}) };
   }
@@ -438,6 +446,25 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       updatedAt: new Date(),
     };
 
+    this.jobApplications.set(id, updated);
+    return updated;
+  }
+
+  async updateApplicationPackPreferences(
+    id: string,
+    preferences: ApplicationPackPreferences,
+  ): Promise<JobApplication> {
+    const existing = this.jobApplications.get(id);
+
+    if (!existing) {
+      throw new Error(`Job application ${id} was not found`);
+    }
+
+    const updated = {
+      ...existing,
+      applicationPackPreferences: normalizeApplicationPackPreferences(preferences),
+      updatedAt: new Date(),
+    };
     this.jobApplications.set(id, updated);
     return updated;
   }

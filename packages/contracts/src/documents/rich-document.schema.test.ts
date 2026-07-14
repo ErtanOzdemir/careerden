@@ -113,6 +113,7 @@ describe("documentContentSchema", () => {
       documentContentSchema.parse({
         coverLetterContent: paragraph,
         customizedSummary: paragraph,
+        formatVersion: 2,
         experienceEnhancements: [
           {
             experienceIndex: 0,
@@ -124,6 +125,7 @@ describe("documentContentSchema", () => {
     ).toEqual({
       coverLetterContent: paragraph,
       customizedSummary: paragraph,
+      formatVersion: 2,
       experienceEnhancements: [
         {
           experienceIndex: 0,

@@ -33,8 +33,7 @@ export const aiMatchResultSchema = z.object({
     .array(
       z.object({
         experienceIndex: z.number().int().min(0),
-        enhancedDescription: z.string().min(1).optional(),
-        enhancedAchievements: z.array(z.string().min(1)).optional(),
+        enhancedDescription: z.string().min(1),
       }),
     )
     .optional(),
@@ -43,8 +42,7 @@ export const aiMatchResultSchema = z.object({
     .array(
       z.object({
         educationIndex: z.number().int().min(0),
-        enhancedDescription: z.string().min(1).optional(),
-        enhancedAchievements: z.array(z.string().min(1)).optional(),
+        enhancedDescription: z.string().min(1),
       }),
     )
     .optional(),
@@ -52,8 +50,7 @@ export const aiMatchResultSchema = z.object({
     .array(
       z.object({
         projectIndex: z.number().int().min(0),
-        enhancedDescription: z.string().min(1).optional(),
-        enhancedAchievements: z.array(z.string().min(1)).optional(),
+        enhancedDescription: z.string().min(1),
       }),
     )
     .optional(),

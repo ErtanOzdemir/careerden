@@ -22,8 +22,8 @@ storage.
 - Edit AI-assisted CV and cover-letter content before generating files.
 - Upload DOCX CV templates, map detected variables to profile/job fields, configure
   aliases, and select a default template.
-- Generate a DOCX CV from a custom template, or default PDF CV and cover-letter files,
-  then download them through signed RustFS URLs.
+- Generate custom DOCX CV and cover-letter files with PDF previews, or use the default
+  PDF layouts, then download them through signed RustFS URLs.
 - Receive in-app follow-up notifications, with optional SMTP email delivery.
 - Sign in with email and password using email OTP verification.
 
@@ -68,8 +68,8 @@ Start the complete desktop development stack:
 pnpm dev:desktop
 ```
 
-The command starts the API, React/Vite web app, LLM worker, notifications worker, and
-Electron desktop app. On first use, create an account and open MailHog at
+The command starts the API, React/Vite web app, LLM worker, documents worker,
+notifications worker, and Electron desktop app. On first use, create an account and open MailHog at
 <http://localhost:8025> to read the verification OTP. Connect a LinkedIn session from
 the desktop app before submitting LinkedIn URLs for authenticated scraping.
 
@@ -83,9 +83,14 @@ the desktop app before submitting LinkedIn URLs for authenticated scraping.
 | PostgreSQL     | `localhost:5432`               | Application and authentication state |
 | Redis          | `localhost:6380`               | BullMQ and real-time change delivery |
 | MailHog        | <http://localhost:8025>        | Development email inbox              |
+| Gotenberg      | <http://localhost:3002>        | Containerized DOCX-to-PDF conversion |
 | RustFS API     | <http://localhost:9000>        | S3-compatible object storage         |
 | RustFS console | <http://localhost:9001>        | Object-storage administration        |
 | OpenObserve    | <http://localhost:5080>        | OpenTelemetry trace collection       |
+
+Gotenberg is bound to the host loopback interface for local development. If an API or
+documents-worker runtime is moved into the same Compose network, set `GOTENBERG_URL` to
+`http://gotenberg:3000` for that container.
 
 The Vite proxy also exposes the health check at <http://localhost:5173/api/health>.
 
@@ -101,7 +106,7 @@ Authenticated API -> PostgreSQL + transactional outbox
            |
            +-> BullMQ -> LLM worker -> validated match analysis
            |
-           +-> editable CV/cover-letter content -> DOCX/PDF rendering -> RustFS
+           +-> BullMQ -> documents worker -> DOCX/PDF rendering -> RustFS
            |
            +-> follow-up schedule -> notifications worker -> in-app/optional email reminder
 ```
@@ -109,7 +114,8 @@ Authenticated API -> PostgreSQL + transactional outbox
 LinkedIn scraping runs locally in an Electron utility process. The desktop worker claims
 queued work from the API, renews the claim while scraping, and submits both normalized
 and raw results. The API persists workflow changes and outbox events transactionally.
-The LLM and notifications workers consume BullMQ jobs independently from the API.
+The LLM, documents, and notifications workers consume BullMQ jobs independently from
+the API.
 
 Job processing uses explicit states:
 
@@ -132,6 +138,7 @@ link2cv/
 ├── apps/
 │   ├── api/                   Express transport, auth, SSE, and composition root
 │   ├── desktop/               Electron shell and local Playwright scraping worker
+│   ├── documents-worker/      BullMQ application-pack rendering consumer
 │   ├── llm-worker/            BullMQ match-analysis consumer
 │   ├── notifications-worker/  BullMQ reminder consumer and outbox recovery
 │   └── web/                   React application served by Vite
@@ -167,7 +174,7 @@ ownership checks and business workflows live in application use cases.
 | Queues and realtime | Redis 7 and BullMQ 5                             |
 | AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek    |
 | Scraping and PDF    | Playwright 1.49                                  |
-| Documents           | HTML templates, Docxtemplater, PDF rendering     |
+| Documents           | HTML templates, Docxtemplater, Gotenberg         |
 | Storage             | RustFS through the AWS S3 SDK                    |
 | Observability       | OpenTelemetry and OpenObserve                    |
 | Testing             | Vitest 2 and Testing Library                     |
@@ -193,15 +200,17 @@ the variable is marked required.
 
 ### AI and Workers
 
-| Variable                           | Description                       | Default  |
-| ---------------------------------- | --------------------------------- | -------- |
-| `AI_PROVIDER`                      | `openai`, `gemini`, or `deepseek` | `openai` |
-| `OPENAI_API_KEY`                   | OpenAI API key                    | —        |
-| `GEMINI_API_KEY`                   | Google Gemini API key             | —        |
-| `DEEPSEEK_API_KEY`                 | DeepSeek API key                  | —        |
-| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs      | `1`      |
-| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs  | `1`      |
-| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through SMTP | `false`  |
+| Variable                           | Description                        | Default                 |
+| ---------------------------------- | ---------------------------------- | ----------------------- |
+| `AI_PROVIDER`                      | `openai`, `gemini`, or `deepseek`  | `openai`                |
+| `OPENAI_API_KEY`                   | OpenAI API key                     | —                       |
+| `GEMINI_API_KEY`                   | Google Gemini API key              | —                       |
+| `DEEPSEEK_API_KEY`                 | DeepSeek API key                   | —                       |
+| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs       | `1`                     |
+| `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs     | `1`                     |
+| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs   | `1`                     |
+| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through SMTP  | `false`                 |
+| `GOTENBERG_URL`                    | DOCX-to-PDF conversion service URL | `http://localhost:3002` |
 
 ### Email, Storage, Scraping, and Tracing
 
@@ -260,6 +269,7 @@ DOCX uploads use `multipart/form-data`, accept a `file` field, and are limited t
 | `PUT`                    | `/job-applications/:id/status`                         | Advance processing status              |
 | `POST`                   | `/job-applications/:id/retry`                          | Retry failed processing                |
 | `POST`                   | `/job-applications/:id/analysis`                       | Queue match analysis                   |
+| `POST`                   | `/job-applications/:id/application-pack/generations`   | Queue CV and cover-letter generation   |
 | `GET`, `POST`            | `/job-applications/:id/events`                         | List or add timeline events            |
 | `GET`, `POST`            | `/job-applications/:id/contacts`                       | List or add contacts                   |
 | `PATCH`, `DELETE`        | `/job-applications/:id/contacts/:contactId`            | Update or delete a contact             |
@@ -300,21 +310,22 @@ they are not part of the mounted HTTP API.
 
 ### Common Commands
 
-| Command                          | Purpose                                                  |
-| -------------------------------- | -------------------------------------------------------- |
-| `pnpm dev`                       | Start every workspace development target through Turbo   |
-| `pnpm dev:desktop`               | Start API, web, both workers, and Electron with dev URLs |
-| `pnpm dev:services`              | Start PostgreSQL, Redis, and RustFS only                 |
-| `pnpm dev:api`                   | Start only the API                                       |
-| `pnpm dev:llm-worker`            | Start only the LLM worker                                |
-| `pnpm dev:notifications-worker`  | Start only the notifications worker                      |
-| `pnpm --filter @link2cv/web dev` | Start only the Vite web app                              |
-| `pnpm build`                     | Build every workspace                                    |
-| `pnpm test`                      | Run all Vitest suites                                    |
-| `pnpm lint`                      | Run ESLint                                               |
-| `pnpm format:check`              | Check Prettier formatting                                |
-| `pnpm typecheck`                 | Type-check every workspace                               |
-| `pnpm lint:fix` / `pnpm format`  | Apply mechanical lint/format fixes                       |
+| Command                          | Purpose                                                 |
+| -------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                       | Start every workspace development target through Turbo  |
+| `pnpm dev:desktop`               | Start API, web, all workers, and Electron with dev URLs |
+| `pnpm dev:services`              | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
+| `pnpm dev:api`                   | Start only the API                                      |
+| `pnpm dev:llm-worker`            | Start only the LLM worker                               |
+| `pnpm dev:documents-worker`      | Start only the documents worker                         |
+| `pnpm dev:notifications-worker`  | Start only the notifications worker                     |
+| `pnpm --filter @link2cv/web dev` | Start only the Vite web app                             |
+| `pnpm build`                     | Build every workspace                                   |
+| `pnpm test`                      | Run all Vitest suites                                   |
+| `pnpm lint`                      | Run ESLint                                              |
+| `pnpm format:check`              | Check Prettier formatting                               |
+| `pnpm typecheck`                 | Type-check every workspace                              |
+| `pnpm lint:fix` / `pnpm format`  | Apply mechanical lint/format fixes                      |
 
 Use `docker compose up -d` instead of `pnpm dev:services` when local OTP email and
 OpenObserve are also needed.

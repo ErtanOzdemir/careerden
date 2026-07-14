@@ -37,6 +37,7 @@ export type SelectedExperienceTemplateField =
 
 export type SelectedEducationTemplateField =
   | "degree"
+  | "description"
   | "end_date"
   | "field"
   | "institution"

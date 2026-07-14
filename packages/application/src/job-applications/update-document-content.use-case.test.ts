@@ -17,8 +17,14 @@ describe("UpdateDocumentContentUseCase", () => {
 
     const result = await useCase.execute(job.id, "user-1", documentContent);
 
-    expect(result).toEqual(documentContent);
-    expect(await repository.getDocumentContent(job.id)).toEqual(documentContent);
+    expect(result).toEqual({
+      ...documentContent,
+      formatVersion: 2,
+      educationEnhancements: [],
+      projectEnhancements: [],
+      selections: { education: {}, experience: {}, projects: {} },
+    });
+    expect(await repository.getDocumentContent(job.id)).toEqual(result);
     expect(recordChanged).toHaveBeenCalledOnce();
   });
 

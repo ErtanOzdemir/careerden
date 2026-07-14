@@ -3,6 +3,29 @@ import { richDocumentFromText, type ScrapeBundle } from "@link2cv/domain";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {
+  it("defaults and preserves application-pack preferences", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const defaults = await repository.create({ profileId: "profile-1" });
+    const customized = await repository.create({
+      profileId: "profile-1",
+      applicationPackPreferences: {
+        language: "tr-TR",
+        tone: "creative",
+        coverLetterTemplateId: "cover-template",
+      },
+    });
+
+    expect(defaults.applicationPackPreferences).toEqual({
+      language: "auto",
+      tone: "professional",
+    });
+    expect(customized.applicationPackPreferences).toEqual({
+      language: "tr-TR",
+      tone: "creative",
+      coverLetterTemplateId: "cover-template",
+    });
+  });
+
   it("filters, sorts, and paginates applications with a total count", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const lowMatch = await repository.create({

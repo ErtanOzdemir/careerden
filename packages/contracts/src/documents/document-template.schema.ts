@@ -50,6 +50,7 @@ const selectedExperienceFieldsSchema = z
 const selectedEducationFieldsSchema = z
   .object({
     degree: templateVariableNameSchema.optional(),
+    description: templateVariableNameSchema.optional(),
     end_date: templateVariableNameSchema.optional(),
     field: templateVariableNameSchema.optional(),
     institution: templateVariableNameSchema.optional(),

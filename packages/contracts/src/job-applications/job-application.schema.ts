@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applicationPackPreferencesSchema } from "../documents/application-pack.schema.js";
 
 export const linkedInJobUrlSchema = z
   .string()
@@ -26,6 +27,7 @@ const tagsSchema = z.array(z.string().min(1)).default([]);
 export const createJobApplicationSchema = z
   .object({
     profileId: z.string().min(1),
+    applicationPackPreferences: applicationPackPreferencesSchema.default({}),
     sourceUrl: linkedInJobUrlSchema.optional(),
     companyName: z.string().min(1).optional(),
     roleTitle: z.string().min(1).optional(),

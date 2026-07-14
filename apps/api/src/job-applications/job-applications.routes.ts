@@ -12,6 +12,7 @@ import type {
   GetJobApplicationDetailUseCase,
   ListJobApplicationsUseCase,
   RequestJobApplicationAnalysisUseCase,
+  RequestApplicationPackGenerationUseCase,
   UpdateJobApplicationStatusUseCase,
   UpdateJobApplicationTrackingUseCase,
   ClaimNextScrapeJobUseCase,
@@ -50,6 +51,7 @@ import {
   updateJobApplicationSchema,
   updateStatusSchema,
   updateDocumentContentSchema,
+  requestApplicationPackGenerationSchema,
 } from "@link2cv/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
@@ -67,6 +69,7 @@ export function createJobApplicationRouter(dependencies: {
   getJobApplicationDetail: GetJobApplicationDetailUseCase;
   updateJobApplicationTracking: UpdateJobApplicationTrackingUseCase;
   requestJobApplicationAnalysis: RequestJobApplicationAnalysisUseCase;
+  requestApplicationPackGeneration: RequestApplicationPackGenerationUseCase;
   claimNextScrapeJob: ClaimNextScrapeJobUseCase;
   createJobApplicationFromScrape: CreateJobApplicationFromScrapeUseCase;
   renewScrapeClaim: RenewScrapeClaimUseCase;
@@ -336,6 +339,28 @@ export function createJobApplicationRouter(dependencies: {
       next(error);
     }
   });
+
+  router.post(
+    "/:id/application-pack/generations",
+    validateBody(requestApplicationPackGenerationSchema),
+    async (request, response, next) => {
+      try {
+        const generation = await dependencies.requestApplicationPackGeneration.execute({
+          jobApplicationId: request.params.id,
+          userId: currentUser(request).id,
+          ...request.body,
+        });
+        const application = await dependencies.getJobApplicationDetail.execute(
+          request.params.id,
+          currentUser(request).id,
+        );
+
+        response.status(202).json({ ...generation, application });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.post("/:id/scraping/retry", async (request, response, next) => {
     try {

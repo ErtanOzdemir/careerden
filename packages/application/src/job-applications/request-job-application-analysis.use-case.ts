@@ -1,4 +1,5 @@
 import type { JobApplication, PersistenceUnitOfWork } from "@link2cv/domain";
+import { assessProfileReadiness } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
@@ -25,6 +26,16 @@ export class RequestJobApplicationAnalysisUseCase {
         if (!(await jobApplications.getScrapeBundle(jobApplicationId))) {
           throw new ApplicationError("validation", "AI analysis requires saved scrape data");
         }
+        const profile = await profiles.findById(jobApplication.profileId);
+        if (!profile) throw new ApplicationError("not_found", "Profile not found");
+        const profileReadiness = assessProfileReadiness(profile);
+        if (profileReadiness.state === "blocked") {
+          throw new ApplicationError(
+            "validation",
+            "Add positioning, skills, or career evidence before starting AI analysis",
+            { warnings: profileReadiness.warnings },
+          );
+        }
 
         await jobApplications.addEvent({
           jobApplicationId,
@@ -36,6 +47,7 @@ export class RequestJobApplicationAnalysisUseCase {
           outbox,
           jobApplicationId,
           autoRunMatchAnalysis: true,
+          profileReadiness,
         });
         await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         return jobApplication;

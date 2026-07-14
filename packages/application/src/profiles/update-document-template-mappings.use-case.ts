@@ -41,13 +41,13 @@ export class UpdateDocumentTemplateMappingsUseCase {
     }
 
     const mappedFields = Object.values(fieldMappings);
-    const coverLetterContentMappings = mappedFields.filter(
-      (field) => field === "cover_letter_content",
-    );
-    if (template.kind === "cover_letter" && coverLetterContentMappings.length !== 1) {
+    if (
+      template.kind === "cover_letter" &&
+      (mappedFields.length !== 1 || mappedFields[0] !== "cover_letter_content")
+    ) {
       throw new ApplicationError(
         "validation",
-        "Cover letter templates must map one placeholder to cover letter content",
+        "Cover letter templates must map exactly one placeholder to cover letter content",
       );
     }
 

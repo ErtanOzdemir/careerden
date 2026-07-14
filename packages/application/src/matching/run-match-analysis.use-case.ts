@@ -1,5 +1,11 @@
 import { aiMatchResultSchema } from "@link2cv/contracts";
-import type { AiProvider, MatchAnalysisResult, ScrapeBundle, UserProfile } from "@link2cv/domain";
+import type {
+  AiProvider,
+  ApplicationPackPreferences,
+  MatchAnalysisResult,
+  ScrapeBundle,
+  UserProfile,
+} from "@link2cv/domain";
 
 export class RunMatchAnalysisUseCase {
   constructor(private readonly aiProvider: AiProvider) {}
@@ -8,6 +14,7 @@ export class RunMatchAnalysisUseCase {
     jobApplicationId: string;
     profile: UserProfile;
     scrape: ScrapeBundle;
+    applicationPackPreferences?: ApplicationPackPreferences;
   }): Promise<MatchAnalysisResult> {
     const result = await this.aiProvider.generate({
       system: [
@@ -21,15 +28,20 @@ export class RunMatchAnalysisUseCase {
         "Do not claim leadership, ownership, architecture responsibility, mentoring, hiring, stakeholder management, or production impact unless supported by the profile.",
         "Do not add domain experience such as fintech, healthtech, e-commerce, SaaS, banking, AI, cybersecurity, or enterprise unless the profile explicitly supports it.",
         "Hard facts must be directly supported by userProfile. Soft skills may be phrased more naturally only when they are reasonably supported by profile context.",
-        "Allowed transformations: rephrase existing experience to better match the language of the job posting; reorder skills, projects, and experiences by relevance; emphasize matching technologies and responsibilities already present in the profile; combine related facts from the same profile section into a stronger recruiter-facing bullet; translate technical work into business-facing language when truthful; suggest removing, shortening, or deprioritizing unrelated information; suggest adding missing but truthful details only as questions or placeholders, never as facts.",
+        "Allowed transformations: rephrase existing experience to better match the language of the job posting; reorder skills, projects, and experiences by relevance; emphasize matching technologies and responsibilities already present in the profile; combine related facts from the same profile section into one stronger recruiter-facing prose description; translate technical work into business-facing language when truthful; suggest removing, shortening, or deprioritizing unrelated information; suggest adding missing but truthful details only as questions or placeholders, never as facts.",
         "Matching methodology: extract the most important requirements from scrapedJob.requirements, classify every requirement, link every CV recommendation to one or more job requirements, include exact profile evidence for every recommendation, never recommend unsupported claims, and omit enhancements for unrelated profile experiences.",
         "Tone and positioning: write in a confident, professional, recruiter-facing style; prefer concise, high-signal language and active verbs; prioritize clarity over buzzwords; avoid generic phrases such as hard-working, team player, passionate, or fast learner unless grounded in specific evidence; make the candidate look relevant, focused, and credible without overselling beyond the evidence.",
-        "CV optimization rules: prioritize the most job-relevant skills near the top; mirror job posting terminology when truthful; make technical bullets outcome-oriented where the profile supports an outcome; keep bullets specific and concrete; do not include unrelated experience unless it demonstrates a transferable requirement; do not recommend adding missing skills as if the user has them.",
+        "CV optimization rules: prioritize the most job-relevant skills near the top; mirror job posting terminology when truthful; make tailored descriptions outcome-oriented where the profile supports an outcome; keep descriptions specific and concrete; do not include unrelated experience unless it demonstrates a transferable requirement; do not recommend adding missing skills as if the user has them.",
         "Cover letter rules: write a complete, concise, professional cover letter body grounded only in the saved profile and scraped job; do not include markdown; do not add unsupported claims; address the target role and company when available; make the result ready for the user to review and edit.",
+        "Follow outputPreferences for the requested language and tone. When language is auto, infer the best output language from the job posting while preserving proper nouns and technical terms.",
         "LinkedIn optimization rules: Suggest headline improvements only using supported role, skills, and domain facts. Suggest About section improvements that align the user's existing background with the job. Suggest Skills section ordering based on job relevance and profile support. Do not add skills to LinkedIn unless they are present in userProfile or clearly supported by project or experience descriptions.",
         "Return only valid JSON matching the provided output schema. Do not include markdown or commentary outside the JSON.",
       ].join(" "),
       prompt: JSON.stringify({
+        outputPreferences: input.applicationPackPreferences ?? {
+          language: "auto",
+          tone: "professional",
+        },
         userProfile: toPlainTextProfile(input.profile),
         scrapedJob: input.scrape.job,
         scrapedCompany: {
@@ -71,9 +83,9 @@ export class RunMatchAnalysisUseCase {
           "suggestedRewrite.coverLetter": "Use coverLetterContent.",
           "suggestedRewrite.skillsOrder": "Use skillSuggestions.",
           "suggestedRewrite.experienceBullets":
-            "Use experienceEnhancements keyed by zero-based userProfile.experience index.",
+            "Use experienceEnhancements keyed by zero-based userProfile.experience index, with one enhancedDescription prose paragraph per included item.",
           "suggestedRewrite.projectBullets":
-            "Use projectEnhancements keyed by zero-based userProfile.projects index.",
+            "Use projectEnhancements keyed by zero-based userProfile.projects index, with one enhancedDescription prose paragraph per included item.",
           missingOrRiskyClaims:
             "Summarize important risky claims as interviewTips or coverLetterGuidance review guidance.",
           clarificationQuestions:
@@ -91,9 +103,9 @@ export class RunMatchAnalysisUseCase {
         ],
         cvOptimizationRules: [
           "Prioritize the most job-relevant skills near the top.",
-          "Rewrite bullets to mirror the job posting's terminology when truthful.",
-          "Make technical bullets outcome-oriented where the profile supports an outcome.",
-          "Keep bullets specific and concrete.",
+          "Rewrite descriptions to mirror the job posting's terminology when truthful.",
+          "Make technical descriptions outcome-oriented where the profile supports an outcome.",
+          "Keep each enhancement as one concise prose paragraph of 1-3 sentences without markdown or bullet markers.",
           "Prefer Built, Developed, Implemented, Integrated, Optimized, Maintained, Designed, Automated, Tested, and Collaborated when accurate.",
           "Do not include unrelated experience unless it demonstrates a transferable requirement.",
           "Do not recommend adding missing skills as if the user has them.",
@@ -151,13 +163,13 @@ export class RunMatchAnalysisUseCase {
           interviewTips: "Practical tips for this interview",
           coverLetterGuidance: "Optional guidance for the cover letter",
           experienceEnhancements:
-            "Optional array keyed by zero-based profile experience index. Include enhancedDescription and enhancedAchievements only when grounded in the original profile experience.",
+            "Optional array keyed by zero-based profile experience index. Each included item must contain one enhancedDescription prose paragraph that integrates only grounded responsibilities, outcomes, and achievement evidence. Do not return separate achievements or bullet lists.",
           skillSuggestions:
             "Optional. Skills from the profile that are most relevant for this job. Do not invent skills not present in the profile.",
           educationEnhancements:
-            "Optional array keyed by zero-based profile education index. Include enhancedDescription and enhancedAchievements only when grounded in the original profile education.",
+            "Optional array keyed by zero-based profile education index. Each included item must contain one enhancedDescription prose paragraph that integrates only grounded details and achievement evidence. Do not return separate achievements or bullet lists.",
           projectEnhancements:
-            "Optional array keyed by zero-based profile projects index. Include enhancedDescription and enhancedAchievements only when grounded in the original profile projects.",
+            "Optional array keyed by zero-based profile projects index. Each included item must contain one enhancedDescription prose paragraph that integrates the project's grounded description and achievement evidence. Do not return separate achievements or bullet lists.",
           certificationSuggestions:
             "Optional. Profile certifications most relevant for this job. Do not invent certifications not present in the profile.",
         },

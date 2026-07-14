@@ -6,7 +6,7 @@ import type {
   ScrapeBundle,
   UserProfileAccessRepository,
 } from "@link2cv/domain";
-import { canTransitionJobApplicationStatus } from "@link2cv/domain";
+import { assessProfileReadiness, canTransitionJobApplicationStatus } from "@link2cv/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
@@ -80,6 +80,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
             outbox,
             jobApplicationId,
             autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
+            profileReadiness: assessProfileReadiness(profile),
           });
           if (previousLogoFileId && previousLogoFileId !== logo.uploadedFileId) {
             await enqueueStorageDeletions(outbox, [previousLogoFileId]);

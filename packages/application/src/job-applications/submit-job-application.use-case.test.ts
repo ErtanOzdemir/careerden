@@ -28,6 +28,11 @@ describe("SubmitJobApplicationUseCase", () => {
       {
         profileId: profile.id,
         sourceUrl: "https://www.linkedin.com/jobs/view/123",
+        applicationPackPreferences: {
+          language: "tr-TR",
+          tone: "concise",
+          cvTemplateId: "cv-template",
+        },
       },
       "user-1",
     );
@@ -35,6 +40,11 @@ describe("SubmitJobApplicationUseCase", () => {
     expect(jobApplication.status).toBe("queued");
     expect(jobApplication.tracking.applicationStatus).toBe("saved");
     expect(jobApplication.sourceUrl).toBe("https://www.linkedin.com/jobs/view/123");
+    expect(jobApplication.applicationPackPreferences).toEqual({
+      language: "tr-TR",
+      tone: "concise",
+      cvTemplateId: "cv-template",
+    });
     expect(jobApplication.tracking.jobUrl).toBe("https://www.linkedin.com/jobs/view/123");
     expect(changes).toHaveLength(1);
     expect(changes[0]).toEqual(

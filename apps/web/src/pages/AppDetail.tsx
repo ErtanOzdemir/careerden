@@ -33,6 +33,7 @@ import {
   Pencil,
   RefreshCw,
   CalendarClock,
+  CalendarPlus2,
   Mail,
   Loader2,
   Trash2,
@@ -1229,6 +1230,9 @@ function TimelineTab({
             </div>
           </form>
         )}
+        {(!app.followUps || app.followUps.length === 0) && !showFollowUpForm && (
+          <FollowUpsEmptyState onAdd={onToggleFollowUpForm} />
+        )}
         {app.followUps && app.followUps.length > 0 && (
           <div className="divide-y divide-border border-t border-border">
             {app.followUps.map((f) => (
@@ -1369,6 +1373,30 @@ function TimelineTab({
           </div>
         </Panel>
       </div>
+    </div>
+  );
+}
+
+export function FollowUpsEmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="border-t border-border px-6 py-10 text-center">
+      <div
+        className="relative mx-auto flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/20 dark:ring-primary/25"
+        aria-hidden="true"
+      >
+        <CalendarPlus2 className="size-8" strokeWidth={1.75} />
+        <span className="absolute -right-1 -top-1 size-3 rounded-full bg-primary/20 ring-4 ring-card dark:bg-primary/35" />
+        <span className="absolute -bottom-1 -left-1 size-2 rounded-full bg-primary/15 ring-4 ring-card dark:bg-primary/30" />
+      </div>
+      <h3 className="mt-4 text-sm font-semibold text-foreground">No follow-ups scheduled</h3>
+      <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-muted-foreground">
+        Schedule a check-in after applying or interviewing. Link2CV will remind you 10 minutes
+        before it is due.
+      </p>
+      <Button variant="outline" size="sm" className="mt-5" onClick={onAdd}>
+        <CalendarPlus2 className="size-4" />
+        Schedule your first follow-up
+      </Button>
     </div>
   );
 }

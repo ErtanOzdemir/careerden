@@ -1,7 +1,22 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "../types.js";
-import { JobDetailsPanel } from "./AppDetail.js";
+import { FollowUpsEmptyState, JobDetailsPanel } from "./AppDetail.js";
+
+describe("FollowUpsEmptyState", () => {
+  afterEach(cleanup);
+
+  it("describes reminders and starts the add flow", () => {
+    const onAdd = vi.fn();
+
+    render(<FollowUpsEmptyState onAdd={onAdd} />);
+
+    expect(screen.getByText("No follow-ups scheduled")).toBeInTheDocument();
+    expect(screen.getByText(/remind you 10 minutes before/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Schedule your first follow-up" }));
+    expect(onAdd).toHaveBeenCalledOnce();
+  });
+});
 
 describe("JobDetailsPanel", () => {
   afterEach(cleanup);

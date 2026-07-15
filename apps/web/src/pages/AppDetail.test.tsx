@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobApplication } from "../types.js";
-import { FollowUpsEmptyState, JobDetailsPanel } from "./AppDetail.js";
+import { CompanyDetailsPanel, FollowUpsEmptyState, JobDetailsPanel } from "./AppDetail.js";
 
 describe("FollowUpsEmptyState", () => {
   afterEach(cleanup);
@@ -25,24 +25,13 @@ describe("JobDetailsPanel", () => {
     renderPanel();
 
     expect(screen.getByText("Salary")).toBeInTheDocument();
-    expect(screen.getByText("Company website")).toBeInTheDocument();
+    expect(screen.queryByText("Company website")).not.toBeInTheDocument();
     expect(screen.getByText("Work style")).toBeInTheDocument();
     expect(screen.getByText("Interest level")).toBeInTheDocument();
     expect(screen.getAllByText("Not set")).toHaveLength(3);
     expect(screen.getByRole("button", { name: "Edit salary" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit work style" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit interest level" })).toBeInTheDocument();
-  });
-
-  it("links to the company website in a new tab", () => {
-    renderPanel();
-
-    const companyWebsite = screen.getByRole("link", {
-      name: "https://www.acme.example/careers",
-    });
-    expect(companyWebsite).toHaveAttribute("href", "https://www.acme.example/careers");
-    expect(companyWebsite).toHaveAttribute("target", "_blank");
-    expect(companyWebsite).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("opens and cancels the interest editor without changing the value", () => {
@@ -135,6 +124,54 @@ describe("JobDetailsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(onSaveWorkStyle).toHaveBeenCalledWith(null));
+  });
+});
+
+describe("CompanyDetailsPanel", () => {
+  afterEach(cleanup);
+
+  it("omits the panel when the company details are blank", () => {
+    const { container } = render(<CompanyDetailsPanel description="   " websiteUrl="   " />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows the company website in a new tab when no description exists", () => {
+    render(<CompanyDetailsPanel websiteUrl="https://www.acme.example/careers" />);
+
+    expect(screen.getByRole("heading", { name: "Company details" })).toBeInTheDocument();
+    const companyWebsite = screen.getByRole("link", {
+      name: "https://www.acme.example/careers",
+    });
+    expect(companyWebsite).toHaveAttribute("href", "https://www.acme.example/careers");
+    expect(companyWebsite).toHaveAttribute("target", "_blank");
+    expect(companyWebsite).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("shows a short description without an expansion control", () => {
+    render(<CompanyDetailsPanel description="  Acme builds reliable products.  " />);
+
+    expect(screen.getByText("Acme builds reliable products.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+  });
+
+  it("collapses and expands a long description accessibly", () => {
+    const description = `Acme builds reliable products. ${"Product teams use them every day. ".repeat(12)}`;
+    render(<CompanyDetailsPanel description={description} />);
+
+    const text = screen.getByText(/Acme builds reliable products/);
+    const expandButton = screen.getByRole("button", { name: "Show more" });
+    expect(text).toHaveClass("line-clamp-5");
+    expect(expandButton).toHaveAttribute("aria-expanded", "false");
+    expect(expandButton).toHaveAttribute("aria-controls", text.id);
+
+    fireEvent.click(expandButton);
+
+    expect(text).not.toHaveClass("line-clamp-5");
+    expect(screen.getByRole("button", { name: "Show less" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
   });
 });
 

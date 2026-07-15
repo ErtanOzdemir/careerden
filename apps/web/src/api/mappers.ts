@@ -69,6 +69,13 @@ export function mapApiJobApplicationToUi(
     detail?.scrapeBundle?.companyLinkedIn?.websiteUrl ??
     detail?.scrapeBundle?.companyWebsite?.websiteUrl;
   const companyWebsiteUrl = scrapedCompanyWebsiteUrl?.trim();
+  const companyDescription = [
+    detail?.scrapeBundle?.companyLinkedIn?.description,
+    detail?.scrapeBundle?.companyWebsite?.description,
+    detail?.scrapeBundle?.careerPage?.description,
+  ]
+    .map((description) => description?.trim())
+    .find((description): description is string => Boolean(description));
 
   return {
     applicationPackPreferences: application.applicationPackPreferences,
@@ -76,6 +83,7 @@ export function mapApiJobApplicationToUi(
     profileId: application.profileId,
     updatedAt: application.updatedAt,
     company,
+    companyDescription,
     companyWebsiteUrl:
       companyWebsiteUrl && isHttpUrl(companyWebsiteUrl) ? companyWebsiteUrl : undefined,
     logo: application.companyLogoUrl,

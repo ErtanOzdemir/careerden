@@ -94,6 +94,7 @@ export interface JobApplication {
   profileId?: string;
   updatedAt?: string;
   company: string;
+  companyDescription?: string;
   companyWebsiteUrl?: string;
   domain: string;
   logo?: string;

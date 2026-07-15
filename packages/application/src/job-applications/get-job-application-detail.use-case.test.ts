@@ -23,6 +23,7 @@ describe("GetJobApplicationDetailUseCase", () => {
         },
         companyLinkedIn: {
           name: "Acme",
+          description: "Acme builds reliable products.",
           logoFileId: "logo-1",
           logoUrl: "remote",
           raw: {},
@@ -58,6 +59,7 @@ describe("GetJobApplicationDetailUseCase", () => {
     expect(detail.documentContent?.experienceEnhancements[0]?.achievements).toEqual([]);
     expect(detail.scrapeBundle?.companyLinkedIn).toEqual({
       name: "Acme",
+      description: "Acme builds reliable products.",
       raw: {},
       websiteUrl: "https://www.acme.example/careers",
     });

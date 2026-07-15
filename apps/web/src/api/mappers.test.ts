@@ -25,6 +25,7 @@ describe("API mappers", () => {
     const mapped = mapApiJobApplicationToUi(application);
 
     expect(mapped.company).toBe("Acme");
+    expect(mapped.companyDescription).toBe("Acme builds reliable products.");
     expect(mapped.companyWebsiteUrl).toBe("https://www.acme.example/careers");
     expect(mapped.logo).toBe("http://localhost:9000/signed-logo");
     expect(mapped.matchScore).toBe(82);
@@ -105,6 +106,40 @@ describe("API mappers", () => {
     };
 
     expect(mapApiJobApplicationToUi(application).companyWebsiteUrl).toBeUndefined();
+  });
+
+  it("uses the first non-blank normalized company description", () => {
+    const application = createApplicationDetail();
+    application.scrapeBundle.companyLinkedIn = {
+      name: "Acme",
+      description: "   ",
+      raw: {},
+    };
+    application.scrapeBundle.companyWebsite = {
+      name: "Acme",
+      description: "  Acme builds tools for product teams.  ",
+      raw: {},
+    };
+    application.scrapeBundle.careerPage = {
+      name: "Acme",
+      description: "Join Acme.",
+      raw: {},
+    };
+
+    expect(mapApiJobApplicationToUi(application).companyDescription).toBe(
+      "Acme builds tools for product teams.",
+    );
+  });
+
+  it("omits blank company descriptions", () => {
+    const application = createApplicationDetail();
+    application.scrapeBundle.companyLinkedIn = {
+      name: "Acme",
+      description: "   ",
+      raw: {},
+    };
+
+    expect(mapApiJobApplicationToUi(application).companyDescription).toBeUndefined();
   });
 
   it("maps analytics and details into dashboard stats", () => {
@@ -393,6 +428,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
     scrapeBundle: {
       companyLinkedIn: {
         name: "Acme",
+        description: "Acme builds reliable products.",
         raw: {},
         websiteUrl: "https://www.acme.example/careers",
       },

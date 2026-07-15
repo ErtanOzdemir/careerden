@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/link2cv/panel.js";
@@ -658,8 +658,85 @@ function OverviewTab({
           onSaveSalary={onSaveSalary}
           onSaveWorkStyle={onSaveWorkStyle}
         />
+        <CompanyDetailsPanel
+          description={app.companyDescription}
+          websiteUrl={app.companyWebsiteUrl}
+        />
       </div>
     </div>
+  );
+}
+
+const companyDescriptionCollapseThreshold = 300;
+
+export function CompanyDetailsPanel({
+  description,
+  websiteUrl,
+}: {
+  description?: string;
+  websiteUrl?: string;
+}) {
+  const content = description?.trim() ?? "";
+  const website = websiteUrl?.trim() ?? "";
+  const descriptionId = useId();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isCollapsible = content.length > companyDescriptionCollapseThreshold;
+
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [content]);
+
+  if (!content && !website) {
+    return null;
+  }
+
+  return (
+    <Panel>
+      <PanelHeader title="Company details" />
+      <div className="divide-y divide-border border-t border-border text-sm">
+        {website && (
+          <div className="flex items-center justify-between gap-4 px-5 py-2.5">
+            <span className="shrink-0 text-muted-foreground">Company website</span>
+            <a
+              href={website}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={website}
+              className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
+            >
+              <span className="truncate">{website}</span>
+              <ExternalLink className="size-3.5 shrink-0" />
+            </a>
+          </div>
+        )}
+        {content && (
+          <div className="px-5 py-4">
+            <p
+              id={descriptionId}
+              className={cn(
+                "text-sm leading-relaxed text-muted-foreground",
+                isCollapsible && !isExpanded && "line-clamp-5",
+              )}
+            >
+              {content}
+            </p>
+            {isCollapsible && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="-ml-2 mt-2 h-auto py-0"
+                aria-controls={descriptionId}
+                aria-expanded={isExpanded}
+                onClick={() => setIsExpanded((expanded) => !expanded)}
+              >
+                {isExpanded ? "Show less" : "Show more"}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </Panel>
   );
 }
 
@@ -833,22 +910,6 @@ export function JobDetailsPanel({
     <Panel>
       <PanelHeader title="Job details" />
       <div className="divide-y divide-border border-t border-border text-sm">
-        {app.companyWebsiteUrl && (
-          <div className="flex items-center justify-between gap-4 px-5 py-2.5">
-            <span className="shrink-0 text-muted-foreground">Company website</span>
-            <a
-              href={app.companyWebsiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={app.companyWebsiteUrl}
-              className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
-            >
-              <span className="truncate">{app.companyWebsiteUrl}</span>
-              <ExternalLink className="size-3.5 shrink-0" />
-            </a>
-          </div>
-        )}
-
         {editingField === "salary" ? (
           <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4 px-5 py-4">
             <div>

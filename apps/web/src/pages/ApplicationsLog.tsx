@@ -26,6 +26,8 @@ import type { ApiApplicationStatus } from "../api/types.js";
 type SortKey = "recent" | "match" | "company";
 const PAGE_SIZE = 20;
 const processingStatuses = ["queued", "scraping", "analyzing", "generating_documents"];
+const applicationsGridColumns =
+  "md:grid-cols-[minmax(0,3fr)_minmax(0,1.5fr)_minmax(0,1.7fr)_minmax(0,1.8fr)_minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.6fr)]";
 
 const filters: { id: DisplayStatus | "all"; label: string }[] = [
   { id: "all", label: "All" },
@@ -263,14 +265,19 @@ export default function ApplicationsLog() {
       )}
 
       <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="hidden grid-cols-12 gap-4 border-b border-border px-5 py-2.5 text-xs font-medium text-muted-foreground md:grid">
-          <div className="col-span-3">Company & role</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-2">Match</div>
-          <div className="col-span-2">Interest</div>
-          <div className="col-span-1">Follow-up</div>
-          <div className="col-span-1 text-right">Added</div>
-          <div className="col-span-1 text-center">Actions</div>
+        <div
+          className={cn(
+            "hidden gap-4 border-b border-border px-5 py-2.5 text-xs font-medium text-muted-foreground md:grid",
+            applicationsGridColumns,
+          )}
+        >
+          <div>Company & role</div>
+          <div>Status</div>
+          <div>Match</div>
+          <div>Interest</div>
+          <div className="md:pl-2">Salary</div>
+          <div className="text-right">Added</div>
+          <div className="text-center">Actions</div>
         </div>
 
         <div className="divide-y divide-border">
@@ -302,12 +309,13 @@ export default function ApplicationsLog() {
                 key={app.id}
                 onClick={() => navigate(`/applications/${app.id}`)}
                 className={cn(
-                  "grid w-full grid-cols-1 items-center gap-2 px-5 py-3.5 text-left transition-colors hover:bg-muted/50 md:grid-cols-12 md:gap-4",
+                  "grid w-full grid-cols-1 items-center gap-2 px-5 py-3.5 text-left transition-colors hover:bg-muted/50 md:gap-4",
+                  applicationsGridColumns,
                   isProcessing && "bg-info-soft/30 hover:bg-info-soft/50",
                   isFailed && "bg-danger-soft hover:bg-danger-soft/70",
                 )}
               >
-                <div className="col-span-3 flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <ApplicationCompanyLogo company={app.company} logo={app.logo} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{app.role}</p>
@@ -316,10 +324,10 @@ export default function ApplicationsLog() {
                     </p>
                   </div>
                 </div>
-                <div className="col-span-2">
+                <div className="min-w-0">
                   <StatusBadge status={mapUiStatusToDisplay(app)} />
                 </div>
-                <div className="col-span-2 text-sm text-foreground">
+                <div className="min-w-0 text-sm text-foreground">
                   {(app.matchScore ?? 0) > 0 ? (
                     <span className="flex items-center gap-2">
                       <span className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
@@ -344,17 +352,20 @@ export default function ApplicationsLog() {
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </div>
-                <div className="col-span-2">
+                <div className="min-w-0">
                   <InterestTag interestLevel={app.interestLevel} />
                 </div>
-                <div className="col-span-1 text-xs text-muted-foreground">
-                  {app.dateLabel || "—"}
+                <div
+                  className="min-w-0 truncate text-xs text-muted-foreground md:pl-2"
+                  title={formatSalary(app)}
+                >
+                  {formatSalary(app)}
                 </div>
-                <div className="col-span-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
+                <div className="flex min-w-0 items-center justify-end gap-1 text-xs text-muted-foreground">
                   {app.dateApplied.replace(/, \d{4}$/, "")}
                 </div>
                 <div
-                  className="col-span-1 flex items-center justify-center"
+                  className="flex min-w-0 items-center justify-center"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="relative">
@@ -500,6 +511,20 @@ function matchScoreTextColor(score: number): string {
   if (score >= 70) return "text-success";
   if (score >= 50) return "text-warning-emphasis";
   return "text-destructive";
+}
+
+function formatSalary(app: JobApplication): string {
+  if (app.salaryMinAmount === undefined && app.salaryMaxAmount === undefined) return "—";
+
+  const amounts = [app.salaryMinAmount, app.salaryMaxAmount]
+    .filter((amount): amount is number => amount !== undefined)
+    .map((amount) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(amount))
+    .join(" – ");
+  const currency = app.salaryCurrency ? ` ${app.salaryCurrency}` : "";
+  const period = app.salaryPeriod ? ` / ${app.salaryPeriod.replace("ly", "")}` : "";
+  const salaryType = app.salaryType ? ` · ${app.salaryType === "gross" ? "Gross" : "Net"}` : "";
+
+  return `${amounts}${currency}${period}${salaryType}`;
 }
 
 function ApplicationCompanyLogo({ company, logo }: { company: string; logo?: string }) {

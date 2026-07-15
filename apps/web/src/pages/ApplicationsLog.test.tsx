@@ -82,6 +82,11 @@ describe("ApplicationsLog", () => {
             companyName: "Acme",
             metadata: {},
             roleTitle: "Software Engineer",
+            salaryCurrency: "EUR",
+            salaryMaxAmount: 120_000,
+            salaryMinAmount: 90_000,
+            salaryPeriod: "yearly",
+            salaryType: "gross",
             tags: [],
           },
           updatedAt: "2026-07-13T09:00:00.000Z",
@@ -103,6 +108,9 @@ describe("ApplicationsLog", () => {
 
     const logo = await screen.findByRole("img", { name: "Acme logo" });
     expect(logo.parentElement).toHaveClass("bg-white", "border-black/10");
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.queryByText("Follow-up")).not.toBeInTheDocument();
+    expect(screen.getByText("90,000 – 120,000 EUR / year · Gross")).toBeInTheDocument();
 
     fireEvent.error(logo);
 

@@ -110,9 +110,6 @@ importers:
       multer:
         specifier: ^2.2.0
         version: 2.2.0
-      nodemailer:
-        specifier: ^9.0.3
-        version: 9.0.3
       pg:
         specifier: ^8.16.3
         version: 8.22.0
@@ -132,9 +129,6 @@ importers:
       '@types/multer':
         specifier: ^2.1.0
         version: 2.1.0
-      '@types/nodemailer':
-        specifier: ^8.0.1
-        version: 8.0.1
       '@types/pg':
         specifier: ^8.15.6
         version: 8.20.0

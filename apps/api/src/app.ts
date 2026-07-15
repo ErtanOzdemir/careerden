@@ -60,6 +60,7 @@ import {
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
   RustFsStorage,
+  createSmtpEmailSender,
   createPostgresDb,
   runPostgresMigrations,
   MockSupportRequestNotifier,
@@ -67,7 +68,6 @@ import {
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";
-import { createSmtpAuthEmailSender } from "./auth/auth-email-sender.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -87,7 +87,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   await runPostgresMigrations(db);
 
   const auth = createAuth({
-    authEmailSender: createSmtpAuthEmailSender({
+    emailSender: createSmtpEmailSender({
       from: env.SMTP_FROM,
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,

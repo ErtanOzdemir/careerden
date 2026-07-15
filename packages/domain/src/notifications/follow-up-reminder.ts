@@ -54,15 +54,3 @@ export interface FollowUpReminderRepository {
   markSent(input: FollowUpReminderQueuePayload, sentAt: Date): Promise<boolean>;
   isPendingScheduleCurrent(input: FollowUpReminderQueuePayload): Promise<boolean>;
 }
-
-export interface NotificationEmailSender {
-  sendFollowUpReminder(input: {
-    messageId: string;
-    email: string;
-    companyName?: string;
-    roleTitle?: string;
-    followUpAt: Date;
-    title: string;
-    description?: string;
-  }): Promise<void>;
-}

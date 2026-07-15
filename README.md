@@ -73,6 +73,10 @@ notifications worker, and Electron desktop app. On first use, create an account 
 <http://localhost:8025> to read the verification OTP. Connect a LinkedIn session from
 the desktop app before submitting LinkedIn URLs for authenticated scraping.
 
+The example environment also enables follow-up reminder email delivery, so those messages appear in
+the same MailHog inbox. Keep `NOTIFICATION_EMAIL_ENABLED=false` in environments where reminder
+emails should not be dispatched.
+
 ### Local Services
 
 | Service        | Address                        | Purpose                              |

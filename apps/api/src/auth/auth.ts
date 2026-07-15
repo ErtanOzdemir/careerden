@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import { Pool } from "pg";
-import type { AuthEmailSender } from "./auth-email-sender.js";
+import type { EmailSender } from "@link2cv/domain";
 
 type VerificationOtpType = "sign-in" | "email-verification" | "forget-password" | "change-email";
 
@@ -12,7 +12,7 @@ interface VerificationOtpInput {
 }
 
 export interface AuthConfig {
-  authEmailSender: AuthEmailSender;
+  emailSender: EmailSender;
   baseUrl: string;
   databaseUrl: string;
   secret: string;
@@ -45,7 +45,7 @@ export function createAuth(config: AuthConfig): Link2CvAuth {
       enabled: true,
       requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
-      sendResetPassword: createPasswordResetHandler(config.authEmailSender),
+      sendResetPassword: createPasswordResetHandler(config.emailSender),
     },
     emailVerification: {
       autoSignInAfterVerification: true,
@@ -54,28 +54,47 @@ export function createAuth(config: AuthConfig): Link2CvAuth {
     plugins: [
       emailOTP({
         overrideDefaultEmailVerification: true,
-        sendVerificationOTP: createRegistrationOtpHandler(config.authEmailSender),
+        sendVerificationOTP: createRegistrationOtpHandler(config.emailSender),
       }),
     ],
   });
 }
 
-export function createRegistrationOtpHandler(authEmailSender: AuthEmailSender) {
+export function createRegistrationOtpHandler(emailSender: EmailSender) {
   return async function sendVerificationOTP({ email, otp, type }: VerificationOtpInput) {
     if (type !== "email-verification") {
       return;
     }
 
-    await authEmailSender.sendRegistrationOtp({ email, otp });
+    await emailSender.send({
+      to: email,
+      subject: "Your Link2CV verification code",
+      text: `Your Link2CV verification code is ${otp}. It expires in 5 minutes.`,
+      html: `<p>Your Link2CV verification code is <strong>${escapeHtml(otp)}</strong>.</p><p>It expires in 5 minutes.</p>`,
+    });
   };
 }
 
-export function createPasswordResetHandler(authEmailSender: AuthEmailSender) {
+export function createPasswordResetHandler(emailSender: EmailSender) {
   return async function sendResetPassword({ user, url }: { user: { email: string }; url: string }) {
-    void authEmailSender
-      .sendPasswordResetLink({ email: user.email, url })
+    void emailSender
+      .send({
+        to: user.email,
+        subject: "Reset your Link2CV password",
+        text: `Reset your Link2CV password by opening this link: ${url}\n\nThis link expires in 1 hour. If you did not request a password reset, you can ignore this email.`,
+        html: `<p>We received a request to reset your Link2CV password.</p><p><a href="${escapeHtml(url)}">Reset your password</a></p><p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>`,
+      })
       .catch((error: unknown) => {
         console.error("Failed to send password-reset email", error);
       });
   };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }

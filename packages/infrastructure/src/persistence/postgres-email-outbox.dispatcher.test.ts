@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { NotificationEmailSender, OutboxEvent } from "@link2cv/domain";
+import type { EmailSender, OutboxEvent } from "@link2cv/domain";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresEmailOutboxDispatcher } from "./postgres-email-outbox.dispatcher.js";
 
@@ -12,18 +12,19 @@ describe("PostgresEmailOutboxDispatcher", () => {
         return true;
       }),
     });
-    const sender: NotificationEmailSender = {
-      sendFollowUpReminder: vi.fn(async () => {
+    const sender: EmailSender = {
+      send: vi.fn(async () => {
         calls.push("sent");
       }),
     };
 
     await new PostgresEmailOutboxDispatcher(outbox, sender).dispatchPending();
 
-    expect(sender.sendFollowUpReminder).toHaveBeenCalledWith(
+    expect(sender.send).toHaveBeenCalledWith(
       expect.objectContaining({
         messageId: "<follow-up-1@link2cv.local>",
-        email: "ada@example.com",
+        to: "ada@example.com",
+        subject: "Follow-up reminder: Send a note",
       }),
     );
     expect(calls).toEqual(["sent", "processed"]);
@@ -31,8 +32,8 @@ describe("PostgresEmailOutboxDispatcher", () => {
 
   it("retries after an SMTP failure without marking the event processed", async () => {
     const outbox = createOutbox();
-    const sender: NotificationEmailSender = {
-      sendFollowUpReminder: vi.fn(async () => {
+    const sender: EmailSender = {
+      send: vi.fn(async () => {
         throw new Error("smtp unavailable");
       }),
     };

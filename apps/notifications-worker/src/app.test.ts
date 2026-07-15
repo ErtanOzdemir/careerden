@@ -1,10 +1,27 @@
 import { describe, expect, it, vi } from "vitest";
 import type {
+  EmailSender,
   FollowUpReminderCandidate,
   FollowUpReminderQueue,
   FollowUpReminderRepository,
 } from "@link2cv/domain";
-import { createFollowUpReminderRecoveryRunner } from "./app.js";
+import { PostgresEmailOutboxDispatcher, PostgresOutboxRepository } from "@link2cv/infrastructure";
+import { createEmailOutboxDispatcher, createFollowUpReminderRecoveryRunner } from "./app.js";
+
+describe("createEmailOutboxDispatcher", () => {
+  const outbox = new PostgresOutboxRepository({} as never);
+  const emailSender: EmailSender = { send: vi.fn() };
+
+  it("creates email delivery when reminder email is enabled", () => {
+    expect(createEmailOutboxDispatcher(true, outbox, emailSender)).toBeInstanceOf(
+      PostgresEmailOutboxDispatcher,
+    );
+  });
+
+  it("omits email delivery when reminder email is disabled", () => {
+    expect(createEmailOutboxDispatcher(false, outbox, emailSender)).toBeUndefined();
+  });
+});
 
 describe("createFollowUpReminderRecoveryRunner", () => {
   it("skips overlapping recovery runs", async () => {

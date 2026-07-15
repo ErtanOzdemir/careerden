@@ -10,6 +10,7 @@ export * from "./job-applications/job-application-follow-up.js";
 export * from "./job-applications/job-queue.js";
 export * from "./job-applications/workflow-status.js";
 export * from "./notifications/follow-up-reminder.js";
+export * from "./notifications/email-sender.js";
 export * from "./notifications/notification.js";
 export * from "./notifications/notification-repository.js";
 export * from "./persistence/outbox.js";

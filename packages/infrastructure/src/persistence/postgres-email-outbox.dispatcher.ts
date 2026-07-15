@@ -1,4 +1,4 @@
-import type { NotificationEmailSender } from "@link2cv/domain";
+import type { EmailSender } from "@link2cv/domain";
 import { outboxEventTypes } from "@link2cv/domain";
 import { randomUUID } from "node:crypto";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
@@ -12,7 +12,7 @@ export class PostgresEmailOutboxDispatcher {
 
   constructor(
     private readonly outbox: PostgresOutboxRepository,
-    private readonly sender: NotificationEmailSender,
+    private readonly sender: EmailSender,
   ) {}
 
   async dispatchPending(): Promise<number> {
@@ -24,14 +24,20 @@ export class PostgresEmailOutboxDispatcher {
     });
     for (const event of events) {
       try {
-        await this.sender.sendFollowUpReminder({
+        const companyName = optionalString(event.payload, "companyName");
+        const roleTitle = optionalString(event.payload, "roleTitle");
+        const followUpAt = new Date(requireString(event.payload, "followUpAt"));
+        const title = requireString(event.payload, "title");
+        const description = optionalString(event.payload, "description");
+        const target = [companyName, roleTitle].filter(Boolean).join(" - ") || "your application";
+        const formattedFollowUpAt = followUpAt.toLocaleString();
+
+        await this.sender.send({
           messageId: requireString(event.payload, "messageId"),
-          email: requireString(event.payload, "email"),
-          companyName: optionalString(event.payload, "companyName"),
-          roleTitle: optionalString(event.payload, "roleTitle"),
-          followUpAt: new Date(requireString(event.payload, "followUpAt")),
-          title: requireString(event.payload, "title"),
-          description: optionalString(event.payload, "description"),
+          to: requireString(event.payload, "email"),
+          subject: `Follow-up reminder: ${title}`,
+          text: `Reminder: ${title} — follow up on ${target} at ${formattedFollowUpAt}.${description ? `\n\n${description}` : ""}`,
+          html: `<p>Reminder: <strong>${escapeHtml(title)}</strong> — follow up on <strong>${escapeHtml(target)}</strong> at ${escapeHtml(formattedFollowUpAt)}.</p>${description ? `<p>${escapeHtml(description)}</p>` : ""}`,
         });
         await this.outbox.markProcessed(event.id, this.leaseOwner);
       } catch (error) {
@@ -61,4 +67,13 @@ function requireString(payload: Record<string, unknown>, key: string): string {
 function optionalString(payload: Record<string, unknown>, key: string): string | undefined {
   const value = payload[key];
   return typeof value === "string" ? value : undefined;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }

@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
 import type {
+  EmailSender,
   FollowUpReminderQueue,
   FollowUpReminderQueuePayload,
   FollowUpReminderRepository,
@@ -16,7 +17,7 @@ import {
   PostgresStorageOutboxDispatcher,
   RustFsStorage,
   createPostgresDb,
-  createSmtpNotificationEmailSender,
+  createSmtpEmailSender,
   followUpReminderQueueName,
   getFollowUpReminderScheduledFor,
 } from "@link2cv/infrastructure";
@@ -57,14 +58,16 @@ export async function createNotificationsWorkerRuntime(
     reminders,
     reminderQueue,
   );
-  const emailSender = createSmtpNotificationEmailSender({
+  const emailSender = createSmtpEmailSender({
     from: env.SMTP_FROM,
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
   });
-  const emailOutbox = env.NOTIFICATION_EMAIL_ENABLED
-    ? new PostgresEmailOutboxDispatcher(new PostgresOutboxRepository(db), emailSender)
-    : undefined;
+  const emailOutbox = createEmailOutboxDispatcher(
+    env.NOTIFICATION_EMAIL_ENABLED,
+    new PostgresOutboxRepository(db),
+    emailSender,
+  );
   const recoverFollowUpReminders = createFollowUpReminderRecoveryRunner(reminders, reminderQueue);
 
   await recoverFollowUpReminders();
@@ -129,6 +132,14 @@ export async function createNotificationsWorkerRuntime(
       await db.destroy();
     },
   };
+}
+
+export function createEmailOutboxDispatcher(
+  enabled: boolean,
+  outbox: PostgresOutboxRepository,
+  emailSender: EmailSender,
+): PostgresEmailOutboxDispatcher | undefined {
+  return enabled ? new PostgresEmailOutboxDispatcher(outbox, emailSender) : undefined;
 }
 
 export function createFollowUpReminderRecoveryRunner(

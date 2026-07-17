@@ -16,6 +16,39 @@ services:
       - "6380:6379"
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  bullstudio:
+    image: emirce/bullstudio:2.2.0
+    restart: unless-stopped
+    profiles: ["operations"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      PORT: 4000
+      BULLSTUDIO_USERNAME: bullstudio
+      BULLSTUDIO_PASSWORD: Link2CV-Bullstudio-2026!
+      BULLSTUDIO_POLL_INTERVAL: ${BULLSTUDIO_POLL_INTERVAL:-5000}
+      BULLSTUDIO_POLL_ALLOW_OVERRIDE: "false"
+    ports:
+      - "127.0.0.1:${BULLSTUDIO_PORT:-4000}:4000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mailhog:
     image: mailhog/mailhog:v1.0.1

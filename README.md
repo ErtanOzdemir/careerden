@@ -202,6 +202,13 @@ the variable is marked required.
 | `WEB_ORIGIN`         | Allowed credentialed web origin                   | `http://localhost:5173`  |
 | `VITE_API_BASE_URL`  | API URL used by the web renderer/desktop          | `http://localhost:3000`  |
 
+### Queue Operations Dashboard
+
+| Variable                   | Description                            | Default |
+| -------------------------- | -------------------------------------- | ------- |
+| `BULLSTUDIO_PORT`          | Host port for the Bullstudio dashboard | `4000`  |
+| `BULLSTUDIO_POLL_INTERVAL` | Redis polling interval in milliseconds | `5000`  |
+
 ### AI and Workers
 
 | Variable                           | Description                        | Default                 |
@@ -246,6 +253,20 @@ handlers, endpoints require an authenticated session cookie and enforce profile 
 | ------ | --------- | ------------------------------------------------------- |
 | `GET`  | `/health` | API health check                                        |
 | `*`    | `/auth/*` | Better Auth sign-up, sign-in, OTP, and session handlers |
+
+Bullstudio runs as a separate, opt-in Docker service and discovers Link2CV's BullMQ queues
+from Redis. Start it with:
+
+```bash
+docker compose --profile operations up -d bullstudio
+```
+
+Open <http://localhost:4000> and sign in with the hardcoded username `bullstudio` and
+password `Link2CV-Bullstudio-2026!`. The port binds to `127.0.0.1` by default; production
+access should go through an authenticated HTTPS reverse proxy or private network.
+Standalone Bullstudio can retry/remove jobs and pause/resume queues, so treat access as
+privileged operations access rather than read-only monitoring. Because the credentials are
+stored in `compose.yaml`, anyone with repository access can read them.
 
 ### Profiles and Templates
 

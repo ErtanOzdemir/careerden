@@ -1,10 +1,11 @@
 import { Button } from "./ui/button.js";
-import { Bell, Maximize2, Minus, Plus, Search, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Bell, Maximize2, Minus, Plus, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { notificationsApi } from "../api/notifications.js";
 import type { ApiNotification } from "../api/types.js";
+import { TopbarApplicationSearch } from "./TopbarApplicationSearch.js";
 
 export function Topbar({
   title,
@@ -16,6 +17,7 @@ export function Topbar({
   onAddJob: () => void;
 }) {
   const navigate = useNavigate();
+  const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -27,6 +29,11 @@ export function Topbar({
     electronApi.maximizeWindow &&
     electronApi.closeWindow,
   );
+
+  const handleSearchOpenChange = useCallback((nextOpen: boolean) => {
+    setSearchOpen(nextOpen);
+    if (nextOpen) setNotificationsOpen(false);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,6 +84,7 @@ export function Topbar({
   async function toggleNotifications() {
     const next = !notificationsOpen;
     setNotificationsOpen(next);
+    if (next) setSearchOpen(false);
 
     if (!next) {
       return;
@@ -146,13 +154,7 @@ export function Topbar({
         {subtitle ? <p className="truncate text-xs text-muted-foreground">{subtitle}</p> : null}
       </div>
 
-      <div className="relative hidden [-webkit-app-region:no-drag] md:block">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          placeholder="Search applications..."
-          className="h-9 w-56 rounded-lg border border-input bg-card pr-3 pl-8 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20 [-webkit-app-region:no-drag]"
-        />
-      </div>
+      <TopbarApplicationSearch open={searchOpen} onOpenChange={handleSearchOpenChange} />
 
       <div ref={notificationsMenuRef} className="relative [-webkit-app-region:no-drag]">
         <Button

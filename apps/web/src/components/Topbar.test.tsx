@@ -89,6 +89,25 @@ describe("Topbar", () => {
     expect(screen.queryByText("Notifications")).not.toBeInTheDocument();
   });
 
+  it("keeps application search and notifications mutually exclusive", () => {
+    renderTopbar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Notifications" }));
+    expect(screen.getByText("Mark all read")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Search applications" }), {
+      target: { value: "acme" },
+    });
+    expect(screen.queryByText("Mark all read")).not.toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "Application search results" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Notifications" }));
+    expect(
+      screen.queryByRole("listbox", { name: "Application search results" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Mark all read")).toBeInTheDocument();
+  });
+
   it("opens the related application's follow-ups when a reminder is clicked", async () => {
     const notification = {
       body: "It is time to follow up on Acme - Engineer.",

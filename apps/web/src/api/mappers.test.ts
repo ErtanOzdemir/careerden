@@ -45,6 +45,7 @@ describe("API mappers", () => {
         email: "sarah.hughes@example.com",
         initials: "SH",
         name: "Sarah Hughes",
+        phone: "+1 555 0101",
         role: "Recruiter",
       },
     ]);
@@ -358,6 +359,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
         jobApplicationId: "job-1",
         email: "sarah.hughes@example.com",
         name: "Sarah Hughes",
+        phone: "+1 555 0101",
         role: "Recruiter",
         updatedAt: "2026-06-01T00:00:00.000Z",
       },

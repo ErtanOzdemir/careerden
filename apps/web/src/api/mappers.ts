@@ -118,6 +118,7 @@ export function mapApiJobApplicationToUi(
       email: contact.email,
       initials: getInitials(contact.name),
       name: contact.name,
+      phone: contact.phone,
       role: contact.role ?? "Contact",
     })),
     generatedDocuments: application.documents?.map((document) => ({

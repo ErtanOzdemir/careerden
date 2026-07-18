@@ -74,7 +74,7 @@ export default function AppDetail() {
   });
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
-  const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
+  const [contactForm, setContactForm] = useState({ name: "", role: "", email: "", phone: "" });
   const [showContactForm, setShowContactForm] = useState(false);
   const [notes, setNotes] = useState("");
 
@@ -237,8 +237,9 @@ export default function AppDetail() {
         name: contactForm.name.trim(),
         role: contactForm.role.trim() || undefined,
         email: contactForm.email.trim() || undefined,
+        phone: contactForm.phone.trim() || undefined,
       });
-      setContactForm({ name: "", role: "", email: "" });
+      setContactForm({ name: "", role: "", email: "", phone: "" });
       setShowContactForm(false);
       await refresh();
     } catch (e) {
@@ -577,7 +578,10 @@ export default function AppDetail() {
           onEditFollowUp={handleEditFollowUp}
           onDeleteFollowUp={handleDeleteFollowUp}
           onSetContactForm={setContactForm}
-          onToggleContactForm={() => setShowContactForm((v) => !v)}
+          onToggleContactForm={() => {
+            setContactForm({ name: "", role: "", email: "", phone: "" });
+            setShowContactForm((v) => !v);
+          }}
           onAddContact={handleAddContact}
           onNotesChange={setNotes}
           onSaveNotes={handleSaveNotes}
@@ -1207,7 +1211,7 @@ function TimelineTab({
   showFollowUpForm: boolean;
   isSavingFollowUp: boolean;
   isSavingNotes: boolean;
-  contactForm: { name: string; role: string; email: string };
+  contactForm: { name: string; role: string; email: string; phone: string };
   showContactForm: boolean;
   isAddingContact: boolean;
   notes: string;
@@ -1221,7 +1225,7 @@ function TimelineTab({
   onSaveFollowUp: (e: React.FormEvent) => void;
   onEditFollowUp: (followUpId: string) => void;
   onDeleteFollowUp: (followUpId: string) => void;
-  onSetContactForm: (f: { name: string; role: string; email: string }) => void;
+  onSetContactForm: (f: { name: string; role: string; email: string; phone: string }) => void;
   onToggleContactForm: () => void;
   onAddContact: (e: React.FormEvent) => void;
   onNotesChange: (v: string) => void;
@@ -1409,6 +1413,13 @@ function TimelineTab({
                 onChange={(e) => onSetContactForm({ ...contactForm, email: e.target.value })}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
               />
+              <input
+                placeholder="Phone"
+                type="tel"
+                value={contactForm.phone}
+                onChange={(e) => onSetContactForm({ ...contactForm, phone: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring"
+              />
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" size="sm" type="button" onClick={onToggleContactForm}>
                   Cancel
@@ -1429,6 +1440,7 @@ function TimelineTab({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{c.name}</p>
                     <p className="truncate text-xs text-muted-foreground">{c.role}</p>
+                    {c.phone && <p className="truncate text-xs text-muted-foreground">{c.phone}</p>}
                   </div>
                   {c.email && (
                     <a

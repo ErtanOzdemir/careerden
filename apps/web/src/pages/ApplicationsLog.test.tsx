@@ -117,4 +117,60 @@ describe("ApplicationsLog", () => {
     expect(await screen.findByText("AC")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Acme logo" })).not.toBeInTheDocument();
   });
+
+  it("replaces stale rows with the loading state while changing pages", async () => {
+    mocks.me.mockResolvedValue({ id: "profile-1" });
+    let resolveSecondPage: ((value: ReturnType<typeof applicationPage>) => void) | undefined;
+    mocks.list
+      .mockResolvedValueOnce(applicationPage("application-1", "First page role", 1))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecondPage = resolve;
+          }),
+      );
+
+    render(
+      <MemoryRouter initialEntries={["/applications"]}>
+        <Routes>
+          <Route path="/applications" element={<ApplicationsLog />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("First page role")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(await screen.findByText("Loading applications...")).toBeInTheDocument();
+    expect(screen.queryByText("First page role")).not.toBeInTheDocument();
+
+    resolveSecondPage?.(applicationPage("application-2", "Second page role", 2));
+    expect(await screen.findByText("Second page role")).toBeInTheDocument();
+    expect(screen.queryByText("Loading applications...")).not.toBeInTheDocument();
+  });
 });
+
+function applicationPage(id: string, roleTitle: string, page: number) {
+  return {
+    items: [
+      {
+        createdAt: "2026-07-13T09:00:00.000Z",
+        id,
+        profileId: "profile-1",
+        status: "review_ready" as const,
+        tracking: {
+          applicationStatus: "saved" as const,
+          companyName: "Acme",
+          metadata: {},
+          roleTitle,
+          tags: [],
+        },
+        updatedAt: "2026-07-13T09:00:00.000Z",
+      },
+    ],
+    page,
+    pageSize: 20,
+    totalItems: 21,
+    totalPages: 2,
+  };
+}

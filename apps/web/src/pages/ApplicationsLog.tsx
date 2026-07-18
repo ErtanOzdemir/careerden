@@ -198,6 +198,7 @@ export default function ApplicationsLog() {
   );
 
   const rows = useMemo(() => applications, [applications]);
+  const visibleRows = isLoading ? [] : rows;
 
   return (
     <div className="space-y-5">
@@ -296,7 +297,7 @@ export default function ApplicationsLog() {
             </div>
           )}
 
-          {rows.map((app) => {
+          {visibleRows.map((app) => {
             const isProcessing = [
               "queued",
               "scraping",

@@ -3,6 +3,7 @@ import type { Request, Router as ExpressRouter } from "express";
 import multer from "multer";
 import type {
   CreateProfileUseCase,
+  DeleteDocumentTemplateUseCase,
   GetOrCreateCurrentProfileUseCase,
   GetProfileUseCase,
   ListDocumentTemplatesUseCase,
@@ -33,6 +34,7 @@ export function createProfileRouter(dependencies: {
   getProfile: GetProfileUseCase;
   updateProfile: UpdateProfileUseCase;
   listDocumentTemplates: ListDocumentTemplatesUseCase;
+  deleteDocumentTemplate: DeleteDocumentTemplateUseCase;
   uploadDocumentTemplate: UploadDocumentTemplateUseCase;
   updateDocumentTemplateMappings: UpdateDocumentTemplateMappingsUseCase;
   updateDocumentTemplateVariableAliases: UpdateDocumentTemplateVariableAliasesUseCase;
@@ -101,6 +103,19 @@ export function createProfileRouter(dependencies: {
           currentUser(request).id,
         ),
       );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/:id/document-templates/:templateId", async (request, response, next) => {
+    try {
+      await dependencies.deleteDocumentTemplate.execute(
+        request.params.id,
+        request.params.templateId,
+        currentUser(request).id,
+      );
+      response.status(204).send();
     } catch (error) {
       next(error);
     }

@@ -4,6 +4,7 @@ import express from "express";
 import type { Express } from "express";
 import {
   CreateProfileUseCase,
+  DeleteDocumentTemplateUseCase,
   DeleteJobApplicationUseCase,
   GenerateDocumentsUseCase,
   GenerateJobApplicationDocumentsUseCase,
@@ -154,6 +155,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       getProfile,
       updateProfile: new UpdateProfileUseCase(profiles),
       listDocumentTemplates: new ListDocumentTemplatesUseCase(profiles),
+      deleteDocumentTemplate: new DeleteDocumentTemplateUseCase(unitOfWork),
       uploadDocumentTemplate: new UploadDocumentTemplateUseCase(
         profiles,
         storage,

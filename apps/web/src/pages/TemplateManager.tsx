@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/button.js";
+import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
 import { Panel, PanelHeader } from "../components/link2cv/panel.js";
 import TemplateVariableMapping from "../components/TemplateVariableMapping.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiDocumentTemplate, ApiProfile } from "../api/types.js";
 import { hasValidCoverLetterTemplateMapping } from "../lib/document-template.js";
 import { cn } from "../lib/utils.js";
-import { FileText, Upload, Check, MoreHorizontal } from "lucide-react";
+import { Check, ChevronDown, FileText, Upload } from "lucide-react";
 
 export default function TemplateManager() {
   const [templates, setTemplates] = useState<ApiDocumentTemplate[]>([]);
@@ -15,6 +16,9 @@ export default function TemplateManager() {
   const coverLetterFileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<ApiDocumentTemplate | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -72,6 +76,29 @@ export default function TemplateManager() {
     }
   }
 
+  async function handleDeleteTemplate() {
+    if (!profile || !templateToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await profilesApi.deleteDocumentTemplate(profile.id, templateToDelete.id);
+      setTemplates((previous) =>
+        previous.filter((template) => template.id !== templateToDelete.id),
+      );
+      setTemplateToDelete(null);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Failed to delete template.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function openDeleteDialog(template: ApiDocumentTemplate) {
+    setDeleteError(null);
+    setTemplateToDelete(template);
+  }
+
   const cvTemplates = templates.filter((t) => t.kind === "cv");
   const letterTemplates = templates.filter((t) => t.kind === "cover_letter");
 
@@ -113,6 +140,7 @@ export default function TemplateManager() {
           templates={cvTemplates}
           profile={profile}
           onSetDefault={handleSetDefault}
+          onDelete={openDeleteDialog}
           onTemplateUpdated={handleTemplateUpdated}
         />
         <TemplateGroup
@@ -120,9 +148,26 @@ export default function TemplateManager() {
           templates={letterTemplates}
           profile={profile}
           onSetDefault={handleSetDefault}
+          onDelete={openDeleteDialog}
           onTemplateUpdated={handleTemplateUpdated}
         />
       </div>
+
+      <ConfirmDialog
+        confirmLabel="Delete template"
+        description="The template file and its variable mappings will be permanently removed. Existing generated documents will remain available, and saved selections will return to the default layout."
+        error={deleteError}
+        isPending={isDeleting}
+        onConfirm={() => void handleDeleteTemplate()}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTemplateToDelete(null);
+            setDeleteError(null);
+          }
+        }}
+        open={templateToDelete !== null}
+        title={`Delete ${templateToDelete?.fileName ?? "template"}?`}
+      />
     </div>
   );
 }
@@ -166,12 +211,14 @@ function TemplateGroup({
   templates,
   profile,
   onSetDefault,
+  onDelete,
   onTemplateUpdated,
 }: {
   title: string;
   templates: ApiDocumentTemplate[];
   profile: ApiProfile | null;
   onSetDefault: (id: string) => void;
+  onDelete: (template: ApiDocumentTemplate) => void;
   onTemplateUpdated: (template: ApiDocumentTemplate) => void;
 }) {
   return (
@@ -185,6 +232,7 @@ function TemplateGroup({
               template={t}
               profile={profile}
               onSetDefault={onSetDefault}
+              onDelete={onDelete}
               onTemplateUpdated={onTemplateUpdated}
             />
           ))
@@ -202,11 +250,13 @@ function TemplateCard({
   template,
   profile,
   onSetDefault,
+  onDelete,
   onTemplateUpdated,
 }: {
   template: ApiDocumentTemplate;
   profile: ApiProfile | null;
   onSetDefault: (id: string) => void;
+  onDelete: (template: ApiDocumentTemplate) => void;
   onTemplateUpdated: (template: ApiDocumentTemplate) => void;
 }) {
   const [showMapping, setShowMapping] = useState(false);
@@ -214,7 +264,13 @@ function TemplateCard({
 
   return (
     <div>
-      <div className="flex items-center gap-3.5 px-5 py-4">
+      <button
+        type="button"
+        aria-expanded={showMapping}
+        aria-label={`${showMapping ? "Close" : "Edit"} variable mappings for ${template.fileName}`}
+        className="flex w-full items-center gap-3.5 px-5 py-4 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        onClick={() => setShowMapping((current) => !current)}
+      >
         <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
           <FileText className="size-5" />
         </div>
@@ -239,35 +295,48 @@ function TemplateCard({
             {new Date(template.updatedAt).toLocaleDateString()}
           </p>
         </div>
-        <button
-          onClick={() => onSetDefault(template.id)}
+        <ChevronDown
           className={cn(
-            "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
-            template.isDefault ? "text-muted-foreground/50" : "text-primary hover:bg-accent",
+            "size-4 shrink-0 text-muted-foreground transition-transform",
+            showMapping && "rotate-180",
           )}
-          disabled={template.isDefault || !hasRequiredMapping}
-          title={
-            !hasRequiredMapping ? "Map a Content placeholder before using this template" : undefined
-          }
-        >
-          {template.isDefault ? "In use" : "Set default"}
-        </button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={showMapping ? "Hide variable mapping" : "Show variable mapping"}
-          onClick={() => setShowMapping(!showMapping)}
-        >
-          <MoreHorizontal className="size-4" />
-        </Button>
-      </div>
-
-      {showMapping && profile && (
-        <TemplateVariableMapping
-          template={template}
-          profile={profile}
-          onUpdated={onTemplateUpdated}
         />
+      </button>
+
+      {showMapping && (
+        <>
+          {profile && (
+            <TemplateVariableMapping
+              template={template}
+              profile={profile}
+              onUpdated={onTemplateUpdated}
+            />
+          )}
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-muted/20 px-5 py-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSetDefault(template.id)}
+              disabled={template.isDefault || !hasRequiredMapping}
+              title={
+                !hasRequiredMapping
+                  ? "Map a Content placeholder before using this template"
+                  : undefined
+              }
+            >
+              {template.isDefault ? "Default template" : "Set as default"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Delete template ${template.fileName}`}
+              className="text-destructive hover:bg-danger-soft hover:text-destructive"
+              onClick={() => onDelete(template)}
+            >
+              Delete template
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import type {
   CreateJobApplicationEventInput,
   CreateJobApplicationFollowUpInput,
   DocumentContent,
+  DocumentTemplateKind,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
@@ -449,6 +450,23 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     return toJobApplication(row);
   }
 
+  async clearApplicationPackTemplateSelection(
+    profileId: string,
+    kind: DocumentTemplateKind,
+    templateId: string,
+  ): Promise<string[]> {
+    const rows = await buildClearApplicationPackTemplateSelectionQuery(
+      this.db,
+      profileId,
+      kind,
+      templateId,
+    );
+
+    return (rows as Array<{ id?: unknown }>).flatMap((row) =>
+      typeof row.id === "string" ? [row.id] : [],
+    );
+  }
+
   async saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void> {
     const update: Record<string, unknown> = {
       scrape_bundle: JSON.stringify(scrape),
@@ -749,6 +767,24 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
 
     return rows.map(toGeneratedDocument);
   }
+}
+
+export function buildClearApplicationPackTemplateSelectionQuery(
+  db: Knex,
+  profileId: string,
+  kind: DocumentTemplateKind,
+  templateId: string,
+): Knex.QueryBuilder {
+  const preferenceKey = kind === "cv" ? "cvTemplateId" : "coverLetterTemplateId";
+
+  return db("job_applications")
+    .where({ profile_id: profileId })
+    .whereRaw("application_pack_preferences ->> ? = ?", [preferenceKey, templateId])
+    .update({
+      application_pack_preferences: db.raw("application_pack_preferences - ?", [preferenceKey]),
+      updated_at: db.fn.now(),
+    })
+    .returning("id");
 }
 
 function nullableString(value: unknown): string | undefined {

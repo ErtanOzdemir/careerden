@@ -101,6 +101,22 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
     return this.documentTemplates.get(profileId) ?? [];
   }
 
+  async deleteDocumentTemplate(id: string): Promise<boolean> {
+    const existing = await this.findDocumentTemplateById(id);
+
+    if (!existing) {
+      return false;
+    }
+
+    this.documentTemplates.set(
+      existing.profileId,
+      (this.documentTemplates.get(existing.profileId) ?? []).filter(
+        (template) => template.id !== id,
+      ),
+    );
+    return true;
+  }
+
   async setDefaultDocumentTemplate(
     profileId: string,
     id: string,

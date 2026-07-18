@@ -54,6 +54,7 @@ export function createProfileRepository(
     findDocumentTemplateById: vi.fn(async () => template),
     findDefaultDocumentTemplate: vi.fn(),
     listDocumentTemplates: vi.fn(async () => []),
+    deleteDocumentTemplate: vi.fn(async () => true),
     setDefaultDocumentTemplate: vi.fn(async () => template),
     updateDocumentTemplateMappings: vi.fn(async () => template),
     updateDocumentTemplateVariableAliases: vi.fn(async () => template),

@@ -5,6 +5,7 @@ import type {
   CreateJobApplicationEventInput,
   CreateJobApplicationFollowUpInput,
   DocumentContent,
+  DocumentTemplateKind,
   GeneratedDocument,
   ApplicationPackPreferences,
   JobApplication,
@@ -469,6 +470,36 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     return updated;
   }
 
+  async clearApplicationPackTemplateSelection(
+    profileId: string,
+    kind: DocumentTemplateKind,
+    templateId: string,
+  ): Promise<string[]> {
+    const affectedIds: string[] = [];
+
+    for (const [id, jobApplication] of this.jobApplications) {
+      if (jobApplication.profileId !== profileId) continue;
+
+      const preferences = jobApplication.applicationPackPreferences;
+      const selectedTemplateId =
+        kind === "cv" ? preferences.cvTemplateId : preferences.coverLetterTemplateId;
+      if (selectedTemplateId !== templateId) continue;
+
+      const nextPreferences =
+        kind === "cv"
+          ? omitCvTemplateSelection(preferences)
+          : omitCoverLetterTemplateSelection(preferences);
+      this.jobApplications.set(id, {
+        ...jobApplication,
+        applicationPackPreferences: nextPreferences,
+        updatedAt: new Date(),
+      });
+      affectedIds.push(id);
+    }
+
+    return affectedIds;
+  }
+
   async saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void> {
     this.scrapeBundles.set(id, scrape);
     const existing = this.jobApplications.get(id);
@@ -840,4 +871,18 @@ function sortableValue(
 
 function contains(value: string | undefined, query: string): boolean {
   return (value ?? "").toLowerCase().includes(query.toLowerCase());
+}
+
+function omitCvTemplateSelection(
+  preferences: ApplicationPackPreferences,
+): ApplicationPackPreferences {
+  const { cvTemplateId: _cvTemplateId, ...remaining } = preferences;
+  return remaining;
+}
+
+function omitCoverLetterTemplateSelection(
+  preferences: ApplicationPackPreferences,
+): ApplicationPackPreferences {
+  const { coverLetterTemplateId: _coverLetterTemplateId, ...remaining } = preferences;
+  return remaining;
 }

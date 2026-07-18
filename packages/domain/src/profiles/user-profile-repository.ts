@@ -22,6 +22,7 @@ export interface UserProfileRepository {
     kind: DocumentTemplateKind,
   ): Promise<DocumentTemplate | null>;
   listDocumentTemplates(profileId: string): Promise<DocumentTemplate[]>;
+  deleteDocumentTemplate(id: string): Promise<boolean>;
   setDefaultDocumentTemplate(profileId: string, id: string): Promise<DocumentTemplate | null>;
   updateDocumentTemplateMappings(
     id: string,

@@ -135,6 +135,10 @@ export class KnexUserProfileRepository implements UserProfileRepository {
     return rows.map(toDocumentTemplate);
   }
 
+  async deleteDocumentTemplate(id: string): Promise<boolean> {
+    return (await this.db("document_templates").where({ id }).delete()) > 0;
+  }
+
   async setDefaultDocumentTemplate(
     profileId: string,
     id: string,

@@ -8,6 +8,7 @@ export * from "./profiles/update-profile.use-case.js";
 export * from "./profiles/get-or-create-current-profile.use-case.js";
 export * from "./profiles/get-profile.use-case.js";
 export * from "./profiles/list-document-templates.use-case.js";
+export * from "./profiles/delete-document-template.use-case.js";
 export * from "./profiles/upload-document-template.use-case.js";
 export * from "./profiles/update-document-template-mappings.use-case.js";
 export * from "./profiles/update-document-template-variable-aliases.use-case.js";

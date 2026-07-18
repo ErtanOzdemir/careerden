@@ -26,6 +26,51 @@ describe("InMemoryJobApplicationRepository", () => {
     });
   });
 
+  it("clears only matching application-pack template selections", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const affected = await repository.create({
+      profileId: "profile-1",
+      applicationPackPreferences: {
+        language: "tr-TR",
+        tone: "creative",
+        cvTemplateId: "cv-template",
+        coverLetterTemplateId: "cover-template",
+      },
+    });
+    const otherTemplate = await repository.create({
+      profileId: "profile-1",
+      applicationPackPreferences: {
+        language: "en",
+        tone: "concise",
+        cvTemplateId: "other-template",
+      },
+    });
+    await repository.create({
+      profileId: "profile-2",
+      applicationPackPreferences: {
+        language: "de",
+        tone: "professional",
+        cvTemplateId: "cv-template",
+      },
+    });
+
+    await expect(
+      repository.clearApplicationPackTemplateSelection("profile-1", "cv", "cv-template"),
+    ).resolves.toEqual([affected.id]);
+    await expect(repository.findById(affected.id)).resolves.toMatchObject({
+      applicationPackPreferences: {
+        language: "tr-TR",
+        tone: "creative",
+        coverLetterTemplateId: "cover-template",
+      },
+    });
+    await expect(repository.findById(otherTemplate.id)).resolves.toMatchObject({
+      applicationPackPreferences: {
+        cvTemplateId: "other-template",
+      },
+    });
+  });
+
   it("filters, sorts, and paginates applications with a total count", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const lowMatch = await repository.create({

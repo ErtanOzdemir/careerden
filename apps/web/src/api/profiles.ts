@@ -19,6 +19,11 @@ export const profilesApi = {
   listDocumentTemplates(id: string): Promise<ApiDocumentTemplate[]> {
     return requestJson<ApiDocumentTemplate[]>(`/profiles/${id}/document-templates`);
   },
+  deleteDocumentTemplate(id: string, templateId: string): Promise<void> {
+    return requestJson<void>(`/profiles/${id}/document-templates/${templateId}`, {
+      method: "DELETE",
+    });
+  },
   async uploadDocumentTemplate(
     id: string,
     kind: ApiDocumentTemplate["kind"],

@@ -160,4 +160,39 @@ describe("InMemoryUserProfileRepository", () => {
       (await repository.listDocumentTemplates(profile.id)).filter((item) => item.isDefault),
     ).toHaveLength(2);
   });
+
+  it("deletes document templates without promoting another default", async () => {
+    const repository = new InMemoryUserProfileRepository();
+    const profile = await repository.create({
+      email: "ada@example.com",
+      experience: [],
+      fullName: "Ada Lovelace",
+      skills: [],
+    });
+    const first = await repository.createDocumentTemplate({
+      profileId: profile.id,
+      kind: "cv",
+      format: "docx",
+      fileId: "templates/first.docx",
+      fileName: "first.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 100,
+      placeholders: ["summary"],
+    });
+    const second = await repository.createDocumentTemplate({
+      profileId: profile.id,
+      kind: "cv",
+      format: "docx",
+      fileId: "templates/second.docx",
+      fileName: "second.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 120,
+      placeholders: ["skills"],
+    });
+
+    await expect(repository.deleteDocumentTemplate(first.id)).resolves.toBe(true);
+    await expect(repository.deleteDocumentTemplate(first.id)).resolves.toBe(false);
+    await expect(repository.findDefaultDocumentTemplate(profile.id, "cv")).resolves.toBeNull();
+    await expect(repository.listDocumentTemplates(profile.id)).resolves.toEqual([second]);
+  });
 });

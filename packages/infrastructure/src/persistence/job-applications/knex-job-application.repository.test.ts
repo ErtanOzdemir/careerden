@@ -1,6 +1,9 @@
 import knex from "knex";
 import { afterAll, describe, expect, it } from "vitest";
-import { applyJobApplicationFilters } from "./knex-job-application.repository.js";
+import {
+  applyJobApplicationFilters,
+  buildClearApplicationPackTemplateSelectionQuery,
+} from "./knex-job-application.repository.js";
 
 const db = knex({ client: "pg" });
 
@@ -30,5 +33,26 @@ describe("applyJobApplicationFilters", () => {
     const statement = query.toSQL();
     expect(statement.sql).toContain("tags @> ?::jsonb");
     expect(statement.bindings).toEqual(['["typescript"]']);
+  });
+});
+
+describe("buildClearApplicationPackTemplateSelectionQuery", () => {
+  it("removes only the selected template key for matching profile applications", () => {
+    const statement = buildClearApplicationPackTemplateSelectionQuery(
+      db,
+      "profile-1",
+      "cover_letter",
+      "template-1",
+    ).toSQL();
+
+    expect(statement.sql).toContain("application_pack_preferences - ?");
+    expect(statement.sql).toContain("application_pack_preferences ->> ? = ?");
+    expect(statement.sql).toContain('where "profile_id" = ?');
+    expect(statement.bindings).toEqual([
+      "coverLetterTemplateId",
+      "profile-1",
+      "coverLetterTemplateId",
+      "template-1",
+    ]);
   });
 });

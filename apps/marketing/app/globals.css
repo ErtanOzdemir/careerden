@@ -229,26 +229,6 @@ a {
   max-width: 880px;
   text-align: center;
 }
-.announcement {
-  width: fit-content;
-  margin: 0 auto 28px;
-  padding: 6px 12px 6px 7px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 72%);
-  color: var(--muted-foreground);
-  font-size: 0.76rem;
-  box-shadow: var(--shadow-sm);
-}
-.announcement span {
-  display: inline-block;
-  margin-right: 8px;
-  border-radius: 999px;
-  background: var(--foreground);
-  color: var(--background);
-  padding: 4px 8px;
-  font-weight: 650;
-}
 .hero h1 {
   margin: 0;
   font-size: clamp(3.1rem, 7.3vw, 6.6rem);
@@ -1156,12 +1136,6 @@ a {
   .hero {
     padding-top: 70px;
     padding-bottom: 0;
-  }
-  .announcement {
-    max-width: 100%;
-  }
-  .announcement span {
-    display: none;
   }
   .hero h1 {
     font-size: clamp(3rem, 15vw, 4.5rem);

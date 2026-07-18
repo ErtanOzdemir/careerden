@@ -5,6 +5,9 @@ import HomePage, { metadata } from "./page";
 describe("marketing workflow story", () => {
   it("presents the five real product stages in order", () => {
     const { container } = render(<HomePage />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Track every job application." }),
+    ).toBeVisible();
     const steps = [...container.querySelectorAll(".workflow-step-copy > h3")].map(
       (heading) => heading.textContent,
     );

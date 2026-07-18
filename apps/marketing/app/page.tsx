@@ -78,19 +78,14 @@ export default function HomePage() {
         <div className="hero-orb hero-orb-one" aria-hidden="true" />
         <div className="hero-orb hero-orb-two" aria-hidden="true" />
         <div className="container hero-copy">
-          <div className="announcement">
-            <span>Desktop job application tracker</span> From saved opportunity to next follow-up
-          </div>
           <h1>
-            Track every application.
-            <br />
-            <span>Prepare every next step.</span>
+            Track every <br />
+            <span>job application.</span>
           </h1>
           <p className="hero-lede">
-            Link2CV is an open-source desktop job application tracker with a profile-aware CV
-            creator and cover letter creator. Keep opportunities, statuses, follow-ups, notes, match
-            insights, and documents in one workspace. Today, its desktop helper can capture LinkedIn
-            job details automatically; direct manual entry from other sources is planned.
+            Link2CV is an open-source desktop job application tracker with profile-aware CV and
+            cover-letter tools. Track opportunities, follow-ups, match insights, and documents in
+            one place.
           </p>
           <div className="hero-actions">
             <Link className="button button-primary button-large" href="/download">

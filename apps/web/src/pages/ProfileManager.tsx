@@ -35,7 +35,9 @@ const sections = [
   { id: "experience", label: "Experience", icon: Briefcase },
   { id: "education", label: "Education", icon: GraduationCap },
   { id: "projects", label: "Projects & certifications", icon: FolderGit2 },
-];
+] as const;
+
+type SectionId = (typeof sections)[number]["id"];
 
 function emptyExperience(): ApiProfileExperience {
   return {
@@ -61,6 +63,7 @@ export default function ProfileManager() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [activeSection, setActiveSection] = useState<SectionId>("basics");
   const [isEditingBasics, setIsEditingBasics] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [isEditingSkills, setIsEditingSkills] = useState(false);
@@ -110,6 +113,32 @@ export default function ProfileManager() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!profile || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const closestVisibleSection = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort(
+            (left, right) =>
+              Math.abs(left.boundingClientRect.top - 96) -
+              Math.abs(right.boundingClientRect.top - 96),
+          )[0]?.target.id as SectionId | undefined;
+
+        if (closestVisibleSection) setActiveSection(closestVisibleSection);
+      },
+      { rootMargin: "-96px 0px -60% 0px", threshold: [0, 0.1, 0.5] },
+    );
+
+    for (const section of sections) {
+      const element = document.getElementById(section.id);
+      if (element) observer.observe(element);
+    }
+
+    return () => observer.disconnect();
+  }, [profile]);
 
   async function savePartial(payload: ApiUpdateProfilePayload): Promise<ApiProfile | null> {
     if (!profile) return null;
@@ -187,7 +216,10 @@ export default function ProfileManager() {
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-current={activeSection === s.id ? "location" : undefined}
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted hover:text-foreground ${
+                activeSection === s.id ? "bg-muted text-foreground" : "text-muted-foreground"
+              }`}
             >
               <s.icon className="size-4" />
               {s.label}
@@ -221,7 +253,12 @@ export default function ProfileManager() {
           </div>
         )}
 
-        <section id="basics" className="scroll-mt-24">
+        <section
+          id="basics"
+          className="scroll-mt-24"
+          onFocusCapture={() => setActiveSection("basics")}
+          onMouseEnter={() => setActiveSection("basics")}
+        >
           <Panel className="p-6">
             <div className="flex items-center justify-between gap-3">
               <SectionTitle icon={UserRound} title="Basic information" />
@@ -276,7 +313,12 @@ export default function ProfileManager() {
           </Panel>
         </section>
 
-        <section id="summary" className="scroll-mt-24">
+        <section
+          id="summary"
+          className="scroll-mt-24"
+          onFocusCapture={() => setActiveSection("summary")}
+          onMouseEnter={() => setActiveSection("summary")}
+        >
           <Panel className="p-6">
             <div className="flex items-center justify-between gap-3">
               <SectionTitle icon={FileText} title="Professional summary" />
@@ -319,7 +361,12 @@ export default function ProfileManager() {
           </Panel>
         </section>
 
-        <section id="skills" className="scroll-mt-24">
+        <section
+          id="skills"
+          className="scroll-mt-24"
+          onFocusCapture={() => setActiveSection("skills")}
+          onMouseEnter={() => setActiveSection("skills")}
+        >
           <Panel className="p-6">
             <div className="flex items-center justify-between gap-3">
               <SectionTitle icon={Award} title="Skills" />
@@ -391,7 +438,12 @@ export default function ProfileManager() {
           </Panel>
         </section>
 
-        <section id="experience" className="scroll-mt-24">
+        <section
+          id="experience"
+          className="scroll-mt-24"
+          onFocusCapture={() => setActiveSection("experience")}
+          onMouseEnter={() => setActiveSection("experience")}
+        >
           <Panel className="p-6">
             <div className="flex items-center justify-between">
               <SectionTitle icon={Briefcase} title="Experience" />
@@ -440,7 +492,12 @@ export default function ProfileManager() {
           </Panel>
         </section>
 
-        <section id="education" className="scroll-mt-24">
+        <section
+          id="education"
+          className="scroll-mt-24"
+          onFocusCapture={() => setActiveSection("education")}
+          onMouseEnter={() => setActiveSection("education")}
+        >
           <Panel className="p-6">
             <div className="flex items-center justify-between">
               <SectionTitle icon={GraduationCap} title="Education" />
@@ -486,7 +543,12 @@ export default function ProfileManager() {
           </Panel>
         </section>
 
-        <section id="projects" className="scroll-mt-24">
+        <section
+          id="projects"
+          className="scroll-mt-24"
+          onFocusCapture={() => setActiveSection("projects")}
+          onMouseEnter={() => setActiveSection("projects")}
+        >
           <Panel className="p-6">
             <div className="flex items-center justify-between">
               <SectionTitle icon={FolderGit2} title="Projects & certifications" />

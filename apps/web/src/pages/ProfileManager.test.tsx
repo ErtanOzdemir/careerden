@@ -74,6 +74,27 @@ describe("ProfileManager", () => {
       });
     });
   });
+
+  it("highlights the navigation item for the section being edited", async () => {
+    const profile = createProfile(createRichText());
+    vi.mocked(profilesApi.me).mockResolvedValue(profile);
+
+    render(<ProfileManager />);
+
+    await screen.findAllByText("Ada Lovelace");
+    const basicsLink = screen.getByRole("link", { name: "Basic information" });
+    const skillsLink = screen.getByRole("link", { name: "Skills" });
+
+    expect(basicsLink).toHaveAttribute("aria-current", "location");
+    expect(skillsLink).not.toHaveAttribute("aria-current");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit skills" }));
+    fireEvent.focus(screen.getByLabelText("New skill"));
+
+    expect(skillsLink).toHaveAttribute("aria-current", "location");
+    expect(skillsLink).toHaveClass("bg-muted", "text-foreground");
+    expect(basicsLink).not.toHaveAttribute("aria-current");
+  });
 });
 
 function createRichText(): RichDocument {

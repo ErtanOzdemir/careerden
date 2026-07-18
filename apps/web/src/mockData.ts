@@ -704,6 +704,7 @@ export const mockDashboardStats: DashboardStats = {
   },
   upcomingInterviews: [
     {
+      jobApplicationId: "1",
       month: "Jun",
       day: 12,
       time: "10:00 AM",
@@ -713,6 +714,7 @@ export const mockDashboardStats: DashboardStats = {
       meetLabel: "Zoom",
     },
     {
+      jobApplicationId: "2",
       month: "Jun",
       day: 14,
       time: "02:30 PM",
@@ -722,6 +724,7 @@ export const mockDashboardStats: DashboardStats = {
       meetLabel: "On-site",
     },
     {
+      jobApplicationId: "3",
       month: "Jun",
       day: 18,
       time: "11:00 AM",
@@ -731,6 +734,7 @@ export const mockDashboardStats: DashboardStats = {
       meetLabel: "Google Meet",
     },
     {
+      jobApplicationId: "4",
       month: "Jun",
       day: 20,
       time: "01:00 PM",

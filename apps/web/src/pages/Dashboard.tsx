@@ -121,6 +121,7 @@ export default function Dashboard() {
   const followUps = (() => {
     if (stats?.upcomingInterviews && stats.upcomingInterviews.length > 0) {
       return stats.upcomingInterviews.map((u) => ({
+        jobApplicationId: u.jobApplicationId,
         company: u.company,
         type: "Follow-up: " + u.role,
         date: `${u.month} ${u.day}`,
@@ -131,6 +132,7 @@ export default function Dashboard() {
       .filter((a) => a.status === "Interviewing")
       .slice(0, 3)
       .map((a) => ({
+        jobApplicationId: a.id,
         company: a.company,
         type: "Follow-up",
         date: a.dateApplied,
@@ -235,8 +237,13 @@ export default function Dashboard() {
           <PanelHeader title="Upcoming follow-ups" />
           <div className="divide-y divide-border border-t border-border">
             {followUps.length > 0 ? (
-              followUps.map((f, i) => (
-                <div key={i} className="flex gap-3 px-5 py-3.5">
+              followUps.map((f) => (
+                <button
+                  key={f.jobApplicationId}
+                  type="button"
+                  onClick={() => navigate(`/applications/${f.jobApplicationId}?tab=timeline`)}
+                  className="flex w-full gap-3 px-5 py-3.5 text-left transition-colors hover:bg-muted/50"
+                >
                   <div className="flex size-9 shrink-0 flex-col items-center justify-center rounded-lg bg-accent text-accent-foreground">
                     <CalendarDays className="size-4" />
                   </div>
@@ -247,7 +254,7 @@ export default function Dashboard() {
                       {f.relative} {f.date ? "·" : ""} {f.date}
                     </p>
                   </div>
-                </div>
+                </button>
               ))
             ) : (
               <div className="px-5 py-8 text-center text-sm text-muted-foreground">

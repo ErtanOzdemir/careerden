@@ -360,6 +360,7 @@ function mapUpcomingInterviews(details: ApiJobApplicationDetail[]): UpcomingInte
     .sort((left, right) => left.scheduledAt.getTime() - right.scheduledAt.getTime())
     .slice(0, 5)
     .map(({ scheduledAt, followUp, application }) => ({
+      jobApplicationId: application.id,
       month: scheduledAt.toLocaleString(undefined, { month: "short" }),
       day: scheduledAt.getDate(),
       time: scheduledAt.toLocaleTimeString(undefined, {

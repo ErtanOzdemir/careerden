@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/link2cv/panel.js";
 import { StatusBadge } from "../components/link2cv/status-badge.js";
@@ -49,12 +49,13 @@ const tabs: { id: Tab; label: string }[] = [
 
 export default function AppDetail() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [app, setApp] = useState<JobApplication | null>(null);
   const [profile, setProfile] = useState<ApiProfile | null>(null);
   const [templates, setTemplates] = useState<ApiDocumentTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("pack");
+  const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get("tab")) ?? "pack");
   const [isUpdatingPack, setIsUpdatingPack] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -76,6 +77,13 @@ export default function AppDetail() {
   const [contactForm, setContactForm] = useState({ name: "", role: "", email: "" });
   const [showContactForm, setShowContactForm] = useState(false);
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    const requestedTab = parseTab(searchParams.get("tab"));
+    if (requestedTab) {
+      setTab(requestedTab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!id) {
@@ -577,6 +585,10 @@ export default function AppDetail() {
       )}
     </div>
   );
+}
+
+function parseTab(value: string | null): Tab | null {
+  return tabs.some((tab) => tab.id === value) ? (value as Tab) : null;
 }
 
 // --- Sub-components ---

@@ -2,6 +2,7 @@ import { Button } from "./ui/button.js";
 import { Bell, Maximize2, Minus, Plus, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { notificationsApi } from "../api/notifications.js";
 import type { ApiNotification } from "../api/types.js";
 
@@ -14,6 +15,7 @@ export function Topbar({
   subtitle?: string;
   onAddJob: () => void;
 }) {
+  const navigate = useNavigate();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -89,12 +91,19 @@ export function Topbar({
     }
   }
 
-  async function markRead(id: string) {
-    const wasUnread = notifications.some((item) => item.id === id && !item.readAt);
-    const updated = await notificationsApi.markRead(id);
-    setNotifications((items) => items.map((item) => (item.id === id ? updated : item)));
+  async function openNotification(notification: ApiNotification) {
+    const wasUnread = !notification.readAt;
+    const updated = await notificationsApi.markRead(notification.id);
+    setNotifications((items) =>
+      items.map((item) => (item.id === notification.id ? updated : item)),
+    );
     if (wasUnread) {
       setUnreadCount((count) => Math.max(0, count - 1));
+    }
+    setNotificationsOpen(false);
+
+    if (notification.type === "follow_up_reminder" && notification.jobApplicationId) {
+      navigate(`/applications/${notification.jobApplicationId}?tab=timeline`);
     }
   }
 
@@ -180,7 +189,7 @@ export function Topbar({
                     key={notification.id}
                     className="block w-full border-b border-border px-4 py-3 text-left last:border-b-0 hover:bg-muted/60"
                     type="button"
-                    onClick={() => void markRead(notification.id)}
+                    onClick={() => void openNotification(notification)}
                   >
                     <div className="flex items-start gap-2">
                       {!notification.readAt && (

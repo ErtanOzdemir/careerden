@@ -161,6 +161,7 @@ describe("API mappers", () => {
     expect(stats.rejectionRate).toBe(25);
     expect(stats.weeklyTrend).toEqual([1, 2]);
     expect(stats.upcomingInterviews).toHaveLength(1);
+    expect(stats.upcomingInterviews[0]?.jobApplicationId).toBe("job-1");
     expect(stats.sankey).toEqual({
       nodes: [
         { id: "all-applications", label: "All applications", count: 4 },

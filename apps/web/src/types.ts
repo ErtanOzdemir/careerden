@@ -219,6 +219,7 @@ export interface KpiTrend {
 }
 
 export interface UpcomingInterview {
+  jobApplicationId: string;
   month: string;
   day: number;
   time: string;

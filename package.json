@@ -10,6 +10,7 @@
     "dev:llm-worker": "pnpm --filter @link2cv/llm-worker dev",
     "dev:documents-worker": "pnpm --filter @link2cv/documents-worker dev",
     "dev:notifications-worker": "pnpm --filter @link2cv/notifications-worker dev",
+    "dev:marketing": "pnpm --filter @link2cv/marketing dev",
     "dev:services": "docker compose up -d postgres redis rustfs gotenberg",
     "migrate:make": "pnpm --filter @link2cv/infrastructure exec knex migrate:make --knexfile knexfile.cjs",
     "migrate:latest": "pnpm --filter @link2cv/infrastructure exec knex migrate:latest --knexfile knexfile.cjs",

@@ -1,0 +1,66 @@
+# Link2CV: product and public-site context
+
+Link2CV is a TypeScript open-source desktop job application tracker with a profile-aware CV creator and cover letter creator. It keeps opportunities, stages, salary and work-style context, interest, follow-ups, contacts, notes, match analysis, and application documents together from discovery through outcome. A user also maintains reusable profile details such as professional summary, skills, experience, education, projects, and certifications. In the current desktop workflow, a user submits a LinkedIn job-posting URL through a connected LinkedIn session and the application captures source and normalized job/company information. LinkedIn is the current automated capture source; direct manual application entry from other sources is planned and is not available in the current release. Depending on operator configuration and profile readiness, Link2CV can run AI-supported requirement extraction and match analysis, then prepare editable CV and cover-letter drafts and rendered documents inside the tracked application.
+
+## Intended workflow
+
+1. A user creates and authenticates an account, then enters factual CV information in the Career
+   Profile.
+2. For custom document layouts, the user uploads CV and cover-letter DOCX templates. The public
+   walkthrough presents this as the recommended setup; the product may also provide built-in layouts.
+3. The user maps detected template variables to profile data and saves the mapping. Cover-letter
+   content is mapped to the generated document-content field.
+4. In the connected desktop app, the user submits a LinkedIn job-posting URL and may choose output
+   language and tone. Link2CV queues and processes the posting while preserving source material for
+   traceability. Direct manual application entry from other sources is planned and is not available
+   in the current release.
+5. The captured opportunity becomes a trackable application record. The user can update its stage,
+   interest, salary, work style, contacts, notes, and follow-ups while dashboard views show active
+   applications, upcoming follow-ups, recent activity, and the application pipeline.
+6. AI-supported analysis compares job requirements with the supplied profile and prepares editable
+   CV and cover-letter content for the Application Pack.
+7. The user reviews the overview, match evidence, CV, and cover letter; edits generated content when
+   needed; and applies those edits with Update pack before deciding whether to use or submit the
+   documents.
+
+Link2CV is not an automatic job-application service. It does not promise employment outcomes or guarantee the accuracy of AI output. Users should verify every generated statement.
+
+The public marketing website explains the desktop product. It does not expose sign-in, signup, or
+browser-application links. Its `/download` page reflects the configured macOS DMG, Windows NSIS, and
+Linux AppImage package targets while explicitly identifying all installer links as mock placeholders
+until verified release artifacts are published.
+
+The public site links directly to the Link2CV repository at
+https://github.com/ErtanOzdemir/link2cv. The current repository license is Business Source License
+1.1, which permits the uses described in its LICENSE file and is scheduled to convert to Apache
+License 2.0 under its stated terms.
+
+## Public workflow demonstration
+
+The public landing page presents job-application tracking as the core workflow, followed by five
+presentation-only setup and preparation steps: Add your profile, Upload your templates, Map the
+variables, Add the application, and Review the pack and track progress. Its screen replicas use
+fictional data and do not upload files, submit jobs, or persist onboarding progress. The public copy
+does not claim a separate AI-regeneration action; it describes the current edit-and-Update-pack flow.
+
+## Data categories described by the public policies
+
+The intended workflow may process account and authentication data; professional profile information; job and company source/normalized data; application workflow events and preferences; match analysis; generated and uploaded documents; rendered files; support messages; reminders; security records; and essential technical/browser data.
+
+Production controller details, lawful-basis mapping, subprocessor names, provider regions, international transfer mechanisms, retention periods, deletion timelines, security-control descriptions, analytics choices, contact details, company identity, billing terms, governing law, and related business/legal details are not yet confirmed. The published draft pages mark these items explicitly for owner and legal review and do not claim GDPR certification or guaranteed compliance.
+
+## Crawling guidance
+
+Public product and policy pages may be indexed. `/onboarding` is a legacy noindex route that redirects
+to the landing-page workflow. Authenticated application routes such as login, signup, applications,
+profile, templates, settings, support, and API routes should not be indexed on any deployment that
+shares a host.
+
+## Public documents
+
+- `/download`
+- `/privacy`
+- `/cookies`
+- `/terms`
+- `/gdpr`
+- `/data-deletion`

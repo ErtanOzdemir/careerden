@@ -1,0 +1,41 @@
+# Link2CV
+
+> Link2CV is an open-source desktop job application tracker, profile-aware CV creator, and cover letter creator that keeps each opportunity's status, follow-ups, notes, match analysis, and reviewable document drafts together.
+
+## Public pages
+
+- [Home](/): Product overview, five-step workflow, features, privacy principles, and FAQ.
+- [Download](/download): Desktop package targets and clearly labeled placeholder installer links.
+- [Privacy Policy](/privacy): Intended personal-data practices and explicit owner/legal placeholders.
+- [Cookie Policy](/cookies): Browser storage and cookie information.
+- [Terms of Service](/terms): Draft service terms requiring legal review.
+- [GDPR and data rights](/gdpr): Intended data-rights request process.
+- [Account and data deletion](/data-deletion): Intended deletion process and current limitations.
+
+## Important context
+
+- Link2CV does not apply to jobs on a user's behalf.
+- The desktop workspace tracks applications through Saved, Applied, Interviewing, Offer,
+  Rejected, and Ghosted stages and keeps follow-ups, contacts, notes, job context, and documents with
+  each application.
+- Generated analysis and documents require human review.
+- The public workflow shows fictional replicas of the profile, template upload, variable mapping,
+  job submission, and application-pack review screens.
+- Automatic LinkedIn capture currently uses the desktop app and its connected LinkedIn session.
+- LinkedIn is the current automated capture source, not the product boundary. Direct manual
+  application entry is planned and is not available in the current release.
+- The public marketing website does not expose login, signup, or browser-application links. Its
+  download page shows macOS DMG, Windows NSIS, and Linux AppImage packaging targets, but clearly
+  labels every installer action as a placeholder until verified artifacts are published.
+- Link2CV links directly to its repository at https://github.com/ErtanOzdemir/link2cv. The current
+  repository license is Business Source License 1.1 and is scheduled to convert to Apache License
+  2.0 under the license's stated terms.
+- DOCX template upload and mapping is the recommended setup for custom document layouts; built-in
+  layouts may also be available in the authenticated product.
+- Users can review generated CV and cover-letter content, edit it, and apply changes with Update
+  pack. This page does not claim a separate AI-regeneration action.
+- Legal copy is a working draft wherever marked and must not be treated as a compliance guarantee.
+- The legacy `/onboarding` route redirects to the public workflow and remains excluded from indexing.
+- Authenticated application routes should not be indexed.
+
+See [/llms-full.txt](/llms-full.txt) for a fuller product and data-flow overview.

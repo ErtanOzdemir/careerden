@@ -206,7 +206,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     const pageSize = filter.pageSize;
     const baseQuery = this.db("job_applications")
       .where({ profile_id: profileId })
-      .modify((builder) => applyFilters(builder, filter));
+      .modify((builder) => applyJobApplicationFilters(builder, filter));
     const countQuery = baseQuery
       .clone()
       .clearSelect()
@@ -755,14 +755,16 @@ function nullableString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function applyFilters(query: Knex.QueryBuilder, filter: ListJobApplicationsFilter): void {
+export function applyJobApplicationFilters(
+  query: Knex.QueryBuilder,
+  filter: ListJobApplicationsFilter,
+): void {
   if (filter.applicationStatus) query.where("application_status", filter.applicationStatus);
   if (filter.processingStatus) query.where("status", filter.processingStatus);
   if (filter.processingStatuses) query.whereIn("status", filter.processingStatuses);
   if (filter.priority) query.where("priority", filter.priority);
   if (filter.roleType) query.where("role_type", filter.roleType);
-  if (filter.tag)
-    query.whereRaw("EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)", [filter.tag]);
+  if (filter.tag) query.whereRaw("tags @> ?::jsonb", [JSON.stringify([filter.tag])]);
   if (filter.dateFrom) query.where("date_applied", ">=", filter.dateFrom);
   if (filter.dateTo) query.where("date_applied", "<=", filter.dateTo);
   if (filter.company) query.whereILike("company_name", `%${filter.company}%`);
@@ -774,7 +776,10 @@ function applyFilters(query: Knex.QueryBuilder, filter: ListJobApplicationsFilte
         .whereILike("company_name", `%${filter.search}%`)
         .orWhereILike("role_title", `%${filter.search}%`)
         .orWhereILike("role_type", `%${filter.search}%`)
-        .orWhereRaw("tags LIKE ?", [`%${filter.search}%`]);
+        .orWhereRaw(
+          "EXISTS (SELECT 1 FROM jsonb_array_elements_text(tags) AS tag(value) WHERE tag.value ILIKE ?)",
+          [`%${filter.search}%`],
+        );
     });
   }
 }

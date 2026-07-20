@@ -12,6 +12,7 @@ Thanks for your interest in contributing! This document provides guidelines and 
 - [Pull Request Process](#pull-request-process)
 - [Coding Standards](#coding-standards)
 - [Testing](#testing)
+- [Desktop Releases](#desktop-releases)
 - [Adding New Features](#adding-new-features)
 
 ## Code of Conduct
@@ -178,7 +179,8 @@ Context placement by layer:
 | API routes              | `packages/api/src/<context>`                       |
 | Frontend UI             | `apps/web/src`                                     |
 
-Current backend contexts are `profiles`, `job-applications`, `scraping`, `matching`, `documents`, `storage`, `persistence`, and `queue`.
+Current backend contexts are `profiles`, `job-applications`, `scraping`, `matching`,
+`documents`, `notifications`, `storage`, `persistence`, and `queue`.
 
 ### Linting and Formatting
 
@@ -209,6 +211,27 @@ pnpm --filter @link2cv/domain test
 # Run tests in watch mode
 pnpm vitest --filter @link2cv/contracts
 ```
+
+## Desktop Releases
+
+Desktop releases are built from a `v*.*.*` tag by
+`.github/workflows/desktop-release.yml`. The tag must match the version in
+`apps/desktop/package.json`. The workflow builds the macOS universal DMG, Windows x64
+NSIS installer, and Linux x64 AppImage, then attaches them and `SHA256SUMS.txt` to a
+draft GitHub release.
+
+Before creating a tag:
+
+- Run the full repository verification set and ensure the release commit is on the
+  protected/default branch.
+- Confirm the `DESKTOP_API_BASE_URL` repository variable points to the intended API.
+- Confirm the macOS signing and notarization secrets are configured.
+- Review the current limitations and full manual checklist in the
+  [desktop runtime and release guide](apps/desktop/README.md#draft-release-workflow).
+
+After the workflow succeeds, smoke-test every installer and verify its checksum before
+manually publishing the draft. A workflow rerun may update draft assets, but published
+release tags and assets must never be moved or reused.
 
 ## Adding New Features
 

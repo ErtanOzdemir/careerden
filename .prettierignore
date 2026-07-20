@@ -1,9 +1,14 @@
 dist/
 node_modules/
 .turbo/
+# Generated scratch files and the preserved historical follow-up implementation plan.
+.superpowers/
+docs/superpowers/plans/2026-07-08-multiple-follow-ups.md
 .agents/
 .codex/
 .opencode/
+apps/desktop/release/
+apps/desktop/renderer/
 coverage/
 playwright-report/
 storage/

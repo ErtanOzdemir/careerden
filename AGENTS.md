@@ -16,7 +16,8 @@ documents for review or download.
 - Linting and formatting: ESLint 10, typescript-eslint 8.61, Prettier 3.8
 - Testing: Vitest 2.1
 - API: Express 4.21, Zod 3.24 for validation
-- Desktop runtime: Electron 33 with an embedded Express server
+- Desktop runtime: Electron 43 with a Vite renderer in development and a bundled custom
+  protocol renderer in packaged builds
 - Web app: React 19, React Router 7, Vite 6, Tailwind CSS 4, Tiptap 3
 - Persistence: PostgreSQL via `pg` and Knex 3.1 for API database access and
   migrations
@@ -62,13 +63,22 @@ documents for review or download.
   interfaces/adapters so implementations can be swapped.
 - Validate external inputs and AI output with schemas before persisting or rendering.
 - Use explicit workflow status transitions for job applications.
-- The current desktop runtime starts an Electron app and, in development, loads the Vite
-  web app with `?apiBaseUrl=...` pointing at the standalone API server.
+- The desktop runtime loads the Vite web app with `?apiBaseUrl=...` in development. A
+  packaged build serves bundled renderer assets from `link2cv://app`, provides React
+  Router fallback, and proxies same-origin `/api` requests to the build-time
+  `DESKTOP_API_BASE_URL`. The API remains a standalone service.
+- The desktop main process consumes the authenticated, profile-scoped notification SSE
+  stream with Electron's default session. It refreshes the renderer for every new
+  notification and shows an operating-system notification only when the app is
+  unfocused. Clicking the alert restores the app and opens the related timeline.
 - The API runtime uses PostgreSQL for state, RustFS-compatible object storage for
   generated files, and Redis/BullMQ for enqueueing job application processing.
-- The `apps/llm-worker` runtime consumes BullMQ job-application events and runs LLM
-  match analysis independently from the API process. Future workers should use a
-  descriptive `*-worker` app name, for example `notifications-worker`.
+- The `apps/llm-worker`, `apps/documents-worker`, and `apps/notifications-worker`
+  runtimes consume BullMQ work independently from the API process. Future workers should
+  use the same descriptive `*-worker` app naming convention.
+- Desktop release tags must match the version in `apps/desktop/package.json`. The
+  GitHub workflow builds platform installers, generates SHA-256 checksums, and creates a
+  draft release; publishing remains a manual verification step.
 - PostgreSQL migrations are run through Knex during API startup.
 
 ## Runtime Validation Commands
@@ -93,10 +103,15 @@ documents for review or download.
   ```bash
   curl http://localhost:5173/api/health
   ```
-- Check the embedded desktop API health endpoint when the `apiPort` value is known from
-  the desktop launch URL:
+- Build the desktop main process and production renderer against an explicit API:
   ```bash
-  curl http://localhost:<apiPort>/health
+  DESKTOP_API_BASE_URL=https://api.example.com \
+    LINK2CV_REQUIRE_DESKTOP_API_BASE_URL=true \
+    pnpm --filter @link2cv/desktop build
+  ```
+- Package the already-built desktop app for the current host platform:
+  ```bash
+  pnpm --filter @link2cv/desktop package
   ```
 - Find likely running app ports:
   ```bash

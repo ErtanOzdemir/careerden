@@ -24,7 +24,8 @@ storage.
   aliases, and select a default template.
 - Generate custom DOCX CV and cover-letter files with PDF previews, or use the default
   PDF layouts, then download them through signed RustFS URLs.
-- Receive in-app follow-up notifications, with optional SMTP email delivery.
+- Receive in-app follow-up notifications and, when the desktop window is unfocused,
+  native operating-system alerts with optional SMTP email delivery.
 - Sign in with email and password using email OTP verification.
 
 ## Quick Start
@@ -113,6 +114,8 @@ Authenticated API -> PostgreSQL + transactional outbox
            +-> BullMQ -> documents worker -> DOCX/PDF rendering -> RustFS
            |
            +-> follow-up schedule -> notifications worker -> in-app/optional email reminder
+                                                        |
+                                                        +-> Redis -> API SSE -> Electron native alert
 ```
 
 LinkedIn scraping runs locally in an Electron utility process. The desktop worker claims
@@ -120,6 +123,12 @@ queued work from the API, renews the claim while scraping, and submits both norm
 and raw results. The API persists workflow changes and outbox events transactionally.
 The LLM, documents, and notifications workers consume BullMQ jobs independently from
 the API.
+
+In development, Electron loads the Vite renderer and connects to the standalone API. A
+packaged app instead serves the bundled renderer from `link2cv://app` and proxies
+same-origin `/api` requests to its build-time API URL. See the
+[desktop runtime and release guide](apps/desktop/README.md) for notification behavior,
+packaging, signing, checksums, and the manual release checklist.
 
 Job processing uses explicit states:
 
@@ -141,7 +150,7 @@ bounded contexts.
 link2cv/
 ├── apps/
 │   ├── api/                   Express transport, auth, SSE, and composition root
-│   ├── desktop/               Electron shell and local Playwright scraping worker
+│   ├── desktop/               Electron renderer, native notifications, and local scraping
 │   ├── documents-worker/      BullMQ application-pack rendering consumer
 │   ├── llm-worker/            BullMQ match-analysis consumer
 │   ├── notifications-worker/  BullMQ reminder consumer and outbox recovery
@@ -169,7 +178,7 @@ ownership checks and business workflows live in application use cases.
 | Runtime             | Node.js 22                                       |
 | Language            | TypeScript 5.7, strict ESM, NodeNext resolution  |
 | Package management  | pnpm 9.15 and Turborepo 2.3                      |
-| Desktop             | Electron 33                                      |
+| Desktop             | Electron 43                                      |
 | Web                 | React 19, React Router 7, Vite 6, Tailwind CSS 4 |
 | Rich-text editing   | Tiptap 3                                         |
 | API and validation  | Express 4 and Zod 3                              |
@@ -191,16 +200,17 @@ the variable is marked required.
 
 ### API, Auth, and Frontend
 
-| Variable             | Description                                       | Default                  |
-| -------------------- | ------------------------------------------------- | ------------------------ |
-| `NODE_ENV`           | `development`, `test`, or `production`            | `development`            |
-| `PORT`               | API port                                          | `3000`                   |
-| `DATABASE_URL`       | PostgreSQL connection string                      | Required                 |
-| `REDIS_URL`          | Redis connection string                           | `redis://localhost:6380` |
-| `BETTER_AUTH_SECRET` | Better Auth signing secret, minimum 16 characters | Development-only value   |
-| `BETTER_AUTH_URL`    | Public API/auth base URL                          | `http://localhost:3000`  |
-| `WEB_ORIGIN`         | Allowed credentialed web origin                   | `http://localhost:5173`  |
-| `VITE_API_BASE_URL`  | API URL used by the web renderer/desktop          | `http://localhost:3000`  |
+| Variable               | Description                                              | Default                  |
+| ---------------------- | -------------------------------------------------------- | ------------------------ |
+| `NODE_ENV`             | `development`, `test`, or `production`                   | `development`            |
+| `PORT`                 | API port                                                 | `3000`                   |
+| `DATABASE_URL`         | PostgreSQL connection string                             | Required                 |
+| `REDIS_URL`            | Redis connection string                                  | `redis://localhost:6380` |
+| `BETTER_AUTH_SECRET`   | Better Auth signing secret, minimum 16 characters        | Development-only value   |
+| `BETTER_AUTH_URL`      | Public API/auth base URL                                 | `http://localhost:3000`  |
+| `WEB_ORIGIN`           | Allowed credentialed web origin                          | `http://localhost:5173`  |
+| `VITE_API_BASE_URL`    | API URL used by the web and development desktop renderer | `http://localhost:3000`  |
+| `DESKTOP_API_BASE_URL` | API URL embedded in a production desktop build           | `http://localhost:3000`  |
 
 ### Queue Operations Dashboard
 
@@ -324,36 +334,44 @@ they are not part of the mounted HTTP API.
 
 ### Notifications
 
-| Method  | Path                          | Description                     |
-| ------- | ----------------------------- | ------------------------------- |
-| `GET`   | `/notifications`              | List current-user notifications |
-| `GET`   | `/notifications/unread-count` | Count unread notifications      |
-| `PATCH` | `/notifications/:id/read`     | Mark one notification read      |
-| `PATCH` | `/notifications/read-all`     | Mark all notifications read     |
+| Method  | Path                          | Description                       |
+| ------- | ----------------------------- | --------------------------------- |
+| `GET`   | `/notifications`              | List current-user notifications   |
+| `GET`   | `/notifications/unread-count` | Count unread notifications        |
+| `GET`   | `/notifications/stream`       | Stream notification changes (SSE) |
+| `PATCH` | `/notifications/:id/read`     | Mark one notification read        |
+| `PATCH` | `/notifications/read-all`     | Mark all notifications read       |
 
 ## Development
 
 ### Common Commands
 
-| Command                          | Purpose                                                 |
-| -------------------------------- | ------------------------------------------------------- |
-| `pnpm dev`                       | Start every workspace development target through Turbo  |
-| `pnpm dev:desktop`               | Start API, web, all workers, and Electron with dev URLs |
-| `pnpm dev:services`              | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
-| `pnpm dev:api`                   | Start only the API                                      |
-| `pnpm dev:llm-worker`            | Start only the LLM worker                               |
-| `pnpm dev:documents-worker`      | Start only the documents worker                         |
-| `pnpm dev:notifications-worker`  | Start only the notifications worker                     |
-| `pnpm --filter @link2cv/web dev` | Start only the Vite web app                             |
-| `pnpm build`                     | Build every workspace                                   |
-| `pnpm test`                      | Run all Vitest suites                                   |
-| `pnpm lint`                      | Run ESLint                                              |
-| `pnpm format:check`              | Check Prettier formatting                               |
-| `pnpm typecheck`                 | Type-check every workspace                              |
-| `pnpm lint:fix` / `pnpm format`  | Apply mechanical lint/format fixes                      |
+| Command                                  | Purpose                                                 |
+| ---------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                               | Start every workspace development target through Turbo  |
+| `pnpm dev:desktop`                       | Start API, web, all workers, and Electron with dev URLs |
+| `pnpm dev:services`                      | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
+| `pnpm dev:api`                           | Start only the API                                      |
+| `pnpm dev:llm-worker`                    | Start only the LLM worker                               |
+| `pnpm dev:documents-worker`              | Start only the documents worker                         |
+| `pnpm dev:notifications-worker`          | Start only the notifications worker                     |
+| `pnpm --filter @link2cv/web dev`         | Start only the Vite web app                             |
+| `pnpm --filter @link2cv/desktop build`   | Build the Electron main process and renderer            |
+| `pnpm --filter @link2cv/desktop package` | Package desktop for the current host platform           |
+| `pnpm build`                             | Build every workspace                                   |
+| `pnpm test`                              | Run all Vitest suites                                   |
+| `pnpm lint`                              | Run ESLint                                              |
+| `pnpm format:check`                      | Check Prettier formatting                               |
+| `pnpm typecheck`                         | Type-check every workspace                              |
+| `pnpm lint:fix` / `pnpm format`          | Apply mechanical lint/format fixes                      |
 
 Use `docker compose up -d` instead of `pnpm dev:services` when local OTP email and
 OpenObserve are also needed.
+
+Desktop installers are produced by the tag-triggered GitHub Actions workflow as a draft
+release. Publishing remains a manual verification step. Follow the complete
+[desktop release checklist](apps/desktop/README.md#draft-release-workflow) before tagging
+or publishing a version.
 
 ### Database Migrations
 

@@ -128,6 +128,7 @@ export function createUnitOfWork(
           jobApplicationChanges: { changed: recordChanged, deleted: recordDeleted },
           profiles: profiles as never,
           notifications: {} as never,
+          notificationChanges: {} as never,
           followUpReminders: {} as never,
           outbox: { add: addOutboxEvent },
         }),

@@ -169,6 +169,7 @@ function createUnitOfWork(
         },
         profiles,
         notifications: {} as never,
+        notificationChanges: {} as never,
         followUpReminders: {} as never,
         outbox: {} as never,
       }),

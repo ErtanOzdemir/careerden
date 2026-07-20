@@ -32,6 +32,7 @@ export * from "./queue/job-applications/bullmq-application-pack-generation.queue
 export * from "./queue/job-applications/self-processing-job-application.queue.js";
 export * from "./queue/notifications/bullmq-follow-up-reminder.queue.js";
 export * from "./notifications/follow-up-reminder.repository.js";
+export * from "./notifications/redis-notification-change.bus.js";
 export * from "./notifications/smtp-email.sender.js";
 export * from "./scraping/adapters/linkedin-company.scraper.js";
 export * from "./scraping/adapters/linkedin-job.scraper.js";

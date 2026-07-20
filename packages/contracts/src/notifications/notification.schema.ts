@@ -13,4 +13,13 @@ export const notificationSchema = z.object({
   createdAt: z.coerce.date(),
 });
 
+export const notificationChangeSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("notification.created"),
+    notification: notificationSchema,
+    summary: z.string().min(1),
+  }),
+]);
+
 export type NotificationDto = z.infer<typeof notificationSchema>;
+export type NotificationChangeDto = z.infer<typeof notificationChangeSchema>;

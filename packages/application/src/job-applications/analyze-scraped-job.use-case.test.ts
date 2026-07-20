@@ -203,6 +203,7 @@ function createUnitOfWork(
           jobApplicationChanges: { changed: recordChanged, deleted: vi.fn() },
           profiles: profiles as never,
           notifications: {} as never,
+          notificationChanges: {} as never,
           followUpReminders: {} as never,
           outbox: { add: addOutboxEvent },
         }),

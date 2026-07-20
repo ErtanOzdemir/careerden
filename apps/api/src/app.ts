@@ -60,6 +60,7 @@ import {
   PostgresPersistenceUnitOfWork,
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
+  RedisNotificationChangeBus,
   RustFsStorage,
   createSmtpEmailSender,
   createPostgresDb,
@@ -99,6 +100,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
   });
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
+  const notificationChangeBus = RedisNotificationChangeBus.create(env.REDIS_URL);
   const jobApplications = new PostgresJobApplicationRepository(db);
   const notifications = new PostgresNotificationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
@@ -244,6 +246,8 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         notifications,
         getCurrentProfile,
       ),
+      getCurrentProfile,
+      notificationChanges: notificationChangeBus,
     }),
   );
   app.use(
@@ -258,7 +262,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     app,
     db,
     close: async () => {
-      await changeBus.close();
+      await Promise.all([changeBus.close(), notificationChangeBus.close()]);
       await db.destroy();
     },
   };

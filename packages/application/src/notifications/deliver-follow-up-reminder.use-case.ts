@@ -18,35 +18,42 @@ export class DeliverFollowUpReminderUseCase {
   ): Promise<Notification | null> {
     const reminder = await this.reminders.findValidReminder(payload);
     if (!reminder) return null;
-    return this.unitOfWork.execute(async ({ notifications, followUpReminders, outbox }) => {
-      if (!(await followUpReminders.markSent(payload, now))) return null;
-      const notification = await notifications.create({
-        profileId: reminder.profileId,
-        jobApplicationId: reminder.jobApplicationId,
-        type: "follow_up_reminder",
-        title: reminder.title,
-        body: createFollowUpBody(reminder.companyName, reminder.roleTitle, reminder.description),
-      });
-      await outbox.add({
-        type: outboxEventTypes.followUpReminderEmail,
-        aggregateId: reminder.followUpId,
-        payload: {
-          messageId: `<follow-up-${reminder.followUpId}-${payload.scheduledFor}@link2cv.local>`,
-          email: reminder.profileEmail,
-          companyName: reminder.companyName,
-          roleTitle: reminder.roleTitle,
-          followUpAt: reminder.scheduledAt.toISOString(),
+    return this.unitOfWork.execute(
+      async ({ notifications, notificationChanges, followUpReminders, outbox }) => {
+        if (!(await followUpReminders.markSent(payload, now))) return null;
+        const summary = createFollowUpSummary(reminder.companyName, reminder.roleTitle);
+        const notification = await notifications.create({
+          profileId: reminder.profileId,
+          jobApplicationId: reminder.jobApplicationId,
+          type: "follow_up_reminder",
           title: reminder.title,
-          description: reminder.description,
-        },
-      });
-      return notification;
-    });
+          body: createFollowUpBody(summary, reminder.description),
+        });
+        await notificationChanges.created(notification, summary);
+        await outbox.add({
+          type: outboxEventTypes.followUpReminderEmail,
+          aggregateId: reminder.followUpId,
+          payload: {
+            messageId: `<follow-up-${reminder.followUpId}-${payload.scheduledFor}@link2cv.local>`,
+            email: reminder.profileEmail,
+            companyName: reminder.companyName,
+            roleTitle: reminder.roleTitle,
+            followUpAt: reminder.scheduledAt.toISOString(),
+            title: reminder.title,
+            description: reminder.description,
+          },
+        });
+        return notification;
+      },
+    );
   }
 }
 
-function createFollowUpBody(companyName?: string, roleTitle?: string, description?: string) {
+function createFollowUpSummary(companyName?: string, roleTitle?: string) {
   const target = [companyName, roleTitle].filter(Boolean).join(" - ");
-  const context = target ? `It is time to follow up on ${target}.` : "It is time to follow up.";
-  return description ? `${context}\n\n${description}` : context;
+  return target ? `It is time to follow up on ${target}.` : "It is time to follow up.";
+}
+
+function createFollowUpBody(summary: string, description?: string) {
+  return description ? `${summary}\n\n${description}` : summary;
 }

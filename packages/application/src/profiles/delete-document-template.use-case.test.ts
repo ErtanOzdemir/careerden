@@ -88,6 +88,7 @@ function createUnitOfWork(profiles: ReturnType<typeof createProfileRepository>):
           jobApplicationChanges: { changed: recordChanged } as never,
           profiles,
           notifications: {} as never,
+          notificationChanges: {} as never,
           followUpReminders: {} as never,
           outbox: { add: addOutboxEvent },
         }),

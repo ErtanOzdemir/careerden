@@ -13,6 +13,7 @@ import {
   PostgresEmailOutboxDispatcher,
   PostgresOutboxRepository,
   PostgresPersistenceUnitOfWork,
+  RedisNotificationChangeBus,
   PostgresReminderOutboxDispatcher,
   PostgresStorageOutboxDispatcher,
   RustFsStorage,
@@ -38,7 +39,8 @@ export async function createNotificationsWorkerRuntime(
 ): Promise<NotificationsWorkerRuntime> {
   const db = createPostgresDb(env.DATABASE_URL);
   const reminders = new PostgresFollowUpReminderRepository(db);
-  const unitOfWork = new PostgresPersistenceUnitOfWork(db);
+  const notificationChangeBus = RedisNotificationChangeBus.create(env.REDIS_URL);
+  const unitOfWork = new PostgresPersistenceUnitOfWork(db, undefined, notificationChangeBus);
   const deliverFollowUpReminder = new DeliverFollowUpReminderUseCase(reminders, unitOfWork);
   const storage = new RustFsStorage({
     accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
@@ -129,6 +131,7 @@ export async function createNotificationsWorkerRuntime(
       clearInterval(storageOutboxInterval);
       await worker.close();
       await reminderQueue.close();
+      await notificationChangeBus.close();
       await db.destroy();
     },
   };

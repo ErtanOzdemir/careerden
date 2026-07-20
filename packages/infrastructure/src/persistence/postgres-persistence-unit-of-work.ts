@@ -3,6 +3,10 @@ import type {
   JobApplicationChange,
   JobApplicationChangePublisher,
   JobApplicationChangeRecorder,
+  Notification,
+  NotificationChange,
+  NotificationChangePublisher,
+  NotificationChangeRecorder,
   PersistenceTransaction,
   PersistenceUnitOfWork,
 } from "@link2cv/domain";
@@ -16,23 +20,55 @@ export class PostgresPersistenceUnitOfWork implements PersistenceUnitOfWork {
   constructor(
     private readonly db: Knex,
     private readonly jobApplicationChangePublisher?: JobApplicationChangePublisher,
+    private readonly notificationChangePublisher?: NotificationChangePublisher,
   ) {}
 
   async execute<T>(work: (transaction: PersistenceTransaction) => Promise<T>): Promise<T> {
     const changes = new BufferedJobApplicationChangeRecorder();
+    const notificationChanges = new BufferedNotificationChangeRecorder();
     const result = await this.db.transaction((transaction) =>
       work({
         jobApplications: new PostgresJobApplicationRepository(transaction),
         jobApplicationChanges: changes,
         profiles: new PostgresUserProfileRepository(transaction),
         notifications: new PostgresNotificationRepository(transaction),
+        notificationChanges,
         followUpReminders: new PostgresFollowUpReminderRepository(transaction),
         outbox: new PostgresOutboxRepository(transaction),
       }),
     );
 
-    await changes.publishBestEffort(this.jobApplicationChangePublisher);
+    await Promise.all([
+      changes.publishBestEffort(this.jobApplicationChangePublisher),
+      notificationChanges.publishBestEffort(this.notificationChangePublisher),
+    ]);
     return result;
+  }
+}
+
+class BufferedNotificationChangeRecorder implements NotificationChangeRecorder {
+  private readonly changes = new Map<string, NotificationChange>();
+
+  async created(notification: Notification, summary: string): Promise<void> {
+    this.changes.set(notification.id, {
+      type: "notification.created",
+      notification,
+      summary,
+    });
+  }
+
+  async publishBestEffort(publisher?: NotificationChangePublisher): Promise<void> {
+    if (!publisher) return;
+
+    const results = await Promise.allSettled(
+      [...this.changes.values()].map((change) => publisher.publish(change)),
+    );
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error("Failed to publish notification realtime change", result.reason);
+      }
+    }
   }
 }
 

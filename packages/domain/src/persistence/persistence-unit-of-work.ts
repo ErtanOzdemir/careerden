@@ -1,6 +1,7 @@
 import type { JobApplicationRepository } from "../job-applications/job-application-repository.js";
 import type { JobApplicationChangeRecorder } from "../job-applications/job-application-change.js";
 import type { FollowUpReminderRepository } from "../notifications/follow-up-reminder.js";
+import type { NotificationChangeRecorder } from "../notifications/notification-change.js";
 import type { NotificationRepository } from "../notifications/notification-repository.js";
 import type { UserProfileAccountRepository } from "../profiles/user-profile-repository.js";
 import type { OutboxRepository } from "./outbox.js";
@@ -10,6 +11,7 @@ export interface PersistenceTransaction {
   jobApplicationChanges: JobApplicationChangeRecorder;
   profiles: UserProfileAccountRepository;
   notifications: NotificationRepository;
+  notificationChanges: NotificationChangeRecorder;
   followUpReminders: FollowUpReminderRepository;
   outbox: OutboxRepository;
 }

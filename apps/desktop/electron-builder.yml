@@ -1,22 +1,42 @@
 appId: com.link2cv.desktop
 productName: Link2CV
+artifactName: Link2CV-${version}-${arch}.${ext}
+asar: true
 directories:
+  buildResources: build
   output: release
 icon: build/icon
 files:
   - dist/**/*
+  - renderer/**/*
   - node_modules/**/*
+  # msgpackr's native extractor is optional. Exclude host-only binaries so universal
+  # packages consistently use its JavaScript fallback on both architectures.
+  - "!node_modules/@msgpackr-extract/**/*"
+  - "!node_modules/msgpackr-extract/**/*"
   - package.json
 mac:
   category: public.app-category.business
+  darkModeSupport: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  hardenedRuntime: true
   icon: build/link2cv.icon
+  notarize: true
   target:
-    - dmg
+    - target: dmg
+      arch:
+        - universal
 dmg:
   icon: build/icon.icns
 win:
   target:
-    - nsis
+    - target: nsis
+      arch:
+        - x64
 linux:
+  category: Office
   target:
-    - AppImage
+    - target: AppImage
+      arch:
+        - x64

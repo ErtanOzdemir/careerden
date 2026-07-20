@@ -1,0 +1,148 @@
+name: Desktop Draft Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal DMG
+            os: macos-latest
+            artifact_name: desktop-macos-universal
+            artifact_path: apps/desktop/release/*.dmg
+          - name: Windows x64 NSIS
+            os: windows-latest
+            artifact_name: desktop-windows-x64
+            artifact_path: apps/desktop/release/*.exe
+          - name: Linux x64 AppImage
+            os: ubuntu-latest
+            artifact_name: desktop-linux-x64
+            artifact_path: apps/desktop/release/*.AppImage
+    env:
+      DESKTOP_API_BASE_URL: ${{ vars.DESKTOP_API_BASE_URL }}
+      LINK2CV_REQUIRE_DESKTOP_API_BASE_URL: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Validate release version and API configuration
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./apps/desktop/package.json').version")"
+          if [[ "${GITHUB_REF_NAME}" != "v${package_version}" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match desktop version ${package_version}"
+            exit 1
+          fi
+          if [[ -z "${DESKTOP_API_BASE_URL}" ]]; then
+            echo "::error::Repository variable DESKTOP_API_BASE_URL is required"
+            exit 1
+          fi
+
+      - name: Validate macOS signing configuration
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+        run: |
+          for variable_name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!variable_name}" ]]; then
+              echo "::error::Secret ${variable_name} is required for signed macOS releases"
+              exit 1
+            fi
+          done
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build desktop application
+        run: pnpm --filter @link2cv/desktop build
+
+      - name: Package and notarize macOS
+        if: runner.os == 'macOS'
+        env:
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+        run: pnpm --filter @link2cv/desktop exec electron-builder --config electron-builder.yml --publish never --mac
+
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        run: pnpm --filter @link2cv/desktop exec electron-builder --config electron-builder.yml --publish never --win
+
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        run: pnpm --filter @link2cv/desktop exec electron-builder --config electron-builder.yml --publish never --linux
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Create draft release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Generate checksums
+        run: |
+          cd release-assets
+          sha256sum ./* > SHA256SUMS.txt
+
+      - name: Create or update draft GitHub release
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing_draft="$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft 2>/dev/null || true)"
+          if [[ "${existing_draft}" == "false" ]]; then
+            echo "::error::Release ${GITHUB_REF_NAME} is already published"
+            exit 1
+          fi
+          if [[ "${existing_draft}" == "true" ]]; then
+            gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" release-assets/* \
+              --draft \
+              --generate-notes \
+              --title "Link2CV ${GITHUB_REF_NAME#v}" \
+              --verify-tag
+          fi

@@ -2,10 +2,47 @@ import { createAuthClient } from "better-auth/react";
 import { emailOTPClient } from "better-auth/client/plugins";
 import { apiBaseUrl } from "./config";
 
+const desktopAuthTransportOrigin = "https://desktop-auth.link2cv.invalid";
+const authTransport = resolveAuthClientTransport(apiBaseUrl);
+
 export const authClient = createAuthClient({
-  baseURL: resolveAuthBaseUrl(apiBaseUrl),
+  baseURL: authTransport.baseURL,
+  fetchOptions: authTransport.customFetchImpl
+    ? { customFetchImpl: authTransport.customFetchImpl }
+    : undefined,
   plugins: [emailOTPClient()],
 });
+
+export function resolveAuthClientTransport(
+  baseUrl: string,
+  origin = defaultOrigin(),
+  fetchImpl: typeof globalThis.fetch = globalThis.fetch,
+): {
+  baseURL: string;
+  customFetchImpl?: typeof globalThis.fetch;
+} {
+  const authBaseUrl = resolveAuthBaseUrl(baseUrl, origin);
+  const authUrl = new URL(authBaseUrl);
+
+  if (authUrl.protocol === "http:" || authUrl.protocol === "https:") {
+    return { baseURL: authBaseUrl };
+  }
+
+  if (!authUrl.host) {
+    throw new Error("Desktop auth proxy URLs require a host-based renderer origin");
+  }
+
+  const rendererOrigin = `${authUrl.protocol}//${authUrl.host}`;
+  const transportBaseUrl = new URL(
+    `${authUrl.pathname}${authUrl.search}${authUrl.hash}`,
+    desktopAuthTransportOrigin,
+  ).toString();
+
+  return {
+    baseURL: normalizeBaseUrl(transportBaseUrl),
+    customFetchImpl: createDesktopAuthProxyFetch(rendererOrigin, fetchImpl),
+  };
+}
 
 export function resolveAuthBaseUrl(baseUrl: string, origin = defaultOrigin()): string {
   const trimmed = baseUrl.trim();
@@ -23,6 +60,48 @@ export function resolveAuthBaseUrl(baseUrl: string, origin = defaultOrigin()): s
 
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/$/, "");
+}
+
+function createDesktopAuthProxyFetch(
+  rendererOrigin: string,
+  fetchImpl: typeof globalThis.fetch,
+): typeof globalThis.fetch {
+  return (input, init) => {
+    const requestUrl = new URL(input instanceof Request ? input.url : input.toString());
+
+    if (requestUrl.origin !== desktopAuthTransportOrigin) {
+      return fetchImpl(input, init);
+    }
+
+    const proxyUrl = new URL(
+      `${requestUrl.pathname}${requestUrl.search}${requestUrl.hash}`,
+      `${rendererOrigin}/`,
+    );
+    const proxyInit = input instanceof Request ? copyRequestInit(input, init) : init;
+
+    return fetchImpl(proxyUrl, proxyInit);
+  };
+}
+
+function copyRequestInit(request: Request, overrides?: RequestInit): RequestInit {
+  const method = overrides?.method ?? request.method;
+  const canHaveBody = method !== "GET" && method !== "HEAD";
+
+  return {
+    body: canHaveBody ? request.body : undefined,
+    cache: request.cache,
+    credentials: request.credentials,
+    headers: request.headers,
+    integrity: request.integrity,
+    keepalive: request.keepalive,
+    method: request.method,
+    mode: request.mode,
+    redirect: request.redirect,
+    referrer: request.referrer,
+    referrerPolicy: request.referrerPolicy,
+    signal: request.signal,
+    ...overrides,
+  };
 }
 
 function defaultOrigin(): string {

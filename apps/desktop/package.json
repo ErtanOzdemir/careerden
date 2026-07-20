@@ -6,8 +6,11 @@
   "type": "module",
   "main": "dist/main/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/preload && cp src/preload/index.cjs dist/preload/index.cjs",
-    "dev": "tsc -p tsconfig.json && mkdir -p dist/preload && cp src/preload/index.cjs dist/preload/index.cjs && electron .",
+    "build": "pnpm run build:main && pnpm run build:renderer",
+    "build:main": "tsc -p tsconfig.json && node scripts/prepare-main-build.mjs",
+    "build:renderer": "pnpm --dir ../web exec vite build --outDir ../desktop/renderer --emptyOutDir",
+    "dev": "pnpm run build:main && electron .",
+    "package": "electron-builder --config electron-builder.yml --publish never",
     "rebuild": "echo 'No native desktop rebuild required'",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"

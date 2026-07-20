@@ -1,0 +1,105 @@
+import { describe, expect, it, vi } from "vitest";
+import {
+  buildProxiedApiUrl,
+  createPackagedRendererProtocolHandler,
+  packagedRendererSchemeRegistration,
+} from "./packaged-renderer-protocol.js";
+
+describe("packaged renderer protocol", () => {
+  it("serves bundled assets and falls back to index.html for browser routes", async () => {
+    const fetchFile = vi.fn(async () => new Response("renderer"));
+    const handler = createHandler({ fetchFile });
+
+    await handler(new Request("link2cv://app/assets/index.js"));
+    await handler(new Request("link2cv://app/applications/application-1?tab=timeline"));
+
+    expect(fetchFile.mock.calls[0]?.[0]).toMatch(/\/renderer\/assets\/index\.js$/);
+    expect(fetchFile.mock.calls[1]?.[0]).toMatch(/\/renderer\/index\.html$/);
+    expect(packagedRendererSchemeRegistration).toMatchObject({
+      scheme: "link2cv",
+      privileges: { secure: true, standard: true, supportFetchAPI: true },
+    });
+  });
+
+  it("rejects traversal, unknown hosts, and non-read methods for renderer assets", async () => {
+    const fetchFile = vi.fn(async () => new Response("renderer"));
+    const handler = createHandler({ fetchFile });
+
+    const traversal = await handler(new Request("link2cv://app/%2e%2e%2fprivate.txt"));
+    const unknownHost = await handler(new Request("link2cv://other/index.html"));
+    const method = await handler(new Request("link2cv://app/index.html", { method: "POST" }));
+
+    expect(traversal.status).toBe(400);
+    expect(unknownHost.status).toBe(404);
+    expect(method.status).toBe(405);
+    expect(fetchFile).not.toHaveBeenCalled();
+  });
+
+  it("proxies API requests with session credentials and a trusted upstream origin", async () => {
+    let forwardedBody = "";
+    const fetchApi = vi.fn(async (_input: string, init?: RequestInit) => {
+      forwardedBody = await new Response(init?.body).text();
+      return Response.json({ ok: true });
+    });
+    const handler = createHandler({ fetchApi });
+    const response = await handler(
+      new Request("link2cv://app/api/notifications/notification-1/read?source=desktop", {
+        body: JSON.stringify({ read: true }),
+        headers: {
+          Cookie: "renderer-cookie=untrusted",
+          "Content-Type": "application/json",
+          Origin: "link2cv://app",
+        },
+        method: "PATCH",
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchApi).toHaveBeenCalledOnce();
+    expect(fetchApi.mock.calls[0]?.[0]).toBe(
+      "https://api.example.com/base/notifications/notification-1/read?source=desktop",
+    );
+    const init = fetchApi.mock.calls[0]?.[1];
+    expect(init).toMatchObject({ credentials: "include", method: "PATCH", redirect: "follow" });
+    expect(new Headers(init?.headers).get("Origin")).toBe("https://api.example.com");
+    expect(new Headers(init?.headers).has("Cookie")).toBe(false);
+    expect(forwardedBody).toBe('{"read":true}');
+  });
+
+  it("returns a safe gateway response when the upstream API is unavailable", async () => {
+    const onError = vi.fn();
+    const handler = createHandler({
+      fetchApi: vi.fn(async () => {
+        throw new Error("private upstream detail");
+      }),
+      onError,
+    });
+
+    const response = await handler(new Request("link2cv://app/api/notifications"));
+
+    expect(response.status).toBe(502);
+    expect(await response.text()).toBe("Link2CV API is unavailable");
+    expect(onError).toHaveBeenCalledOnce();
+  });
+
+  it("preserves an API base path when constructing upstream URLs", () => {
+    expect(
+      buildProxiedApiUrl(
+        "https://api.example.com/link2cv/",
+        new URL("link2cv://app/api/health?check=true"),
+      ),
+    ).toBe("https://api.example.com/link2cv/health?check=true");
+  });
+});
+
+function createHandler(
+  overrides: Partial<Parameters<typeof createPackagedRendererProtocolHandler>[0]> = {},
+) {
+  return createPackagedRendererProtocolHandler({
+    apiBaseUrl: "https://api.example.com/base",
+    fetchApi: vi.fn(async () => Response.json({ ok: true })),
+    fetchFile: vi.fn(async () => new Response("renderer")),
+    rendererDirectory: "/opt/link2cv/renderer",
+    ...overrides,
+  });
+}

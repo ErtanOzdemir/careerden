@@ -13,4 +13,6 @@ storage/*
 .opencode/plugins/emdash-notifications.js
 storage/linkedin-session/
 apps/api/storage/linkedin-session/
+apps/desktop/release/
+apps/desktop/renderer/
 .claude/settings.local.json

@@ -1,6 +1,16 @@
-import { app, BrowserWindow, nativeTheme, Notification, session, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  nativeTheme,
+  net,
+  Notification,
+  protocol,
+  session,
+  shell,
+} from "electron";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadDesktopApiBaseUrl } from "./desktop-runtime-config.js";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
@@ -12,6 +22,12 @@ import {
   NativeNotificationPresenter,
   type DesktopNativeNotification,
 } from "./notifications/native-notification-presenter.js";
+import {
+  createPackagedRendererProtocolHandler,
+  packagedRendererScheme,
+  packagedRendererSchemeRegistration,
+  packagedRendererUrl,
+} from "./renderer/packaged-renderer-protocol.js";
 import { DesktopApiClient } from "./scraping/desktop-api-client.js";
 import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
 import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
@@ -38,6 +54,7 @@ let flushCookiesTimeout: NodeJS.Timeout | undefined;
 let isQuittingAfterCookieFlush = false;
 const notificationActivations = new DesktopNotificationActivationQueue();
 
+protocol.registerSchemesAsPrivileged([packagedRendererSchemeRegistration]);
 app.setName(appName);
 
 if (process.platform === "win32") {
@@ -90,6 +107,27 @@ async function initializeDesktopRuntime(): Promise<void> {
     app.dock.setIcon(join(__dirname, "..", "..", "build", "icon-dev.png"));
   }
 
+  const apiBaseUrl = loadDesktopApiBaseUrl({
+    configPath: join(__dirname, "desktop-runtime-config.json"),
+    environment: process.env,
+    isPackaged: app.isPackaged,
+  });
+
+  if (app.isPackaged) {
+    session.defaultSession.protocol.handle(
+      packagedRendererScheme,
+      createPackagedRendererProtocolHandler({
+        apiBaseUrl,
+        fetchApi: (input, init) => session.defaultSession.fetch(input, init),
+        fetchFile: (input, init) => net.fetch(input, init),
+        onError: (error) => {
+          console.error("Packaged renderer protocol error", error);
+        },
+        rendererDirectory: join(__dirname, "..", "..", "renderer"),
+      }),
+    );
+  }
+
   registerAuthCookiePersistence();
 
   const sessionDirectory = join(app.getPath("userData"), "linkedin-session");
@@ -102,7 +140,6 @@ async function initializeDesktopRuntime(): Promise<void> {
   const checkLinkedInSession = new CheckLinkedInSessionUseCase(sessionManager);
   const startLinkedInSession = new StartLinkedInSessionUseCase(sessionManager);
   const saveLinkedInSession = new SaveLinkedInSessionUseCase(sessionManager);
-  const apiBaseUrl = process.env.VITE_API_BASE_URL ?? "http://localhost:3000";
   const claimedBy = getDesktopScrapingClaimOwner();
   utilityScrapingRunner = new UtilityProcessLinkedInScrapingRunner({
     modulePath: join(__dirname, "scraping", "scraping-utility-process.js"),
@@ -223,6 +260,8 @@ async function createWindow(): Promise<BrowserWindow> {
       url.searchParams.set("apiBaseUrl", process.env.VITE_API_BASE_URL);
     }
     loadWindow = window.loadURL(url.toString());
+  } else if (app.isPackaged) {
+    loadWindow = window.loadURL(packagedRendererUrl);
   } else {
     loadWindow = window.loadFile(join(__dirname, "..", "..", "renderer", "index.html"));
   }

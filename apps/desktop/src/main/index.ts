@@ -1,9 +1,17 @@
-import { app, BrowserWindow, nativeTheme, session, shell } from "electron";
+import { app, BrowserWindow, nativeTheme, Notification, session, shell } from "electron";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
+import { DesktopNotificationActivationQueue } from "./notifications/desktop-notification-activation.js";
+import { DesktopNotificationCoordinator } from "./notifications/desktop-notification-coordinator.js";
+import { desktopNotificationIpcChannels } from "./notifications/desktop-notification-ipc.js";
+import { DesktopNotificationStream } from "./notifications/desktop-notification-stream.js";
+import {
+  NativeNotificationPresenter,
+  type DesktopNativeNotification,
+} from "./notifications/native-notification-presenter.js";
 import { DesktopApiClient } from "./scraping/desktop-api-client.js";
 import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
 import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
@@ -21,38 +29,63 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const appName = "Link2CV";
 
 let mainWindow: BrowserWindow | null = null;
+let mainWindowReady: Promise<BrowserWindow> | null = null;
 let localScrapingWorker: LocalScrapingWorker | null = null;
 let utilityScrapingRunner: UtilityProcessLinkedInScrapingRunner | null = null;
+let notificationStream: DesktopNotificationStream | null = null;
+let nativeNotificationPresenter: NativeNotificationPresenter | null = null;
 let flushCookiesTimeout: NodeJS.Timeout | undefined;
 let isQuittingAfterCookieFlush = false;
+const notificationActivations = new DesktopNotificationActivationQueue();
 
 app.setName(appName);
 
-async function createWindow(): Promise<void> {
-  mainWindow = new BrowserWindow(
-    getMainWindowOptions(join(__dirname, "..", "preload", "index.cjs")),
-  );
-
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
-    return { action: "deny" };
-  });
-
-  const isDev = process.env.NODE_ENV === "development";
-  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
-
-  if (isDev && devServerUrl) {
-    const url = new URL(devServerUrl);
-    if (process.env.VITE_API_BASE_URL) {
-      url.searchParams.set("apiBaseUrl", process.env.VITE_API_BASE_URL);
-    }
-    void mainWindow.loadURL(url.toString());
-  } else {
-    void mainWindow.loadFile(join(__dirname, "..", "..", "renderer", "index.html"));
-  }
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.link2cv.desktop");
 }
 
-void app.whenReady().then(async () => {
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  registerDesktopLifecycle();
+}
+
+function registerDesktopLifecycle(): void {
+  app.on("second-instance", () => {
+    void activateMainWindow();
+  });
+
+  app.on("activate", () => {
+    void activateMainWindow();
+  });
+
+  void app.whenReady().then(initializeDesktopRuntime);
+
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      app.quit();
+    }
+  });
+
+  app.on("before-quit", (event) => {
+    if (isQuittingAfterCookieFlush) {
+      return;
+    }
+
+    event.preventDefault();
+    localScrapingWorker?.stop();
+    utilityScrapingRunner?.dispose();
+    nativeNotificationPresenter?.closeAll();
+    const stopNotificationStream = notificationStream?.stop() ?? Promise.resolve();
+
+    void Promise.all([stopNotificationStream, flushDefaultSessionCookies()]).finally(() => {
+      isQuittingAfterCookieFlush = true;
+      app.quit();
+    });
+  });
+}
+
+async function initializeDesktopRuntime(): Promise<void> {
   if (process.platform === "darwin" && !app.isPackaged && app.dock) {
     app.dock.setIcon(join(__dirname, "..", "..", "build", "icon-dev.png"));
   }
@@ -87,6 +120,49 @@ void app.whenReady().then(async () => {
   });
   localScrapingWorker.start();
 
+  nativeNotificationPresenter = new NativeNotificationPresenter({
+    createNotification: createNativeNotification,
+    onActivate: (activation) => {
+      notificationActivations.add(activation);
+      void activateMainWindow()
+        .then((window) => {
+          window.webContents.send(desktopNotificationIpcChannels.activationAvailable);
+        })
+        .catch((error: unknown) => {
+          console.error("Failed to activate Link2CV from a native notification", error);
+        });
+    },
+    onError: (error) => {
+      console.error("Native notification error", error);
+    },
+  });
+
+  const notificationCoordinator = new DesktopNotificationCoordinator({
+    getWindow: () => {
+      const window = getMainWindow();
+      if (!window) return null;
+
+      return {
+        isFocused: () => window.isFocused(),
+        notifyRenderer: () => {
+          window.webContents.send(desktopNotificationIpcChannels.arrived);
+        },
+      };
+    },
+    showNativeNotification: (change) => {
+      nativeNotificationPresenter?.show(change);
+    },
+  });
+
+  notificationStream = new DesktopNotificationStream({
+    apiBaseUrl,
+    fetch: (input, init) => session.defaultSession.fetch(input, init),
+    onChange: (change) => notificationCoordinator.received(change),
+    onError: (error) => {
+      console.error("Desktop notification stream error", error);
+    },
+  });
+
   new IpcHandlerRegistry()
     .register("open-external", (_event, url: string) => {
       void shell.openExternal(url);
@@ -96,6 +172,11 @@ void app.whenReady().then(async () => {
     .register("linkedin-session-start", async () => startLinkedInSession.execute())
     .register("linkedin-session-save", async () => saveLinkedInSession.execute())
     .register("job-application-queued", () => localScrapingWorker?.wake())
+    .register(desktopNotificationIpcChannels.consumeActivations, (event) => {
+      const window = getMainWindow();
+      if (!window || event.sender !== window.webContents) return [];
+      return notificationActivations.takeAll();
+    })
     .register("set-native-theme-source", (_event, source: unknown) => {
       setNativeThemeSource(nativeTheme, source);
     })
@@ -108,39 +189,101 @@ void app.whenReady().then(async () => {
     });
 
   await createWindow();
+  notificationStream.start();
+}
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      void createWindow();
+async function createWindow(): Promise<BrowserWindow> {
+  const existingWindow = getMainWindow();
+  if (existingWindow && mainWindowReady) return mainWindowReady;
+
+  const window = new BrowserWindow(
+    getMainWindowOptions(join(__dirname, "..", "preload", "index.cjs")),
+  );
+  mainWindow = window;
+
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  window.on("closed", () => {
+    if (mainWindow === window) {
+      mainWindow = null;
+      mainWindowReady = null;
     }
   });
-});
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
+  const isDev = process.env.NODE_ENV === "development";
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  let loadWindow: Promise<void>;
+
+  if (isDev && devServerUrl) {
+    const url = new URL(devServerUrl);
+    if (process.env.VITE_API_BASE_URL) {
+      url.searchParams.set("apiBaseUrl", process.env.VITE_API_BASE_URL);
+    }
+    loadWindow = window.loadURL(url.toString());
+  } else {
+    loadWindow = window.loadFile(join(__dirname, "..", "..", "renderer", "index.html"));
   }
-});
 
-app.on("before-quit", (event) => {
-  if (isQuittingAfterCookieFlush) {
-    return;
-  }
+  mainWindowReady = loadWindow
+    .then(() => window)
+    .catch((error: unknown) => {
+      if (!window.isDestroyed()) window.destroy();
+      throw error;
+    });
 
-  event.preventDefault();
-  localScrapingWorker?.stop();
-  utilityScrapingRunner?.dispose();
-  void flushDefaultSessionCookies().finally(() => {
-    isQuittingAfterCookieFlush = true;
-    app.quit();
+  return mainWindowReady;
+}
+
+async function activateMainWindow(): Promise<BrowserWindow> {
+  await app.whenReady();
+  const window = await createWindow();
+
+  if (window.isMinimized()) window.restore();
+  if (!window.isVisible()) window.show();
+  window.focus();
+  return window;
+}
+
+function getMainWindow(): BrowserWindow | null {
+  return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+}
+
+function createNativeNotification(options: {
+  body: string;
+  title: string;
+}): DesktopNativeNotification | null {
+  if (!Notification.isSupported()) return null;
+
+  const notification = new Notification({
+    body: options.body,
+    timeoutType: "default",
+    title: options.title,
   });
-});
+
+  return {
+    close: () => notification.close(),
+    onClick: (listener) => {
+      notification.once("click", () => listener());
+    },
+    onClose: (listener) => {
+      notification.once("close", () => listener());
+    },
+    onFailed: (listener) => {
+      notification.once("failed", (_event, error) => listener(error));
+    },
+    show: () => notification.show(),
+  };
+}
 
 function registerAuthCookiePersistence(): void {
   session.defaultSession.cookies.on("changed", (_event, cookie) => {
     if (isAuthCookie(cookie.name)) {
       scheduleCookieFlush();
       localScrapingWorker?.wake();
+      notificationStream?.wake();
     }
   });
 }

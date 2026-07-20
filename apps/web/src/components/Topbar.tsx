@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { notificationsApi } from "../api/notifications.js";
 import type { ApiNotification } from "../api/types.js";
+import { notificationsChangedEventName } from "./DesktopNotificationBridge.js";
 import { TopbarApplicationSearch } from "./TopbarApplicationSearch.js";
 
 export function Topbar({
@@ -35,28 +36,47 @@ export function Topbar({
     if (nextOpen) setNotificationsOpen(false);
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadUnreadCount() {
-      try {
-        const result = await notificationsApi.unreadCount();
-        if (isMounted) {
-          setUnreadCount(result.count);
-        }
-      } catch {
-        /* ignore */
-      }
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const result = await notificationsApi.unreadCount();
+      setUnreadCount(result.count);
+    } catch {
+      /* ignore */
     }
+  }, []);
 
+  const loadNotifications = useCallback(async () => {
+    try {
+      const items = await notificationsApi.list();
+      setNotifications(items);
+      setUnreadCount(items.filter((item) => !item.readAt).length);
+    } catch {
+      setNotifications([]);
+    }
+  }, []);
+
+  useEffect(() => {
     void loadUnreadCount();
     const interval = window.setInterval(() => void loadUnreadCount(), 30_000);
 
-    return () => {
-      isMounted = false;
-      window.clearInterval(interval);
+    return () => window.clearInterval(interval);
+  }, [loadUnreadCount]);
+
+  useEffect(() => {
+    const refreshNotifications = () => {
+      if (notificationsOpen) {
+        void loadNotifications();
+      } else {
+        void loadUnreadCount();
+      }
     };
-  }, []);
+
+    window.addEventListener(notificationsChangedEventName, refreshNotifications);
+
+    return () => {
+      window.removeEventListener(notificationsChangedEventName, refreshNotifications);
+    };
+  }, [loadNotifications, loadUnreadCount, notificationsOpen]);
 
   useEffect(() => {
     if (!notificationsOpen) {
@@ -90,13 +110,7 @@ export function Topbar({
       return;
     }
 
-    try {
-      const items = await notificationsApi.list();
-      setNotifications(items);
-      setUnreadCount(items.filter((item) => !item.readAt).length);
-    } catch {
-      setNotifications([]);
-    }
+    await loadNotifications();
   }
 
   async function openNotification(notification: ApiNotification) {

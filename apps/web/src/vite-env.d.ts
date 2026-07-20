@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+interface DesktopNotificationActivation {
+  notificationId: string;
+  jobApplicationId?: string;
+}
+
 interface Window {
   electronAPI?: {
     platform?: string;
@@ -11,5 +16,8 @@ interface Window {
     maximizeWindow?: () => Promise<void>;
     closeWindow?: () => Promise<void>;
     setNativeThemeSource?: (theme: "light" | "system" | "dark") => Promise<void>;
+    onNotificationArrived?: (callback: () => void) => () => void;
+    onNativeNotificationActivationAvailable?: (callback: () => void) => () => void;
+    consumePendingNativeNotificationActivations?: () => Promise<DesktopNotificationActivation[]>;
   };
 }

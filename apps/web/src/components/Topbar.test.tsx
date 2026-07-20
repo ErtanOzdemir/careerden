@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { notificationsApi } from "../api/notifications.js";
+import { notificationsChangedEventName } from "./DesktopNotificationBridge.js";
 import { Topbar } from "./Topbar";
 
 describe("Topbar", () => {
@@ -142,6 +143,20 @@ describe("Topbar", () => {
 
     await waitFor(() => expect(markRead).toHaveBeenCalledWith("notification-1"));
     expect(await screen.findByText("Related application follow-ups")).toBeInTheDocument();
+  });
+
+  it("refreshes the unread badge immediately after a desktop arrival", async () => {
+    const unreadCount = vi
+      .spyOn(notificationsApi, "unreadCount")
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 2 });
+    renderTopbar();
+    expect(await screen.findByText("1")).toBeInTheDocument();
+
+    window.dispatchEvent(new Event(notificationsChangedEventName));
+
+    await waitFor(() => expect(unreadCount).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("2")).toBeInTheDocument();
   });
 });
 

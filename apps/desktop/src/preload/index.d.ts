@@ -1,5 +1,10 @@
 export type NativeThemeSource = "system" | "light" | "dark";
 
+export interface DesktopNotificationActivation {
+  notificationId: string;
+  jobApplicationId?: string;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   openExternal: (url: string) => Promise<void>;
@@ -12,6 +17,9 @@ export interface ElectronAPI {
   minimizeWindow: () => Promise<void>;
   maximizeWindow: () => Promise<void>;
   closeWindow: () => Promise<void>;
+  onNotificationArrived: (callback: () => void) => () => void;
+  onNativeNotificationActivationAvailable: (callback: () => void) => () => void;
+  consumePendingNativeNotificationActivations: () => Promise<DesktopNotificationActivation[]>;
 }
 
 declare global {

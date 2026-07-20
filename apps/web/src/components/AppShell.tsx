@@ -3,6 +3,7 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import Sidebar from "./Sidebar.js";
 import { Topbar } from "./Topbar.js";
 import { AddJobDialog } from "./AddJobDialog.js";
+import { DesktopNotificationBridge } from "./DesktopNotificationBridge.js";
 
 const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
   "/": {
@@ -65,6 +66,7 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      <DesktopNotificationBridge />
       <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">

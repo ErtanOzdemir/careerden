@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import type { CreateUserProfileInput, UserProfile } from "@link2cv/domain";
+import type { CreateUserProfileInput, UserProfile } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import { toUserProfile } from "../mappers.js";
 import { KnexUserProfileRepository } from "./knex-user-profile.repository.js";

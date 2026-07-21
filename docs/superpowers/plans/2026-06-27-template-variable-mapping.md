@@ -27,7 +27,7 @@
 
 **Interfaces:**
 
-- Consumes: existing `updateDocumentTemplateMappingsSchema` from `@link2cv/contracts`
+- Consumes: existing `updateDocumentTemplateMappingsSchema` from `@careerden/contracts`
 - Produces: Allows `PATCH /:id/document-templates/:templateId/mappings` to accept a subset of placeholders in `fieldMappings` instead of requiring every detected placeholder
 
 - [ ] **Step 1: Change the validation to allow partial mappings**
@@ -76,7 +76,7 @@ git commit -m "feat: allow partial fieldMappings in template mappings PATCH"
 
 **Interfaces:**
 
-- Consumes: `ApiDocumentTemplate`, `ApiProfile` from `../api/types.js`; `profilesApi` from `../api/profiles.js`; `Button` from `./ui/button.js`; `Panel`, `PanelHeader` from `./link2cv/panel.js`; `cn` from `../lib/utils.js`; `ChevronDown`, `ChevronRight`, `Save`, `AlertCircle` from `lucide-react`
+- Consumes: `ApiDocumentTemplate`, `ApiProfile` from `../api/types.js`; `profilesApi` from `../api/profiles.js`; `Button` from `./ui/button.js`; `Panel`, `PanelHeader` from `./careerden/panel.js`; `cn` from `../lib/utils.js`; `ChevronDown`, `ChevronRight`, `Save`, `AlertCircle` from `lucide-react`
 - Produces: `TemplateVariableMapping` default export component
 
 - [ ] **Step 1: Create the component file with imports, types, and helper functions**
@@ -84,7 +84,7 @@ git commit -m "feat: allow partial fieldMappings in template mappings PATCH"
 ```typescript
 import { useState, useMemo, useCallback } from "react";
 import { Button } from "./ui/button.js";
-import { Panel } from "./link2cv/panel.js";
+import { Panel } from "./careerden/panel.js";
 import { profilesApi } from "../api/profiles.js";
 import type {
   ApiDocumentTemplate,
@@ -780,7 +780,7 @@ Replace the entire file content of `apps/web/src/pages/TemplateManager.tsx`:
 ```typescript
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/button.js";
-import { Panel, PanelHeader } from "../components/link2cv/panel.js";
+import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import TemplateVariableMapping from "../components/TemplateVariableMapping.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiDocumentTemplate, ApiProfile } from "../api/types.js";

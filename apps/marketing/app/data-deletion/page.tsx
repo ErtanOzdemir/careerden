@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
   title: "Account and Data Deletion",
-  description: "How to request deletion of a Link2CV account and associated personal data.",
+  description: "How to request deletion of a Careerden account and associated personal data.",
   path: "/data-deletion",
 });
 
@@ -104,7 +104,7 @@ export default function DataDeletionPage() {
     <LegalPage
       eyebrow="Account controls"
       title="Account and data deletion"
-      summary="What to expect when you ask Link2CV to delete an account or specific personal data."
+      summary="What to expect when you ask Careerden to delete an account or specific personal data."
       sections={sections}
     />
   );

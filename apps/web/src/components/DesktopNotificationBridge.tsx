@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { notificationsApi } from "../api/notifications.js";
 
-export const notificationsChangedEventName = "link2cv:notifications-changed";
+export const notificationsChangedEventName = "careerden:notifications-changed";
 
 export function DesktopNotificationBridge() {
   const navigate = useNavigate();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FileStorage, OutboxEvent } from "@link2cv/domain";
+import type { FileStorage, OutboxEvent } from "@careerden/domain";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresStorageOutboxDispatcher } from "./postgres-storage-outbox.dispatcher.js";
 

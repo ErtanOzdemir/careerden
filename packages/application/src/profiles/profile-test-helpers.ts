@@ -1,5 +1,9 @@
 import { vi } from "vitest";
-import type { DocumentTemplate, UserProfile, UserProfileAccountRepository } from "@link2cv/domain";
+import type {
+  DocumentTemplate,
+  UserProfile,
+  UserProfileAccountRepository,
+} from "@careerden/domain";
 
 export function createTestProfile(): UserProfile {
   const now = new Date("2026-01-01T00:00:00.000Z");

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ApplicationPackGenerationQueuePayload } from "@link2cv/domain";
+import type { ApplicationPackGenerationQueuePayload } from "@careerden/domain";
 import { BullMqApplicationPackGenerationQueue } from "./bullmq-application-pack-generation.queue.js";
 
 describe("BullMqApplicationPackGenerationQueue", () => {

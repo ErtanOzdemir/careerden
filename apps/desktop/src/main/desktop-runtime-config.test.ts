@@ -3,7 +3,9 @@ import { loadDesktopApiBaseUrl, normalizeDesktopApiBaseUrl } from "./desktop-run
 
 describe("loadDesktopApiBaseUrl", () => {
   it("loads the API URL embedded in a packaged desktop build", () => {
-    const readFile = vi.fn(() => JSON.stringify({ apiBaseUrl: "https://api.link2cv.example/v1/" }));
+    const readFile = vi.fn(() =>
+      JSON.stringify({ apiBaseUrl: "https://api.careerden.example/v1/" }),
+    );
 
     expect(
       loadDesktopApiBaseUrl({
@@ -12,7 +14,7 @@ describe("loadDesktopApiBaseUrl", () => {
         isPackaged: true,
         readFile,
       }),
-    ).toBe("https://api.link2cv.example/v1");
+    ).toBe("https://api.careerden.example/v1");
     expect(readFile).toHaveBeenCalledWith("/app/dist/main/desktop-runtime-config.json");
   });
 

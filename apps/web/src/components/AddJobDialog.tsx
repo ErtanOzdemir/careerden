@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal } from "./link2cv/modal.js";
+import { Modal } from "./careerden/modal.js";
 import { Button } from "./ui/button.js";
 import { Link2, Sparkles } from "lucide-react";
 import { jobApplicationsApi } from "../api/jobApplications.js";

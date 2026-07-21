@@ -1,4 +1,4 @@
-import type { NotificationChangeDto } from "@link2cv/contracts";
+import type { NotificationChangeDto } from "@careerden/contracts";
 
 export interface DesktopNotificationWindow {
   isFocused(): boolean;

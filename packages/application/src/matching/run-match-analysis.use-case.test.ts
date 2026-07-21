@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { richDocumentFromText } from "@link2cv/domain";
-import type { AiGenerateParams, AiProvider, UserProfile } from "@link2cv/domain";
-import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
+import { richDocumentFromText } from "@careerden/domain";
+import type { AiGenerateParams, AiProvider, UserProfile } from "@careerden/domain";
+import { InMemoryJobApplicationRepository } from "@careerden/infrastructure";
 import { RunMatchAnalysisUseCase } from "./run-match-analysis.use-case.js";
 
 describe("RunMatchAnalysisUseCase", () => {

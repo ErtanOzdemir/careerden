@@ -1,5 +1,9 @@
-import type { JobApplication, JobApplicationStatus, PersistenceUnitOfWork } from "@link2cv/domain";
-import { canTransitionJobApplicationStatus } from "@link2cv/domain";
+import type {
+  JobApplication,
+  JobApplicationStatus,
+  PersistenceUnitOfWork,
+} from "@careerden/domain";
+import { canTransitionJobApplicationStatus } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 

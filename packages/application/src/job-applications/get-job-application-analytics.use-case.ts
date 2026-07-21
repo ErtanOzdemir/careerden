@@ -2,7 +2,7 @@ import type {
   JobApplication,
   JobApplicationRepository,
   UserProfileAccessRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
 
 export interface JobApplicationAnalytics {

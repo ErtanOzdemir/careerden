@@ -1,4 +1,4 @@
-import type { AiProvider } from "@link2cv/domain";
+import type { AiProvider } from "@careerden/domain";
 import { DeepSeekAiProvider } from "./providers/deepseek-ai.provider.js";
 import { GeminiAiProvider } from "./providers/gemini-ai.provider.js";
 import { OpenAiAiProvider } from "./providers/openai-ai.provider.js";

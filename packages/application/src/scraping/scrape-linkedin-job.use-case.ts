@@ -1,4 +1,4 @@
-import type { JobSiteScraper, ScrapedCompany, ScrapedJob } from "@link2cv/domain";
+import type { JobSiteScraper, ScrapedCompany, ScrapedJob } from "@careerden/domain";
 
 export interface ScrapeLinkedInJobResult {
   job: ScrapedJob;

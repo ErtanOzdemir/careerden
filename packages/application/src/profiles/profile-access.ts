@@ -1,4 +1,4 @@
-import type { UserProfile, UserProfileAccessRepository } from "@link2cv/domain";
+import type { UserProfile, UserProfileAccessRepository } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 
 export interface AuthenticatedProfileUser {

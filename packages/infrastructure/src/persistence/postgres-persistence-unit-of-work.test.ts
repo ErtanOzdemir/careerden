@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { JobApplicationChangePublisher, NotificationChangePublisher } from "@link2cv/domain";
+import type { JobApplicationChangePublisher, NotificationChangePublisher } from "@careerden/domain";
 import type { Knex } from "knex";
 import { PostgresPersistenceUnitOfWork } from "./postgres-persistence-unit-of-work.js";
 

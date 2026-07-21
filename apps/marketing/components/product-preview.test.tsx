@@ -8,7 +8,7 @@ describe("dashboard product preview", () => {
 
     expect(
       screen.getByRole("img", {
-        name: "Fictional Link2CV job application tracking dashboard preview",
+        name: "Fictional Careerden job application tracking dashboard preview",
       }),
     ).toBeVisible();
     expect(screen.getByText("Fictional data · Application tracking dashboard")).toBeVisible();

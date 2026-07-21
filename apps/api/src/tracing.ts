@@ -16,7 +16,7 @@ export function setupTracing(env: ApiEnv) {
         "@opentelemetry/instrumentation-express": { enabled: true },
       }),
     ],
-    serviceName: "link2cv-api",
+    serviceName: "careerden-api",
   });
 
   sdk.start();

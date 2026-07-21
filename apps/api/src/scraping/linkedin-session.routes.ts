@@ -4,7 +4,7 @@ import type {
   CheckLinkedInSessionUseCase,
   SaveLinkedInSessionUseCase,
   StartLinkedInSessionUseCase,
-} from "@link2cv/application";
+} from "@careerden/application";
 
 export function createLinkedInSessionRouter(dependencies: {
   startLinkedInSession: StartLinkedInSessionUseCase;

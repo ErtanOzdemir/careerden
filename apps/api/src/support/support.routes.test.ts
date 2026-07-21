@@ -1,8 +1,8 @@
 import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SubmitSupportRequestUseCase } from "@link2cv/application";
-import type { SupportRequestNotifier } from "@link2cv/domain";
+import { SubmitSupportRequestUseCase } from "@careerden/application";
+import type { SupportRequestNotifier } from "@careerden/domain";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 import { createSupportRouter } from "./support.routes.js";
 

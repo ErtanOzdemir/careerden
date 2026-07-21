@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import { createUnitOfWork } from "./job-application-test-helpers.js";
 import { FailApplicationPackGenerationUseCase } from "./fail-application-pack-generation.use-case.js";
 import { GenerateRequestedApplicationPackUseCase } from "./generate-requested-application-pack.use-case.js";

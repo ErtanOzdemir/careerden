@@ -1,4 +1,4 @@
-import type { PersistenceUnitOfWork } from "@link2cv/domain";
+import type { PersistenceUnitOfWork } from "@careerden/domain";
 import { getAccessibleFollowUp } from "./job-application-resource-access.js";
 import { cancelFollowUpReminder } from "./schedule-follow-up-reminder.js";
 

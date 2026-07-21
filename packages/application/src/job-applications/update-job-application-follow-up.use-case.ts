@@ -2,7 +2,7 @@ import type {
   JobApplicationFollowUp,
   PersistenceUnitOfWork,
   UpdateJobApplicationFollowUpInput,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { getAccessibleFollowUp } from "./job-application-resource-access.js";
 import { cancelFollowUpReminder, scheduleFollowUpReminder } from "./schedule-follow-up-reminder.js";
 

@@ -1,4 +1,4 @@
-import type { SupportRequestNotification, SupportRequestNotifier } from "@link2cv/domain";
+import type { SupportRequestNotification, SupportRequestNotifier } from "@careerden/domain";
 
 export class MockSupportRequestNotifier implements SupportRequestNotifier {
   async notify(_request: SupportRequestNotification): Promise<void> {

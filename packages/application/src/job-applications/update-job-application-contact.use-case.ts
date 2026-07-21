@@ -2,7 +2,7 @@ import type {
   JobApplicationContact,
   PersistenceUnitOfWork,
   UpdateJobApplicationContactInput,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { getAccessibleContact } from "./job-application-resource-access.js";
 
 export class UpdateJobApplicationContactUseCase {

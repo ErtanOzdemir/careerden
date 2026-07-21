@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import type { TraceIdRequest } from "./trace-id.middleware.js";
-import { ApplicationError } from "@link2cv/application";
+import { ApplicationError } from "@careerden/application";
 
 export function errorHandler(
   error: unknown,

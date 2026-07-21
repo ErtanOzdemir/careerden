@@ -7,7 +7,7 @@ export default function NotFound() {
       <h1>That page is not here.</h1>
       <p>The link may be outdated, or the page may have moved.</p>
       <Link className="button button-primary" href="/">
-        Back to Link2CV
+        Back to Careerden
       </Link>
     </main>
   );

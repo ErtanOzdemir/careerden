@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { NotificationChangeDto } from "@link2cv/contracts";
+import type { NotificationChangeDto } from "@careerden/contracts";
 import {
   DesktopNotificationStream,
   getDesktopNotificationRetryDelayMs,
@@ -93,7 +93,7 @@ describe("DesktopNotificationStream", () => {
     expect(fetch).toHaveBeenCalledOnce();
     expect(onError.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
-        message: "The Link2CV API does not support desktop notification streaming",
+        message: "The Careerden API does not support desktop notification streaming",
       }),
     );
   });

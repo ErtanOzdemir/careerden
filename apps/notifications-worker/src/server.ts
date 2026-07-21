@@ -5,7 +5,7 @@ const env = loadNotificationsWorkerEnv();
 const runtime = await createNotificationsWorkerRuntime(env);
 
 console.log(
-  `Link2CV notifications worker listening on queue "follow-up-reminders" with concurrency ${env.NOTIFICATIONS_WORKER_CONCURRENCY}`,
+  `Careerden notifications worker listening on queue "follow-up-reminders" with concurrency ${env.NOTIFICATIONS_WORKER_CONCURRENCY}`,
 );
 
 async function shutdown() {

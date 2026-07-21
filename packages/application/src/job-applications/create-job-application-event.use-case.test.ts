@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { JobApplicationEvent } from "@link2cv/domain";
+import type { JobApplicationEvent } from "@careerden/domain";
 import { CreateJobApplicationEventUseCase } from "./create-job-application-event.use-case.js";
 import {
   createJobApplicationRepository,

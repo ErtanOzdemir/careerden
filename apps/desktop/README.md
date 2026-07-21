@@ -1,6 +1,6 @@
-# Link2CV Desktop
+# Careerden Desktop
 
-The Link2CV desktop app is the Electron runtime for the React application, local
+The Careerden desktop app is the Electron runtime for the React application, local
 LinkedIn scraping, and native follow-up notifications. The API and BullMQ workers remain
 standalone services; the desktop installer does not embed the backend.
 
@@ -10,7 +10,7 @@ standalone services; the desktop installer does not embed the backend.
 | ---------------------- | ----------------------- | ----------------------------------------------------------------------- |
 | Development            | Vite development server | The launch URL carries `VITE_API_BASE_URL` as `apiBaseUrl`              |
 | Local production build | `apps/desktop/renderer` | Uses the API URL generated during the desktop build                     |
-| Packaged installer     | `link2cv://app`         | Electron proxies same-origin `/api/*` requests to the generated API URL |
+| Packaged installer     | `careerden://app`       | Electron proxies same-origin `/api/*` requests to the generated API URL |
 
 Start the complete development stack from the repository root:
 
@@ -21,7 +21,7 @@ pnpm dev:desktop
 In a packaged application, the request path is:
 
 ```text
-React renderer at link2cv://app
+React renderer at careerden://app
             |
             | fetch /api/* with credentials
             v
@@ -29,7 +29,7 @@ Electron custom-protocol handler
             |
             | rewrite to DESKTOP_API_BASE_URL and use the default Electron session
             v
-Standalone Link2CV API
+Standalone Careerden API
 ```
 
 The custom protocol serves bundled static assets, falls back to `index.html` for React
@@ -39,9 +39,9 @@ It also avoids depending on a production web server and avoids cross-origin API 
 cookie handling in the renderer.
 
 Better Auth expects an HTTP(S) base URL internally. When the renderer runs on
-`link2cv://app`, the auth client temporarily constructs requests against
-`https://desktop-auth.link2cv.invalid`. A custom fetch implementation immediately
-rewrites those requests to `link2cv://app/api/auth`; the `.invalid` address is only a
+`careerden://app`, the auth client temporarily constructs requests against
+`https://desktop-auth.careerden.invalid`. A custom fetch implementation immediately
+rewrites those requests to `careerden://app/api/auth`; the `.invalid` address is only a
 local transport placeholder and is never contacted over the network.
 
 ## Native Follow-up Notifications
@@ -63,8 +63,8 @@ Runtime behavior:
 
 - A newly created notification always tells the renderer to refresh its notification
   list and unread count when a window exists.
-- An operating-system notification is shown only when no Link2CV window is focused.
-- Clicking the operating-system notification restores and focuses Link2CV, opens the
+- An operating-system notification is shown only when no Careerden window is focused.
+- Clicking the operating-system notification restores and focuses Careerden, opens the
   related application's timeline, and attempts to mark the notification as read.
 - Unsupported native notifications do not block the in-app refresh.
 - The stream retries transient failures with bounded backoff. Authentication failures
@@ -82,8 +82,8 @@ Build the Electron main process and production renderer from the repository root
 
 ```bash
 DESKTOP_API_BASE_URL=https://api.example.com \
-  LINK2CV_REQUIRE_DESKTOP_API_BASE_URL=true \
-  pnpm --filter @link2cv/desktop build
+  CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL=true \
+  pnpm --filter @careerden/desktop build
 ```
 
 The build writes a validated runtime configuration into the desktop output. The API URL
@@ -92,13 +92,13 @@ prefix is supported. `DESKTOP_API_BASE_URL` is public application configuration 
 in the installer, so store it as a GitHub repository variable rather than a secret.
 
 For non-release local builds, the URL falls back to `http://localhost:3000`. Release
-builds set `LINK2CV_REQUIRE_DESKTOP_API_BASE_URL=true` so an installer cannot be produced
+builds set `CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL=true` so an installer cannot be produced
 accidentally with that fallback.
 
 After building, package for the current host platform:
 
 ```bash
-pnpm --filter @link2cv/desktop package
+pnpm --filter @careerden/desktop package
 ```
 
 Installers are written to `apps/desktop/release`. The GitHub release workflow is the

@@ -20,8 +20,8 @@ import type {
   UpdateJobApplicationContactInput,
   UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
-} from "@link2cv/domain";
-import type { CreateJobApplicationInput, JobApplicationStatus } from "@link2cv/domain";
+} from "@careerden/domain";
+import type { CreateJobApplicationInput, JobApplicationStatus } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import {
   toGeneratedDocument,

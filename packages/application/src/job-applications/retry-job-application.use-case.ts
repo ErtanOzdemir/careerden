@@ -1,5 +1,5 @@
-import type { JobApplication, PersistenceUnitOfWork } from "@link2cv/domain";
-import { assessProfileReadiness } from "@link2cv/domain";
+import type { JobApplication, PersistenceUnitOfWork } from "@careerden/domain";
+import { assessProfileReadiness } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";

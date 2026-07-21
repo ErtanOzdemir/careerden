@@ -17,7 +17,7 @@
 - Backend source organized by bounded context; no broad generic folders
 - Backend and package source files use kebab-case; React components/pages use PascalCase
 - Tests colocated with behavior; `*.test.ts` / `*.test.tsx`
-- Workspace packages use `@link2cv/*` scope
+- Workspace packages use `@careerden/*` scope
 - Validate external inputs with Zod schemas before persisting
 - Run quality gates before considering work ready: `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm build`, `pnpm test`
 - User has requested: do NOT commit changes; work on the master branch
@@ -76,7 +76,7 @@
 - Test: `packages/domain/src/job-applications/job-application.test.ts` (verify compilation)
 
 **Interfaces:**
-- Produces: `JobApplicationFollowUp`, `CreateJobApplicationFollowUpInput`, `UpdateJobApplicationFollowUpInput` in `@link2cv/domain`
+- Produces: `JobApplicationFollowUp`, `CreateJobApplicationFollowUpInput`, `UpdateJobApplicationFollowUpInput` in `@careerden/domain`
 - Produces: Updated `FollowUpReminderQueuePayload` with `followUpId: string`
 - Produces: Updated `FollowUpReminderRepository` with methods keyed by `followUpId`
 - Produces: Updated `FollowUpReminderCandidate` with `followUpId`, `title`, `description`, `scheduledAt`
@@ -306,7 +306,7 @@ git commit -m "feat(domain): add JobApplicationFollowUp entity and key reminders
 
 **Interfaces:**
 - Consumes: none
-- Produces: `createJobApplicationFollowUpSchema`, `updateJobApplicationFollowUpSchema`, `CreateJobApplicationFollowUpDto`, `UpdateJobApplicationFollowUpDto` in `@link2cv/contracts`
+- Produces: `createJobApplicationFollowUpSchema`, `updateJobApplicationFollowUpSchema`, `CreateJobApplicationFollowUpDto`, `UpdateJobApplicationFollowUpDto` in `@careerden/contracts`
 - Produces: `createJobApplicationSchema` and `updateJobApplicationSchema` without `nextFollowUpAt`
 
 - [ ] **Step 1: Write the failing test for follow-up schemas**
@@ -350,7 +350,7 @@ import {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @link2cv/contracts test -- --run packages/contracts/src/job-applications/job-application.schema.test.ts`
+Run: `pnpm --filter @careerden/contracts test -- --run packages/contracts/src/job-applications/job-application.schema.test.ts`
 Expected: FAIL with "createJobApplicationFollowUpSchema is not defined" or import error.
 
 - [ ] **Step 3: Add follow-up schemas and remove nextFollowUpAt**
@@ -435,7 +435,7 @@ In `packages/contracts/src/job-applications/job-application.schema.test.ts`, upd
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `pnpm --filter @link2cv/contracts test -- --run packages/contracts/src/job-applications/job-application.schema.test.ts`
+Run: `pnpm --filter @careerden/contracts test -- --run packages/contracts/src/job-applications/job-application.schema.test.ts`
 Expected: PASS — all tests green.
 
 - [ ] **Step 6: Commit**
@@ -586,7 +586,7 @@ git commit -m "feat(infrastructure): add migration for job_application_follow_up
 - Test: `packages/infrastructure/src/persistence/job-applications/in-memory-job-application.repository.test.ts`
 
 **Interfaces:**
-- Consumes: `JobApplicationFollowUp`, `CreateJobApplicationFollowUpInput`, `UpdateJobApplicationFollowUpInput` from `@link2cv/domain`
+- Consumes: `JobApplicationFollowUp`, `CreateJobApplicationFollowUpInput`, `UpdateJobApplicationFollowUpInput` from `@careerden/domain`
 - Produces: `toJobApplicationFollowUp` mapper function
 - Produces: `KnexJobApplicationRepository` and `InMemoryJobApplicationRepository` with follow-up CRUD methods
 - Produces: `PublishingJobApplicationRepository` wrapping follow-up CRUD with change publishing
@@ -645,12 +645,12 @@ And add after `expect(await repository.listContacts(job.id)).toEqual([]);`:
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @link2cv/infrastructure test -- --run packages/infrastructure/src/persistence/job-applications/in-memory-job-application.repository.test.ts`
+Run: `pnpm --filter @careerden/infrastructure test -- --run packages/infrastructure/src/persistence/job-applications/in-memory-job-application.repository.test.ts`
 Expected: FAIL — `repository.createFollowUp is not a function`.
 
 - [ ] **Step 3: Add toJobApplicationFollowUp mapper**
 
-In `packages/infrastructure/src/persistence/mappers.ts`, add `JobApplicationFollowUp` to the import from `@link2cv/domain`:
+In `packages/infrastructure/src/persistence/mappers.ts`, add `JobApplicationFollowUp` to the import from `@careerden/domain`:
 
 ```typescript
 import type {
@@ -668,7 +668,7 @@ import type {
   ProfileExperience,
   ProfileProject,
   UserProfile,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 ```
 
 Remove the four follow-up fields from `toJobApplication` (lines 41-45):
@@ -714,7 +714,7 @@ export function toJobApplicationFollowUp(row: Record<string, unknown>): JobAppli
 
 In `packages/infrastructure/src/persistence/job-applications/knex-job-application.repository.ts`:
 
-Add to the type imports from `@link2cv/domain`:
+Add to the type imports from `@careerden/domain`:
 
 ```typescript
 import type {
@@ -736,7 +736,7 @@ import type {
   UpdateJobApplicationContactInput,
   UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 ```
 
 Add `toJobApplicationFollowUp` to the mapper import:
@@ -856,7 +856,7 @@ import type {
   UpdateJobApplicationContactInput,
   UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 ```
 
 Add a follow-ups map to the class fields:
@@ -992,7 +992,7 @@ import type {
   UpdateJobApplicationContactInput,
   UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 ```
 
 Add follow-up CRUD methods after `deleteContact` (before `attachGeneratedDocument`):
@@ -1030,7 +1030,7 @@ Add follow-up CRUD methods after `deleteContact` (before `attachGeneratedDocumen
 
 - [ ] **Step 7: Run the in-memory repository tests to verify they pass**
 
-Run: `pnpm --filter @link2cv/infrastructure test -- --run packages/infrastructure/src/persistence/job-applications/in-memory-job-application.repository.test.ts`
+Run: `pnpm --filter @careerden/infrastructure test -- --run packages/infrastructure/src/persistence/job-applications/in-memory-job-application.repository.test.ts`
 Expected: PASS — all tests green including the new follow-up CRUD test and the updated delete test.
 
 - [ ] **Step 8: Commit**
@@ -1050,7 +1050,7 @@ git commit -m "feat(infrastructure): add follow-up CRUD to repositories and mapp
 - Modify: `packages/infrastructure/src/notifications/smtp-notification-email.sender.ts`
 
 **Interfaces:**
-- Consumes: `FollowUpReminderRepository`, `FollowUpReminderQueuePayload`, `FollowUpReminderCandidate`, `ScheduleFollowUpReminderInput` from `@link2cv/domain`
+- Consumes: `FollowUpReminderRepository`, `FollowUpReminderQueuePayload`, `FollowUpReminderCandidate`, `ScheduleFollowUpReminderInput` from `@careerden/domain`
 - Produces: `PostgresFollowUpReminderRepository` querying `job_application_follow_ups` by `follow_up_id`
 - Produces: `BullMqFollowUpReminderQueue` with job ID `follow-up:${followUpId}` and payload including `followUpId`
 - Produces: `createSmtpNotificationEmailSender` with `sendFollowUpReminder` accepting `title` and `description`
@@ -1070,8 +1070,8 @@ import type {
   FollowUpReminderQueuePayload,
   FollowUpReminderRepository,
   UpdateFollowUpReminderScheduleInput,
-} from "@link2cv/domain";
-import { followUpReminderLeadTimeMs } from "@link2cv/domain";
+} from "@careerden/domain";
+import { followUpReminderLeadTimeMs } from "@careerden/domain";
 import { nullableDate, nullableString } from "../persistence/mappers.js";
 
 export class PostgresFollowUpReminderRepository implements FollowUpReminderRepository {
@@ -1275,7 +1275,7 @@ git commit -m "feat(infrastructure): key reminders by followUpId and include tit
 - Test: `apps/api/src/job-applications/job-applications.routes.test.ts`
 
 **Interfaces:**
-- Consumes: `createJobApplicationFollowUpSchema`, `updateJobApplicationFollowUpSchema` from `@link2cv/contracts`; `JobApplicationFollowUp`, `CreateJobApplicationFollowUpInput`, `UpdateJobApplicationFollowUpInput` from `@link2cv/domain`
+- Consumes: `createJobApplicationFollowUpSchema`, `updateJobApplicationFollowUpSchema` from `@careerden/contracts`; `JobApplicationFollowUp`, `CreateJobApplicationFollowUpInput`, `UpdateJobApplicationFollowUpInput` from `@careerden/domain`
 - Produces: `POST /:id/follow-ups`, `GET /:id/follow-ups`, `PATCH /:id/follow-ups/:followUpId`, `DELETE /:id/follow-ups/:followUpId` routes
 - Produces: `JobApplicationDetail` type with `followUps: JobApplicationFollowUp[]`
 - Produces: `getJobApplicationDetail` including `followUps` in the response
@@ -1296,7 +1296,7 @@ import type {
   JobApplicationFollowUp,
   JobApplicationQueue,
   JobApplicationRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 ```
 
 Update the test at line 252 — remove `nextFollowUpAt` from the tracking overrides, add a follow-up to the mock, and verify it appears in the detail:
@@ -1383,7 +1383,7 @@ Update `createJobApplicationRepository` to add `listFollowUps`, `createFollowUp`
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @link2cv/api test -- --run apps/api/src/job-applications/job-applications.routes.test.ts`
+Run: `pnpm --filter @careerden/api test -- --run apps/api/src/job-applications/job-applications.routes.test.ts`
 Expected: FAIL — `listFollowUps` is not on the mock type, or `detail.followUps` is undefined.
 
 - [ ] **Step 3: Update imports and types in the routes file**
@@ -1401,7 +1401,7 @@ import type {
   JobApplicationRepository,
   MatchAnalysisResult,
   ScrapeBundle,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 ```
 
 Add follow-up schemas to the contracts import:
@@ -1422,7 +1422,7 @@ import {
   updateJobApplicationSchema,
   updateStatusSchema,
   updateDocumentContentSchema,
-} from "@link2cv/contracts";
+} from "@careerden/contracts";
 ```
 
 Update `JobApplicationDetail` type to include `followUps`:
@@ -1501,7 +1501,7 @@ async function scheduleFollowUpReminder(input: {
 }
 ```
 
-The routes file already imports `getFollowUpReminderScheduledFor` from `@link2cv/infrastructure` — keep that import as-is.
+The routes file already imports `getFollowUpReminderScheduledFor` from `@careerden/infrastructure` — keep that import as-is.
 
 - [ ] **Step 6: Remove nextFollowUpAt scheduling from POST / and PATCH /:id**
 
@@ -1644,7 +1644,7 @@ Add these routes after the contacts routes (after the `DELETE /:id/contacts/:con
 
 - [ ] **Step 8: Run the API tests to verify they pass**
 
-Run: `pnpm --filter @link2cv/api test -- --run apps/api/src/job-applications/job-applications.routes.test.ts`
+Run: `pnpm --filter @careerden/api test -- --run apps/api/src/job-applications/job-applications.routes.test.ts`
 Expected: PASS — all tests green.
 
 - [ ] **Step 9: Commit**
@@ -1662,7 +1662,7 @@ git commit -m "feat(api): add follow-up CRUD routes and include followUps in det
 - Modify: `apps/notifications-worker/src/app.ts`
 
 **Interfaces:**
-- Consumes: `FollowUpReminderQueuePayload` with `followUpId` from `@link2cv/domain`; `FollowUpReminderCandidate` with `followUpId`, `title`, `description`, `scheduledAt` from `@link2cv/domain`
+- Consumes: `FollowUpReminderQueuePayload` with `followUpId` from `@careerden/domain`; `FollowUpReminderCandidate` with `followUpId`, `title`, `description`, `scheduledAt` from `@careerden/domain`
 - Produces: Worker that creates notifications and sends emails using follow-up `title` and `description`
 
 - [ ] **Step 1: Update the worker to use followUpId and include title/description**
@@ -1811,7 +1811,7 @@ Update the "maps analytics and details into dashboard stats" test — `upcomingI
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @link2cv/web test -- --run apps/web/src/api/mappers.test.ts`
+Run: `pnpm --filter @careerden/web test -- --run apps/web/src/api/mappers.test.ts`
 Expected: FAIL — `followUps` not on the type, `nextFollowUpAt` still present, etc.
 
 - [ ] **Step 3: Add ApiJobApplicationFollowUp and update detail type**
@@ -2074,7 +2074,7 @@ function mapFollowUp(followUp: ApiJobApplicationFollowUp): FollowUp {
 
 - [ ] **Step 7: Run the mapper tests to verify they pass**
 
-Run: `pnpm --filter @link2cv/web test -- --run apps/web/src/api/mappers.test.ts`
+Run: `pnpm --filter @careerden/web test -- --run apps/web/src/api/mappers.test.ts`
 Expected: PASS — all tests green.
 
 - [ ] **Step 8: Commit**
@@ -2347,7 +2347,7 @@ Replace the PanelHeader action and the follow-up form section (lines 717-771):
                 required
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Link2CV will notify you automatically 10 minutes before this time.
+                Careerden will notify you automatically 10 minutes before this time.
               </p>
             </div>
             <div className="flex justify-end gap-2">
@@ -2409,7 +2409,7 @@ Remove the old `{app.nextFollowUpAt && (...)}` block (lines 764-771).
 
 - [ ] **Step 4: Run typecheck to verify the web app compiles**
 
-Run: `pnpm --filter @link2cv/web typecheck`
+Run: `pnpm --filter @careerden/web typecheck`
 Expected: PASS — no type errors.
 
 - [ ] **Step 5: Run all tests to verify nothing is broken**

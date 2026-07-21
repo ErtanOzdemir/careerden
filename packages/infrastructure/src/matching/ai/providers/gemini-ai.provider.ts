@@ -1,4 +1,4 @@
-import type { AiGenerateParams, AiProvider } from "@link2cv/domain";
+import type { AiGenerateParams, AiProvider } from "@careerden/domain";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 

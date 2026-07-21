@@ -1,5 +1,5 @@
-import type { JobApplication, JobApplicationRepository, OutboxRepository } from "@link2cv/domain";
-import { outboxEventTypes } from "@link2cv/domain";
+import type { JobApplication, JobApplicationRepository, OutboxRepository } from "@careerden/domain";
+import { outboxEventTypes } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import { generatedDocumentFileIds } from "../documents/generate-documents.use-case.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";

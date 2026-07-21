@@ -1,4 +1,4 @@
-export const THEME_STORAGE_KEY = "link2cv-theme";
+export const THEME_STORAGE_KEY = "careerden-theme";
 
 export const themes = ["light", "system", "dark"] as const;
 

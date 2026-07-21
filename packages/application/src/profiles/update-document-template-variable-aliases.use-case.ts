@@ -2,7 +2,7 @@ import type {
   DocumentTemplate,
   DocumentTemplateVariableAliases,
   UserProfileAccountRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleDocumentTemplate } from "./document-template-access.js";
 import { hasConfiguredDocumentTemplateVariableAliases } from "./document-template-mapping.js";

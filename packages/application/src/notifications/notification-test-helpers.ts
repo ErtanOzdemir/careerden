@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { Notification, NotificationRepository, UserProfile } from "@link2cv/domain";
+import type { Notification, NotificationRepository, UserProfile } from "@careerden/domain";
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 
 export function createTestNotification(): Notification {

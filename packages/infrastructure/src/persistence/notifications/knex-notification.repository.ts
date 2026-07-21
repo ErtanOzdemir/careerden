@@ -3,7 +3,7 @@ import type {
   CreateNotificationInput,
   Notification,
   NotificationRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import { toNotification } from "../mappers.js";
 

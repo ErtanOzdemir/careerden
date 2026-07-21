@@ -1,11 +1,11 @@
 import { Redis } from "ioredis";
-import { notificationChangeSchema } from "@link2cv/contracts";
+import { notificationChangeSchema } from "@careerden/contracts";
 import type {
   NotificationChange,
   NotificationChangeListener,
   NotificationChangePublisher,
   NotificationChangeSubscriber,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 const defaultChannel = "notification-changes";
 

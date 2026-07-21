@@ -1,4 +1,5 @@
 import type { BrowserWindowConstructorOptions } from "electron";
+import { desktopAppIdentity } from "./desktop-app-identity.js";
 
 export function getMainWindowOptions(
   preloadPath: string,
@@ -9,7 +10,7 @@ export function getMainWindowOptions(
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    title: "Link2CV",
+    title: desktopAppIdentity.name,
     backgroundColor: "#ffffff",
     hasShadow: true,
     autoHideMenuBar: true,

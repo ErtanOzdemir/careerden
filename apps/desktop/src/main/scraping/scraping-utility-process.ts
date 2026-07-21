@@ -1,10 +1,10 @@
 import process from "node:process";
-import { ScrapeLinkedInJobUseCase } from "@link2cv/application";
+import { ScrapeLinkedInJobUseCase } from "@careerden/application";
 import {
   LinkedInCompanyScraper,
   LinkedInJobScraper,
   LinkedInSessionManager,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import {
   parseScrapingUtilityRequest,
   type ScrapingUtilityResponse,

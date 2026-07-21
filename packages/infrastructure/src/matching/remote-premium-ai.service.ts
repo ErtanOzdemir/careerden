@@ -5,7 +5,7 @@ import {
   type PremiumAiInput,
   type PremiumAiResult,
   type PremiumAiService,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export interface RemotePremiumAiServiceOptions {
   apiUrl: string;

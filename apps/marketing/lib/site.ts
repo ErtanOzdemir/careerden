@@ -1,8 +1,8 @@
-export const siteName = "Link2CV";
-export const githubUrl = "https://github.com/ErtanOzdemir/link2cv";
+export const siteName = "Careerden";
+export const githubUrl = "https://github.com/ErtanOzdemir/careerden";
 export const desktopDownloadPlaceholderUrl = "/download#installer-coming-soon";
 
-export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.link2cv.example";
+export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.careerden.example";
 export const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "[CONTACT EMAIL]";
 export const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "[LEGAL COMPANY NAME]";
 export const companyAddress = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "[REGISTERED ADDRESS]";

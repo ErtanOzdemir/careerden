@@ -1,4 +1,4 @@
-import type { RemoteImage, RemoteImageFetcher } from "@link2cv/domain";
+import type { RemoteImage, RemoteImageFetcher } from "@careerden/domain";
 
 const allowedContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 

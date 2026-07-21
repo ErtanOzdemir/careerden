@@ -4,8 +4,8 @@ import type {
   DocumentTemplateKind,
   PersistenceUnitOfWork,
   UserProfileRepository,
-} from "@link2cv/domain";
-import { normalizeApplicationPackPreferences } from "@link2cv/domain";
+} from "@careerden/domain";
+import { normalizeApplicationPackPreferences } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { hasValidCoverLetterContentMapping } from "../profiles/document-template-mapping.js";
 import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";

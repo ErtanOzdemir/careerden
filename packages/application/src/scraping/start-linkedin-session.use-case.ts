@@ -1,4 +1,4 @@
-import type { LinkedInSessionStatusResult, SessionManager } from "@link2cv/domain";
+import type { LinkedInSessionStatusResult, SessionManager } from "@careerden/domain";
 
 export class StartLinkedInSessionUseCase {
   constructor(private readonly sessionManager: SessionManager) {}

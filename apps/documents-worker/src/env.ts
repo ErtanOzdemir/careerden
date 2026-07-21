@@ -10,7 +10,7 @@ export const documentsWorkerEnvSchema = z.object({
   DOCUMENTS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
   GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
   RUSTFS_ENDPOINT: z.string().url().default("http://localhost:9000"),
-  RUSTFS_BUCKET: z.string().min(1).default("link2cv"),
+  RUSTFS_BUCKET: z.string().min(1).default("careerden"),
   RUSTFS_ACCESS_KEY_ID: z.string().min(1).default("rustfsadmin"),
   RUSTFS_SECRET_ACCESS_KEY: z.string().min(1).default("rustfsadmin"),
   RUSTFS_REGION: z.string().min(1).default("us-east-1"),

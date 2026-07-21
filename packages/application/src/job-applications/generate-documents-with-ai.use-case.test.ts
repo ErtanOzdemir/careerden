@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { richDocumentFromText } from "@link2cv/domain";
-import type { PremiumAiService } from "@link2cv/domain";
+import { richDocumentFromText } from "@careerden/domain";
+import type { PremiumAiService } from "@careerden/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import { GenerateDocumentsWithAiUseCase } from "./generate-documents-with-ai.use-case.js";
 import { createUnitOfWork } from "./job-application-test-helpers.js";
 

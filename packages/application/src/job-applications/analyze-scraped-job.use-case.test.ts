@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AiGenerateParams, AiProvider, PersistenceUnitOfWork } from "@link2cv/domain";
+import type { AiGenerateParams, AiProvider, PersistenceUnitOfWork } from "@careerden/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import { AnalyzeScrapedJobUseCase } from "./analyze-scraped-job.use-case.js";
 import { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 

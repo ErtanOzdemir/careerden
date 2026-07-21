@@ -3,7 +3,7 @@ import type { JobsOptions } from "bullmq";
 import type {
   ApplicationPackGenerationQueue,
   ApplicationPackGenerationQueuePayload,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export const applicationPackGenerationQueueName = "application-pack-generations";
 

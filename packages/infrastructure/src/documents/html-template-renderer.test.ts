@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { richDocumentFromText } from "@link2cv/domain";
+import { richDocumentFromText } from "@careerden/domain";
 import { HtmlTemplateRenderer } from "./html-template-renderer.js";
 
 describe("HtmlTemplateRenderer", () => {

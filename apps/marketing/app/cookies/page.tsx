@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/metadata";
 export const metadata: Metadata = pageMetadata({
   title: "Cookie Policy",
   description:
-    "How Link2CV intends to use essential cookies and any optional measurement technologies.",
+    "How Careerden intends to use essential cookies and any optional measurement technologies.",
   path: "/cookies",
 });
 
@@ -16,9 +16,9 @@ const sections: LegalSection[] = [
     content: (
       <p>
         Cookies and similar browser storage can remember a session, preferences, or measurement
-        choices. This policy covers the public marketing website. Link2CV is currently presented as
-        a desktop-only product, and desktop application storage must be documented separately where
-        its behavior differs.
+        choices. This policy covers the public marketing website. Careerden is currently presented
+        as a desktop-only product, and desktop application storage must be documented separately
+        where its behavior differs.
       </p>
     ),
   },

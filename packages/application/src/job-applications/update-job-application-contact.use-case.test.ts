@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { JobApplicationContact } from "@link2cv/domain";
+import type { JobApplicationContact } from "@careerden/domain";
 import {
   createJobApplicationRepository,
   createProfiles,

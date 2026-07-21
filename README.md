@@ -1,8 +1,8 @@
-# Link2CV
+# Careerden
 
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE)
 
-Link2CV is a desktop-first job application tracker that turns LinkedIn job postings into
+Careerden is a desktop-first job application tracker that turns LinkedIn job postings into
 profile-aware match analysis, tailored CVs, and cover letters. It combines local
 Playwright scraping with an authenticated React app, durable PostgreSQL state, BullMQ
 workers, editable document content, custom DOCX templates, and S3-compatible file
@@ -40,8 +40,8 @@ storage.
 ### Setup
 
 ```bash
-git clone git@github.com:ErtanOzdemir/link2cv.git
-cd link2cv
+git clone git@github.com:ErtanOzdemir/careerden.git
+cd careerden
 
 nvm use
 corepack enable
@@ -125,7 +125,7 @@ The LLM, documents, and notifications workers consume BullMQ jobs independently 
 the API.
 
 In development, Electron loads the Vite renderer and connects to the standalone API. A
-packaged app instead serves the bundled renderer from `link2cv://app` and proxies
+packaged app instead serves the bundled renderer from `careerden://app` and proxies
 same-origin `/api` requests to its build-time API URL. See the
 [desktop runtime and release guide](apps/desktop/README.md) for notification behavior,
 packaging, signing, checksums, and the manual release checklist.
@@ -143,11 +143,11 @@ failure reason and workflow event are preserved so retries remain explicit.
 
 ## Architecture
 
-Link2CV is a strict ESM TypeScript monorepo organized around clean architecture and
+Careerden is a strict ESM TypeScript monorepo organized around clean architecture and
 bounded contexts.
 
 ```text
-link2cv/
+careerden/
 ├── apps/
 │   ├── api/                   Express transport, auth, SSE, and composition root
 │   ├── desktop/               Electron renderer, native notifications, and local scraping
@@ -235,21 +235,21 @@ the variable is marked required.
 
 ### Email, Storage, Scraping, and Tracing
 
-| Variable                       | Description                                 | Default                            |
-| ------------------------------ | ------------------------------------------- | ---------------------------------- |
-| `SMTP_HOST`                    | SMTP server host                            | `localhost`                        |
-| `SMTP_PORT`                    | SMTP server port                            | `1025`                             |
-| `SMTP_FROM`                    | Sender used for OTP and reminder emails     | `Link2CV <no-reply@link2cv.local>` |
-| `LINKEDIN_SESSION_SECRET`      | Encrypts the local LinkedIn browser session | Development-only value             |
-| `LINKEDIN_SESSION_STORAGE_DIR` | Shared-config session storage path          | `./storage/linkedin-session`       |
-| `RUSTFS_ENDPOINT`              | S3-compatible storage endpoint              | `http://localhost:9000`            |
-| `RUSTFS_BUCKET`                | Generated file/template bucket              | `link2cv`                          |
-| `RUSTFS_ACCESS_KEY_ID`         | RustFS access key                           | `rustfsadmin`                      |
-| `RUSTFS_SECRET_ACCESS_KEY`     | RustFS secret key                           | `rustfsadmin`                      |
-| `RUSTFS_REGION`                | S3 region                                   | `us-east-1`                        |
-| `RUSTFS_FORCE_PATH_STYLE`      | Use S3 path-style addressing                | `true`                             |
-| `OPEN_OBSERVE_URL`             | OpenTelemetry HTTP trace endpoint           | `http://localhost:5080`            |
-| `OPEN_OBSERVE_KEY`             | OpenObserve Basic Auth credential           | Required                           |
+| Variable                       | Description                                 | Default                                |
+| ------------------------------ | ------------------------------------------- | -------------------------------------- |
+| `SMTP_HOST`                    | SMTP server host                            | `localhost`                            |
+| `SMTP_PORT`                    | SMTP server port                            | `1025`                                 |
+| `SMTP_FROM`                    | Sender used for OTP and reminder emails     | `Careerden <no-reply@careerden.local>` |
+| `LINKEDIN_SESSION_SECRET`      | Encrypts the local LinkedIn browser session | Development-only value                 |
+| `LINKEDIN_SESSION_STORAGE_DIR` | Shared-config session storage path          | `./storage/linkedin-session`           |
+| `RUSTFS_ENDPOINT`              | S3-compatible storage endpoint              | `http://localhost:9000`                |
+| `RUSTFS_BUCKET`                | Generated file/template bucket              | `careerden`                            |
+| `RUSTFS_ACCESS_KEY_ID`         | RustFS access key                           | `rustfsadmin`                          |
+| `RUSTFS_SECRET_ACCESS_KEY`     | RustFS secret key                           | `rustfsadmin`                          |
+| `RUSTFS_REGION`                | S3 region                                   | `us-east-1`                            |
+| `RUSTFS_FORCE_PATH_STYLE`      | Use S3 path-style addressing                | `true`                                 |
+| `OPEN_OBSERVE_URL`             | OpenTelemetry HTTP trace endpoint           | `http://localhost:5080`                |
+| `OPEN_OBSERVE_KEY`             | OpenObserve Basic Auth credential           | Required                               |
 
 ## API Overview
 
@@ -264,7 +264,7 @@ handlers, endpoints require an authenticated session cookie and enforce profile 
 | `GET`  | `/health` | API health check                                        |
 | `*`    | `/auth/*` | Better Auth sign-up, sign-in, OTP, and session handlers |
 
-Bullstudio runs as a separate, opt-in Docker service and discovers Link2CV's BullMQ queues
+Bullstudio runs as a separate, opt-in Docker service and discovers Careerden's BullMQ queues
 from Redis. Start it with:
 
 ```bash
@@ -272,7 +272,7 @@ docker compose --profile operations up -d bullstudio
 ```
 
 Open <http://localhost:4000> and sign in with the hardcoded username `bullstudio` and
-password `Link2CV-Bullstudio-2026!`. The port binds to `127.0.0.1` by default; production
+password `Careerden-Bullstudio-2026!`. The port binds to `127.0.0.1` by default; production
 access should go through an authenticated HTTPS reverse proxy or private network.
 Standalone Bullstudio can retry/remove jobs and pause/resume queues, so treat access as
 privileged operations access rather than read-only monitoring. Because the credentials are
@@ -346,24 +346,24 @@ they are not part of the mounted HTTP API.
 
 ### Common Commands
 
-| Command                                  | Purpose                                                 |
-| ---------------------------------------- | ------------------------------------------------------- |
-| `pnpm dev`                               | Start every workspace development target through Turbo  |
-| `pnpm dev:desktop`                       | Start API, web, all workers, and Electron with dev URLs |
-| `pnpm dev:services`                      | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
-| `pnpm dev:api`                           | Start only the API                                      |
-| `pnpm dev:llm-worker`                    | Start only the LLM worker                               |
-| `pnpm dev:documents-worker`              | Start only the documents worker                         |
-| `pnpm dev:notifications-worker`          | Start only the notifications worker                     |
-| `pnpm --filter @link2cv/web dev`         | Start only the Vite web app                             |
-| `pnpm --filter @link2cv/desktop build`   | Build the Electron main process and renderer            |
-| `pnpm --filter @link2cv/desktop package` | Package desktop for the current host platform           |
-| `pnpm build`                             | Build every workspace                                   |
-| `pnpm test`                              | Run all Vitest suites                                   |
-| `pnpm lint`                              | Run ESLint                                              |
-| `pnpm format:check`                      | Check Prettier formatting                               |
-| `pnpm typecheck`                         | Type-check every workspace                              |
-| `pnpm lint:fix` / `pnpm format`          | Apply mechanical lint/format fixes                      |
+| Command                                    | Purpose                                                 |
+| ------------------------------------------ | ------------------------------------------------------- |
+| `pnpm dev`                                 | Start every workspace development target through Turbo  |
+| `pnpm dev:desktop`                         | Start API, web, all workers, and Electron with dev URLs |
+| `pnpm dev:services`                        | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
+| `pnpm dev:api`                             | Start only the API                                      |
+| `pnpm dev:llm-worker`                      | Start only the LLM worker                               |
+| `pnpm dev:documents-worker`                | Start only the documents worker                         |
+| `pnpm dev:notifications-worker`            | Start only the notifications worker                     |
+| `pnpm --filter @careerden/web dev`         | Start only the Vite web app                             |
+| `pnpm --filter @careerden/desktop build`   | Build the Electron main process and renderer            |
+| `pnpm --filter @careerden/desktop package` | Package desktop for the current host platform           |
+| `pnpm build`                               | Build every workspace                                   |
+| `pnpm test`                                | Run all Vitest suites                                   |
+| `pnpm lint`                                | Run ESLint                                              |
+| `pnpm format:check`                        | Check Prettier formatting                               |
+| `pnpm typecheck`                           | Type-check every workspace                              |
+| `pnpm lint:fix` / `pnpm format`            | Apply mechanical lint/format fixes                      |
 
 Use `docker compose up -d` instead of `pnpm dev:services` when local OTP email and
 OpenObserve are also needed.
@@ -395,7 +395,7 @@ Additional one-step controls are available as `pnpm migrate:up` and
 pnpm test
 
 # One workspace
-pnpm --filter @link2cv/domain test
+pnpm --filter @careerden/domain test
 
 # Required source-change gates
 pnpm lint
@@ -414,7 +414,7 @@ and pull request checklist. Security issues should follow [SECURITY.md](SECURITY
 
 ## License
 
-Link2CV is licensed under the [Business Source License 1.1](LICENSE).
+Careerden is licensed under the [Business Source License 1.1](LICENSE).
 
 - Personal, non-commercial use: free
 - Education and research: free

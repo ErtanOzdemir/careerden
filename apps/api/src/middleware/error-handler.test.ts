@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
-import { ApplicationError } from "@link2cv/application";
+import { ApplicationError } from "@careerden/application";
 import { errorHandler } from "./error-handler.js";
 import type { TraceIdRequest } from "./trace-id.middleware.js";
 

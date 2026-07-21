@@ -4,7 +4,7 @@ import type {
   FollowUpReminderRepository,
   NotificationRepository,
   PersistenceUnitOfWork,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { DeliverFollowUpReminderUseCase } from "./deliver-follow-up-reminder.use-case.js";
 
 describe("DeliverFollowUpReminderUseCase", () => {

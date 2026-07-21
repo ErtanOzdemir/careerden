@@ -1,5 +1,5 @@
-import { apiErrorResponseSchema } from "@link2cv/contracts";
-import type { ApiErrorCode } from "@link2cv/contracts";
+import { apiErrorResponseSchema } from "@careerden/contracts";
+import type { ApiErrorCode } from "@careerden/contracts";
 
 export class DesktopApiError extends Error {
   constructor(

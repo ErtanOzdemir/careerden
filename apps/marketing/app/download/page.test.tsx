@@ -20,21 +20,21 @@ describe("desktop download page", () => {
         screen.getByRole("link", { name: new RegExp(`Preview ${platform} download`, "i") }),
       ).toHaveAttribute("href", "/download#installer-coming-soon");
     }
-    expect(screen.getByRole("link", { name: /View Link2CV on GitHub/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /View Careerden on GitHub/i })).toHaveAttribute(
       "href",
-      "https://github.com/ErtanOzdemir/link2cv",
+      "https://github.com/ErtanOzdemir/careerden",
     );
   });
 
   it("publishes unique, indexable metadata", () => {
-    expect(metadata.title).toBe("Download Link2CV for Desktop | Link2CV");
+    expect(metadata.title).toBe("Download Careerden for Desktop | Careerden");
     expect(metadata.description).toMatch(/macOS, Windows, or Linux/);
     expect(metadata.alternates).toMatchObject({
       canonical: expect.stringMatching(/\/download$/),
     });
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
     expect(metadata.openGraph).toMatchObject({
-      title: "Download Link2CV for Desktop | Link2CV",
+      title: "Download Careerden for Desktop | Careerden",
       url: expect.stringMatching(/\/download$/),
     });
   });

@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 import type { JobsOptions } from "bullmq";
-import type { JobApplicationQueue, JobApplicationQueuePayload } from "@link2cv/domain";
+import type { JobApplicationQueue, JobApplicationQueuePayload } from "@careerden/domain";
 
 export const jobApplicationQueueName = "job-applications";
 

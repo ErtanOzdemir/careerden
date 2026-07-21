@@ -18,16 +18,16 @@ describe("createSmtpEmailSender", () => {
 
   it("sends generic email messages through the configured SMTP transport", async () => {
     const sender = createSmtpEmailSender({
-      from: "Link2CV <no-reply@link2cv.local>",
+      from: "Careerden <no-reply@careerden.local>",
       host: "localhost",
       port: 1025,
     });
     const message = {
       to: "ada@example.com",
       subject: "Welcome",
-      text: "Welcome to Link2CV.",
-      html: "<p>Welcome to Link2CV.</p>",
-      messageId: "<welcome-1@link2cv.local>",
+      text: "Welcome to Careerden.",
+      html: "<p>Welcome to Careerden.</p>",
+      messageId: "<welcome-1@careerden.local>",
     };
 
     await sender.send(message);
@@ -39,7 +39,7 @@ describe("createSmtpEmailSender", () => {
     });
     expect(sendMail).toHaveBeenCalledWith({
       ...message,
-      from: "Link2CV <no-reply@link2cv.local>",
+      from: "Careerden <no-reply@careerden.local>",
     });
   });
 });

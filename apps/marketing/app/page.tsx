@@ -16,14 +16,14 @@ import { absoluteUrl, githubUrl } from "@/lib/site";
 export const metadata: Metadata = pageMetadata({
   title: "Desktop Job Application Tracker & CV Creator",
   description:
-    "Link2CV is an open-source desktop job application tracker and CV creator for managing statuses, follow-ups, match insights, CVs, and cover letters.",
+    "Careerden is an open-source desktop job application tracker and CV creator for managing statuses, follow-ups, match insights, CVs, and cover letters.",
   path: "/",
 });
 
 const faqs = [
   [
-    "Does Link2CV apply to jobs for me?",
-    "No. Link2CV helps you track opportunities and prepare application materials. You review the content and decide when and where to apply.",
+    "Does Careerden apply to jobs for me?",
+    "No. Careerden helps you track opportunities and prepare application materials. You review the content and decide when and where to apply.",
   ],
   [
     "Will it invent experience to improve my match?",
@@ -34,8 +34,8 @@ const faqs = [
     "Open the desktop app and complete your career profile. Today, the desktop workflow can capture a LinkedIn posting automatically. You can also upload and map your own CV and cover-letter DOCX templates, or use the built-in layouts.",
   ],
   [
-    "Is Link2CV only for LinkedIn jobs?",
-    "No. Link2CV is a job-application tracking workspace. LinkedIn is the automated capture source currently supported by the desktop helper. Direct manual entry for applications from other sources is planned and is not available in the current release.",
+    "Is Careerden only for LinkedIn jobs?",
+    "No. Careerden is a job-application tracking workspace. LinkedIn is the automated capture source currently supported by the desktop helper. Direct manual entry for applications from other sources is planned and is not available in the current release.",
   ],
   [
     "What can I track for each application?",
@@ -46,7 +46,7 @@ const faqs = [
     "Yes. Compare profile content with the AI-tailored draft, choose what to use, edit the CV or cover letter, and select Update pack to render the revised documents.",
   ],
   [
-    "Is Link2CV also a CV creator?",
+    "Is Careerden also a CV creator?",
     "Yes. The profile-aware CV creator and cover letter creator use your factual profile and each job's requirements to prepare editable drafts. You review and update every draft before use.",
   ],
   [
@@ -59,7 +59,7 @@ export default function HomePage() {
   const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Link2CV",
+    name: "Careerden",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Desktop",
     url: absoluteUrl("/"),
@@ -83,7 +83,7 @@ export default function HomePage() {
             <span>job application.</span>
           </h1>
           <p className="hero-lede">
-            Link2CV is an open-source desktop job application tracker with profile-aware CV and
+            Careerden is an open-source desktop job application tracker with profile-aware CV and
             cover-letter tools. Track opportunities, follow-ups, match insights, and documents in
             one place.
           </p>
@@ -99,7 +99,7 @@ export default function HomePage() {
             Tracking is the foundation. Automated capture and AI-assisted documents support it.
             <span aria-hidden="true"> · </span>
             <a href={githubUrl} rel="noreferrer" target="_blank">
-              Explore Link2CV on GitHub
+              Explore Careerden on GitHub
             </a>
           </p>
         </div>
@@ -125,7 +125,7 @@ export default function HomePage() {
               <h2>Keep the whole job search in view.</h2>
             </div>
             <p>
-              Link2CV is the place where each opportunity lives from discovery through follow-up.
+              Careerden is the place where each opportunity lives from discovery through follow-up.
               Matching and document generation help you prepare; the tracker helps you keep moving.
             </p>
           </div>
@@ -191,7 +191,7 @@ export default function HomePage() {
       <section className="section-pad workflow-section" id="how-it-works">
         <div className="container">
           <div className="section-heading centered">
-            <span className="kicker">How Link2CV works</span>
+            <span className="kicker">How Careerden works</span>
             <h2>Set up once. Track and review every application.</h2>
             <p>
               Add your career details and document templates once, then create an application
@@ -259,9 +259,9 @@ export default function HomePage() {
                 <span className="kicker">Application capture</span>
                 <h3>Add your first application</h3>
                 <p>
-                  In the connected desktop app, paste a LinkedIn job URL. Link2CV captures the role
-                  as a tracked application, compares its requirements with your profile, and opens
-                  the complete Overview shown below.
+                  In the connected desktop app, paste a LinkedIn job URL. Careerden captures the
+                  role as a tracked application, compares its requirements with your profile, and
+                  opens the complete Overview shown below.
                 </p>
                 <small className="workflow-step-note">
                   LinkedIn is the current automated capture source. Direct manual application entry
@@ -299,10 +299,10 @@ export default function HomePage() {
         <div className="container trust-grid">
           <div>
             <span className="kicker light">Open source on GitHub</span>
-            <h2>Inspect the code and help shape Link2CV.</h2>
+            <h2>Inspect the code and help shape Careerden.</h2>
             <a className="source-link" href={githubUrl} rel="noreferrer" target="_blank">
               <GitHubMark />
-              View the Link2CV repository
+              View the Careerden repository
               <span aria-hidden="true">↗</span>
             </a>
           </div>
@@ -311,7 +311,7 @@ export default function HomePage() {
               <span className="trust-icon">01</span>
               <h3>Built in the open</h3>
               <p>
-                Explore the Link2CV codebase, follow development, report issues, and contribute on
+                Explore the Careerden codebase, follow development, report issues, and contribute on
                 GitHub under the repository's current BSL 1.1 license.
               </p>
               <p>
@@ -337,7 +337,7 @@ export default function HomePage() {
           <div className="section-heading">
             <span className="kicker">Questions, answered</span>
             <h2>Know what happens before you begin</h2>
-            <p>Link2CV supports your application workflow; it does not replace your judgment.</p>
+            <p>Careerden supports your application workflow; it does not replace your judgment.</p>
           </div>
           <div className="faq-list">
             {faqs.map(([question, answer], index) => (

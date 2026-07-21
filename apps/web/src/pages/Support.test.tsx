@@ -17,9 +17,9 @@ describe("Support", () => {
   it("shows the support reasons and contact email", async () => {
     render(<Support />);
 
-    expect(screen.getByRole("link", { name: /support@link2cv\.example/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /support@careerden\.example/i })).toHaveAttribute(
       "href",
-      "mailto:support@link2cv.example",
+      "mailto:support@careerden.example",
     );
     fireEvent.click(screen.getByRole("button", { name: "Open support reason options" }));
     expect(await screen.findByRole("option", { name: "Bug report" })).toBeInTheDocument();

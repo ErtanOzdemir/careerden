@@ -1,4 +1,4 @@
-import type { PersistenceUnitOfWork } from "@link2cv/domain";
+import type { PersistenceUnitOfWork } from "@careerden/domain";
 import { getAccessibleContact } from "./job-application-resource-access.js";
 
 export class DeleteJobApplicationContactUseCase {

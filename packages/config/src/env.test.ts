@@ -44,7 +44,7 @@ describe("loadEnv", () => {
       delete process.env[key];
     }
 
-    tempDirectory = mkdtempSync(join(tmpdir(), "link2cv-config-"));
+    tempDirectory = mkdtempSync(join(tmpdir(), "careerden-config-"));
     const nestedDirectory = join(tempDirectory, "apps", "desktop");
     mkdirSync(nestedDirectory, { recursive: true });
     writeFileSync(join(tempDirectory, ".env"), "PORT=3100");
@@ -75,7 +75,7 @@ describe("loadEnv", () => {
       delete process.env[key];
     }
 
-    tempDirectory = mkdtempSync(join(tmpdir(), "link2cv-config-"));
+    tempDirectory = mkdtempSync(join(tmpdir(), "careerden-config-"));
     const nestedDirectory = join(tempDirectory, "apps", "desktop");
     mkdirSync(nestedDirectory, { recursive: true });
     writeFileSync(

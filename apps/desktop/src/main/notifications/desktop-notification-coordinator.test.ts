@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { NotificationChangeDto } from "@link2cv/contracts";
+import type { NotificationChangeDto } from "@careerden/contracts";
 import { DesktopNotificationCoordinator } from "./desktop-notification-coordinator.js";
 
 describe("DesktopNotificationCoordinator", () => {

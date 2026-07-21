@@ -4,7 +4,7 @@ import type {
   DocxTemplateRenderer,
   FileStorage,
   UserProfileAccountRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleDocumentTemplate } from "./document-template-access.js";
 import { hasValidCoverLetterContentMapping } from "./document-template-mapping.js";

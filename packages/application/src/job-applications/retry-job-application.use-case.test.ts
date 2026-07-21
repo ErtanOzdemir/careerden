@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ScrapeBundle, UserProfileAccountRepository } from "@link2cv/domain";
-import { InMemoryJobApplicationRepository } from "@link2cv/infrastructure";
+import type { ScrapeBundle, UserProfileAccountRepository } from "@careerden/domain";
+import { InMemoryJobApplicationRepository } from "@careerden/infrastructure";
 import { RetryJobApplicationUseCase } from "./retry-job-application.use-case.js";
 import { createUnitOfWork } from "./job-application-test-helpers.js";
 

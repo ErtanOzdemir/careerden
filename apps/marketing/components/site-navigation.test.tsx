@@ -24,11 +24,11 @@ describe("marketing navigation", () => {
     for (const link of screen.getAllByRole("link", { name: "Download" })) {
       expect(link).toHaveAttribute("href", "/download");
     }
-    expect(screen.getByRole("link", { name: "View Link2CV on GitHub" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View Careerden on GitHub" })).toHaveAttribute(
       "href",
-      "https://github.com/ErtanOzdemir/link2cv",
+      "https://github.com/ErtanOzdemir/careerden",
     );
-    expect(screen.getByRole("link", { name: "View Link2CV on GitHub" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View Careerden on GitHub" })).toHaveAttribute(
       "target",
       "_blank",
     );

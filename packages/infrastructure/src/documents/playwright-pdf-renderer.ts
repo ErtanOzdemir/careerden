@@ -1,4 +1,4 @@
-import type { DocumentRenderer } from "@link2cv/domain";
+import type { DocumentRenderer } from "@careerden/domain";
 
 export class PlaywrightPdfRenderer implements DocumentRenderer {
   async htmlToPdf(html: string): Promise<Buffer> {

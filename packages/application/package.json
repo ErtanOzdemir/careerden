@@ -1,5 +1,5 @@
 {
-  "name": "@link2cv/application",
+  "name": "@careerden/application",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,11 +17,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@link2cv/contracts": "workspace:*",
-    "@link2cv/domain": "workspace:*"
+    "@careerden/contracts": "workspace:*",
+    "@careerden/domain": "workspace:*"
   },
   "devDependencies": {
-    "@link2cv/infrastructure": "workspace:*",
+    "@careerden/infrastructure": "workspace:*",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

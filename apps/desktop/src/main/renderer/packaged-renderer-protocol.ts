@@ -2,7 +2,7 @@ import { extname, isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { normalizeDesktopApiBaseUrl } from "../desktop-runtime-config.js";
 
-export const packagedRendererScheme = "link2cv";
+export const packagedRendererScheme = "careerden";
 export const packagedRendererOrigin = `${packagedRendererScheme}://app`;
 export const packagedRendererUrl = `${packagedRendererOrigin}/`;
 export const packagedRendererSchemeRegistration = {
@@ -114,7 +114,7 @@ async function proxyApiRequest(
     return await options.fetchApi(targetUrl, init);
   } catch (error) {
     options.onError?.(error);
-    return textResponse("Link2CV API is unavailable", 502);
+    return textResponse("Careerden API is unavailable", 502);
   }
 }
 

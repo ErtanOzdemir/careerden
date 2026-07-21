@@ -1,6 +1,6 @@
-appId: com.link2cv.desktop
-productName: Link2CV
-artifactName: Link2CV-${version}-${arch}.${ext}
+appId: com.careerden.desktop
+productName: Careerden
+artifactName: Careerden-${version}-${arch}.${ext}
 asar: true
 directories:
   buildResources: build
@@ -21,7 +21,7 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist
   hardenedRuntime: true
-  icon: build/link2cv.icon
+  icon: build/careerden.icon
   notarize: true
   target:
     - target: dmg

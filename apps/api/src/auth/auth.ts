@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import { Pool } from "pg";
-import type { EmailSender } from "@link2cv/domain";
+import type { EmailSender } from "@careerden/domain";
 
 type VerificationOtpType = "sign-in" | "email-verification" | "forget-password" | "change-email";
 
@@ -19,7 +19,7 @@ export interface AuthConfig {
   trustedOrigins: string[];
 }
 
-export interface Link2CvAuth {
+export interface CareerdenAuth {
   handler: (request: Request) => Promise<Response>;
   api: {
     getSession(input: { headers: Headers }): Promise<{
@@ -32,7 +32,7 @@ export interface Link2CvAuth {
   };
 }
 
-export function createAuth(config: AuthConfig): Link2CvAuth {
+export function createAuth(config: AuthConfig): CareerdenAuth {
   return betterAuth({
     baseURL: config.baseUrl,
     basePath: "/auth",
@@ -68,9 +68,9 @@ export function createRegistrationOtpHandler(emailSender: EmailSender) {
 
     await emailSender.send({
       to: email,
-      subject: "Your Link2CV verification code",
-      text: `Your Link2CV verification code is ${otp}. It expires in 5 minutes.`,
-      html: `<p>Your Link2CV verification code is <strong>${escapeHtml(otp)}</strong>.</p><p>It expires in 5 minutes.</p>`,
+      subject: "Your Careerden verification code",
+      text: `Your Careerden verification code is ${otp}. It expires in 5 minutes.`,
+      html: `<p>Your Careerden verification code is <strong>${escapeHtml(otp)}</strong>.</p><p>It expires in 5 minutes.</p>`,
     });
   };
 }
@@ -80,9 +80,9 @@ export function createPasswordResetHandler(emailSender: EmailSender) {
     void emailSender
       .send({
         to: user.email,
-        subject: "Reset your Link2CV password",
-        text: `Reset your Link2CV password by opening this link: ${url}\n\nThis link expires in 1 hour. If you did not request a password reset, you can ignore this email.`,
-        html: `<p>We received a request to reset your Link2CV password.</p><p><a href="${escapeHtml(url)}">Reset your password</a></p><p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>`,
+        subject: "Reset your Careerden password",
+        text: `Reset your Careerden password by opening this link: ${url}\n\nThis link expires in 1 hour. If you did not request a password reset, you can ignore this email.`,
+        html: `<p>We received a request to reset your Careerden password.</p><p><a href="${escapeHtml(url)}">Reset your password</a></p><p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>`,
       })
       .catch((error: unknown) => {
         console.error("Failed to send password-reset email", error);

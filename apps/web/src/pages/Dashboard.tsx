@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
-import { Panel, PanelHeader } from "../components/link2cv/panel.js";
-import { StatusBadge } from "../components/link2cv/status-badge.js";
+import { Panel, PanelHeader } from "../components/careerden/panel.js";
+import { StatusBadge } from "../components/careerden/status-badge.js";
 import { ApplicationPipelineSankey } from "../components/ApplicationPipelineSankey.js";
-import type { DisplayStatus } from "../components/link2cv/status-badge.js";
+import type { DisplayStatus } from "../components/careerden/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
 import { mapApiJobApplicationToUi, mapApiDashboardStats } from "../api/mappers.js";
@@ -152,13 +152,13 @@ export default function Dashboard() {
               Turn a LinkedIn posting into a tailored application
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Paste a job URL and Link2CV handles extraction, analysis, and drafting.
+              Paste a job URL and Careerden handles extraction, analysis, and drafting.
             </p>
           </div>
         </div>
         <Button
           onClick={() => {
-            window.dispatchEvent(new CustomEvent("link2cv:open-add-job"));
+            window.dispatchEvent(new CustomEvent("careerden:open-add-job"));
           }}
           className="shrink-0"
         >

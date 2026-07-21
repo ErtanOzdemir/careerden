@@ -3,8 +3,8 @@ import type {
   FollowUpReminderRepository,
   Notification,
   PersistenceUnitOfWork,
-} from "@link2cv/domain";
-import { outboxEventTypes } from "@link2cv/domain";
+} from "@careerden/domain";
+import { outboxEventTypes } from "@careerden/domain";
 
 export class DeliverFollowUpReminderUseCase {
   constructor(
@@ -34,7 +34,7 @@ export class DeliverFollowUpReminderUseCase {
           type: outboxEventTypes.followUpReminderEmail,
           aggregateId: reminder.followUpId,
           payload: {
-            messageId: `<follow-up-${reminder.followUpId}-${payload.scheduledFor}@link2cv.local>`,
+            messageId: `<follow-up-${reminder.followUpId}-${payload.scheduledFor}@careerden.local>`,
             email: reminder.profileEmail,
             companyName: reminder.companyName,
             roleTitle: reminder.roleTitle,

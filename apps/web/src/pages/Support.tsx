@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { CircleCheck, LifeBuoy, Mail, Send } from "lucide-react";
 import { supportApi, type SupportRequestReason } from "../api/support.js";
-import { Panel, PanelHeader } from "../components/link2cv/panel.js";
-import { UnifiedSelect, type UnifiedSelectOption } from "../components/link2cv/unified-select.js";
+import { Panel, PanelHeader } from "../components/careerden/panel.js";
+import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
 import { Button } from "../components/ui/button.js";
 
 const supportReasons: UnifiedSelectOption[] = [
@@ -124,15 +124,15 @@ export default function Support() {
           <div>
             <h2 className="text-sm font-semibold text-foreground">Prefer email?</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              You can also contact the Link2CV support team directly.
+              You can also contact the Careerden support team directly.
             </p>
           </div>
           <a
-            href="mailto:support@link2cv.example"
+            href="mailto:support@careerden.example"
             className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
           >
             <Mail className="size-4" />
-            support@link2cv.example
+            support@careerden.example
           </a>
         </div>
       </Panel>

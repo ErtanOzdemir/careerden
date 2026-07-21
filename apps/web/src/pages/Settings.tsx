@@ -1,9 +1,9 @@
 import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import { Button } from "../components/ui/button.js";
-import { Panel, PanelHeader } from "../components/link2cv/panel.js";
-import { Modal } from "../components/link2cv/modal.js";
-import { Field } from "../components/link2cv/field.js";
+import { Panel, PanelHeader } from "../components/careerden/panel.js";
+import { Modal } from "../components/careerden/modal.js";
+import { Field } from "../components/careerden/field.js";
 import { cn } from "../lib/utils.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiProfile } from "../api/types.js";
@@ -223,7 +223,7 @@ export default function Settings() {
             <ArrowUpCircle className="size-5" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Link2CV is up to date</p>
+            <p className="text-sm font-semibold text-foreground">Careerden is up to date</p>
             <p className="mt-0.5 text-sm text-muted-foreground">
               You're running the latest version.
             </p>
@@ -374,7 +374,7 @@ export default function Settings() {
         </div>
       </Panel>
 
-      <p className="text-center text-xs text-muted-foreground">Link2CV · Version 0.1.0</p>
+      <p className="text-center text-xs text-muted-foreground">Careerden · Version 0.1.0</p>
 
       <Modal open={updateOpen} onClose={() => setUpdateOpen(false)}>
         <div className="flex size-11 items-center justify-center rounded-lg bg-info-soft text-info">
@@ -382,7 +382,7 @@ export default function Settings() {
         </div>
         <h2 className="mt-4 text-lg font-semibold text-foreground">Check for updates</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          You are running the latest version of Link2CV.
+          You are running the latest version of Careerden.
         </p>
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setUpdateOpen(false)}>

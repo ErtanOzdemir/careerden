@@ -2,7 +2,7 @@ import { createAuthClient } from "better-auth/react";
 import { emailOTPClient } from "better-auth/client/plugins";
 import { apiBaseUrl } from "./config";
 
-const desktopAuthTransportOrigin = "https://desktop-auth.link2cv.invalid";
+const desktopAuthTransportOrigin = "https://desktop-auth.careerden.invalid";
 const authTransport = resolveAuthClientTransport(apiBaseUrl);
 
 export const authClient = createAuthClient({

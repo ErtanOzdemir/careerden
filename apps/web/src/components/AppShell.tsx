@@ -47,8 +47,8 @@ export default function AppShell() {
     function handleOpenAddJob() {
       setAddJobOpen(true);
     }
-    window.addEventListener("link2cv:open-add-job", handleOpenAddJob);
-    return () => window.removeEventListener("link2cv:open-add-job", handleOpenAddJob);
+    window.addEventListener("careerden:open-add-job", handleOpenAddJob);
+    return () => window.removeEventListener("careerden:open-add-job", handleOpenAddJob);
   }, []);
 
   const header = useMemo(() => {
@@ -61,7 +61,7 @@ export default function AppShell() {
     if (location.pathname.startsWith("/applications/") && params.id) {
       return { title: "Application", subtitle: "Review, generate, and track." };
     }
-    return { title: "Link2CV", subtitle: undefined };
+    return { title: "Careerden", subtitle: undefined };
   }, [greeting, location.pathname, params.id]);
 
   return (

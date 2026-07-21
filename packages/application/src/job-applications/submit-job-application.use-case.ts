@@ -3,7 +3,7 @@ import type {
   JobApplication,
   PersistenceUnitOfWork,
   ScrapeBundle,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
 
 export class SubmitJobApplicationUseCase {

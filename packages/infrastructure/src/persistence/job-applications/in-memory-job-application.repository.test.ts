@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { richDocumentFromText, type ScrapeBundle } from "@link2cv/domain";
+import { richDocumentFromText, type ScrapeBundle } from "@careerden/domain";
 import { InMemoryJobApplicationRepository } from "./in-memory-job-application.repository.js";
 
 describe("InMemoryJobApplicationRepository", () => {

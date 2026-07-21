@@ -8,7 +8,7 @@ describe("InMemoryUserProfileRepository", () => {
       email: "ada@example.com",
       experience: [
         {
-          company: "Link2CV",
+          company: "Careerden",
           description: "Built a profile manager",
           title: "Engineer",
         },

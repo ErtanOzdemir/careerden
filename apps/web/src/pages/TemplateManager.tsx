@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/button.js";
 import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
-import { Panel, PanelHeader } from "../components/link2cv/panel.js";
+import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import TemplateVariableMapping from "../components/TemplateVariableMapping.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiDocumentTemplate, ApiProfile } from "../api/types.js";

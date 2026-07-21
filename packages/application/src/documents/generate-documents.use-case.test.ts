@@ -5,12 +5,12 @@ import type {
   RichDocument,
   StoredFileInput,
   TemplateRenderer,
-} from "@link2cv/domain";
-import { richDocumentFromText, richDocumentToPlainText } from "@link2cv/domain";
+} from "@careerden/domain";
+import { richDocumentFromText, richDocumentToPlainText } from "@careerden/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import { GenerateDocumentsUseCase } from "./generate-documents.use-case.js";
 
 describe("GenerateDocumentsUseCase", () => {
@@ -127,7 +127,7 @@ describe("GenerateDocumentsUseCase", () => {
       ],
       projects: [
         {
-          name: "Link2CV",
+          name: "Careerden",
           description: "Built profile-aware documents.",
           descriptionRichText: originalDescription,
           skills: ["TypeScript"],
@@ -248,7 +248,7 @@ describe("GenerateDocumentsUseCase", () => {
     ]);
     expect(capturedDocxData[0]?.selected_projects).toEqual([
       {
-        name: "Link2CV",
+        name: "Careerden",
         url: "",
         skills: ["TypeScript"],
         description: richDocumentFromText("Built automation. Launched automated tailoring."),
@@ -275,7 +275,7 @@ describe("GenerateDocumentsUseCase", () => {
     );
     const projectContent = capturedDocxData[0]?.project_content as RichDocument[];
     expect(richDocumentToPlainText(projectContent[0]!)).toContain(
-      "Link2CV\nTypeScript\nBuilt automation. Launched automated tailoring.",
+      "Careerden\nTypeScript\nBuilt automation. Launched automated tailoring.",
     );
     expect(capturedDocxData[0]?.experience_list).toEqual(capturedDocxData[0]?.selected_experiences);
     expect(capturedDocxData[0]?.raw_experience_list).toEqual([

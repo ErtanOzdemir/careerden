@@ -1,5 +1,5 @@
 {
-  "name": "@link2cv/documents-worker",
+  "name": "@careerden/documents-worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,9 +11,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@link2cv/application": "workspace:*",
-    "@link2cv/domain": "workspace:*",
-    "@link2cv/infrastructure": "workspace:*",
+    "@careerden/application": "workspace:*",
+    "@careerden/domain": "workspace:*",
+    "@careerden/infrastructure": "workspace:*",
     "bullmq": "^5.64.1",
     "dotenv": "^16.4.7",
     "knex": "^3.1.0",

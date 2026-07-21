@@ -1,7 +1,7 @@
 import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { NotificationChange, NotificationChangeListener } from "@link2cv/domain";
+import type { NotificationChange, NotificationChangeListener } from "@careerden/domain";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 import { createNotificationRouter } from "./notifications.routes.js";
 

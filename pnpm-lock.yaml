@@ -50,19 +50,19 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.932.0
         version: 3.1075.0
-      '@link2cv/application':
+      '@careerden/application':
         specifier: workspace:*
         version: link:../../packages/application
-      '@link2cv/config':
+      '@careerden/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@link2cv/contracts':
+      '@careerden/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@link2cv/domain':
+      '@careerden/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@link2cv/infrastructure':
+      '@careerden/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
       '@opentelemetry/api':
@@ -144,19 +144,19 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@link2cv/application':
+      '@careerden/application':
         specifier: workspace:*
         version: link:../../packages/application
-      '@link2cv/config':
+      '@careerden/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@link2cv/contracts':
+      '@careerden/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@link2cv/domain':
+      '@careerden/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@link2cv/infrastructure':
+      '@careerden/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
       playwright:
@@ -199,13 +199,13 @@ importers:
 
   apps/documents-worker:
     dependencies:
-      '@link2cv/application':
+      '@careerden/application':
         specifier: workspace:*
         version: link:../../packages/application
-      '@link2cv/domain':
+      '@careerden/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@link2cv/infrastructure':
+      '@careerden/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
       bullmq:
@@ -233,13 +233,13 @@ importers:
 
   apps/llm-worker:
     dependencies:
-      '@link2cv/application':
+      '@careerden/application':
         specifier: workspace:*
         version: link:../../packages/application
-      '@link2cv/domain':
+      '@careerden/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@link2cv/infrastructure':
+      '@careerden/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
       bullmq:
@@ -307,13 +307,13 @@ importers:
 
   apps/notifications-worker:
     dependencies:
-      '@link2cv/application':
+      '@careerden/application':
         specifier: workspace:*
         version: link:../../packages/application
-      '@link2cv/domain':
+      '@careerden/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@link2cv/infrastructure':
+      '@careerden/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure
       bullmq:
@@ -441,14 +441,14 @@ importers:
 
   packages/application:
     dependencies:
-      '@link2cv/contracts':
+      '@careerden/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@link2cv/domain':
+      '@careerden/domain':
         specifier: workspace:*
         version: link:../domain
     devDependencies:
-      '@link2cv/infrastructure':
+      '@careerden/infrastructure':
         specifier: workspace:*
         version: link:../infrastructure
       typescript:
@@ -517,10 +517,10 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.932.0
         version: 3.1075.0
-      '@link2cv/contracts':
+      '@careerden/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@link2cv/domain':
+      '@careerden/domain':
         specifier: workspace:*
         version: link:../domain
       ai:

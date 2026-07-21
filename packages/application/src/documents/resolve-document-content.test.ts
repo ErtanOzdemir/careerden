@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { DocumentContent, UserProfile } from "@link2cv/domain";
-import { richDocumentFromText, richDocumentToPlainText } from "@link2cv/domain";
+import type { DocumentContent, UserProfile } from "@careerden/domain";
+import { richDocumentFromText, richDocumentToPlainText } from "@careerden/domain";
 import { resolveDocumentContent } from "./resolve-document-content.js";
 
 describe("resolveDocumentContent", () => {
@@ -165,7 +165,7 @@ function createProfile(): UserProfile {
       {
         achievements: ["Original project achievement one.", "Original project achievement two."],
         description: "Original project description.",
-        name: "Link2CV",
+        name: "Careerden",
         skills: ["TypeScript"],
       },
     ],

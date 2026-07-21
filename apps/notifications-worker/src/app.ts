@@ -5,8 +5,8 @@ import type {
   FollowUpReminderQueue,
   FollowUpReminderQueuePayload,
   FollowUpReminderRepository,
-} from "@link2cv/domain";
-import { DeliverFollowUpReminderUseCase } from "@link2cv/application";
+} from "@careerden/domain";
+import { DeliverFollowUpReminderUseCase } from "@careerden/application";
 import {
   BullMqFollowUpReminderQueue,
   PostgresFollowUpReminderRepository,
@@ -21,7 +21,7 @@ import {
   createSmtpEmailSender,
   followUpReminderQueueName,
   getFollowUpReminderScheduledFor,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import type { Knex } from "knex";
 import type { NotificationsWorkerEnv } from "./env.js";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";

@@ -3,7 +3,7 @@ import type {
   FollowUpReminderQueue,
   FollowUpReminderRepository,
   OutboxEvent,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresReminderOutboxDispatcher } from "./postgres-reminder-outbox.dispatcher.js";
 

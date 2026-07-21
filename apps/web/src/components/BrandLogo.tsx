@@ -9,24 +9,24 @@ export function BrandLogo({
   variant?: "theme" | "light" | "inverse";
 }) {
   if (variant === "light") {
-    return <img src={logoUrl} alt="Link2CV" className={className} />;
+    return <img src={logoUrl} alt="Careerden" className={className} />;
   }
 
   if (variant === "inverse") {
     return (
       <>
-        <img src={whiteLogoUrl} alt="Link2CV" className={`dark:hidden ${className ?? ""}`} />
-        <img src={logoUrl} alt="Link2CV" className={`hidden dark:block ${className ?? ""}`} />
+        <img src={whiteLogoUrl} alt="Careerden" className={`dark:hidden ${className ?? ""}`} />
+        <img src={logoUrl} alt="Careerden" className={`hidden dark:block ${className ?? ""}`} />
       </>
     );
   }
 
   return (
     <>
-      <img src={logoUrl} alt="Link2CV" className={`brand-logo-theme-light ${className ?? ""}`} />
+      <img src={logoUrl} alt="Careerden" className={`brand-logo-theme-light ${className ?? ""}`} />
       <img
         src={whiteLogoUrl}
-        alt="Link2CV"
+        alt="Careerden"
         className={`brand-logo-theme-dark ${className ?? ""}`}
       />
     </>

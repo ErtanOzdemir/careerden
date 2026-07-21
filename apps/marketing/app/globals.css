@@ -1327,7 +1327,7 @@ a {
   }
 }
 
-/* Product previews intentionally mirror the authenticated Link2CV UI. */
+/* Product previews intentionally mirror the authenticated Careerden UI. */
 .dashboard-preview-shell {
   display: grid;
   grid-template-columns: 188px minmax(0, 1fr);

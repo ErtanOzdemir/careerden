@@ -32,8 +32,8 @@ import type {
   UpdateJobApplicationFollowUpUseCase,
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
-} from "@link2cv/application";
-import type { JobApplicationChangeSubscriber } from "@link2cv/domain";
+} from "@careerden/application";
+import type { JobApplicationChangeSubscriber } from "@careerden/domain";
 import {
   createJobApplicationFromScrapeSchema,
   claimScrapeJobSchema,
@@ -52,7 +52,7 @@ import {
   updateStatusSchema,
   updateDocumentContentSchema,
   requestApplicationPackGenerationSchema,
-} from "@link2cv/contracts";
+} from "@careerden/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 

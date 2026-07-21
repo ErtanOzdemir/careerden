@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { SupportRequestNotifier } from "@link2cv/domain";
+import type { SupportRequestNotifier } from "@careerden/domain";
 import { SubmitSupportRequestUseCase } from "./submit-support-request.use-case.js";
 
 describe("SubmitSupportRequestUseCase", () => {

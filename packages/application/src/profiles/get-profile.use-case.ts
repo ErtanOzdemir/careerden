@@ -1,4 +1,4 @@
-import type { UserProfile, UserProfileAccountRepository } from "@link2cv/domain";
+import type { UserProfile, UserProfileAccountRepository } from "@careerden/domain";
 import { getAccessibleProfile } from "./profile-access.js";
 
 export class GetProfileUseCase {

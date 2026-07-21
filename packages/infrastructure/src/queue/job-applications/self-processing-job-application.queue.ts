@@ -1,4 +1,4 @@
-import type { JobApplicationQueue, JobApplicationQueuePayload } from "@link2cv/domain";
+import type { JobApplicationQueue, JobApplicationQueuePayload } from "@careerden/domain";
 
 export type JobProcessor = (payload: JobApplicationQueuePayload) => Promise<void>;
 

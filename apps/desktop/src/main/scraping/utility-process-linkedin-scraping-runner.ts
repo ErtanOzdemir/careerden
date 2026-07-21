@@ -1,7 +1,7 @@
 import type { UtilityProcess } from "electron";
 import { utilityProcess } from "electron";
 import { randomUUID } from "node:crypto";
-import type { ScrapeBundle } from "@link2cv/domain";
+import type { ScrapeBundle } from "@careerden/domain";
 import type { LinkedInScrapingRunner } from "./local-scraping-worker.js";
 import type { ScrapingUtilityResponse } from "./scraping-utility-messages.js";
 
@@ -70,7 +70,7 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
 
     const fork = this.options.fork ?? utilityProcess.fork;
     const child = fork(this.options.modulePath, [], {
-      serviceName: "link2cv-linkedin-scraper",
+      serviceName: "careerden-linkedin-scraper",
     });
 
     child.on("message", (message: unknown) => this.handleMessage(message));

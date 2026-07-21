@@ -1,6 +1,6 @@
-# Link2CV
+# Careerden
 
-> Link2CV is an open-source desktop job application tracker, profile-aware CV creator, and cover letter creator that keeps each opportunity's status, follow-ups, notes, match analysis, and reviewable document drafts together.
+> Careerden is an open-source desktop job application tracker, profile-aware CV creator, and cover letter creator that keeps each opportunity's status, follow-ups, notes, match analysis, and reviewable document drafts together.
 
 ## Public pages
 
@@ -14,7 +14,7 @@
 
 ## Important context
 
-- Link2CV does not apply to jobs on a user's behalf.
+- Careerden does not apply to jobs on a user's behalf.
 - The desktop workspace tracks applications through Saved, Applied, Interviewing, Offer,
   Rejected, and Ghosted stages and keeps follow-ups, contacts, notes, job context, and documents with
   each application.
@@ -27,7 +27,7 @@
 - The public marketing website does not expose login, signup, or browser-application links. Its
   download page shows macOS DMG, Windows NSIS, and Linux AppImage packaging targets, but clearly
   labels every installer action as a placeholder until verified artifacts are published.
-- Link2CV links directly to its repository at https://github.com/ErtanOzdemir/link2cv. The current
+- Careerden links directly to its repository at https://github.com/ErtanOzdemir/careerden. The current
   repository license is Business Source License 1.1 and is scheduled to convert to Apache License
   2.0 under the license's stated terms.
 - DOCX template upload and mapping is the recommended setup for custom document layouts; built-in

@@ -1,11 +1,11 @@
-import { aiMatchResultSchema } from "@link2cv/contracts";
+import { aiMatchResultSchema } from "@careerden/contracts";
 import type {
   AiProvider,
   ApplicationPackPreferences,
   MatchAnalysisResult,
   ScrapeBundle,
   UserProfile,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export class RunMatchAnalysisUseCase {
   constructor(private readonly aiProvider: AiProvider) {}

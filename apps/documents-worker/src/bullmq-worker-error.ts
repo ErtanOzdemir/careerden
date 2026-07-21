@@ -1,5 +1,5 @@
 import { UnrecoverableError } from "bullmq";
-import { ApplicationError } from "@link2cv/application";
+import { ApplicationError } from "@careerden/application";
 
 export function toBullMqWorkerError(error: unknown): unknown {
   if (error instanceof ApplicationError) {

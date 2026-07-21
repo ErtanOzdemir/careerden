@@ -3,7 +3,7 @@ import {
   type CreateUserProfileInput,
   type UserProfile,
   type UserProfileRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export class CreateProfileUseCase {
   constructor(private readonly profiles: UserProfileRepository) {}

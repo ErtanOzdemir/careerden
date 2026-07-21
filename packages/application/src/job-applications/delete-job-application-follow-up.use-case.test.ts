@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { JobApplicationFollowUp } from "@link2cv/domain";
+import type { JobApplicationFollowUp } from "@careerden/domain";
 import { DeleteJobApplicationFollowUpUseCase } from "./delete-job-application-follow-up.use-case.js";
 import {
   createJobApplicationRepository,

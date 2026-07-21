@@ -43,14 +43,14 @@ describe("profile schemas", () => {
       summaryRichText: richText,
       experience: [
         {
-          company: "Link2CV",
+          company: "Careerden",
           title: "Engineer",
           descriptionRichText: richText,
         },
       ],
       projects: [
         {
-          name: "Link2CV",
+          name: "Careerden",
           descriptionRichText: richText,
           skills: [],
           achievements: [],

@@ -1,4 +1,4 @@
-import type { ScrapeBundle } from "@link2cv/domain";
+import type { ScrapeBundle } from "@careerden/domain";
 import { DesktopApiError, isTerminalClaimApiError } from "./desktop-api-error.js";
 
 export interface ClaimedScrapeJob {

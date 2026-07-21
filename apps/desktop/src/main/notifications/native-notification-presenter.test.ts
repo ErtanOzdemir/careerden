@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { NotificationChangeDto } from "@link2cv/contracts";
+import type { NotificationChangeDto } from "@careerden/contracts";
 import type { DesktopNativeNotification } from "./native-notification-presenter.js";
 import { NativeNotificationPresenter } from "./native-notification-presenter.js";
 

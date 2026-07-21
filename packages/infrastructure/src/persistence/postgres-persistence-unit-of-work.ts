@@ -9,7 +9,7 @@ import type {
   NotificationChangeRecorder,
   PersistenceTransaction,
   PersistenceUnitOfWork,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { PostgresFollowUpReminderRepository } from "../notifications/follow-up-reminder.repository.js";
 import { PostgresJobApplicationRepository } from "./job-applications/postgres-job-application.repository.js";
 import { PostgresNotificationRepository } from "./notifications/postgres-notification.repository.js";

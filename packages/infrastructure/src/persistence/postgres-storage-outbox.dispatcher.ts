@@ -1,5 +1,5 @@
-import type { FileStorage } from "@link2cv/domain";
-import { outboxEventTypes } from "@link2cv/domain";
+import type { FileStorage } from "@careerden/domain";
+import { outboxEventTypes } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 

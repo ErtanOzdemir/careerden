@@ -5,7 +5,7 @@ import type {
   PersistenceUnitOfWork,
   PremiumAiService,
   UserProfileRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import {
   generatedDocumentFileIds,

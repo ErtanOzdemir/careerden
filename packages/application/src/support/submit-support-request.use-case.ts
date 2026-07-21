@@ -1,4 +1,4 @@
-import type { SupportRequestNotifier, SupportRequestReason } from "@link2cv/domain";
+import type { SupportRequestNotifier, SupportRequestReason } from "@careerden/domain";
 
 export interface SubmitSupportRequestInput {
   user: {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { RemoteImageFetcher } from "@link2cv/domain";
+import type { RemoteImageFetcher } from "@careerden/domain";
 import {
   createJobApplicationRepository,
   createProfiles,

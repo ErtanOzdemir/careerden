@@ -1,11 +1,11 @@
 ---
-name: link2cv-architect
-description: Design, implement, and review Link2CV's Node.js/TypeScript architecture across API, application, domain, contracts, infrastructure, Electron desktop scraping, BullMQ workers, persistence, AI matching, document generation, storage, and tests. Use for backend features, refactors, boundaries, workflows, adapters, queues, error handling, or package organization in the Link2CV repository.
+name: careerden-architect
+description: Design, implement, and review Careerden's Node.js/TypeScript architecture across API, application, domain, contracts, infrastructure, Electron desktop scraping, BullMQ workers, persistence, AI matching, document generation, storage, and tests. Use for backend features, refactors, boundaries, workflows, adapters, queues, error handling, or package organization in the Careerden repository.
 ---
 
-# Link2CV Architect
+# Careerden Architect
 
-Keep Link2CV modular, transport-independent, and expandable across job sites and providers.
+Keep Careerden modular, transport-independent, and expandable across job sites and providers.
 
 ## Core Workflow
 
@@ -25,7 +25,7 @@ Keep Link2CV modular, transport-independent, and expandable across job sites and
 - Keep site, AI, storage, rendering, persistence, and queue variations behind domain interfaces and infrastructure adapters.
 - Keep long-running consumers in descriptive `apps/*-worker` runtimes. Workers call use cases; they do not own business rules.
 - Preserve raw scrape payloads with normalized data for traceability.
-- Use internal relative TypeScript imports with the runtime `.js` extension and stable `@link2cv/*` package barrels for public imports.
+- Use internal relative TypeScript imports with the runtime `.js` extension and stable `@careerden/*` package barrels for public imports.
 - Use Conventional Commit subjects such as `feat:`, `fix:`, `refactor:`, `test:`, or `docs:` when committing.
 
 ## Reference Routing

@@ -1,4 +1,4 @@
-import type { DocumentTemplate, DocumentTemplateVariableAliases } from "@link2cv/domain";
+import type { DocumentTemplate, DocumentTemplateVariableAliases } from "@careerden/domain";
 
 export function hasValidCoverLetterContentMapping(template: DocumentTemplate): boolean {
   const mappings = Object.entries(template.fieldMappings);

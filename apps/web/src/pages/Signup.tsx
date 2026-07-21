@@ -103,7 +103,7 @@ export default function Signup() {
       }
       title={step === "details" ? "Create Account" : "Verify Email"}
       subtitle={
-        step === "details" ? "Start your Link2CV workspace." : `Enter the code sent to ${email}.`
+        step === "details" ? "Start your Careerden workspace." : `Enter the code sent to ${email}.`
       }
     >
       {step === "details" ? (

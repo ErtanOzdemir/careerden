@@ -19,10 +19,10 @@ import type {
   UpdateJobApplicationContactInput,
   UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
-} from "@link2cv/domain";
-import type { CreateJobApplicationInput } from "@link2cv/domain";
-import type { JobApplicationStatus } from "@link2cv/domain";
-import { normalizeApplicationPackPreferences } from "@link2cv/domain";
+} from "@careerden/domain";
+import type { CreateJobApplicationInput } from "@careerden/domain";
+import type { JobApplicationStatus } from "@careerden/domain";
+import { normalizeApplicationPackPreferences } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 
 export class InMemoryJobApplicationRepository implements JobApplicationRepository {

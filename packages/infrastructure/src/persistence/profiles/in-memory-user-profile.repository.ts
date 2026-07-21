@@ -7,7 +7,7 @@ import type {
   UpdateUserProfileInput,
   UserProfile,
   UserProfileRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 
 export class InMemoryUserProfileRepository implements UserProfileRepository {

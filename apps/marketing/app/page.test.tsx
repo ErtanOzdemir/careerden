@@ -28,9 +28,9 @@ describe("marketing workflow story", () => {
     expect(screen.getAllByText("Job application tracker").length).toBeGreaterThan(0);
     expect(screen.getByText("CV creator")).toBeVisible();
     expect(screen.getByText("Cover letter creator")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Explore Link2CV on GitHub" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Explore Careerden on GitHub" })).toHaveAttribute(
       "href",
-      "https://github.com/ErtanOzdemir/link2cv",
+      "https://github.com/ErtanOzdemir/careerden",
     );
     expect(screen.getAllByText(/manual application entry.*not available/i).length).toBeGreaterThan(
       0,
@@ -40,7 +40,9 @@ describe("marketing workflow story", () => {
       'script[type="application/ld+json"]',
     )?.textContent;
     expect(structuredData).toContain('"operatingSystem":"Desktop"');
-    expect(structuredData).toContain('"codeRepository":"https://github.com/ErtanOzdemir/link2cv"');
+    expect(structuredData).toContain(
+      '"codeRepository":"https://github.com/ErtanOzdemir/careerden"',
+    );
   });
 
   it("keeps public actions inside the desktop product explanation", () => {
@@ -60,7 +62,7 @@ describe("marketing workflow story", () => {
   });
 
   it("uses tracking-first search and social metadata", () => {
-    expect(metadata.title).toBe("Desktop Job Application Tracker & CV Creator | Link2CV");
+    expect(metadata.title).toBe("Desktop Job Application Tracker & CV Creator | Careerden");
     expect(metadata.description).toMatch(/open-source desktop job application tracker/);
     expect(metadata.openGraph).toMatchObject({
       description: expect.stringMatching(/open-source desktop job application tracker/),

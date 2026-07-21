@@ -1,9 +1,9 @@
 import { useEffect, useId, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
-import { Panel, PanelHeader } from "../components/link2cv/panel.js";
-import { StatusBadge } from "../components/link2cv/status-badge.js";
-import type { DisplayStatus } from "../components/link2cv/status-badge.js";
+import { Panel, PanelHeader } from "../components/careerden/panel.js";
+import { StatusBadge } from "../components/careerden/status-badge.js";
+import type { DisplayStatus } from "../components/careerden/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
 import { mapApiJobApplicationToUi } from "../api/mappers.js";
@@ -16,7 +16,7 @@ import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
-import { UnifiedSelect, type UnifiedSelectOption } from "../components/link2cv/unified-select.js";
+import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
 import type {
   ApiApplicationPackPreferences,
   ApiDocumentContent,
@@ -1294,7 +1294,7 @@ function TimelineTab({
                 required
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Link2CV will notify you automatically 10 minutes before this time.
+                Careerden will notify you automatically 10 minutes before this time.
               </p>
             </div>
             <div className="flex justify-end gap-2">
@@ -1475,7 +1475,7 @@ export function FollowUpsEmptyState({ onAdd }: { onAdd: () => void }) {
       </div>
       <h3 className="mt-4 text-sm font-semibold text-foreground">No follow-ups scheduled</h3>
       <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-muted-foreground">
-        Schedule a check-in after applying or interviewing. Link2CV will remind you 10 minutes
+        Schedule a check-in after applying or interviewing. Careerden will remind you 10 minutes
         before it is due.
       </p>
       <Button variant="outline" size="sm" className="mt-5" onClick={onAdd}>

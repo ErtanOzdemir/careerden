@@ -14,16 +14,16 @@ describe("resolveAuthBaseUrl", () => {
 
   it("adapts the desktop custom scheme through the packaged API proxy", async () => {
     const fetchImpl = vi.fn(async () => Response.json({ ok: true }));
-    const transport = resolveAuthClientTransport("/api", "link2cv://app", fetchImpl);
+    const transport = resolveAuthClientTransport("/api", "careerden://app", fetchImpl);
 
-    expect(transport.baseURL).toBe("https://desktop-auth.link2cv.invalid/api/auth");
+    expect(transport.baseURL).toBe("https://desktop-auth.careerden.invalid/api/auth");
     await transport.customFetchImpl?.(`${transport.baseURL}/get-session?source=desktop`, {
       credentials: "include",
     });
 
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(fetchImpl.mock.calls[0]?.[0].toString()).toBe(
-      "link2cv://app/api/auth/get-session?source=desktop",
+      "careerden://app/api/auth/get-session?source=desktop",
     );
     expect(fetchImpl.mock.calls[0]?.[1]).toEqual({ credentials: "include" });
   });

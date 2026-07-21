@@ -1,4 +1,4 @@
-import type { ScrapeBundle } from "@link2cv/domain";
+import type { ScrapeBundle } from "@careerden/domain";
 import type { ClaimedScrapeJob, DesktopScrapingApiClient } from "./local-scraping-worker.js";
 import { DesktopApiError } from "./desktop-api-error.js";
 

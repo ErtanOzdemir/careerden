@@ -4,8 +4,8 @@ import type {
   FollowUpReminderQueuePayload,
   FollowUpReminderRepository,
   UpdateFollowUpReminderScheduleInput,
-} from "@link2cv/domain";
-import { followUpReminderLeadTimeMs } from "@link2cv/domain";
+} from "@careerden/domain";
+import { followUpReminderLeadTimeMs } from "@careerden/domain";
 import { nullableDate, nullableString } from "../persistence/mappers.js";
 
 export const followUpReminderRecoveryBatchLimit = 100;

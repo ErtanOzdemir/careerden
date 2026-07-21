@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EmailSender, OutboxEvent } from "@link2cv/domain";
+import type { EmailSender, OutboxEvent } from "@careerden/domain";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresEmailOutboxDispatcher } from "./postgres-email-outbox.dispatcher.js";
 
@@ -22,7 +22,7 @@ describe("PostgresEmailOutboxDispatcher", () => {
 
     expect(sender.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        messageId: "<follow-up-1@link2cv.local>",
+        messageId: "<follow-up-1@careerden.local>",
         to: "ada@example.com",
         subject: "Follow-up reminder: Send a note",
       }),
@@ -56,7 +56,7 @@ function createOutbox(overrides: Record<string, unknown> = {}): PostgresOutboxRe
     type: "follow-up-reminder.email",
     aggregateId: "follow-up-1",
     payload: {
-      messageId: "<follow-up-1@link2cv.local>",
+      messageId: "<follow-up-1@careerden.local>",
       email: "ada@example.com",
       companyName: "Acme",
       roleTitle: "Engineer",

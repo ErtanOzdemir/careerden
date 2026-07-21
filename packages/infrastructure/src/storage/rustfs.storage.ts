@@ -9,7 +9,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
-import type { FileStorage, StoredFile, StoredFileContent, StoredFileInput } from "@link2cv/domain";
+import type { FileStorage, StoredFile, StoredFileContent, StoredFileInput } from "@careerden/domain";
 
 export interface RustFsStorageOptions {
   accessKeyId: string;

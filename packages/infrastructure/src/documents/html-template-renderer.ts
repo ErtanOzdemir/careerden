@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { TemplateRenderer } from "@link2cv/domain";
+import type { TemplateRenderer } from "@careerden/domain";
 import { isRichDocument, renderRichDocumentToHtml } from "./rich-document-html.js";
 
 export class HtmlTemplateRenderer implements TemplateRenderer {

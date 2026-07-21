@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RichDocument } from "@link2cv/domain";
+import type { RichDocument } from "@careerden/domain";
 import { renderRichDocumentToHtml } from "./rich-document-html.js";
 
 describe("renderRichDocumentToHtml", () => {

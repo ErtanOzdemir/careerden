@@ -1,4 +1,4 @@
-import type { NotificationChangeDto } from "@link2cv/contracts";
+import type { NotificationChangeDto } from "@careerden/contracts";
 import type { DesktopNotificationActivation } from "./desktop-notification-activation.js";
 
 export interface DesktopNativeNotification {

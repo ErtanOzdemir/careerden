@@ -1,7 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { FileStorage, StoredFile, StoredFileContent, StoredFileInput } from "@link2cv/domain";
+import type { FileStorage, StoredFile, StoredFileContent, StoredFileInput } from "@careerden/domain";
 
 export class LocalFileStorage implements FileStorage {
   constructor(private readonly rootDir: string) {}

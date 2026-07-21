@@ -23,7 +23,7 @@ describe("assessProfileReadiness", () => {
         createProfile({
           headline: "Software Engineer",
           skills: ["TypeScript"],
-          projects: [{ name: "Link2CV", skills: [], achievements: [] }],
+          projects: [{ name: "Careerden", skills: [], achievements: [] }],
         }),
       ),
     ).toEqual({ state: "ready", warnings: [] });

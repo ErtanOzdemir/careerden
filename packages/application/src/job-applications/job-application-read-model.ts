@@ -10,7 +10,7 @@ import type {
   MatchAnalysisResult,
   ScrapeBundle,
   ProfileReadiness,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export type JobApplicationWithDocuments = JobApplication & {
   documents: GeneratedDocument[];

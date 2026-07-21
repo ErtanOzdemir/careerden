@@ -4,7 +4,7 @@ The public legal copy is a working product draft, not legal advice or a complian
 
 ## Owner and business details
 
-- `NEXT_PUBLIC_SITE_URL`: canonical production marketing origin. The fallback `https://www.link2cv.example` is deliberately non-production.
+- `NEXT_PUBLIC_SITE_URL`: canonical production marketing origin. The fallback `https://www.careerden.example` is deliberately non-production.
 - `NEXT_PUBLIC_COMPANY_NAME`, legal entity type, registration number, jurisdiction, and registered address.
 - `NEXT_PUBLIC_CONTACT_EMAIL`, privacy/data-rights contact, legal notice contact, support contact, and deletion-request channel.
 - Product availability, eligible markets, minimum user age, account eligibility, and effective dates.

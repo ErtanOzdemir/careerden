@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Link2CV — Job application tracker and CV creator";
+export const alt = "Careerden — Job application tracker and CV creator";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -35,7 +35,7 @@ export default function OpenGraphImage() {
           />
           <path d="m160 45 27-27c12-12 42-12 57 0l67 67-56 55Z" fill="#191919" />
         </svg>
-        Link2CV
+        Careerden
       </div>
       <div style={{ display: "flex", flexDirection: "column", maxWidth: "900px" }}>
         <div

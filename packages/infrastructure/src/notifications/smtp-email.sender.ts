@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import type { EmailSender } from "@link2cv/domain";
+import type { EmailSender } from "@careerden/domain";
 
 export interface SmtpEmailSenderConfig {
   from: string;

@@ -3,7 +3,7 @@ import type {
   JobApplicationRepository,
   ListJobApplicationsFilter,
   UserProfileAccessRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
 import {
   addDocumentsToJobApplications,

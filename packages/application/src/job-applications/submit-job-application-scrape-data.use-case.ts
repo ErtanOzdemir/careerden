@@ -5,8 +5,8 @@ import type {
   RemoteImageFetcher,
   ScrapeBundle,
   UserProfileAccessRepository,
-} from "@link2cv/domain";
-import { assessProfileReadiness, canTransitionJobApplicationStatus } from "@link2cv/domain";
+} from "@careerden/domain";
+import { assessProfileReadiness, canTransitionJobApplicationStatus } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";

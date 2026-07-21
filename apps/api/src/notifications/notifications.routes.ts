@@ -6,8 +6,8 @@ import type {
   ListNotificationsUseCase,
   MarkAllNotificationsReadUseCase,
   MarkNotificationReadUseCase,
-} from "@link2cv/application";
-import type { NotificationChangeSubscriber } from "@link2cv/domain";
+} from "@careerden/application";
+import type { NotificationChangeSubscriber } from "@careerden/domain";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
 export function createNotificationRouter(dependencies: {

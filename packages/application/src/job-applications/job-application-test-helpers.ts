@@ -7,7 +7,7 @@ import type {
   PersistenceUnitOfWork,
   ScrapeBundle,
   UserProfileAccessRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export function createTestJobApplication(overrides: Partial<JobApplication> = {}): JobApplication {
   const now = new Date("2026-06-14T00:00:00.000Z");

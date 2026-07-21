@@ -13,7 +13,7 @@ describe("marketing workflow previews", () => {
     render(<ProfileWorkflowPreview />);
 
     expect(
-      screen.getByRole("img", { name: "Fictional Link2CV career profile workflow preview" }),
+      screen.getByRole("img", { name: "Fictional Careerden career profile workflow preview" }),
     ).toBeVisible();
     expect(screen.getByText("Career profile")).toBeVisible();
     expect(screen.getAllByText("Professional summary").length).toBeGreaterThan(0);
@@ -27,7 +27,7 @@ describe("marketing workflow previews", () => {
 
     expect(
       screen.getByRole("img", {
-        name: "Fictional Link2CV document template upload workflow preview",
+        name: "Fictional Careerden document template upload workflow preview",
       }),
     ).toBeVisible();
     expect(screen.getByText("Upload CV template")).toBeVisible();
@@ -47,7 +47,7 @@ describe("marketing workflow previews", () => {
 
     expect(
       screen.getByRole("img", {
-        name: "Fictional Link2CV template variable mapping workflow preview",
+        name: "Fictional Careerden template variable mapping workflow preview",
       }),
     ).toBeVisible();
     expect(
@@ -67,7 +67,7 @@ describe("marketing workflow previews", () => {
 
     expect(
       screen.getByRole("img", {
-        name: "Fictional Link2CV application Overview workflow preview",
+        name: "Fictional Careerden application Overview workflow preview",
       }),
     ).toBeVisible();
     expect(screen.getByText("Application")).toBeVisible();
@@ -90,7 +90,7 @@ describe("marketing workflow previews", () => {
 
     expect(
       screen.getByRole("img", {
-        name: "Fictional Link2CV application pack and customization workflow preview",
+        name: "Fictional Careerden application pack and customization workflow preview",
       }),
     ).toBeVisible();
     expect(screen.getAllByText("Application pack").length).toBeGreaterThan(0);

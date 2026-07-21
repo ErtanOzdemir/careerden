@@ -3,11 +3,11 @@ import type {
   JobApplicationChange,
   PersistenceUnitOfWork,
   UserProfileAccountRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import { SubmitJobApplicationUseCase } from "./submit-job-application.use-case.js";
 
 describe("SubmitJobApplicationUseCase", () => {

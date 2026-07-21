@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Link2CV, please report it responsibly.
+If you discover a security vulnerability in Careerden, please report it responsibly.
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
@@ -36,7 +36,7 @@ If you discover a security vulnerability in Link2CV, please report it responsibl
 
 This security policy applies to:
 
-- The latest release of Link2CV
+- The latest release of Careerden
 - The main branch of this repository
 
 ### Safe Harbor
@@ -52,7 +52,7 @@ We will not take legal action against researchers who follow these guidelines.
 
 ## Security Best Practices
 
-When deploying Link2CV:
+When deploying Careerden:
 
 - Use environment variables for all secrets (API keys, database URLs, session secrets).
 - Never commit `.env` files to version control.

@@ -2,7 +2,7 @@ import type {
   JobApplication,
   JobApplicationRepository,
   UserProfileAccessRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 
 export async function getAccessibleJobApplication(

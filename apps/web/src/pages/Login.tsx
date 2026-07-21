@@ -125,7 +125,7 @@ export default function Login() {
       title={step === "credentials" ? "Get Started Now" : "Verify Email"}
       subtitle={
         step === "credentials"
-          ? "Sign in to your Link2CV workspace."
+          ? "Sign in to your Careerden workspace."
           : `Enter the code sent to ${email}.`
       }
     >
@@ -284,7 +284,7 @@ export function AuthShell({
               className="flex h-24 items-center gap-2 pb-4 text-sm text-white/70 dark:text-black/65"
             >
               <BrandLogo variant="inverse" className="size-9 rounded-lg object-contain" />
-              Link2CV
+              Careerden
             </div>
             <div className="mt-12 max-w-sm">
               <p className="text-sm text-white/65 dark:text-black/60">You can easily</p>
@@ -328,7 +328,7 @@ export function AuthShell({
             <div className="mb-8 pt-10 md:hidden">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <BrandLogo className="size-9 rounded-lg object-contain" />
-                Link2CV
+                Careerden
               </div>
             </div>
             <div className="mb-7">

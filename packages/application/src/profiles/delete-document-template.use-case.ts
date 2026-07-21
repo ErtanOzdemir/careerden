@@ -1,4 +1,4 @@
-import type { PersistenceUnitOfWork } from "@link2cv/domain";
+import type { PersistenceUnitOfWork } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { getAccessibleDocumentTemplate } from "./document-template-access.js";

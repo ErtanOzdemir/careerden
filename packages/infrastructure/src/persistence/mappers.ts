@@ -1,4 +1,4 @@
-import { normalizeApplicationPackPreferences, richDocumentFromText } from "@link2cv/domain";
+import { normalizeApplicationPackPreferences, richDocumentFromText } from "@careerden/domain";
 import type {
   DocumentTemplate,
   DocumentTemplateField,
@@ -15,7 +15,7 @@ import type {
   ProfileProject,
   RichDocument,
   UserProfile,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export function toJobApplication(row: Record<string, unknown>): JobApplication {
   return {

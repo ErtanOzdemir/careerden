@@ -89,7 +89,7 @@ export default function ResetPassword() {
       subtitle={
         isComplete
           ? "Your password has been reset. Sign in with your new password."
-          : "Choose a new password for your Link2CV account."
+          : "Choose a new password for your Careerden account."
       }
     >
       {isComplete ? (

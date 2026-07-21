@@ -1,10 +1,12 @@
+name: careerden
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: link2cv
-      POSTGRES_PASSWORD: link2cv
-      POSTGRES_DB: link2cv
+      POSTGRES_USER: careerden
+      POSTGRES_PASSWORD: careerden
+      POSTGRES_DB: careerden
     ports:
       - "5432:5432"
     volumes:
@@ -33,7 +35,7 @@ services:
       REDIS_URL: redis://redis:6379
       PORT: 4000
       BULLSTUDIO_USERNAME: bullstudio
-      BULLSTUDIO_PASSWORD: Link2CV-Bullstudio-2026!
+      BULLSTUDIO_PASSWORD: Careerden-Bullstudio-2026!
       BULLSTUDIO_POLL_INTERVAL: ${BULLSTUDIO_POLL_INTERVAL:-5000}
       BULLSTUDIO_POLL_ALLOW_OVERRIDE: "false"
     ports:

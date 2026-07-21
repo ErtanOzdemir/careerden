@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { fromNodeHeaders } from "better-auth/node";
-import type { Link2CvAuth } from "./auth.js";
+import type { CareerdenAuth } from "./auth.js";
 
 export interface AuthenticatedUser {
   id: string;
@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
   user: AuthenticatedUser;
 }
 
-export function requireSession(auth: Link2CvAuth) {
+export function requireSession(auth: CareerdenAuth) {
   return async (request: Request, response: Response, next: NextFunction) => {
     try {
       const session = await auth.api.getSession({

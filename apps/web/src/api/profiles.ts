@@ -7,7 +7,7 @@ import type {
   ApiUpdateProfilePayload,
 } from "./types";
 
-export const profileUpdatedEvent = "link2cv:profile-updated";
+export const profileUpdatedEvent = "careerden:profile-updated";
 
 export const profilesApi = {
   me(): Promise<ApiProfile> {

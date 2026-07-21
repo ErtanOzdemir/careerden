@@ -5,7 +5,7 @@ const env = loadLlmWorkerEnv();
 const runtime = await createLlmWorkerRuntime(env);
 
 console.log(
-  `Link2CV LLM worker listening on queue "job-applications" with concurrency ${env.LLM_WORKER_CONCURRENCY}`,
+  `Careerden LLM worker listening on queue "job-applications" with concurrency ${env.LLM_WORKER_CONCURRENCY}`,
 );
 
 async function shutdown() {

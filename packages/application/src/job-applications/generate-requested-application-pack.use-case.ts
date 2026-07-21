@@ -3,7 +3,7 @@ import type {
   JobApplicationRepository,
   PersistenceUnitOfWork,
   UserProfileRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import type { GenerateDocumentsUseCase } from "../documents/generate-documents.use-case.js";
 import { generatedDocumentFileIds } from "../documents/generate-documents.use-case.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";

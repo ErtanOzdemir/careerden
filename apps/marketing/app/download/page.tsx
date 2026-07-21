@@ -6,9 +6,9 @@ import { pageMetadata } from "@/lib/metadata";
 import { desktopDownloadPlaceholderUrl, githubUrl } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Download Link2CV for Desktop",
+  title: "Download Careerden for Desktop",
   description:
-    "Download the Link2CV desktop job application tracker for macOS, Windows, or Linux. Installer links are currently preview placeholders.",
+    "Download the Careerden desktop job application tracker for macOS, Windows, or Linux. Installer links are currently preview placeholders.",
   path: "/download",
 });
 
@@ -39,7 +39,7 @@ export default function DownloadPage() {
       <section className="download-hero section-pad">
         <div className="container download-hero-grid">
           <div className="download-hero-copy">
-            <span className="kicker">Link2CV desktop</span>
+            <span className="kicker">Careerden desktop</span>
             <h1>Download your job application tracker.</h1>
             <p>
               Bring application tracking, follow-ups, job context, match insights, and editable CV
@@ -56,7 +56,7 @@ export default function DownloadPage() {
                 target="_blank"
               >
                 <GitHubMark />
-                View Link2CV on GitHub
+                View Careerden on GitHub
               </a>
             </div>
             <p className="download-release-note">
@@ -64,11 +64,11 @@ export default function DownloadPage() {
             </p>
           </div>
 
-          <div className="download-product-card" aria-label="Link2CV desktop release preview">
+          <div className="download-product-card" aria-label="Careerden desktop release preview">
             <div className="download-product-brand">
               <BrandMark />
               <div>
-                <strong>Link2CV</strong>
+                <strong>Careerden</strong>
                 <span>Desktop application</span>
               </div>
               <small>Release preview</small>
@@ -140,7 +140,7 @@ export default function DownloadPage() {
               </p>
             </div>
             <a href={githubUrl} rel="noreferrer" target="_blank">
-              Follow Link2CV on GitHub <span aria-hidden="true">↗</span>
+              Follow Careerden on GitHub <span aria-hidden="true">↗</span>
             </a>
           </div>
         </div>

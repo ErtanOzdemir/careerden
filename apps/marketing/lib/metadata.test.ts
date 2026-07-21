@@ -26,8 +26,11 @@ describe("public routing and metadata", () => {
       index: false,
     });
     expect(metadata.alternates?.canonical).toContain("/onboarding");
-    expect(metadata.title).toBe("Guided Setup | Link2CV");
-    expect(metadata.openGraph).toMatchObject({ type: "website", title: "Guided Setup | Link2CV" });
+    expect(metadata.title).toBe("Guided Setup | Careerden");
+    expect(metadata.openGraph).toMatchObject({
+      type: "website",
+      title: "Guided Setup | Careerden",
+    });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
     expect(metadata.robots).toMatchObject({ index: false, follow: false });
   });

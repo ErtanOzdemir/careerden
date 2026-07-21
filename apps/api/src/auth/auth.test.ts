@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EmailSender } from "@link2cv/domain";
+import type { EmailSender } from "@careerden/domain";
 import { createPasswordResetHandler, createRegistrationOtpHandler } from "./auth.js";
 
 describe("createRegistrationOtpHandler", () => {
@@ -15,9 +15,9 @@ describe("createRegistrationOtpHandler", () => {
 
     expect(emailSender.send).toHaveBeenCalledWith({
       to: "ada@example.com",
-      subject: "Your Link2CV verification code",
-      text: "Your Link2CV verification code is 123456. It expires in 5 minutes.",
-      html: "<p>Your Link2CV verification code is <strong>123456</strong>.</p><p>It expires in 5 minutes.</p>",
+      subject: "Your Careerden verification code",
+      text: "Your Careerden verification code is 123456. It expires in 5 minutes.",
+      html: "<p>Your Careerden verification code is <strong>123456</strong>.</p><p>It expires in 5 minutes.</p>",
     });
   });
 
@@ -53,9 +53,9 @@ describe("createPasswordResetHandler", () => {
 
     expect(emailSender.send).toHaveBeenCalledWith({
       to: "ada@example.com",
-      subject: "Reset your Link2CV password",
-      text: "Reset your Link2CV password by opening this link: http://localhost:3000/auth/reset-password/token\n\nThis link expires in 1 hour. If you did not request a password reset, you can ignore this email.",
-      html: '<p>We received a request to reset your Link2CV password.</p><p><a href="http://localhost:3000/auth/reset-password/token">Reset your password</a></p><p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>',
+      subject: "Reset your Careerden password",
+      text: "Reset your Careerden password by opening this link: http://localhost:3000/auth/reset-password/token\n\nThis link expires in 1 hour. If you did not request a password reset, you can ignore this email.",
+      html: '<p>We received a request to reset your Careerden password.</p><p><a href="http://localhost:3000/auth/reset-password/token">Reset your password</a></p><p>This link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>',
     });
   });
 });

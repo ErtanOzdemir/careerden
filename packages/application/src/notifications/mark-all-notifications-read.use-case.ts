@@ -1,4 +1,4 @@
-import type { NotificationRepository } from "@link2cv/domain";
+import type { NotificationRepository } from "@careerden/domain";
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 import type { AuthenticatedProfileUser } from "../profiles/profile-access.js";
 

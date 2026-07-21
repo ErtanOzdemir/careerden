@@ -1,5 +1,5 @@
 {
-  "name": "@link2cv/api-app",
+  "name": "@careerden/api-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,11 +14,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.932.0",
     "@aws-sdk/s3-request-presigner": "^3.932.0",
-    "@link2cv/application": "workspace:*",
-    "@link2cv/config": "workspace:*",
-    "@link2cv/contracts": "workspace:*",
-    "@link2cv/domain": "workspace:*",
-    "@link2cv/infrastructure": "workspace:*",
+    "@careerden/application": "workspace:*",
+    "@careerden/config": "workspace:*",
+    "@careerden/contracts": "workspace:*",
+    "@careerden/domain": "workspace:*",
+    "@careerden/infrastructure": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.78.0",
     "@opentelemetry/exporter-prometheus": "^0.220.0",

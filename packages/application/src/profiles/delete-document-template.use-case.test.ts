@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { JobApplicationRepository, PersistenceUnitOfWork } from "@link2cv/domain";
+import type { JobApplicationRepository, PersistenceUnitOfWork } from "@careerden/domain";
 import { createProfileRepository, createTestTemplate } from "./profile-test-helpers.js";
 import { DeleteDocumentTemplateUseCase } from "./delete-document-template.use-case.js";
 

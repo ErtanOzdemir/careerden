@@ -14,7 +14,7 @@ afterEach(async () => {
 
 describe("LocalFileStorage", () => {
   it("deletes a stored file", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "link2cv-storage-"));
+    const directory = await mkdtemp(join(tmpdir(), "careerden-storage-"));
     temporaryDirectories.push(directory);
     const storage = new LocalFileStorage(directory);
     const stored = await storage.put({
@@ -29,7 +29,7 @@ describe("LocalFileStorage", () => {
   });
 
   it("uses a caller-supplied deterministic key", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "link2cv-storage-"));
+    const directory = await mkdtemp(join(tmpdir(), "careerden-storage-"));
     temporaryDirectories.push(directory);
     const storage = new LocalFileStorage(directory);
     const stored = await storage.put({
@@ -44,7 +44,7 @@ describe("LocalFileStorage", () => {
   });
 
   it("rejects file IDs outside the storage root", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "link2cv-storage-"));
+    const directory = await mkdtemp(join(tmpdir(), "careerden-storage-"));
     temporaryDirectories.push(directory);
     const storage = new LocalFileStorage(directory);
 

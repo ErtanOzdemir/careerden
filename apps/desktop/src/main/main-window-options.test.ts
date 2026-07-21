@@ -11,6 +11,7 @@ describe("getMainWindowOptions", () => {
     expect(options.backgroundColor).toBe("#ffffff");
     expect(options.hasShadow).toBe(true);
     expect(options.autoHideMenuBar).toBe(true);
+    expect(options.title).toBe("Careerden");
   });
 
   it("uses a custom frameless window on non-mac platforms", () => {
@@ -20,5 +21,6 @@ describe("getMainWindowOptions", () => {
     expect(options.backgroundColor).toBe("#ffffff");
     expect(options.hasShadow).toBe(true);
     expect(options.autoHideMenuBar).toBe(true);
+    expect(options.title).toBe("Careerden");
   });
 });

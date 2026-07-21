@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button.js";
-import { Panel } from "../components/link2cv/panel.js";
-import { Field } from "../components/link2cv/field.js";
+import { Panel } from "../components/careerden/panel.js";
+import { Field } from "../components/careerden/field.js";
 import RichTextEditor, { RichTextViewer } from "../components/RichTextEditor.js";
 import { profilesApi } from "../api/profiles.js";
 import { emptyRichDocument, richDocumentFromText } from "../lib/rich-document.js";

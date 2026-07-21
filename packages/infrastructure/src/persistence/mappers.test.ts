@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { richDocumentFromText } from "@link2cv/domain";
+import { richDocumentFromText } from "@careerden/domain";
 import { toJobApplication, toUserProfile } from "./mappers.js";
 
 describe("toUserProfile", () => {
@@ -24,7 +24,7 @@ describe("toUserProfile", () => {
       certifications: [],
       projects: [
         {
-          name: "Link2CV",
+          name: "Careerden",
           description: "Legacy project description",
           skills: [],
           achievements: [],

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button.js";
-import { Panel, PanelHeader } from "../components/link2cv/panel.js";
+import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import { cn } from "../lib/utils.js";
 import {
   ShieldCheck,
@@ -11,7 +11,7 @@ import {
   TriangleAlert,
   LogIn,
 } from "lucide-react";
-import { LinkedinIcon } from "../components/link2cv/linkedin-icon.js";
+import { LinkedinIcon } from "../components/careerden/linkedin-icon.js";
 import type { ApiLinkedInSessionStatusResult } from "../api/types.js";
 
 type SessionState = ApiLinkedInSessionStatusResult["status"];

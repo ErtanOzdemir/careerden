@@ -1,6 +1,6 @@
 {
-  "name": "@link2cv/desktop",
-  "productName": "Link2CV",
+  "name": "@careerden/desktop",
+  "productName": "Careerden",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,11 +16,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@link2cv/application": "workspace:*",
-    "@link2cv/config": "workspace:*",
-    "@link2cv/contracts": "workspace:*",
-    "@link2cv/domain": "workspace:*",
-    "@link2cv/infrastructure": "workspace:*",
+    "@careerden/application": "workspace:*",
+    "@careerden/config": "workspace:*",
+    "@careerden/contracts": "workspace:*",
+    "@careerden/domain": "workspace:*",
+    "@careerden/infrastructure": "workspace:*",
     "playwright": "^1.49.1",
     "zod": "^3.24.1"
   },

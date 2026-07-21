@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AiGenerateParams, AiProvider, ScrapedJob } from "@link2cv/domain";
+import type { AiGenerateParams, AiProvider, ScrapedJob } from "@careerden/domain";
 import { ExtractJobRequirementsUseCase } from "./extract-job-requirements.use-case.js";
 
 describe("ExtractJobRequirementsUseCase", () => {

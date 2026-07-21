@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import PizZip from "pizzip";
-import type { DocumentTemplate } from "@link2cv/domain";
-import type { RichDocument } from "@link2cv/domain";
+import type { DocumentTemplate } from "@careerden/domain";
+import type { RichDocument } from "@careerden/domain";
 import { DocxtemplaterTemplateRenderer, buildDocxAliasData } from "./docx-template-renderer.js";
 
 describe("buildDocxAliasData", () => {
@@ -52,7 +52,7 @@ describe("buildDocxAliasData", () => {
       selected_experiences: [
         {
           achievements: ["Built profile tooling"],
-          company: "Link2CV",
+          company: "Careerden",
           description: "Shipped document generation",
           end_date: "2024",
           period: "2020 - 2024",
@@ -75,7 +75,7 @@ describe("buildDocxAliasData", () => {
 
     expect(aliases).toEqual({
       candidate_name: "Ada Lovelace",
-      first_company: "Link2CV",
+      first_company: "Careerden",
       first_role: "Engineer",
       linkedin_url: "https://linkedin.com/in/ada",
       portfolio_url: "https://ada.example.com",
@@ -176,7 +176,7 @@ describe("buildDocxAliasData", () => {
       selected_experiences: [
         {
           achievements: ["Built profile tooling"],
-          company: "Link2CV",
+          company: "Careerden",
           skills: ["TypeScript"],
         },
       ],
@@ -191,7 +191,7 @@ describe("buildDocxAliasData", () => {
 
     expect(aliases).toEqual({
       education_institution: "University",
-      experience_company: "Link2CV",
+      experience_company: "Careerden",
       project_name: "Portfolio",
     });
   });

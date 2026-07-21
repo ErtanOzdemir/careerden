@@ -1,5 +1,9 @@
-import type { JobApplicationRepository, OutboxRepository, ProfileReadiness } from "@link2cv/domain";
-import { outboxEventTypes } from "@link2cv/domain";
+import type {
+  JobApplicationRepository,
+  OutboxRepository,
+  ProfileReadiness,
+} from "@careerden/domain";
+import { outboxEventTypes } from "@careerden/domain";
 
 export async function enqueueMatchAnalysisIfEnabled(input: {
   jobApplications: Pick<JobApplicationRepository, "addEvent" | "setAnalysisAttempt">;

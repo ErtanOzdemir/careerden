@@ -5,7 +5,7 @@ const env = loadDocumentsWorkerEnv();
 const runtime = await createDocumentsWorkerRuntime(env);
 
 console.log(
-  `Link2CV documents worker listening on queue "application-pack-generations" with concurrency ${env.DOCUMENTS_WORKER_CONCURRENCY}`,
+  `Careerden documents worker listening on queue "application-pack-generations" with concurrency ${env.DOCUMENTS_WORKER_CONCURRENCY}`,
 );
 
 async function shutdown() {

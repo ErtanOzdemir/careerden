@@ -1,8 +1,8 @@
-# Link2CV Agent Guide
+# Careerden Agent Guide
 
 ## Project Overview
 
-Link2CV is a TypeScript monorepo for turning LinkedIn job postings into profile-aware
+Careerden is a TypeScript monorepo for turning LinkedIn job postings into profile-aware
 CV and cover-letter documents. The app scrapes job and company data, stores raw and
 normalized scrape results, optionally runs AI matching/document generation, and renders
 documents for review or download.
@@ -28,7 +28,7 @@ documents for review or download.
 
 ## Naming Conventions
 
-- Workspace packages use the `@link2cv/*` scope.
+- Workspace packages use the `@careerden/*` scope.
 - Backend and package source files use kebab-case names, for example
   `process-job-application.ts` and `self-processing-job-application.queue.ts`.
 - Backend folders are named by bounded context, for example `job-applications`,
@@ -64,7 +64,7 @@ documents for review or download.
 - Validate external inputs and AI output with schemas before persisting or rendering.
 - Use explicit workflow status transitions for job applications.
 - The desktop runtime loads the Vite web app with `?apiBaseUrl=...` in development. A
-  packaged build serves bundled renderer assets from `link2cv://app`, provides React
+  packaged build serves bundled renderer assets from `careerden://app`, provides React
   Router fallback, and proxies same-origin `/api` requests to the build-time
   `DESKTOP_API_BASE_URL`. The API remains a standalone service.
 - The desktop main process consumes the authenticated, profile-scoped notification SSE
@@ -106,12 +106,12 @@ documents for review or download.
 - Build the desktop main process and production renderer against an explicit API:
   ```bash
   DESKTOP_API_BASE_URL=https://api.example.com \
-    LINK2CV_REQUIRE_DESKTOP_API_BASE_URL=true \
-    pnpm --filter @link2cv/desktop build
+    CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL=true \
+    pnpm --filter @careerden/desktop build
   ```
 - Package the already-built desktop app for the current host platform:
   ```bash
-  pnpm --filter @link2cv/desktop package
+  pnpm --filter @careerden/desktop package
   ```
 - Find likely running app ports:
   ```bash

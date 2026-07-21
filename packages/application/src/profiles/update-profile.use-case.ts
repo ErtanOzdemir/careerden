@@ -3,7 +3,7 @@ import {
   type UpdateUserProfileInput,
   type UserProfile,
   type UserProfileAccountRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleProfile } from "./profile-access.js";
 

@@ -86,7 +86,7 @@ it("allows the happy-path worker transitions", () => {
 - [ ] **Step 3: Run tests to verify**
 
 ```bash
-pnpm --filter @link2cv/domain test -- packages/domain/src/job-applications/workflow-status.test.ts
+pnpm --filter @careerden/domain test -- packages/domain/src/job-applications/workflow-status.test.ts
 ```
 
 Expected: all tests pass
@@ -190,7 +190,7 @@ Search for `shouldProcess` in `postgres-job-application.repository.ts` and apply
 - [ ] **Step 4: Run existing tests to verify**
 
 ```bash
-pnpm --filter @link2cv/infrastructure test
+pnpm --filter @careerden/infrastructure test
 ```
 
 - [ ] **Step 5: Commit**
@@ -215,7 +215,7 @@ Find and remove all `shouldProcess: true,` lines in `process-job-application.tes
 - [ ] **Step 2: Run tests to verify**
 
 ```bash
-pnpm --filter @link2cv/application test
+pnpm --filter @careerden/application test
 ```
 
 - [ ] **Step 3: Commit**
@@ -337,7 +337,7 @@ router.put(
 - [ ] **Step 4: Run tests to verify existing behavior**
 
 ```bash
-pnpm --filter @link2cv/api-app test
+pnpm --filter @careerden/api-app test
 ```
 
 Expected: Existing tests still pass.
@@ -377,7 +377,7 @@ The full sequence becomes:
 - [ ] **Step 2: Run tests**
 
 ```bash
-pnpm --filter @link2cv/api-app test
+pnpm --filter @careerden/api-app test
 ```
 
 - [ ] **Step 3: Commit**
@@ -424,7 +424,7 @@ await input.jobApplications.updateStatus(jobApplication.id, "analyzing");
 - [ ] **Step 2: Run typecheck to verify**
 
 ```bash
-pnpm --filter @link2cv/api-app typecheck
+pnpm --filter @careerden/api-app typecheck
 ```
 
 - [ ] **Step 3: Commit**
@@ -482,7 +482,7 @@ submitScrapeData(id: string, input: SubmitScrapeDataInput): Promise<ApiJobApplic
 - [ ] **Step 3: Run typecheck**
 
 ```bash
-pnpm --filter @link2cv/web typecheck
+pnpm --filter @careerden/web typecheck
 ```
 
 - [ ] **Step 4: Commit**
@@ -548,7 +548,7 @@ Check if `ApiScrapeBundle` and `CreateJobApplicationFromScrapeInput` imports are
 - [ ] **Step 3: Run typecheck**
 
 ```bash
-pnpm --filter @link2cv/web typecheck
+pnpm --filter @careerden/web typecheck
 ```
 
 - [ ] **Step 4: Commit**
@@ -685,7 +685,7 @@ export function useScrapingQueuePoller(profileId: string | null): void {
 - [ ] **Step 2: Run typecheck**
 
 ```bash
-pnpm --filter @link2cv/web typecheck
+pnpm --filter @careerden/web typecheck
 ```
 
 - [ ] **Step 3: Commit**
@@ -738,7 +738,7 @@ useScrapingQueuePoller(profileId);
 - [ ] **Step 3: Run typecheck**
 
 ```bash
-pnpm --filter @link2cv/web typecheck
+pnpm --filter @careerden/web typecheck
 ```
 
 - [ ] **Step 4: Commit**

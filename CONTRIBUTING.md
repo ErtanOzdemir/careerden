@@ -1,4 +1,4 @@
-# Contributing to Link2CV
+# Contributing to Careerden
 
 Thanks for your interest in contributing! This document provides guidelines and instructions for contributing.
 
@@ -34,8 +34,8 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 2. **Clone** your fork:
 
    ```bash
-   git clone git@github.com:<your-username>/link2cv.git
-   cd link2cv
+   git clone git@github.com:<your-username>/careerden.git
+   cd careerden
    ```
 
 3. **Install dependencies**:
@@ -191,7 +191,7 @@ Current backend contexts are `profiles`, `job-applications`, `scraping`, `matchi
 
 ### Imports
 
-- Use `@link2cv/*` package aliases for cross-package imports.
+- Use `@careerden/*` package aliases for cross-package imports.
 - Group imports: external → internal → relative.
 
 ## Testing
@@ -206,10 +206,10 @@ Current backend contexts are `profiles`, `job-applications`, `scraping`, `matchi
 pnpm test
 
 # Run tests for a specific package
-pnpm --filter @link2cv/domain test
+pnpm --filter @careerden/domain test
 
 # Run tests in watch mode
-pnpm vitest --filter @link2cv/contracts
+pnpm vitest --filter @careerden/contracts
 ```
 
 ## Desktop Releases
@@ -259,4 +259,4 @@ release tags and assets must never be moved or reused.
 
 ## Questions?
 
-Open a [GitHub Discussion](https://github.com/ErtanOzdemir/link2cv/discussions) if you have questions or need help getting started.
+Open a [GitHub Discussion](https://github.com/ErtanOzdemir/careerden/discussions) if you have questions or need help getting started.

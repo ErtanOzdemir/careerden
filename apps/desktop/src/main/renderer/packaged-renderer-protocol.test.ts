@@ -10,13 +10,13 @@ describe("packaged renderer protocol", () => {
     const fetchFile = vi.fn(async () => new Response("renderer"));
     const handler = createHandler({ fetchFile });
 
-    await handler(new Request("link2cv://app/assets/index.js"));
-    await handler(new Request("link2cv://app/applications/application-1?tab=timeline"));
+    await handler(new Request("careerden://app/assets/index.js"));
+    await handler(new Request("careerden://app/applications/application-1?tab=timeline"));
 
     expect(fetchFile.mock.calls[0]?.[0]).toMatch(/\/renderer\/assets\/index\.js$/);
     expect(fetchFile.mock.calls[1]?.[0]).toMatch(/\/renderer\/index\.html$/);
     expect(packagedRendererSchemeRegistration).toMatchObject({
-      scheme: "link2cv",
+      scheme: "careerden",
       privileges: { secure: true, standard: true, supportFetchAPI: true },
     });
   });
@@ -25,9 +25,9 @@ describe("packaged renderer protocol", () => {
     const fetchFile = vi.fn(async () => new Response("renderer"));
     const handler = createHandler({ fetchFile });
 
-    const traversal = await handler(new Request("link2cv://app/%2e%2e%2fprivate.txt"));
-    const unknownHost = await handler(new Request("link2cv://other/index.html"));
-    const method = await handler(new Request("link2cv://app/index.html", { method: "POST" }));
+    const traversal = await handler(new Request("careerden://app/%2e%2e%2fprivate.txt"));
+    const unknownHost = await handler(new Request("careerden://other/index.html"));
+    const method = await handler(new Request("careerden://app/index.html", { method: "POST" }));
 
     expect(traversal.status).toBe(400);
     expect(unknownHost.status).toBe(404);
@@ -43,12 +43,12 @@ describe("packaged renderer protocol", () => {
     });
     const handler = createHandler({ fetchApi });
     const response = await handler(
-      new Request("link2cv://app/api/notifications/notification-1/read?source=desktop", {
+      new Request("careerden://app/api/notifications/notification-1/read?source=desktop", {
         body: JSON.stringify({ read: true }),
         headers: {
           Cookie: "renderer-cookie=untrusted",
           "Content-Type": "application/json",
-          Origin: "link2cv://app",
+          Origin: "careerden://app",
         },
         method: "PATCH",
       }),
@@ -75,20 +75,20 @@ describe("packaged renderer protocol", () => {
       onError,
     });
 
-    const response = await handler(new Request("link2cv://app/api/notifications"));
+    const response = await handler(new Request("careerden://app/api/notifications"));
 
     expect(response.status).toBe(502);
-    expect(await response.text()).toBe("Link2CV API is unavailable");
+    expect(await response.text()).toBe("Careerden API is unavailable");
     expect(onError).toHaveBeenCalledOnce();
   });
 
   it("preserves an API base path when constructing upstream URLs", () => {
     expect(
       buildProxiedApiUrl(
-        "https://api.example.com/link2cv/",
-        new URL("link2cv://app/api/health?check=true"),
+        "https://api.example.com/careerden/",
+        new URL("careerden://app/api/health?check=true"),
       ),
-    ).toBe("https://api.example.com/link2cv/health?check=true");
+    ).toBe("https://api.example.com/careerden/health?check=true");
   });
 });
 
@@ -99,7 +99,7 @@ function createHandler(
     apiBaseUrl: "https://api.example.com/base",
     fetchApi: vi.fn(async () => Response.json({ ok: true })),
     fetchFile: vi.fn(async () => new Response("renderer")),
-    rendererDirectory: "/opt/link2cv/renderer",
+    rendererDirectory: "/opt/careerden/renderer",
     ...overrides,
   });
 }

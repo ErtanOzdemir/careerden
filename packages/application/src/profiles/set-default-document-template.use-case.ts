@@ -1,4 +1,4 @@
-import type { DocumentTemplate, UserProfileAccountRepository } from "@link2cv/domain";
+import type { DocumentTemplate, UserProfileAccountRepository } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleDocumentTemplate } from "./document-template-access.js";
 import { hasValidCoverLetterContentMapping } from "./document-template-mapping.js";

@@ -3,7 +3,7 @@ import type {
   JobApplicationChangeListener,
   JobApplicationChangePublisher,
   JobApplicationChangeSubscriber,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export class InMemoryJobApplicationChangeBus
   implements JobApplicationChangePublisher, JobApplicationChangeSubscriber

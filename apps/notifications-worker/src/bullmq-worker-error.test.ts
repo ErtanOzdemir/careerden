@@ -1,6 +1,6 @@
 import { UnrecoverableError } from "bullmq";
 import { describe, expect, it } from "vitest";
-import { ApplicationError } from "@link2cv/application";
+import { ApplicationError } from "@careerden/application";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";
 
 describe("toBullMqWorkerError", () => {

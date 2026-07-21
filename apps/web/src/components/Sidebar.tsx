@@ -58,7 +58,7 @@ export default function Sidebar() {
       <div data-testid="sidebar-brand" className="flex h-24 items-end gap-2.5 px-5 pb-4">
         <BrandLogo className="size-8 object-contain" />
         <div className="leading-tight">
-          <p className="text-sm font-semibold text-sidebar-foreground">Link2CV</p>
+          <p className="text-sm font-semibold text-sidebar-foreground">Careerden</p>
           <p className="text-xs text-muted-foreground">Career workspace</p>
         </div>
       </div>

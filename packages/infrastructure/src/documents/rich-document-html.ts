@@ -1,4 +1,4 @@
-import type { RichBlock, RichDocument, RichTextAlignment, RichTextNode } from "@link2cv/domain";
+import type { RichBlock, RichDocument, RichTextAlignment, RichTextNode } from "@careerden/domain";
 
 export function isRichDocument(value: unknown): value is RichDocument {
   return (

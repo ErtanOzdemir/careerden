@@ -1,6 +1,6 @@
 ---
 name: maintain-project-docs
-description: Assess and update Link2CV repository documentation when implementation changes make existing guidance incomplete or stale. Use alongside changes to features, setup, commands, environment variables, APIs, architecture, package boundaries, contributor workflows, security practices, marketing runtime behavior, or other user- and contributor-visible behavior that affects README.md, CONTRIBUTING.md, AGENTS.md, package READMEs, or related Markdown documentation.
+description: Assess and update Careerden repository documentation when implementation changes make existing guidance incomplete or stale. Use alongside changes to features, setup, commands, environment variables, APIs, architecture, package boundaries, contributor workflows, security practices, marketing runtime behavior, or other user- and contributor-visible behavior that affects README.md, CONTRIBUTING.md, AGENTS.md, package READMEs, or related Markdown documentation.
 ---
 
 # Maintain Project Docs

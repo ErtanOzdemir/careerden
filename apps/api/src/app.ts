@@ -48,7 +48,7 @@ import {
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
   SubmitSupportRequestUseCase,
-} from "@link2cv/application";
+} from "@careerden/application";
 import {
   DocxtemplaterTemplateRenderer,
   GotenbergDocxPdfRenderer,
@@ -66,7 +66,7 @@ import {
   createPostgresDb,
   runPostgresMigrations,
   MockSupportRequestNotifier,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";

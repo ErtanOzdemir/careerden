@@ -3,7 +3,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser, BrowserContext, BrowserContextOptions, Page } from "playwright";
 import { chromium } from "playwright";
-import type { LinkedInSessionStatusResult } from "@link2cv/domain";
+import type { LinkedInSessionStatusResult } from "@careerden/domain";
 
 export type LinkedInStorageState = Exclude<
   BrowserContextOptions["storageState"],

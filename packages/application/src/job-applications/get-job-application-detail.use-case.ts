@@ -2,8 +2,8 @@ import type {
   FileStorage,
   JobApplicationRepository,
   UserProfileAccessRepository,
-} from "@link2cv/domain";
-import { assessProfileReadiness, normalizeDescriptionOnlyDocumentContent } from "@link2cv/domain";
+} from "@careerden/domain";
+import { assessProfileReadiness, normalizeDescriptionOnlyDocumentContent } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 import {

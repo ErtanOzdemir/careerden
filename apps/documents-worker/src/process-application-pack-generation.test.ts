@@ -1,5 +1,5 @@
 import { UnrecoverableError } from "bullmq";
-import { ApplicationError } from "@link2cv/application";
+import { ApplicationError } from "@careerden/application";
 import { describe, expect, it, vi } from "vitest";
 import { processApplicationPackGeneration } from "./process-application-pack-generation.js";
 

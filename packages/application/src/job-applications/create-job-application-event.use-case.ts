@@ -2,7 +2,7 @@ import type {
   CreateJobApplicationEventInput,
   JobApplicationEvent,
   PersistenceUnitOfWork,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 
 export class CreateJobApplicationEventUseCase {

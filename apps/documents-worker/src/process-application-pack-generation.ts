@@ -1,9 +1,9 @@
-import type { ApplicationPackGenerationQueuePayload } from "@link2cv/domain";
-import { ApplicationError } from "@link2cv/application";
+import type { ApplicationPackGenerationQueuePayload } from "@careerden/domain";
+import { ApplicationError } from "@careerden/application";
 import type {
   FailApplicationPackGenerationUseCase,
   GenerateRequestedApplicationPackUseCase,
-} from "@link2cv/application";
+} from "@careerden/application";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";
 
 export async function processApplicationPackGeneration(input: {

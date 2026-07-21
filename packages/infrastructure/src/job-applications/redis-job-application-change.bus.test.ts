@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { JobApplicationChange } from "@link2cv/domain";
+import type { JobApplicationChange } from "@careerden/domain";
 import { RedisJobApplicationChangeBus } from "./redis-job-application-change.bus.js";
 
 describe("RedisJobApplicationChangeBus", () => {

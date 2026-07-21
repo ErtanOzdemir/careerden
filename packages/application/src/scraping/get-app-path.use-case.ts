@@ -1,4 +1,4 @@
-import type { AppPathProvider } from "@link2cv/domain";
+import type { AppPathProvider } from "@careerden/domain";
 
 export class GetAppPathUseCase {
   constructor(private readonly appPathProvider: AppPathProvider) {}

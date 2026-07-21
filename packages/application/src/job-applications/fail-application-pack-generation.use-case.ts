@@ -1,4 +1,7 @@
-import type { ApplicationPackGenerationQueuePayload, PersistenceUnitOfWork } from "@link2cv/domain";
+import type {
+  ApplicationPackGenerationQueuePayload,
+  PersistenceUnitOfWork,
+} from "@careerden/domain";
 import { generatedDocumentFileIds } from "../documents/generate-documents.use-case.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 

@@ -830,5 +830,5 @@ function packActionDescription(app: JobApplication): string {
   if (app.processingStatus === "completed") return "Your application pack is up to date";
   if (app.processingStatus === "review_ready") return "Your tailored content is ready";
   if (app.processingStatus === "failed") return "Review the error, then try updating the pack";
-  return "Link2CV is preparing your application pack";
+  return "Careerden is preparing your application pack";
 }

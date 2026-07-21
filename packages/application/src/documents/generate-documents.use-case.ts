@@ -15,8 +15,8 @@ import type {
   TemplateRenderer,
   UserProfile,
   UserProfileRepository,
-} from "@link2cv/domain";
-import { documentContentFromMatchAnalysis } from "@link2cv/domain";
+} from "@careerden/domain";
+import { documentContentFromMatchAnalysis } from "@careerden/domain";
 import { hasValidCoverLetterContentMapping } from "../profiles/document-template-mapping.js";
 import {
   resolveDocumentContent,

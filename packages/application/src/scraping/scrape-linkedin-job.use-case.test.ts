@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CompanyLookupInput, JobSiteScraper } from "@link2cv/domain";
+import type { CompanyLookupInput, JobSiteScraper } from "@careerden/domain";
 import { ScrapeLinkedInJobUseCase } from "./scrape-linkedin-job.use-case.js";
 
 describe("ScrapeLinkedInJobUseCase", () => {

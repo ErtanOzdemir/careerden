@@ -51,14 +51,14 @@ describe("UpdateProfileUseCase", () => {
       summaryRichText,
       experience: [
         {
-          company: "Link2CV",
+          company: "Careerden",
           title: "Engineer",
           descriptionRichText,
         },
       ],
       projects: [
         {
-          name: "Link2CV",
+          name: "Careerden",
           descriptionRichText,
           skills: [],
           achievements: [],
@@ -71,7 +71,7 @@ describe("UpdateProfileUseCase", () => {
       summaryRichText,
       experience: [
         {
-          company: "Link2CV",
+          company: "Careerden",
           title: "Engineer",
           description: "Built reliable services",
           descriptionRichText,
@@ -79,7 +79,7 @@ describe("UpdateProfileUseCase", () => {
       ],
       projects: [
         {
-          name: "Link2CV",
+          name: "Careerden",
           description: "Built reliable services",
           descriptionRichText,
           skills: [],

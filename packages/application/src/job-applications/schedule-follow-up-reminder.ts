@@ -1,5 +1,5 @@
-import type { JobApplicationFollowUp, OutboxRepository } from "@link2cv/domain";
-import { followUpReminderLeadTimeMs, outboxEventTypes } from "@link2cv/domain";
+import type { JobApplicationFollowUp, OutboxRepository } from "@careerden/domain";
+import { followUpReminderLeadTimeMs, outboxEventTypes } from "@careerden/domain";
 
 export async function scheduleFollowUpReminder(input: {
   followUp: JobApplicationFollowUp;

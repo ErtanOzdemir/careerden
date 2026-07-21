@@ -1,5 +1,5 @@
-import type { DocumentContent, PersistenceUnitOfWork } from "@link2cv/domain";
-import { normalizeDescriptionOnlyDocumentContent } from "@link2cv/domain";
+import type { DocumentContent, PersistenceUnitOfWork } from "@careerden/domain";
+import { normalizeDescriptionOnlyDocumentContent } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 

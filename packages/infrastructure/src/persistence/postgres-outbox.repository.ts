@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import type { AddOutboxEventInput, OutboxEvent, OutboxRepository } from "@link2cv/domain";
+import type { AddOutboxEventInput, OutboxEvent, OutboxRepository } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 
 export interface ClaimedOutboxEvent extends OutboxEvent {

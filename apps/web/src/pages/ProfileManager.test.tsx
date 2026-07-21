@@ -33,7 +33,7 @@ describe("ProfileManager", () => {
     expect(screen.queryByLabelText("Full name")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Professional summary")).toBeInTheDocument();
     expect(screen.getByLabelText("Engineer description")).toBeInTheDocument();
-    expect(screen.getByLabelText("Link2CV description")).toBeInTheDocument();
+    expect(screen.getByLabelText("Careerden description")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit basic information" }));
     expect(screen.getByLabelText("Full name")).toHaveValue("Ada Lovelace");
@@ -130,7 +130,7 @@ function createProfile(richText: RichDocument): ApiProfile {
     links: [],
     projects: [
       {
-        name: "Link2CV",
+        name: "Careerden",
         description: "Built reliable systems",
         descriptionRichText: richText,
         skills: [],

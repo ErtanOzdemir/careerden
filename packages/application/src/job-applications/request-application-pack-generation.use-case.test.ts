@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { richDocumentFromText } from "@link2cv/domain";
+import { richDocumentFromText } from "@careerden/domain";
 import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import { createUnitOfWork } from "./job-application-test-helpers.js";
 import { RequestApplicationPackGenerationUseCase } from "./request-application-pack-generation.use-case.js";
 

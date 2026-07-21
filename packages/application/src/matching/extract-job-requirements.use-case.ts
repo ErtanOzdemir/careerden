@@ -1,5 +1,5 @@
-import { aiJobRequirementsSchema } from "@link2cv/contracts";
-import type { AiProvider, ScrapedJob } from "@link2cv/domain";
+import { aiJobRequirementsSchema } from "@careerden/contracts";
+import type { AiProvider, ScrapedJob } from "@careerden/domain";
 
 export class ExtractJobRequirementsUseCase {
   constructor(private readonly aiProvider: AiProvider) {}

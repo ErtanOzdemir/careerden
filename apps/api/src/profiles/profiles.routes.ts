@@ -12,13 +12,13 @@ import type {
   UpdateDocumentTemplateVariableAliasesUseCase,
   UpdateProfileUseCase,
   UploadDocumentTemplateUseCase,
-} from "@link2cv/application";
+} from "@careerden/application";
 import {
   createProfileSchema,
   updateDocumentTemplateMappingsSchema,
   updateDocumentTemplateVariableAliasesSchema,
   updateProfileSchema,
-} from "@link2cv/contracts";
+} from "@careerden/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 

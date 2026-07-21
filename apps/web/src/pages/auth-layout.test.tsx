@@ -12,7 +12,7 @@ describe("AuthShell", () => {
 
     expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
     expect(screen.getByText("Sign in to continue.")).toBeInTheDocument();
-    expect(screen.getAllByText("Link2CV")).toHaveLength(2);
+    expect(screen.getAllByText("Careerden")).toHaveLength(2);
     expect(screen.getByTestId("auth-wave-panel")).toHaveClass(
       "bg-black",
       "dark:bg-white",

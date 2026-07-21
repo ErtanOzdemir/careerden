@@ -4,8 +4,8 @@ import {
   FailApplicationPackGenerationUseCase,
   GenerateDocumentsUseCase,
   GenerateRequestedApplicationPackUseCase,
-} from "@link2cv/application";
-import type { ApplicationPackGenerationQueuePayload } from "@link2cv/domain";
+} from "@careerden/application";
+import type { ApplicationPackGenerationQueuePayload } from "@careerden/domain";
 import {
   BullMqApplicationPackGenerationQueue,
   DocxtemplaterTemplateRenderer,
@@ -22,7 +22,7 @@ import {
   RustFsStorage,
   applicationPackGenerationQueueName,
   createPostgresDb,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import type { Knex } from "knex";
 import type { DocumentsWorkerEnv } from "./env.js";
 import { processApplicationPackGeneration } from "./process-application-pack-generation.js";

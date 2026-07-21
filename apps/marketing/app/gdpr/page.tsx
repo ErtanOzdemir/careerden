@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
   title: "GDPR and Data Rights",
-  description: "How to understand and exercise privacy and GDPR rights relating to Link2CV data.",
+  description: "How to understand and exercise privacy and GDPR rights relating to Careerden data.",
   path: "/gdpr",
 });
 
@@ -16,7 +16,7 @@ const sections: LegalSection[] = [
       <p>
         This page explains the intended rights process for people covered by the GDPR or UK GDPR.
         The owner must confirm the controller identity, EU/UK establishment, representative
-        obligations, and whether Link2CV ever acts as a processor for business customers:{" "}
+        obligations, and whether Careerden ever acts as a processor for business customers:{" "}
         <Placeholder>[CONTROLLER, REPRESENTATIVE, AND PROCESSOR ROLES]</Placeholder>.
       </p>
     ),
@@ -43,10 +43,10 @@ const sections: LegalSection[] = [
     title: "AI and automated decisions",
     content: (
       <p>
-        Link2CV uses AI-supported analysis and drafting, but the intended product leaves application
-        decisions and document review to the user. The owner must assess and document whether any
-        production processing creates legal or similarly significant solely automated decisions:{" "}
-        <Placeholder>[ARTICLE 22 ASSESSMENT]</Placeholder>.
+        Careerden uses AI-supported analysis and drafting, but the intended product leaves
+        application decisions and document review to the user. The owner must assess and document
+        whether any production processing creates legal or similarly significant solely automated
+        decisions: <Placeholder>[ARTICLE 22 ASSESSMENT]</Placeholder>.
       </p>
     ),
   },
@@ -120,7 +120,7 @@ export default function GdprPage() {
     <LegalPage
       eyebrow="Data rights"
       title="GDPR and your data"
-      summary="A practical overview of privacy rights and the request process intended for Link2CV."
+      summary="A practical overview of privacy rights and the request process intended for Careerden."
       sections={sections}
     />
   );

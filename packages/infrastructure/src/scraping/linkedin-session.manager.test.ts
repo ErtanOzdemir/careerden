@@ -6,7 +6,7 @@ import { LinkedInSessionManager } from "./linkedin-session.manager.js";
 
 describe("LinkedInSessionManager", () => {
   it("reports missing when no encrypted session exists", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "link2cv-linkedin-session-"));
+    const dir = await mkdtemp(join(tmpdir(), "careerden-linkedin-session-"));
     const manager = new LinkedInSessionManager(dir, "test-secret");
 
     await expect(manager.getStatus()).resolves.toMatchObject({
@@ -15,7 +15,7 @@ describe("LinkedInSessionManager", () => {
   });
 
   it("reports missing with a readable message when the login browser cannot open", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "link2cv-linkedin-session-"));
+    const dir = await mkdtemp(join(tmpdir(), "careerden-linkedin-session-"));
     const manager = new LinkedInSessionManager(dir, "test-secret", {
       async launchBrowser() {
         throw new Error("GUI is unavailable");

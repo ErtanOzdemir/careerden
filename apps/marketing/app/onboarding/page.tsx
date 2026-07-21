@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
-  title: "How Link2CV Works",
+  title: "How Careerden Works",
   description:
-    "See how Link2CV turns each captured opportunity into a trackable application record and reviewable document pack.",
+    "See how Careerden turns each captured opportunity into a trackable application record and reviewable document pack.",
   path: "/onboarding",
   index: false,
 });

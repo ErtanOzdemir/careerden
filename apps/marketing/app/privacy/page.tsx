@@ -4,7 +4,8 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
-  description: "How Link2CV is intended to collect, use, store, share, and protect personal data.",
+  description:
+    "How Careerden is intended to collect, use, store, share, and protect personal data.",
   path: "/privacy",
 });
 
@@ -29,7 +30,7 @@ const sections: LegalSection[] = [
     title: "Data we expect to collect",
     content: (
       <>
-        <p>Depending on how you use Link2CV, the service may process:</p>
+        <p>Depending on how you use Careerden, the service may process:</p>
         <ul>
           <li>
             account details, such as name, email address, authentication records, and security
@@ -173,7 +174,7 @@ const sections: LegalSection[] = [
     content: (
       <>
         <p>
-          Link2CV should use proportionate technical and organizational safeguards, but no service
+          Careerden should use proportionate technical and organizational safeguards, but no service
           can promise absolute security. The owner must document confirmed controls and incident
           contacts rather than making unverified guarantees.
         </p>
@@ -191,7 +192,7 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Privacy"
       title="Privacy Policy"
-      summary="A transparent working description of the personal data Link2CV needs to provide its profile-aware application workflow."
+      summary="A transparent working description of the personal data Careerden needs to provide its profile-aware application workflow."
       sections={sections}
     />
   );

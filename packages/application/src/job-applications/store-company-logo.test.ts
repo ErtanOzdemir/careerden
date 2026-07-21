@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FileStorage, RemoteImageFetcher } from "@link2cv/domain";
+import type { FileStorage, RemoteImageFetcher } from "@careerden/domain";
 import { storeCompanyLogo } from "./store-company-logo.js";
 
 describe("storeCompanyLogo", () => {

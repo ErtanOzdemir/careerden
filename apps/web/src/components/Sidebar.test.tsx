@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar";
 
 vi.mock("../api/profiles.js", () => ({
-  profileUpdatedEvent: "link2cv:profile-updated",
+  profileUpdatedEvent: "careerden:profile-updated",
   profilesApi: {
     me: vi.fn().mockRejectedValue(new Error("No profile")),
   },

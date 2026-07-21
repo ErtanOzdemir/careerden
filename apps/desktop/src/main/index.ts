@@ -10,6 +10,7 @@ import {
 } from "electron";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { desktopAppIdentity } from "./desktop-app-identity.js";
 import { loadDesktopApiBaseUrl } from "./desktop-runtime-config.js";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { getMainWindowOptions } from "./main-window-options.js";
@@ -38,11 +39,10 @@ import {
   GetAppPathUseCase,
   SaveLinkedInSessionUseCase,
   StartLinkedInSessionUseCase,
-} from "@link2cv/application";
-import { LinkedInSessionManager } from "@link2cv/infrastructure";
+} from "@careerden/application";
+import { LinkedInSessionManager } from "@careerden/infrastructure";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const appName = "Link2CV";
 
 let mainWindow: BrowserWindow | null = null;
 let mainWindowReady: Promise<BrowserWindow> | null = null;
@@ -55,10 +55,10 @@ let isQuittingAfterCookieFlush = false;
 const notificationActivations = new DesktopNotificationActivationQueue();
 
 protocol.registerSchemesAsPrivileged([packagedRendererSchemeRegistration]);
-app.setName(appName);
+app.setName(desktopAppIdentity.name);
 
 if (process.platform === "win32") {
-  app.setAppUserModelId("com.link2cv.desktop");
+  app.setAppUserModelId(desktopAppIdentity.id);
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -166,7 +166,7 @@ async function initializeDesktopRuntime(): Promise<void> {
           window.webContents.send(desktopNotificationIpcChannels.activationAvailable);
         })
         .catch((error: unknown) => {
-          console.error("Failed to activate Link2CV from a native notification", error);
+          console.error("Failed to activate Careerden from a native notification", error);
         });
     },
     onError: (error) => {

@@ -5,12 +5,12 @@ import type {
   ProfileProject,
   RichDocument,
   UserProfile,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import {
   normalizeDescriptionOnlyDocumentContent,
   profileProjectDescriptionAsProse,
   richDocumentFromText,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export interface ResolvedDocumentExperience {
   company: string;

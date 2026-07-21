@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { JobApplicationQueuePayload } from "@link2cv/domain";
+import type { JobApplicationQueuePayload } from "@careerden/domain";
 import { BullMqJobApplicationQueue } from "./bullmq-job-application.queue.js";
 
 describe("BullMqJobApplicationQueue", () => {

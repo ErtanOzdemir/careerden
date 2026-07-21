@@ -4,8 +4,8 @@ import type {
   JobApplication,
   PersistenceUnitOfWork,
   ScrapeBundle,
-} from "@link2cv/domain";
-import { assessProfileReadiness } from "@link2cv/domain";
+} from "@careerden/domain";
+import { assessProfileReadiness } from "@careerden/domain";
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 import type { AuthenticatedProfileUser } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";

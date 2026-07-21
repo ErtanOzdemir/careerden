@@ -5,7 +5,7 @@ import type {
   FollowUpReminderQueuePayload,
   ScheduleFollowUpReminderInput,
   ScheduledFollowUpReminder,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 export const followUpReminderQueueName = "follow-up-reminders";
 

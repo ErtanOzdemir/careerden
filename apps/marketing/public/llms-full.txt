@@ -1,6 +1,6 @@
-# Link2CV: product and public-site context
+# Careerden: product and public-site context
 
-Link2CV is a TypeScript open-source desktop job application tracker with a profile-aware CV creator and cover letter creator. It keeps opportunities, stages, salary and work-style context, interest, follow-ups, contacts, notes, match analysis, and application documents together from discovery through outcome. A user also maintains reusable profile details such as professional summary, skills, experience, education, projects, and certifications. In the current desktop workflow, a user submits a LinkedIn job-posting URL through a connected LinkedIn session and the application captures source and normalized job/company information. LinkedIn is the current automated capture source; direct manual application entry from other sources is planned and is not available in the current release. Depending on operator configuration and profile readiness, Link2CV can run AI-supported requirement extraction and match analysis, then prepare editable CV and cover-letter drafts and rendered documents inside the tracked application.
+Careerden is a TypeScript open-source desktop job application tracker with a profile-aware CV creator and cover letter creator. It keeps opportunities, stages, salary and work-style context, interest, follow-ups, contacts, notes, match analysis, and application documents together from discovery through outcome. A user also maintains reusable profile details such as professional summary, skills, experience, education, projects, and certifications. In the current desktop workflow, a user submits a LinkedIn job-posting URL through a connected LinkedIn session and the application captures source and normalized job/company information. LinkedIn is the current automated capture source; direct manual application entry from other sources is planned and is not available in the current release. Depending on operator configuration and profile readiness, Careerden can run AI-supported requirement extraction and match analysis, then prepare editable CV and cover-letter drafts and rendered documents inside the tracked application.
 
 ## Intended workflow
 
@@ -11,7 +11,7 @@ Link2CV is a TypeScript open-source desktop job application tracker with a profi
 3. The user maps detected template variables to profile data and saves the mapping. Cover-letter
    content is mapped to the generated document-content field.
 4. In the connected desktop app, the user submits a LinkedIn job-posting URL and may choose output
-   language and tone. Link2CV queues and processes the posting while preserving source material for
+   language and tone. Careerden queues and processes the posting while preserving source material for
    traceability. Direct manual application entry from other sources is planned and is not available
    in the current release.
 5. The captured opportunity becomes a trackable application record. The user can update its stage,
@@ -23,15 +23,15 @@ Link2CV is a TypeScript open-source desktop job application tracker with a profi
    needed; and applies those edits with Update pack before deciding whether to use or submit the
    documents.
 
-Link2CV is not an automatic job-application service. It does not promise employment outcomes or guarantee the accuracy of AI output. Users should verify every generated statement.
+Careerden is not an automatic job-application service. It does not promise employment outcomes or guarantee the accuracy of AI output. Users should verify every generated statement.
 
 The public marketing website explains the desktop product. It does not expose sign-in, signup, or
 browser-application links. Its `/download` page reflects the configured macOS DMG, Windows NSIS, and
 Linux AppImage package targets while explicitly identifying all installer links as mock placeholders
 until verified release artifacts are published.
 
-The public site links directly to the Link2CV repository at
-https://github.com/ErtanOzdemir/link2cv. The current repository license is Business Source License
+The public site links directly to the Careerden repository at
+https://github.com/ErtanOzdemir/careerden. The current repository license is Business Source License
 1.1, which permits the uses described in its LICENSE file and is scheduled to convert to Apache
 License 2.0 under its stated terms.
 

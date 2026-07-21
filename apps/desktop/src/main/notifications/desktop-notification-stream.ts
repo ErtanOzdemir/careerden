@@ -1,5 +1,5 @@
-import { notificationChangeSchema } from "@link2cv/contracts";
-import type { NotificationChangeDto } from "@link2cv/contracts";
+import { notificationChangeSchema } from "@careerden/contracts";
+import type { NotificationChangeDto } from "@careerden/contracts";
 
 const retryDelaysMs = [1_000, 2_000, 5_000, 10_000, 30_000] as const;
 const deliveredNotificationLimit = 256;
@@ -102,7 +102,7 @@ export class DesktopNotificationStream {
 
       if (result.kind === "not-found") {
         this.reportError(
-          new Error("The Link2CV API does not support desktop notification streaming"),
+          new Error("The Careerden API does not support desktop notification streaming"),
         );
         return;
       }

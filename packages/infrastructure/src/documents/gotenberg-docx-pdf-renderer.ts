@@ -1,4 +1,4 @@
-import type { DocxPdfRenderer } from "@link2cv/domain";
+import type { DocxPdfRenderer } from "@careerden/domain";
 
 const docxContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const libreOfficeConversionPath = "/forms/libreoffice/convert";

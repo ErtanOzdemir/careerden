@@ -3,8 +3,8 @@ import type {
   JobApplicationRepository,
   PersistenceUnitOfWork,
   UserProfileRepository,
-} from "@link2cv/domain";
-import { assessProfileReadiness, documentContentFromMatchAnalysis } from "@link2cv/domain";
+} from "@careerden/domain";
+import { assessProfileReadiness, documentContentFromMatchAnalysis } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";

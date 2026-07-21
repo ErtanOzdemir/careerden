@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import { AnalyzeScrapedJobUseCase, RunMatchAnalysisUseCase } from "@link2cv/application";
-import type { JobApplicationQueuePayload } from "@link2cv/domain";
+import { AnalyzeScrapedJobUseCase, RunMatchAnalysisUseCase } from "@careerden/application";
+import type { JobApplicationQueuePayload } from "@careerden/domain";
 import {
   AiProviderFactory,
   BullMqJobApplicationQueue,
@@ -13,7 +13,7 @@ import {
   RedisJobApplicationChangeBus,
   createPostgresDb,
   jobApplicationQueueName,
-} from "@link2cv/infrastructure";
+} from "@careerden/infrastructure";
 import type { Knex } from "knex";
 import type { LlmWorkerEnv } from "./env.js";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";

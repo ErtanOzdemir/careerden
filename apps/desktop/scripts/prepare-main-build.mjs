@@ -9,7 +9,7 @@ const runtimeConfigModule = await import(
   pathToFileURL(resolve(desktopDirectory, "dist", "main", "desktop-runtime-config.js")).toString()
 );
 const configuredApiBaseUrl = process.env.DESKTOP_API_BASE_URL?.trim();
-const requireConfiguredApiBaseUrl = process.env.LINK2CV_REQUIRE_DESKTOP_API_BASE_URL === "true";
+const requireConfiguredApiBaseUrl = process.env.CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL === "true";
 
 if (requireConfiguredApiBaseUrl && !configuredApiBaseUrl) {
   throw new Error("DESKTOP_API_BASE_URL is required for desktop release builds");

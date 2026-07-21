@@ -3,7 +3,7 @@ import type {
   JobSiteScraper,
   ScrapedCompany,
   ScrapedJob,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { chromium } from "playwright";
 import type { Page } from "playwright";
 import type { LinkedInSessionManager } from "../linkedin-session.manager.js";

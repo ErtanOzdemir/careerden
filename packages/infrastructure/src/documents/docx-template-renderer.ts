@@ -9,7 +9,7 @@ import type {
   SelectedEducationTemplateField,
   SelectedExperienceTemplateField,
   SelectedProjectTemplateField,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 
 const placeholderPattern = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 const sectionPattern = /\{\{\s*#([a-zA-Z0-9_]+)\s*\}\}([\s\S]*?)\{\{\s*\/\1\s*\}\}/g;
@@ -348,7 +348,7 @@ function replaceRichDocumentsWithTokens(
         return [variableName, value];
       }
 
-      const token = `__LINK2CV_RICH_${richDocuments.size}__`;
+      const token = `__CAREERDEN_RICH_${richDocuments.size}__`;
       richDocuments.set(token, { document: value, variableName });
       return [variableName, token];
     }),
@@ -498,7 +498,7 @@ function ensureNumberingPart(zip: PizZip) {
         "word/_rels/document.xml.rels",
         relationships.replace(
           "</Relationships>",
-          '<Relationship Id="rIdLink2cvNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>',
+          '<Relationship Id="rIdCareerdenNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>',
         ),
       );
     }

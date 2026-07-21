@@ -51,7 +51,7 @@ export function ProductPreview() {
   return (
     <div
       className="product-window"
-      aria-label="Fictional Link2CV job application tracking dashboard preview"
+      aria-label="Fictional Careerden job application tracking dashboard preview"
       role="img"
     >
       <div className="window-bar">
@@ -65,7 +65,7 @@ export function ProductPreview() {
           <div className="dashboard-preview-brand">
             <img alt="" src="/handshake-logo.svg" />
             <div>
-              <strong>Link2CV</strong>
+              <strong>Careerden</strong>
               <span>Career workspace</span>
             </div>
           </div>
@@ -115,7 +115,7 @@ export function ProductPreview() {
               </span>
               <div>
                 <strong>Turn a LinkedIn posting into a tailored application</strong>
-                <p>Paste a job URL and Link2CV handles extraction, analysis, and drafting.</p>
+                <p>Paste a job URL and Careerden handles extraction, analysis, and drafting.</p>
               </div>
               <b>
                 <Plus aria-hidden="true" className="preview-icon" />

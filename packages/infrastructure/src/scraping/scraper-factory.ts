@@ -1,4 +1,4 @@
-import type { JobSiteScraper } from "@link2cv/domain";
+import type { JobSiteScraper } from "@careerden/domain";
 
 export class ScraperFactory {
   constructor(private readonly scrapers: JobSiteScraper[]) {}

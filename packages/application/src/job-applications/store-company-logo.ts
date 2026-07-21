@@ -1,4 +1,4 @@
-import type { FileStorage, RemoteImageFetcher, ScrapeBundle } from "@link2cv/domain";
+import type { FileStorage, RemoteImageFetcher, ScrapeBundle } from "@careerden/domain";
 
 export async function storeCompanyLogo(input: {
   jobApplicationId: string;

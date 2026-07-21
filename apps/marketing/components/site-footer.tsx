@@ -8,23 +8,23 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="container footer-grid">
         <div className="footer-intro">
-          <Link className="brand" href="/" aria-label="Link2CV home">
+          <Link className="brand" href="/" aria-label="Careerden home">
             <BrandMark inverse />
-            <span>Link2CV</span>
+            <span>Careerden</span>
           </Link>
           <p>
             An open-source desktop job application tracker with a profile-aware CV creator and cover
             letter creator, keeping follow-ups, match insights, and tailored documents together.
           </p>
           <a
-            aria-label="View Link2CV on GitHub"
+            aria-label="View Careerden on GitHub"
             className="footer-github-link"
             href={githubUrl}
             rel="noreferrer"
             target="_blank"
           >
             <GitHubMark />
-            <span>Link2CV on GitHub</span>
+            <span>Careerden on GitHub</span>
           </a>
         </div>
         <nav aria-label="Product links">
@@ -50,9 +50,10 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="container footer-bottom">
-        <p>© {new Date().getFullYear()} Link2CV. Currently licensed under BSL 1.1.</p>
+        <p>© {new Date().getFullYear()} Careerden. Currently licensed under BSL 1.1.</p>
         <p>
-          LinkedIn is a trademark of LinkedIn Corporation. Link2CV is not affiliated with LinkedIn.
+          LinkedIn is a trademark of LinkedIn Corporation. Careerden is not affiliated with
+          LinkedIn.
         </p>
       </div>
     </footer>

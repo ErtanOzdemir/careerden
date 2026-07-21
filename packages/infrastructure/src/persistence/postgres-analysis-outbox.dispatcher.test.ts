@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { JobApplicationQueue, OutboxEvent } from "@link2cv/domain";
+import type { JobApplicationQueue, OutboxEvent } from "@careerden/domain";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresAnalysisOutboxDispatcher } from "./postgres-analysis-outbox.dispatcher.js";
 

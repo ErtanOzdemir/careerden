@@ -5,7 +5,7 @@ import type {
   FileStorage,
   PersistenceUnitOfWork,
   UserProfileAccountRepository,
-} from "@link2cv/domain";
+} from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { randomUUID } from "node:crypto";

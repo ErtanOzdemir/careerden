@@ -1,5 +1,5 @@
-import type { OutboxRepository } from "@link2cv/domain";
-import { outboxEventTypes } from "@link2cv/domain";
+import type { OutboxRepository } from "@careerden/domain";
+import { outboxEventTypes } from "@careerden/domain";
 
 export async function enqueueStorageDeletions(
   outbox: OutboxRepository,

@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
   title: "Terms of Service",
-  description: "Draft terms governing access to and use of the Link2CV service.",
+  description: "Draft terms governing access to and use of the Careerden service.",
   path: "/terms",
 });
 
@@ -25,9 +25,9 @@ const sections: LegalSection[] = [
     title: "The service",
     content: (
       <p>
-        Link2CV helps users maintain a professional profile, capture job information they submit,
+        Careerden helps users maintain a professional profile, capture job information they submit,
         analyze alignment, organize applications, and draft or render CV and cover-letter materials.
-        Features may change. Link2CV does not promise employment, interviews, a particular match
+        Features may change. Careerden does not promise employment, interviews, a particular match
         result, or uninterrupted availability.
       </p>
     ),
@@ -76,7 +76,7 @@ const sections: LegalSection[] = [
       <p>
         LinkedIn, AI providers, storage, rendering, and other third-party services have their own
         terms and availability. You are responsible for complying with applicable third-party terms.
-        Link2CV is not affiliated with or endorsed by LinkedIn.
+        Careerden is not affiliated with or endorsed by LinkedIn.
       </p>
     ),
   },
@@ -133,7 +133,7 @@ export default function TermsPage() {
     <LegalPage
       eyebrow="Service terms"
       title="Terms of Service"
-      summary="The rules, responsibilities, and important limitations that should govern use of Link2CV."
+      summary="The rules, responsibilities, and important limitations that should govern use of Careerden."
       sections={sections}
     />
   );

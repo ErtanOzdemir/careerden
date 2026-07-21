@@ -1,13 +1,13 @@
 import type { NextFunction, Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
-import type { Link2CvAuth } from "./auth.js";
+import type { CareerdenAuth } from "./auth.js";
 import { requireSession } from "./session.middleware.js";
 
 describe("requireSession", () => {
   it("returns a coded unauthorized response when no session exists", async () => {
     const auth = {
       api: { getSession: vi.fn(async () => null) },
-    } as unknown as Link2CvAuth;
+    } as unknown as CareerdenAuth;
     const response = createResponse();
     const next = vi.fn() as NextFunction;
 

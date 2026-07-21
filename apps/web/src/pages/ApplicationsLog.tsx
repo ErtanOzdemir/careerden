@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
-import { InterestTag, StatusBadge } from "../components/link2cv/status-badge.js";
-import type { DisplayStatus } from "../components/link2cv/status-badge.js";
+import { InterestTag, StatusBadge } from "../components/careerden/status-badge.js";
+import type { DisplayStatus } from "../components/careerden/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
 import { mapApiJobApplicationToUi } from "../api/mappers.js";

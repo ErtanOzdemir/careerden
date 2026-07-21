@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DocxTemplateRenderer, FileStorage, PersistenceUnitOfWork } from "@link2cv/domain";
+import type { DocxTemplateRenderer, FileStorage, PersistenceUnitOfWork } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { createProfileRepository, createTestTemplate } from "./profile-test-helpers.js";
 import { UploadDocumentTemplateUseCase } from "./upload-document-template.use-case.js";

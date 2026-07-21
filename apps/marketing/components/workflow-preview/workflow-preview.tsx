@@ -75,7 +75,7 @@ function ApplicationPreviewFrame({
             <div className="native-preview-brand">
               <img alt="" src="/handshake-logo.svg" />
               <span>
-                <strong>Link2CV</strong>
+                <strong>Careerden</strong>
                 <small>Career workspace</small>
               </span>
             </div>
@@ -149,7 +149,7 @@ export function ProfileWorkflowPreview() {
     <ApplicationPreviewFrame
       active="Profile"
       className="native-profile-preview"
-      label="Fictional Link2CV career profile workflow preview"
+      label="Fictional Careerden career profile workflow preview"
       subtitle="The foundation for every tailored document."
       title="Career profile"
     >
@@ -263,7 +263,7 @@ export function TemplateUploadWorkflowPreview() {
     <ApplicationPreviewFrame
       active="Templates"
       className="native-template-preview"
-      label="Fictional Link2CV document template upload workflow preview"
+      label="Fictional Careerden document template upload workflow preview"
       subtitle="Manage your CV and cover letter templates."
       title="Document templates"
     >
@@ -277,7 +277,7 @@ export function VariableMappingWorkflowPreview() {
     <ApplicationPreviewFrame
       active="Templates"
       className="native-template-preview native-template-mapping-preview"
-      label="Fictional Link2CV template variable mapping workflow preview"
+      label="Fictional Careerden template variable mapping workflow preview"
       subtitle="Manage your CV and cover letter templates."
       title="Document templates"
     >
@@ -409,7 +409,7 @@ export function JobProcessingWorkflowPreview() {
     <ApplicationPreviewFrame
       active="Applications"
       className="native-application-preview"
-      label="Fictional Link2CV application Overview workflow preview"
+      label="Fictional Careerden application Overview workflow preview"
       subtitle="Review, generate, and track."
       title="Application"
     >
@@ -588,7 +588,7 @@ export function ApplicationPackWorkflowPreview() {
     <ApplicationPreviewFrame
       active="Applications"
       className="native-pack-preview"
-      label="Fictional Link2CV application pack and customization workflow preview"
+      label="Fictional Careerden application pack and customization workflow preview"
       subtitle="Review, generate, and track."
       title="Application"
     >

@@ -1,4 +1,4 @@
-import type { JobApplicationRepository, UserProfileAccessRepository } from "@link2cv/domain";
+import type { JobApplicationRepository, UserProfileAccessRepository } from "@careerden/domain";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 
 export class EnsureJobApplicationAccessUseCase {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { richDocumentFromText, richDocumentToPlainText } from "@link2cv/domain";
+import { richDocumentFromText, richDocumentToPlainText } from "@careerden/domain";
 import {
   createJobApplicationRepository,
   createProfiles,

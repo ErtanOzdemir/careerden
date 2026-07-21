@@ -2,6 +2,7 @@
   "name": "@careerden/config",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -23,7 +23,7 @@ storage.
 - Upload DOCX CV templates, map detected variables to profile/job fields, configure
   aliases, and select a default template.
 - Generate custom DOCX CV and cover-letter files with PDF previews, or use the default
-  PDF layouts, then download them through signed RustFS URLs.
+  PDF layouts, then download them through signed S3-compatible storage URLs.
 - Receive in-app follow-up notifications and, when the desktop window is unfocused,
   native operating-system alerts with optional SMTP email delivery.
 - Sign in with email and password using email OTP verification.
@@ -111,7 +111,7 @@ Authenticated API -> PostgreSQL + transactional outbox
            |
            +-> BullMQ -> LLM worker -> validated match analysis
            |
-           +-> BullMQ -> documents worker -> DOCX/PDF rendering -> RustFS
+           +-> BullMQ -> documents worker -> DOCX/PDF rendering -> S3-compatible storage
            |
            +-> follow-up schedule -> notifications worker -> in-app/optional email reminder
                                                         |
@@ -188,7 +188,7 @@ ownership checks and business workflows live in application use cases.
 | AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek    |
 | Scraping and PDF    | Playwright 1.49                                  |
 | Documents           | HTML templates, Docxtemplater, Gotenberg         |
-| Storage             | RustFS through the AWS S3 SDK                    |
+| Storage             | AWS S3 SDK with RustFS locally and Cloudflare R2 |
 | Observability       | OpenTelemetry and OpenObserve                    |
 | Testing             | Vitest 2 and Testing Library                     |
 | Quality             | ESLint 10 and Prettier 3                         |
@@ -235,21 +235,43 @@ the variable is marked required.
 
 ### Email, Storage, Scraping, and Tracing
 
-| Variable                       | Description                                 | Default                                |
-| ------------------------------ | ------------------------------------------- | -------------------------------------- |
-| `SMTP_HOST`                    | SMTP server host                            | `localhost`                            |
-| `SMTP_PORT`                    | SMTP server port                            | `1025`                                 |
-| `SMTP_FROM`                    | Sender used for OTP and reminder emails     | `Careerden <no-reply@careerden.local>` |
-| `LINKEDIN_SESSION_SECRET`      | Encrypts the local LinkedIn browser session | Development-only value                 |
-| `LINKEDIN_SESSION_STORAGE_DIR` | Shared-config session storage path          | `./storage/linkedin-session`           |
-| `RUSTFS_ENDPOINT`              | S3-compatible storage endpoint              | `http://localhost:9000`                |
-| `RUSTFS_BUCKET`                | Generated file/template bucket              | `careerden`                            |
-| `RUSTFS_ACCESS_KEY_ID`         | RustFS access key                           | `rustfsadmin`                          |
-| `RUSTFS_SECRET_ACCESS_KEY`     | RustFS secret key                           | `rustfsadmin`                          |
-| `RUSTFS_REGION`                | S3 region                                   | `us-east-1`                            |
-| `RUSTFS_FORCE_PATH_STYLE`      | Use S3 path-style addressing                | `true`                                 |
-| `OPEN_OBSERVE_URL`             | OpenTelemetry HTTP trace endpoint           | `http://localhost:5080`                |
-| `OPEN_OBSERVE_KEY`             | OpenObserve Basic Auth credential           | Required                               |
+| Variable                           | Description                                 | Default                                |
+| ---------------------------------- | ------------------------------------------- | -------------------------------------- |
+| `SMTP_HOST`                        | SMTP server host                            | `localhost`                            |
+| `SMTP_PORT`                        | SMTP server port                            | `1025`                                 |
+| `SMTP_FROM`                        | Sender used for OTP and reminder emails     | `Careerden <no-reply@careerden.local>` |
+| `LINKEDIN_SESSION_SECRET`          | Encrypts the local LinkedIn browser session | Development-only value                 |
+| `LINKEDIN_SESSION_STORAGE_DIR`     | Shared-config session storage path          | `./storage/linkedin-session`           |
+| `OBJECT_STORAGE_ENDPOINT`          | S3-compatible storage endpoint              | `http://localhost:9000`                |
+| `OBJECT_STORAGE_BUCKET`            | Generated file/template bucket              | `careerden`                            |
+| `OBJECT_STORAGE_ACCESS_KEY_ID`     | S3-compatible access key                    | `rustfsadmin`                          |
+| `OBJECT_STORAGE_SECRET_ACCESS_KEY` | S3-compatible secret key                    | `rustfsadmin`                          |
+| `OBJECT_STORAGE_REGION`            | S3-compatible region                        | `us-east-1`                            |
+| `OBJECT_STORAGE_FORCE_PATH_STYLE`  | Use S3 path-style addressing                | `true`                                 |
+| `OPEN_OBSERVE_URL`                 | OpenTelemetry HTTP trace endpoint           | `http://localhost:5080`                |
+| `OPEN_OBSERVE_KEY`                 | OpenObserve Basic Auth credential           | Required                               |
+
+The API, documents worker, and notifications worker must use the same object-storage
+configuration. Existing `RUSTFS_*` names remain accepted for compatibility, but new
+deployments should use `OBJECT_STORAGE_*`.
+
+### Cloudflare R2 in production
+
+Create a private R2 bucket and an API token with Object Read & Write access scoped to that
+bucket. Set these values on the API, documents worker, and notifications worker:
+
+```bash
+OBJECT_STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+OBJECT_STORAGE_BUCKET=careerden-production
+OBJECT_STORAGE_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID>
+OBJECT_STORAGE_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
+OBJECT_STORAGE_REGION=auto
+OBJECT_STORAGE_FORCE_PATH_STYLE=false
+```
+
+Create the bucket before starting Careerden. Keep the bucket private; Careerden generates
+15-minute presigned download URLs. Use the R2 S3 API endpoint shown above rather than a
+custom domain, because R2 presigned URLs are supported only on the S3 API domain.
 
 ## API Overview
 

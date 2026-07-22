@@ -205,6 +205,9 @@ importers:
       '@careerden/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@careerden/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@careerden/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -313,6 +316,9 @@ importers:
       '@careerden/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@careerden/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@careerden/domain':
         specifier: workspace:*
         version: link:../../packages/domain

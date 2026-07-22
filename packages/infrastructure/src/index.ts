@@ -40,5 +40,6 @@ export * from "./scraping/linkedin-session.manager.js";
 export * from "./scraping/http-remote-image.fetcher.js";
 export * from "./scraping/scraper-factory.js";
 export * from "./storage/local-file.storage.js";
+export * from "./storage/s3-compatible.storage.js";
 export * from "./storage/rustfs.storage.js";
 export * from "./support/mock-support-request.notifier.js";

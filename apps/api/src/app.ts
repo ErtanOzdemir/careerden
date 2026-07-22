@@ -61,7 +61,7 @@ import {
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
   RedisNotificationChangeBus,
-  RustFsStorage,
+  S3CompatibleStorage,
   createSmtpEmailSender,
   createPostgresDb,
   runPostgresMigrations,
@@ -105,13 +105,13 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const notifications = new PostgresNotificationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
   const unitOfWork = new PostgresPersistenceUnitOfWork(db, changeBus);
-  const storage = new RustFsStorage({
-    accessKeyId: env.RUSTFS_ACCESS_KEY_ID,
-    bucket: env.RUSTFS_BUCKET,
-    endpoint: env.RUSTFS_ENDPOINT,
-    forcePathStyle: env.RUSTFS_FORCE_PATH_STYLE,
-    region: env.RUSTFS_REGION,
-    secretAccessKey: env.RUSTFS_SECRET_ACCESS_KEY,
+  const storage = new S3CompatibleStorage({
+    accessKeyId: env.OBJECT_STORAGE_ACCESS_KEY_ID,
+    bucket: env.OBJECT_STORAGE_BUCKET,
+    endpoint: env.OBJECT_STORAGE_ENDPOINT,
+    forcePathStyle: env.OBJECT_STORAGE_FORCE_PATH_STYLE,
+    region: env.OBJECT_STORAGE_REGION,
+    secretAccessKey: env.OBJECT_STORAGE_SECRET_ACCESS_KEY,
   });
   const remoteImageFetcher = new HttpRemoteImageFetcher();
   const docxTemplates = new DocxtemplaterTemplateRenderer();

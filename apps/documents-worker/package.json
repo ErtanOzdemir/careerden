@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@careerden/application": "workspace:*",
+    "@careerden/config": "workspace:*",
     "@careerden/domain": "workspace:*",
     "@careerden/infrastructure": "workspace:*",
     "bullmq": "^5.64.1",

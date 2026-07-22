@@ -24,7 +24,8 @@ documents for review or download.
 - Scraping and rendering: Playwright 1.49
 - AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
 - Document generation: HTML templates, Docxtemplater, Gotenberg/Playwright PDF rendering
-- Storage: S3-compatible object storage via RustFS for generated files
+- Storage: S3-compatible object storage via RustFS locally and Cloudflare R2 in production
+  for generated files
 
 ## Naming Conventions
 
@@ -71,8 +72,9 @@ documents for review or download.
   stream with Electron's default session. It refreshes the renderer for every new
   notification and shows an operating-system notification only when the app is
   unfocused. Clicking the alert restores the app and opens the related timeline.
-- The API runtime uses PostgreSQL for state, RustFS-compatible object storage for
-  generated files, and Redis/BullMQ for enqueueing job application processing.
+- The API runtime uses PostgreSQL for state, S3-compatible object storage through RustFS
+  locally or Cloudflare R2 in production, and Redis/BullMQ for enqueueing job application
+  processing.
 - The `apps/llm-worker`, `apps/documents-worker`, and `apps/notifications-worker`
   runtimes consume BullMQ work independently from the API process. Future workers should
   use the same descriptive `*-worker` app naming convention.

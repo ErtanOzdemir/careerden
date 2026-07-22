@@ -50,7 +50,8 @@ Do not reintroduce cross-context generic source buckets. Keep package barrels st
 - Node.js 22, pnpm 9, strict ESM TypeScript with `NodeNext`.
 - PostgreSQL via Knex, migrations during API startup.
 - Redis/BullMQ for LLM processing and reminder delivery/recovery.
-- RustFS-compatible object storage for generated/template/logo files.
+- S3-compatible object storage via RustFS locally and Cloudflare R2 in production for
+  generated/template/logo files.
 - Playwright for local desktop scraping and PDF rendering.
 - Vercel AI SDK providers behind AI interfaces.
 

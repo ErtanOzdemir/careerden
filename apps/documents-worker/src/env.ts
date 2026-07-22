@@ -2,20 +2,19 @@ import { config } from "dotenv";
 import { existsSync } from "node:fs";
 import { dirname, join, parse } from "node:path";
 import { z } from "zod";
+import { normalizeObjectStorageEnv, objectStorageEnvShape } from "@careerden/config";
 
-export const documentsWorkerEnvSchema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  DATABASE_URL: z.string().min(1),
-  REDIS_URL: z.string().min(1).default("redis://localhost:6380"),
-  DOCUMENTS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
-  GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
-  RUSTFS_ENDPOINT: z.string().url().default("http://localhost:9000"),
-  RUSTFS_BUCKET: z.string().min(1).default("careerden"),
-  RUSTFS_ACCESS_KEY_ID: z.string().min(1).default("rustfsadmin"),
-  RUSTFS_SECRET_ACCESS_KEY: z.string().min(1).default("rustfsadmin"),
-  RUSTFS_REGION: z.string().min(1).default("us-east-1"),
-  RUSTFS_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
-});
+export const documentsWorkerEnvSchema = z.preprocess(
+  normalizeObjectStorageEnv,
+  z.object({
+    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    DATABASE_URL: z.string().min(1),
+    REDIS_URL: z.string().min(1).default("redis://localhost:6380"),
+    DOCUMENTS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+    GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
+    ...objectStorageEnvShape,
+  }),
+);
 
 export type DocumentsWorkerEnv = z.infer<typeof documentsWorkerEnvSchema>;
 

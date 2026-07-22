@@ -12,7 +12,7 @@ documents for review or download.
 - Runtime: Node.js 22 (`.nvmrc`)
 - Package manager: pnpm 9.15.0
 - Language: TypeScript 5.7, strict mode, ESM, `moduleResolution: "NodeNext"`
-- Monorepo orchestration: Turborepo 2.3
+- Monorepo orchestration: Turborepo 2.9
 - Linting and formatting: ESLint 10, typescript-eslint 8.61, Prettier 3.8
 - Testing: Vitest 2.1
 - API: Express 4.21, Zod 3.24 for validation
@@ -21,7 +21,7 @@ documents for review or download.
 - Web app: React 19, React Router 7, Vite 6, Tailwind CSS 4, Tiptap 3
 - Persistence: PostgreSQL via `pg` and Knex 3.1 for API database access and
   migrations
-- Scraping and rendering: Playwright 1.49
+- Scraping and rendering: Playwright 1.60
 - AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
 - Document generation: HTML templates, Docxtemplater, Gotenberg/Playwright PDF rendering
 - Storage: S3-compatible object storage via RustFS locally and Cloudflare R2 in production
@@ -78,6 +78,14 @@ documents for review or download.
 - The `apps/llm-worker`, `apps/documents-worker`, and `apps/notifications-worker`
   runtimes consume BullMQ work independently from the API process. Future workers should
   use the same descriptive `*-worker` app naming convention.
+- Production API and worker images use the dedicated Dockerfiles in their owning
+  `apps/*` directories, with the repository root as the build context. The API and
+  documents-worker images install Playwright's matching Chromium headless shell and
+  validate PDF rendering during the image build; other worker images do not install a
+  browser.
+- On Coolify, the API, workers, and Redis Database Resource must share the same Server and
+  Destination. Every runtime uses Redis's private Internal URL through `REDIS_URL`; never
+  use the local `redis://localhost:6380` default from a production container.
 - Desktop release tags must match the version in `apps/desktop/package.json`. The
   GitHub workflow builds platform installers, generates SHA-256 checksums, and creates a
   draft release; publishing remains a manual verification step.
@@ -114,6 +122,17 @@ documents for review or download.
 - Package the already-built desktop app for the current host platform:
   ```bash
   pnpm --filter @careerden/desktop package
+  ```
+- Build the production API and worker images from the repository root:
+  ```bash
+  docker build -f apps/api/Dockerfile -t careerden-api .
+  docker build -f apps/llm-worker/Dockerfile -t careerden-llm-worker .
+  docker build -f apps/documents-worker/Dockerfile -t careerden-documents-worker .
+  docker build -f apps/notifications-worker/Dockerfile -t careerden-notifications-worker .
+  ```
+- Verify local Playwright PDF rendering after installing Chromium:
+  ```bash
+  pnpm --filter @careerden/infrastructure smoke:playwright-pdf
   ```
 - Find likely running app ports:
   ```bash

@@ -14,6 +14,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "smoke:playwright-pdf": "node scripts/smoke-playwright-pdf.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -33,7 +34,7 @@
     "nodemailer": "^9.0.3",
     "pizzip": "^3.2.0",
     "pg": "^8.16.3",
-    "playwright": "^1.49.1",
+    "playwright": "1.60.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

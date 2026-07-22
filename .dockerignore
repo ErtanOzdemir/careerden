@@ -1,0 +1,12 @@
+.git
+.github
+**/.env*
+**/.turbo
+**/dist
+**/node_modules
+apps/desktop/release
+apps/desktop/renderer
+coverage
+playwright-report
+storage
+test-results

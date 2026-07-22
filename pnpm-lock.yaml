@@ -30,7 +30,7 @@ importers:
         specifier: ^4.19.2
         version: 4.22.4
       turbo:
-        specifier: ^2.3.3
+        specifier: 2.9.18
         version: 2.9.18
       typescript:
         specifier: ^5.7.2
@@ -117,7 +117,7 @@ importers:
         specifier: ^8.16.3
         version: 8.22.0
       playwright:
-        specifier: ^1.49.1
+        specifier: 1.60.0
         version: 1.60.0
       zod:
         specifier: ^3.24.1
@@ -163,7 +163,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/infrastructure
       playwright:
-        specifier: ^1.49.1
+        specifier: 1.60.0
         version: 1.60.0
       zod:
         specifier: ^3.24.1
@@ -223,6 +223,9 @@ importers:
       knex:
         specifier: ^3.1.0
         version: 3.2.10(pg@8.22.0)
+      playwright:
+        specifier: 1.60.0
+        version: 1.60.0
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -557,7 +560,7 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0
       playwright:
-        specifier: ^1.49.1
+        specifier: 1.60.0
         version: 1.60.0
       zod:
         specifier: ^3.24.1

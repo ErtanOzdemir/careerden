@@ -25,6 +25,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 - Node.js 22+
 - pnpm 9.15+
+- Docker with BuildKit when validating production images
 - Git
 
 ### Setup
@@ -42,6 +43,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
    ```bash
    pnpm install
+   pnpm exec playwright install chromium
    ```
 
 4. **Set up environment**:
@@ -75,6 +77,11 @@ pnpm build
 ```
 
 Use `pnpm lint:fix` and `pnpm format` for mechanical cleanup. Do not hand-format code to work around Prettier; let the formatter own whitespace and wrapping.
+
+Changes to runtime dependencies, rendering, package builds, or deployment configuration
+must also validate the affected production image from the repository root. The available
+image commands and Coolify settings are documented under
+[Production containers on Coolify](README.md#production-containers-on-coolify).
 
 ## Branch Naming
 

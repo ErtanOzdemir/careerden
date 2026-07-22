@@ -177,7 +177,7 @@ ownership checks and business workflows live in application use cases.
 | ------------------- | ------------------------------------------------ |
 | Runtime             | Node.js 22                                       |
 | Language            | TypeScript 5.7, strict ESM, NodeNext resolution  |
-| Package management  | pnpm 9.15 and Turborepo 2.3                      |
+| Package management  | pnpm 9.15 and Turborepo 2.9                      |
 | Desktop             | Electron 43                                      |
 | Web                 | React 19, React Router 7, Vite 6, Tailwind CSS 4 |
 | Rich-text editing   | Tiptap 3                                         |
@@ -186,7 +186,7 @@ ownership checks and business workflows live in application use cases.
 | Database            | PostgreSQL 16 via Knex 3 and `pg`                |
 | Queues and realtime | Redis 7 and BullMQ 5                             |
 | AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek    |
-| Scraping and PDF    | Playwright 1.49                                  |
+| Scraping and PDF    | Playwright 1.60                                  |
 | Documents           | HTML templates, Docxtemplater, Gotenberg         |
 | Storage             | AWS S3 SDK with RustFS locally and Cloudflare R2 |
 | Observability       | OpenTelemetry and OpenObserve                    |
@@ -272,6 +272,47 @@ OBJECT_STORAGE_FORCE_PATH_STYLE=false
 Create the bucket before starting Careerden. Keep the bucket private; Careerden generates
 15-minute presigned download URLs. Use the R2 S3 API endpoint shown above rather than a
 custom domain, because R2 presigned URLs are supported only on the S3 API domain.
+
+### Production containers on Coolify
+
+The API and each BullMQ worker have a dedicated production Dockerfile. Build every image
+from the repository root so Turborepo can prune the correct workspace dependency graph:
+
+```bash
+docker build -f apps/api/Dockerfile -t careerden-api .
+docker build -f apps/llm-worker/Dockerfile -t careerden-llm-worker .
+docker build -f apps/documents-worker/Dockerfile -t careerden-documents-worker .
+docker build -f apps/notifications-worker/Dockerfile -t careerden-notifications-worker .
+```
+
+The API and documents-worker images install Playwright's matching Chromium headless shell
+and render a smoke-test PDF during the image build. This keeps the browser in
+`/ms-playwright` instead of relying on an ephemeral home-directory cache. The LLM and
+notifications images do not download browser binaries.
+
+Configure four separate Coolify applications with the Dockerfile build pack and `/` as
+the Base Directory:
+
+| Coolify application  | Dockerfile location                     | Network exposure         |
+| -------------------- | --------------------------------------- | ------------------------ |
+| API                  | `/apps/api/Dockerfile`                  | Port `3000`, `/health`   |
+| LLM worker           | `/apps/llm-worker/Dockerfile`           | No public port or domain |
+| Documents worker     | `/apps/documents-worker/Dockerfile`     | No public port or domain |
+| Notifications worker | `/apps/notifications-worker/Dockerfile` | No public port or domain |
+
+Assign the Redis Database Resource and all four applications to the same Coolify Server
+and Destination. Copy Redis's **Internal URL** into an environment-level shared variable,
+for example `CAREERDEN_REDIS_URL`, and set this on every application:
+
+```text
+REDIS_URL={{environment.CAREERDEN_REDIS_URL}}
+```
+
+Keep Redis private. Do not use `localhost`, `127.0.0.1`, or the development default
+`redis://localhost:6380` from a production container: those addresses refer to the
+container itself. If the Redis credential contains `$` or another value Coolify may
+interpolate, mark the shared variable as literal. Let Coolify manage the Destination
+network rather than adding custom Docker networks.
 
 ## API Overview
 
@@ -368,24 +409,25 @@ they are not part of the mounted HTTP API.
 
 ### Common Commands
 
-| Command                                    | Purpose                                                 |
-| ------------------------------------------ | ------------------------------------------------------- |
-| `pnpm dev`                                 | Start every workspace development target through Turbo  |
-| `pnpm dev:desktop`                         | Start API, web, all workers, and Electron with dev URLs |
-| `pnpm dev:services`                        | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
-| `pnpm dev:api`                             | Start only the API                                      |
-| `pnpm dev:llm-worker`                      | Start only the LLM worker                               |
-| `pnpm dev:documents-worker`                | Start only the documents worker                         |
-| `pnpm dev:notifications-worker`            | Start only the notifications worker                     |
-| `pnpm --filter @careerden/web dev`         | Start only the Vite web app                             |
-| `pnpm --filter @careerden/desktop build`   | Build the Electron main process and renderer            |
-| `pnpm --filter @careerden/desktop package` | Package desktop for the current host platform           |
-| `pnpm build`                               | Build every workspace                                   |
-| `pnpm test`                                | Run all Vitest suites                                   |
-| `pnpm lint`                                | Run ESLint                                              |
-| `pnpm format:check`                        | Check Prettier formatting                               |
-| `pnpm typecheck`                           | Type-check every workspace                              |
-| `pnpm lint:fix` / `pnpm format`            | Apply mechanical lint/format fixes                      |
+| Command                                                        | Purpose                                                 |
+| -------------------------------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                                                     | Start every workspace development target through Turbo  |
+| `pnpm dev:desktop`                                             | Start API, web, all workers, and Electron with dev URLs |
+| `pnpm dev:services`                                            | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
+| `pnpm dev:api`                                                 | Start only the API                                      |
+| `pnpm dev:llm-worker`                                          | Start only the LLM worker                               |
+| `pnpm dev:documents-worker`                                    | Start only the documents worker                         |
+| `pnpm dev:notifications-worker`                                | Start only the notifications worker                     |
+| `pnpm --filter @careerden/web dev`                             | Start only the Vite web app                             |
+| `pnpm --filter @careerden/desktop build`                       | Build the Electron main process and renderer            |
+| `pnpm --filter @careerden/desktop package`                     | Package desktop for the current host platform           |
+| `pnpm --filter @careerden/infrastructure smoke:playwright-pdf` | Verify local Playwright PDF rendering                   |
+| `pnpm build`                                                   | Build every workspace                                   |
+| `pnpm test`                                                    | Run all Vitest suites                                   |
+| `pnpm lint`                                                    | Run ESLint                                              |
+| `pnpm format:check`                                            | Check Prettier formatting                               |
+| `pnpm typecheck`                                               | Type-check every workspace                              |
+| `pnpm lint:fix` / `pnpm format`                                | Apply mechanical lint/format fixes                      |
 
 Use `docker compose up -d` instead of `pnpm dev:services` when local OTP email and
 OpenObserve are also needed.

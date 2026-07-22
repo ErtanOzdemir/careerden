@@ -22,7 +22,7 @@
     "@careerden/contracts": "workspace:*",
     "@careerden/domain": "workspace:*",
     "@careerden/infrastructure": "workspace:*",
-    "playwright": "^1.49.1",
+    "playwright": "1.60.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

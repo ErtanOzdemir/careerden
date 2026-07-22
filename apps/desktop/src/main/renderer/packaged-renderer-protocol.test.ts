@@ -38,7 +38,16 @@ describe("packaged renderer protocol", () => {
   it("proxies API requests with session credentials and a trusted upstream origin", async () => {
     let forwardedBody = "";
     const fetchApi = vi.fn(async (input: string, init?: RequestInit) => {
-      const forwardedRequest = new Request(input, init);
+      // Electron's Session.fetch only supports Chromium's RequestInit fields. Reconstructing
+      // the request here catches Node-only streaming options that Electron drops internally.
+      const forwardedRequest = new Request(input, {
+        body: init?.body,
+        credentials: init?.credentials,
+        headers: init?.headers,
+        method: init?.method,
+        redirect: init?.redirect,
+        signal: init?.signal,
+      });
       forwardedBody = await forwardedRequest.text();
       return Response.json({ ok: true });
     });
@@ -62,7 +71,7 @@ describe("packaged renderer protocol", () => {
     );
     const init = fetchApi.mock.calls[0]?.[1];
     expect(init).toMatchObject({ credentials: "include", method: "PATCH", redirect: "follow" });
-    expect(init).toHaveProperty("duplex", "half");
+    expect(init?.body).toBeInstanceOf(ArrayBuffer);
     expect(new Headers(init?.headers).get("Origin")).toBe("https://api.example.com");
     expect(new Headers(init?.headers).has("Cookie")).toBe(false);
     expect(forwardedBody).toBe('{"read":true}');

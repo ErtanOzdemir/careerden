@@ -82,6 +82,25 @@ jobs:
       - name: Build desktop application
         run: pnpm turbo run build --filter=@careerden/desktop
 
+      - name: Verify embedded desktop API configuration
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          import { normalizeDesktopApiBaseUrl } from "./apps/desktop/dist/main/desktop-runtime-config.js";
+
+          const config = JSON.parse(
+            await readFile("./apps/desktop/dist/main/desktop-runtime-config.json", "utf8"),
+          );
+          const expectedApiBaseUrl = normalizeDesktopApiBaseUrl(process.env.DESKTOP_API_BASE_URL);
+
+          if (config.apiBaseUrl !== expectedApiBaseUrl) {
+            throw new Error(
+              `Embedded API URL ${JSON.stringify(config.apiBaseUrl)} does not match ${JSON.stringify(expectedApiBaseUrl)}`,
+            );
+          }
+          NODE
+
       - name: Package and notarize macOS
         if: runner.os == 'macOS'
         env:

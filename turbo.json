@@ -3,6 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL", "DESKTOP_API_BASE_URL"],
       "outputs": ["dist/**"]
     },
     "typecheck": {

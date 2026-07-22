@@ -38,7 +38,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends tini \
+    && apt-get install --yes --no-install-recommends curl tini \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

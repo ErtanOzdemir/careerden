@@ -80,7 +80,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build desktop application
-        run: pnpm --filter @careerden/desktop build
+        run: pnpm turbo run build --filter=@careerden/desktop
 
       - name: Package and notarize macOS
         if: runner.os == 'macOS'

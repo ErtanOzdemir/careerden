@@ -19,6 +19,10 @@ export const packagedRendererSchemeRegistration = {
 
 type ProtocolFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
+type StreamingRequestInit = RequestInit & {
+  duplex?: "half";
+};
+
 export function createPackagedRendererProtocolHandler(options: {
   apiBaseUrl: string;
   fetchApi: ProtocolFetch;
@@ -98,7 +102,7 @@ async function proxyApiRequest(
 
   headers.set("Origin", targetOrigin);
 
-  const init: RequestInit = {
+  const init: StreamingRequestInit = {
     credentials: "include",
     headers,
     method: request.method,
@@ -108,6 +112,7 @@ async function proxyApiRequest(
 
   if (request.method !== "GET" && request.method !== "HEAD" && request.body) {
     init.body = request.body;
+    init.duplex = "half";
   }
 
   try {

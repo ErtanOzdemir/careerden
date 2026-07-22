@@ -37,8 +37,9 @@ describe("packaged renderer protocol", () => {
 
   it("proxies API requests with session credentials and a trusted upstream origin", async () => {
     let forwardedBody = "";
-    const fetchApi = vi.fn(async (_input: string, init?: RequestInit) => {
-      forwardedBody = await new Response(init?.body).text();
+    const fetchApi = vi.fn(async (input: string, init?: RequestInit) => {
+      const forwardedRequest = new Request(input, init);
+      forwardedBody = await forwardedRequest.text();
       return Response.json({ ok: true });
     });
     const handler = createHandler({ fetchApi });
@@ -61,6 +62,7 @@ describe("packaged renderer protocol", () => {
     );
     const init = fetchApi.mock.calls[0]?.[1];
     expect(init).toMatchObject({ credentials: "include", method: "PATCH", redirect: "follow" });
+    expect(init).toHaveProperty("duplex", "half");
     expect(new Headers(init?.headers).get("Origin")).toBe("https://api.example.com");
     expect(new Headers(init?.headers).has("Cookie")).toBe(false);
     expect(forwardedBody).toBe('{"read":true}');

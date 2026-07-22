@@ -23,6 +23,7 @@ import {
   NativeNotificationPresenter,
   type DesktopNativeNotification,
 } from "./notifications/native-notification-presenter.js";
+import { NativeNotificationPermissionRequester } from "./notifications/native-notification-permission-requester.js";
 import {
   createPackagedRendererProtocolHandler,
   packagedRendererScheme,
@@ -174,6 +175,15 @@ async function initializeDesktopRuntime(): Promise<void> {
     },
   });
 
+  const nativeNotificationPermissionRequester = new NativeNotificationPermissionRequester({
+    initialize: () => new Notification(),
+    isSupported: () => Notification.isSupported(),
+    onError: (error) => {
+      console.error("Failed to request native notification permission", error);
+    },
+    platform: process.platform,
+  });
+
   const notificationCoordinator = new DesktopNotificationCoordinator({
     getWindow: () => {
       const window = getMainWindow();
@@ -213,6 +223,11 @@ async function initializeDesktopRuntime(): Promise<void> {
       const window = getMainWindow();
       if (!window || event.sender !== window.webContents) return [];
       return notificationActivations.takeAll();
+    })
+    .register(desktopNotificationIpcChannels.requestPermission, (event) => {
+      const window = getMainWindow();
+      if (!window || event.sender !== window.webContents) return;
+      nativeNotificationPermissionRequester.request();
     })
     .register("set-native-theme-source", (_event, source: unknown) => {
       setNativeThemeSource(nativeTheme, source);

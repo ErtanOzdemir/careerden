@@ -14,6 +14,48 @@ describe("DesktopNotificationBridge", () => {
     delete window.electronAPI;
   });
 
+  it("requests native notification permission when the authenticated bridge mounts", async () => {
+    const requestNativeNotificationPermission = vi.fn(async () => undefined);
+    window.electronAPI = createElectronApi({
+      consumePendingNativeNotificationActivations: vi.fn(async () => []),
+      onNotificationArrived: vi.fn(() => vi.fn()),
+      onNativeNotificationActivationAvailable: vi.fn(() => vi.fn()),
+      requestNativeNotificationPermission,
+    });
+
+    renderBridge();
+
+    await waitFor(() => expect(requestNativeNotificationPermission).toHaveBeenCalledOnce());
+  });
+
+  it("remains inert in a browser without the Electron bridge", () => {
+    expect(() => renderBridge()).not.toThrow();
+  });
+
+  it("keeps the bridge available when the native permission request fails", async () => {
+    let arrived: (() => void) | undefined;
+    const changed = vi.fn();
+    window.addEventListener(notificationsChangedEventName, changed);
+    window.electronAPI = createElectronApi({
+      consumePendingNativeNotificationActivations: vi.fn(async () => []),
+      onNotificationArrived: vi.fn((listener) => {
+        arrived = listener;
+        return vi.fn();
+      }),
+      onNativeNotificationActivationAvailable: vi.fn(() => vi.fn()),
+      requestNativeNotificationPermission: vi.fn(async () => {
+        throw new Error("permission unavailable");
+      }),
+    });
+
+    renderBridge();
+    await act(async () => undefined);
+    act(() => arrived?.());
+
+    expect(changed).toHaveBeenCalledOnce();
+    window.removeEventListener(notificationsChangedEventName, changed);
+  });
+
   it("consumes a native click, opens the application timeline, and marks it read", async () => {
     const unsubscribeArrived = vi.fn();
     const unsubscribeActivation = vi.fn();
@@ -79,6 +121,7 @@ function createElectronApi(
     | "consumePendingNativeNotificationActivations"
     | "onNativeNotificationActivationAvailable"
     | "onNotificationArrived"
+    | "requestNativeNotificationPermission"
   >,
 ): NonNullable<Window["electronAPI"]> {
   return {

@@ -4,6 +4,7 @@ const desktopNotificationChannels = {
   activationAvailable: "desktop-notification-activation-available",
   arrived: "desktop-notification-arrived",
   consumeActivations: "desktop-notification-consume-activations",
+  requestPermission: "desktop-notification-request-permission",
 };
 
 const electronAPI = {
@@ -23,6 +24,8 @@ const electronAPI = {
     subscribe(desktopNotificationChannels.activationAvailable, callback),
   consumePendingNativeNotificationActivations: () =>
     ipcRenderer.invoke(desktopNotificationChannels.consumeActivations),
+  requestNativeNotificationPermission: () =>
+    ipcRenderer.invoke(desktopNotificationChannels.requestPermission),
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

@@ -13,6 +13,15 @@ export function DesktopNotificationBridge() {
   }, [navigate]);
 
   useEffect(() => {
+    const requestPermission = window.electronAPI?.requestNativeNotificationPermission;
+    if (typeof requestPermission !== "function") return;
+
+    void requestPermission().catch(() => {
+      /* Native permission is optional; in-app notifications remain available. */
+    });
+  }, []);
+
+  useEffect(() => {
     const electronApi = window.electronAPI;
     const consumeActivations = electronApi?.consumePendingNativeNotificationActivations;
     if (!electronApi || typeof consumeActivations !== "function") return;

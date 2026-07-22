@@ -61,6 +61,9 @@ stream without a second desktop credential store.
 
 Runtime behavior:
 
+- After sign-in, a signed macOS build asks for notification authorization when macOS has
+  no prior decision. Existing grants and denials are respected, and no placeholder
+  notification is shown while requesting permission.
 - A newly created notification always tells the renderer to refresh its notification
   list and unread count when a window exists.
 - An operating-system notification is shown only when no Careerden window is focused.

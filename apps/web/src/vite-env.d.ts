@@ -19,5 +19,6 @@ interface Window {
     onNotificationArrived?: (callback: () => void) => () => void;
     onNativeNotificationActivationAvailable?: (callback: () => void) => () => void;
     consumePendingNativeNotificationActivations?: () => Promise<DesktopNotificationActivation[]>;
+    requestNativeNotificationPermission?: () => Promise<void>;
   };
 }

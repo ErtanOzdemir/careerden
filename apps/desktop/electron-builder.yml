@@ -1,5 +1,6 @@
 appId: com.careerden.desktop
 productName: Careerden
+executableName: Careerden
 artifactName: Careerden-${version}-${arch}.${ext}
 asar: true
 directories:

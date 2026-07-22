@@ -374,7 +374,7 @@ export default function Settings() {
         </div>
       </Panel>
 
-      <p className="text-center text-xs text-muted-foreground">Careerden · Version 0.1.3</p>
+      <p className="text-center text-xs text-muted-foreground">Careerden · Version 0.1.4</p>
 
       <Modal open={updateOpen} onClose={() => setUpdateOpen(false)}>
         <div className="flex size-11 items-center justify-center rounded-lg bg-info-soft text-info">

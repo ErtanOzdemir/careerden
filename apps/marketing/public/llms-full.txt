@@ -26,9 +26,9 @@ Careerden is a TypeScript open-source desktop job application tracker with a pro
 Careerden is not an automatic job-application service. It does not promise employment outcomes or guarantee the accuracy of AI output. Users should verify every generated statement.
 
 The public marketing website explains the desktop product. It does not expose sign-in, signup, or
-browser-application links. Its `/download` page reflects the configured macOS DMG, Windows NSIS, and
-Linux AppImage package targets while explicitly identifying all installer links as mock placeholders
-until verified release artifacts are published.
+browser-application links. Its `/download` page detects the visitor's desktop operating system and
+promotes the matching installer from the latest verified release, while also listing direct macOS
+DMG, Windows EXE, and Linux AppImage downloads.
 
 The public site links directly to the Careerden repository at
 https://github.com/ErtanOzdemir/careerden. The current repository license is Business Source License

@@ -282,5 +282,5 @@ version tag.
   GitHub Actions before publishing.
 - Automatic updates require a public published GitHub Release; private repository assets
   are deliberately not authenticated from installed clients.
-- Marketing download buttons remain placeholders until verified release assets are
-  published and connected to the download experience.
+- The marketing download page must be updated when a newly verified release replaces the
+  version and asset links currently promoted to visitors.

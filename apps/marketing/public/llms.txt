@@ -5,7 +5,7 @@
 ## Public pages
 
 - [Home](/): Product overview, five-step workflow, features, privacy principles, and FAQ.
-- [Download](/download): Desktop package targets and clearly labeled placeholder installer links.
+- [Download](/download): OS-aware downloads for the latest verified macOS, Windows, and Linux installers.
 - [Privacy Policy](/privacy): Intended personal-data practices and explicit owner/legal placeholders.
 - [Cookie Policy](/cookies): Browser storage and cookie information.
 - [Terms of Service](/terms): Draft service terms requiring legal review.
@@ -25,8 +25,8 @@
 - LinkedIn is the current automated capture source, not the product boundary. Direct manual
   application entry is planned and is not available in the current release.
 - The public marketing website does not expose login, signup, or browser-application links. Its
-  download page shows macOS DMG, Windows NSIS, and Linux AppImage packaging targets, but clearly
-  labels every installer action as a placeholder until verified artifacts are published.
+  download page detects the visitor's desktop operating system and promotes the matching installer,
+  with direct macOS DMG, Windows EXE, and Linux AppImage links also available.
 - Careerden links directly to its repository at https://github.com/ErtanOzdemir/careerden. The current
   repository license is Business Source License 1.1 and is scheduled to convert to Apache License
   2.0 under the license's stated terms.

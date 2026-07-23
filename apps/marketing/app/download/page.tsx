@@ -1,148 +1,131 @@
 import type { Metadata } from "next";
-import { Apple, Download, MonitorDown, Package, Terminal } from "lucide-react";
-import { BrandMark } from "@/components/brand-mark";
+import { ArrowRight, Check, FileText, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  DesktopDownloadGrid,
+  DetectedDownloadButton,
+} from "@/components/desktop-download-selector";
 import { GitHubMark } from "@/components/GitHubMark";
+import { desktopRelease } from "@/lib/desktop-release";
 import { pageMetadata } from "@/lib/metadata";
-import { desktopDownloadPlaceholderUrl, githubUrl } from "@/lib/site";
+import { githubUrl } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   title: "Download Careerden for Desktop",
   description:
-    "Download the Careerden desktop job application tracker for macOS, Windows, or Linux. Installer links are currently preview placeholders.",
+    "Download Careerden for macOS, Windows, or Linux. The right desktop installer is selected automatically for your operating system.",
   path: "/download",
 });
 
-const platforms = [
+const highlights = [
   {
-    name: "macOS",
-    format: "DMG",
-    description: "A macOS disk-image packaging target is configured for the desktop application.",
-    Icon: Apple,
+    Icon: Sparkles,
+    title: "A calmer job search",
+    description:
+      "Applications, follow-ups, match insights, and documents in one focused workspace.",
   },
   {
-    name: "Windows",
-    format: "NSIS installer",
-    description: "A Windows installer packaging target is configured for the desktop application.",
-    Icon: MonitorDown,
+    Icon: ShieldCheck,
+    title: "Your data stays yours",
+    description: "Open source, profile-aware, and designed as a dedicated desktop application.",
   },
   {
-    name: "Linux",
-    format: "AppImage",
-    description: "A portable Linux AppImage target is configured for the desktop application.",
-    Icon: Terminal,
+    Icon: FileText,
+    title: "Documents built in",
+    description: "Review and edit tailored CV and cover-letter drafts beside every application.",
   },
 ] as const;
 
 export default function DownloadPage() {
   return (
     <main className="download-main" id="main-content">
-      <section className="download-hero section-pad">
-        <div className="container download-hero-grid">
-          <div className="download-hero-copy">
-            <span className="kicker">Careerden desktop</span>
-            <h1>Download your job application tracker.</h1>
-            <p>
-              Bring application tracking, follow-ups, job context, match insights, and editable CV
-              and cover-letter drafts into one desktop workspace.
-            </p>
-            <div className="download-actions">
-              <a className="button button-primary button-large" href="#desktop-downloads">
-                Choose your platform <span aria-hidden="true">↓</span>
-              </a>
-              <a
-                className="button button-outline button-large"
-                href={githubUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <GitHubMark />
-                View Careerden on GitHub
-              </a>
+      <section className="download-hero">
+        <div className="download-hero-orb download-hero-orb-left" />
+        <div className="download-hero-orb download-hero-orb-right" />
+        <div className="container download-hero-inner">
+          <span className="download-eyebrow">
+            <span />
+            Careerden desktop · v{desktopRelease.version}
+          </span>
+          <h1>
+            Your job search,
+            <br />
+            <span>now on desktop.</span>
+          </h1>
+          <p className="download-hero-lede">
+            Track every application, remember every follow-up, and prepare tailored documents
+            without losing the thread.
+          </p>
+
+          <DetectedDownloadButton />
+
+          <a className="download-all-link" href="#all-downloads">
+            See all downloads <span aria-hidden="true">↓</span>
+          </a>
+        </div>
+      </section>
+
+      <section className="download-all section-pad" aria-labelledby="all-downloads-title">
+        <div className="container">
+          <div className="download-section-heading">
+            <div>
+              <span className="kicker">All platforms</span>
+              <h2 id="all-downloads-title">Download Careerden.</h2>
             </div>
-            <p className="download-release-note">
-              Preview download page · Installers are not published yet
+            <p>
+              Version {desktopRelease.version} is available for macOS, Windows, and Linux. Choose
+              the package that matches your computer.
             </p>
           </div>
 
-          <div className="download-product-card" aria-label="Careerden desktop release preview">
-            <div className="download-product-brand">
-              <BrandMark />
-              <div>
-                <strong>Careerden</strong>
-                <span>Desktop application</span>
-              </div>
-              <small>Release preview</small>
+          <DesktopDownloadGrid />
+
+          <div className="download-release-links">
+            <p>
+              <Check aria-hidden="true" />
+              macOS builds are universal for Apple silicon and Intel.
+            </p>
+            <div>
+              <a href={desktopRelease.releaseNotesUrl} rel="noreferrer" target="_blank">
+                Release notes <ArrowRight aria-hidden="true" />
+              </a>
+              <a href={githubUrl} rel="noreferrer" target="_blank">
+                <GitHubMark />
+                View source
+              </a>
             </div>
-            <div className="download-product-message">
-              <Package aria-hidden="true" />
-              <div>
-                <strong>One workspace for the whole application</strong>
-                <p>Track progress first. Use matching and tailored documents when they help.</p>
-              </div>
-            </div>
-            <ul>
-              <li>Job application pipeline and follow-ups</li>
-              <li>Desktop-assisted LinkedIn capture</li>
-              <li>Profile-aware CV and cover-letter workflow</li>
-            </ul>
-            <p className="download-targets">Packaging configured for macOS, Windows, and Linux</p>
           </div>
         </div>
       </section>
 
-      <section className="download-platforms section-pad" id="desktop-downloads">
+      <section className="download-highlights section-pad">
         <div className="container">
-          <div className="section-heading centered">
-            <span className="kicker">Desktop packages</span>
-            <h2>Choose your platform.</h2>
-            <p>
-              The project contains packaging targets for these systems. The buttons currently open
-              the release placeholder below rather than downloading an unpublished installer.
-            </p>
-          </div>
-
-          <div className="download-platform-grid">
-            {platforms.map(({ name, format, description, Icon }) => (
-              <article key={name}>
-                <span className="download-platform-icon">
-                  <Icon aria-hidden="true" />
-                </span>
-                <small>{name}</small>
-                <h3>{format}</h3>
+          <div className="download-highlight-grid">
+            {highlights.map(({ Icon, title, description }) => (
+              <article key={title}>
+                <Icon aria-hidden="true" />
+                <h2>{title}</h2>
                 <p>{description}</p>
-                <a
-                  className="button button-outline download-platform-action"
-                  href={desktopDownloadPlaceholderUrl}
-                >
-                  <Download aria-hidden="true" />
-                  Preview {name} download
-                </a>
               </article>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div
-            className="download-placeholder"
-            id="installer-coming-soon"
-            role="note"
-            aria-labelledby="installer-coming-soon-title"
-          >
-            <span className="download-placeholder-icon">
-              <Package aria-hidden="true" />
-            </span>
-            <div>
-              <span className="kicker">Mock download link</span>
-              <h2 id="installer-coming-soon-title">Desktop installers are coming soon.</h2>
-              <p id="installer-coming-soon-description">
-                No public installer artifacts are available yet. These preview buttons will be
-                replaced with verified release links after packaging, signing, and release checks
-                are complete.
-              </p>
-            </div>
-            <a href={githubUrl} rel="noreferrer" target="_blank">
-              Follow Careerden on GitHub <span aria-hidden="true">↗</span>
-            </a>
+      <section className="download-source-callout">
+        <div className="container">
+          <div>
+            <span className="kicker">Free and open source</span>
+            <h2>Built in the open, for your next move.</h2>
           </div>
+          <a
+            className="button button-light button-large"
+            href={githubUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <GitHubMark />
+            Explore Careerden on GitHub
+          </a>
         </div>
       </section>
     </main>

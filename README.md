@@ -1,12 +1,18 @@
-# Careerden
-
-[![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE)
+<div align="center">
+  <img src="./apps/desktop/build/icon.png" alt="Careerden logo" width="112" />
+  <h1>Careerden</h1>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/License-BSL%201.1-blue.svg" alt="License: BSL 1.1" />
+  </a>
+</div>
 
 Careerden is a desktop-first job application tracker that turns LinkedIn job postings into
 profile-aware match analysis, tailored CVs, and cover letters. It combines local
 Playwright scraping with an authenticated React app, durable PostgreSQL state, BullMQ
 workers, editable document content, custom DOCX templates, and S3-compatible file
 storage.
+
+![Fictional Careerden application tracking dashboard](./docs/images/application-tracking-dashboard.png)
 
 ## Features
 

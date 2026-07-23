@@ -148,8 +148,8 @@ token or other repository credential in the desktop client.
 While this repository is private, unauthenticated installed clients cannot read release
 metadata. Their checks fail open and Settings offers a retry. After the repository and
 its published releases become public, the same updater-capable build can discover
-updates without another configuration change. Builds older than `0.1.6` do not contain
-the updater and must be upgraded to `0.1.6` or newer manually once.
+updates without another configuration change. Builds older than `0.2.0` do not contain
+the updater and must be upgraded to `0.2.0` or newer manually once.
 
 No staged rollout percentage is configured, so every eligible client sees a published
 release. If staging is introduced later, electron-updater stores a stable per-installation

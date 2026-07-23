@@ -127,15 +127,33 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
-        run: pnpm --filter @careerden/desktop exec electron-builder --config electron-builder.yml --publish never --mac
+        run: >-
+          pnpm --filter @careerden/desktop exec electron-builder
+          --config electron-builder.yml
+          --config.publish.owner=${{ github.repository_owner }}
+          --config.publish.repo=${{ github.event.repository.name }}
+          --publish never
+          --mac
 
       - name: Package Windows
         if: runner.os == 'Windows'
-        run: pnpm --filter @careerden/desktop exec electron-builder --config electron-builder.yml --publish never --win
+        run: >-
+          pnpm --filter @careerden/desktop exec electron-builder
+          --config electron-builder.yml
+          --config.publish.owner=${{ github.repository_owner }}
+          --config.publish.repo=${{ github.event.repository.name }}
+          --publish never
+          --win
 
       - name: Package Linux
         if: runner.os == 'Linux'
-        run: pnpm --filter @careerden/desktop exec electron-builder --config electron-builder.yml --publish never --linux
+        run: >-
+          pnpm --filter @careerden/desktop exec electron-builder
+          --config electron-builder.yml
+          --config.publish.owner=${{ github.repository_owner }}
+          --config.publish.repo=${{ github.event.repository.name }}
+          --publish never
+          --linux
 
       - name: Verify updater metadata
         shell: bash

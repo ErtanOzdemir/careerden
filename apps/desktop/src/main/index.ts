@@ -343,11 +343,7 @@ async function createWindow(): Promise<BrowserWindow> {
   let loadWindow: Promise<void>;
 
   if (isDev && devServerUrl) {
-    const url = new URL(devServerUrl);
-    if (process.env.VITE_API_BASE_URL) {
-      url.searchParams.set("apiBaseUrl", process.env.VITE_API_BASE_URL);
-    }
-    loadWindow = window.loadURL(url.toString());
+    loadWindow = window.loadURL(devServerUrl);
   } else if (app.isPackaged) {
     loadWindow = window.loadURL(packagedRendererUrl);
   } else {

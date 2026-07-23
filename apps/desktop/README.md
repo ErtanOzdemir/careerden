@@ -8,9 +8,13 @@ standalone services; the desktop installer does not embed the backend.
 
 | Mode                   | Renderer                | API routing                                                             |
 | ---------------------- | ----------------------- | ----------------------------------------------------------------------- |
-| Development            | Vite development server | The launch URL carries `VITE_API_BASE_URL` as `apiBaseUrl`              |
+| Development            | Vite development server | Vite reads `VITE_API_BASE_URL` from the trusted development environment |
 | Local production build | `apps/desktop/renderer` | Uses the API URL generated during the desktop build                     |
 | Packaged installer     | `careerden://app`       | Electron proxies same-origin `/api/*` requests to the generated API URL |
+
+Renderer query parameters do not control the API destination in any mode. This prevents a
+crafted Careerden URL from redirecting authentication or application requests to another
+origin.
 
 Start the complete development stack from the repository root:
 

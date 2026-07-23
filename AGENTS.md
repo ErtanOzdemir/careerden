@@ -64,10 +64,12 @@ documents for review or download.
   interfaces/adapters so implementations can be swapped.
 - Validate external inputs and AI output with schemas before persisting or rendering.
 - Use explicit workflow status transitions for job applications.
-- The desktop runtime loads the Vite web app with `?apiBaseUrl=...` in development. A
-  packaged build serves bundled renderer assets from `careerden://app`, provides React
-  Router fallback, and proxies same-origin `/api` requests to the build-time
-  `DESKTOP_API_BASE_URL`. The API remains a standalone service.
+- The desktop runtime loads the Vite web app in development, where Vite receives
+  `VITE_API_BASE_URL` directly from the trusted development environment. Renderer query
+  parameters never control the API destination. A packaged build serves bundled
+  renderer assets from `careerden://app`, provides React Router fallback, and proxies
+  same-origin `/api` requests to the build-time `DESKTOP_API_BASE_URL`. The API remains a
+  standalone service.
 - The desktop main process consumes the authenticated, profile-scoped notification SSE
   stream with Electron's default session. It refreshes the renderer for every new
   notification and shows an operating-system notification only when the app is

@@ -1,16 +1,7 @@
-function resolveApiBaseUrl(): string {
-  if (typeof window !== "undefined") {
-    const params = new URLSearchParams(window.location.search);
-    const apiBaseUrl = params.get("apiBaseUrl");
-    if (apiBaseUrl) {
-      return normalizeBaseUrl(apiBaseUrl);
-    }
-    const apiPort = params.get("apiPort");
-    if (apiPort) {
-      return `http://localhost:${apiPort}`;
-    }
-  }
-  return normalizeBaseUrl((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api");
+export function resolveApiBaseUrl(
+  configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api",
+): string {
+  return normalizeApiBaseUrl(configuredBaseUrl);
 }
 
 function resolveDefaultProfileId(): string | undefined {
@@ -36,12 +27,42 @@ export function requireDefaultProfileId(): string {
   return defaultProfileId;
 }
 
-function normalizeBaseUrl(value: string): string {
+export function normalizeApiBaseUrl(value: string): string {
   const trimmed = value.trim();
 
-  if (!trimmed || trimmed === "/") {
+  if (!trimmed) {
     return "";
   }
 
-  return trimmed.replace(/\/$/, "");
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    const relativeUrl = new URL(trimmed, "https://renderer.careerden.invalid");
+    assertApiUrlHasNoRequestComponents(relativeUrl);
+    return relativeUrl.pathname === "/" ? "" : relativeUrl.pathname.replace(/\/$/, "");
+  }
+
+  let absoluteUrl: URL;
+  try {
+    absoluteUrl = new URL(trimmed);
+  } catch {
+    throw new Error("VITE_API_BASE_URL must be an absolute HTTP(S) URL or an absolute path");
+  }
+
+  if (absoluteUrl.protocol !== "http:" && absoluteUrl.protocol !== "https:") {
+    throw new Error("VITE_API_BASE_URL must use HTTP or HTTPS");
+  }
+
+  if (absoluteUrl.username || absoluteUrl.password) {
+    throw new Error("VITE_API_BASE_URL must not contain credentials");
+  }
+
+  assertApiUrlHasNoRequestComponents(absoluteUrl);
+
+  const pathname = absoluteUrl.pathname === "/" ? "" : absoluteUrl.pathname.replace(/\/$/, "");
+  return `${absoluteUrl.origin}${pathname}`;
+}
+
+function assertApiUrlHasNoRequestComponents(url: URL): void {
+  if (url.search || url.hash) {
+    throw new Error("VITE_API_BASE_URL must not contain a query or fragment");
+  }
 }

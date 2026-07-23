@@ -3,7 +3,12 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "env": ["CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL", "DESKTOP_API_BASE_URL"],
+      "env": [
+        "CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL",
+        "CAREERDEN_REQUIRE_DESKTOP_UPDATE_REPOSITORY",
+        "DESKTOP_API_BASE_URL",
+        "DESKTOP_UPDATE_REPOSITORY"
+      ],
       "outputs": ["dist/**"]
     },
     "typecheck": {

@@ -60,3 +60,5 @@ When deploying Careerden:
 - Keep dependencies updated regularly.
 - Use HTTPS in production.
 - Restrict database access to trusted networks.
+- Never embed GitHub tokens or private-repository credentials in desktop builds. Desktop
+  updates must come from public, manually verified GitHub Releases.

@@ -7,6 +7,9 @@ directories:
   buildResources: build
   output: release
 icon: build/icon
+electronUpdaterCompatibility: ">=2.16"
+publish:
+  provider: github
 files:
   - dist/**/*
   - renderer/**/*
@@ -26,6 +29,9 @@ mac:
   notarize: true
   target:
     - target: dmg
+      arch:
+        - universal
+    - target: zip
       arch:
         - universal
 dmg:

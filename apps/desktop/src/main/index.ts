@@ -8,10 +8,12 @@ import {
   session,
   shell,
 } from "electron";
+import electronUpdater from "electron-updater";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { desktopAppIdentity } from "./desktop-app-identity.js";
-import { loadDesktopApiBaseUrl } from "./desktop-runtime-config.js";
+import { loadDesktopRuntimeConfig } from "./desktop-runtime-config.js";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
@@ -34,6 +36,9 @@ import { DesktopApiClient } from "./scraping/desktop-api-client.js";
 import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
 import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
 import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
+import { DesktopUpdateManager, type DesktopUpdater } from "./updates/desktop-update-manager.js";
+import type { DesktopUpdatePolicy } from "./updates/desktop-update-policy.js";
+import { desktopUpdateIpcChannels } from "./updates/desktop-update-types.js";
 import { applyWindowControl, type WindowControlAction } from "./window-controls.js";
 import {
   CheckLinkedInSessionUseCase,
@@ -51,6 +56,7 @@ let localScrapingWorker: LocalScrapingWorker | null = null;
 let utilityScrapingRunner: UtilityProcessLinkedInScrapingRunner | null = null;
 let notificationStream: DesktopNotificationStream | null = null;
 let nativeNotificationPresenter: NativeNotificationPresenter | null = null;
+let desktopUpdateManager: DesktopUpdateManager | null = null;
 let flushCookiesTimeout: NodeJS.Timeout | undefined;
 let isQuittingAfterCookieFlush = false;
 const notificationActivations = new DesktopNotificationActivationQueue();
@@ -91,12 +97,7 @@ function registerDesktopLifecycle(): void {
     }
 
     event.preventDefault();
-    localScrapingWorker?.stop();
-    utilityScrapingRunner?.dispose();
-    nativeNotificationPresenter?.closeAll();
-    const stopNotificationStream = notificationStream?.stop() ?? Promise.resolve();
-
-    void Promise.all([stopNotificationStream, flushDefaultSessionCookies()]).finally(() => {
+    void shutdownDesktopRuntime().finally(() => {
       isQuittingAfterCookieFlush = true;
       app.quit();
     });
@@ -108,11 +109,15 @@ async function initializeDesktopRuntime(): Promise<void> {
     app.dock.setIcon(join(__dirname, "..", "..", "build", "icon-dev.png"));
   }
 
-  const apiBaseUrl = loadDesktopApiBaseUrl({
+  const runtimeConfig = loadDesktopRuntimeConfig({
     configPath: join(__dirname, "desktop-runtime-config.json"),
     environment: process.env,
     isPackaged: app.isPackaged,
   });
+  const { apiBaseUrl, desktopUpdateRepository } = runtimeConfig;
+  const desktopUpdatePolicyUrl = desktopUpdateRepository
+    ? `https://github.com/${desktopUpdateRepository}/releases/latest/download/careerden-desktop-update-policy.json`
+    : undefined;
 
   if (app.isPackaged) {
     session.defaultSession.protocol.handle(
@@ -210,6 +215,55 @@ async function initializeDesktopRuntime(): Promise<void> {
     },
   });
 
+  const updatePolicyCachePath = join(app.getPath("userData"), "desktop-update-policy-cache.json");
+  desktopUpdateManager = new DesktopUpdateManager({
+    beforeInstall: async () => {
+      await shutdownDesktopRuntime();
+      isQuittingAfterCookieFlush = true;
+    },
+    currentVersion: app.getVersion(),
+    fetchPolicy: async () => {
+      if (!desktopUpdatePolicyUrl) {
+        throw new Error("Desktop update repository is not configured");
+      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+
+      try {
+        const response = await session.defaultSession.fetch(desktopUpdatePolicyUrl, {
+          headers: {
+            Accept: "application/json",
+            "Cache-Control": "no-cache",
+          },
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`Update policy request failed with HTTP ${response.status}`);
+        }
+        return response.json();
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+    isPackaged: app.isPackaged && desktopUpdateRepository !== undefined,
+    onStateChange: (state) => {
+      getMainWindow()?.webContents.send(desktopUpdateIpcChannels.stateChanged, state);
+    },
+    readCachedPolicy: async () => {
+      try {
+        return JSON.parse(await readFile(updatePolicyCachePath, "utf8")) as unknown;
+      } catch (error) {
+        if (isNodeErrorWithCode(error, "ENOENT")) return undefined;
+        throw error;
+      }
+    },
+    updater: electronUpdater.autoUpdater as DesktopUpdater,
+    writeCachedPolicy: async (policy: DesktopUpdatePolicy) => {
+      await mkdir(app.getPath("userData"), { recursive: true });
+      await writeFile(updatePolicyCachePath, `${JSON.stringify(policy, null, 2)}\n`, "utf8");
+    },
+  });
+
   new IpcHandlerRegistry()
     .register("open-external", (_event, url: string) => {
       void shell.openExternal(url);
@@ -229,6 +283,24 @@ async function initializeDesktopRuntime(): Promise<void> {
       if (!window || event.sender !== window.webContents) return;
       nativeNotificationPermissionRequester.request();
     })
+    .register(desktopUpdateIpcChannels.getState, (event) => {
+      const window = getMainWindow();
+      if (!window || event.sender !== window.webContents) return undefined;
+      return desktopUpdateManager?.getState();
+    })
+    .register(desktopUpdateIpcChannels.check, async (event) => {
+      const window = getMainWindow();
+      if (!window || event.sender !== window.webContents || !desktopUpdateManager) {
+        return undefined;
+      }
+      await desktopUpdateManager.checkForUpdates();
+      return desktopUpdateManager.getState();
+    })
+    .register(desktopUpdateIpcChannels.restartAndInstall, (event) => {
+      const window = getMainWindow();
+      if (!window || event.sender !== window.webContents) return;
+      return desktopUpdateManager?.restartAndInstall();
+    })
     .register("set-native-theme-source", (_event, source: unknown) => {
       setNativeThemeSource(nativeTheme, source);
     })
@@ -242,6 +314,7 @@ async function initializeDesktopRuntime(): Promise<void> {
 
   await createWindow();
   notificationStream.start();
+  await desktopUpdateManager.start();
 }
 
 async function createWindow(): Promise<BrowserWindow> {
@@ -362,7 +435,21 @@ async function flushDefaultSessionCookies(): Promise<void> {
   await session.defaultSession.cookies.flushStore();
 }
 
+async function shutdownDesktopRuntime(): Promise<void> {
+  localScrapingWorker?.stop();
+  utilityScrapingRunner?.dispose();
+  nativeNotificationPresenter?.closeAll();
+  await Promise.all([
+    notificationStream?.stop() ?? Promise.resolve(),
+    flushDefaultSessionCookies(),
+  ]);
+}
+
 function isAuthCookie(name: string): boolean {
   const normalized = name.replace(/^__(Secure|Host)-/, "");
   return normalized === "session_token" || /(^|[.-])session_token$/.test(normalized);
+}
+
+function isNodeErrorWithCode(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
 }

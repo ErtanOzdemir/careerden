@@ -7,6 +7,13 @@ const desktopNotificationChannels = {
   requestPermission: "desktop-notification-request-permission",
 };
 
+const desktopUpdateChannels = {
+  check: "desktop-update-check",
+  getState: "desktop-update-get-state",
+  restartAndInstall: "desktop-update-restart-and-install",
+  stateChanged: "desktop-update-state-changed",
+};
+
 const electronAPI = {
   platform: process.platform,
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
@@ -26,6 +33,11 @@ const electronAPI = {
     ipcRenderer.invoke(desktopNotificationChannels.consumeActivations),
   requestNativeNotificationPermission: () =>
     ipcRenderer.invoke(desktopNotificationChannels.requestPermission),
+  getDesktopUpdateState: () => ipcRenderer.invoke(desktopUpdateChannels.getState),
+  checkForDesktopUpdates: () => ipcRenderer.invoke(desktopUpdateChannels.check),
+  restartAndInstallDesktopUpdate: () => ipcRenderer.invoke(desktopUpdateChannels.restartAndInstall),
+  onDesktopUpdateStateChanged: (callback) =>
+    subscribeWithPayload(desktopUpdateChannels.stateChanged, callback),
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);
@@ -34,6 +46,14 @@ function subscribe(channel, callback) {
   if (typeof callback !== "function") return () => undefined;
 
   const listener = () => callback();
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}
+
+function subscribeWithPayload(channel, callback) {
+  if (typeof callback !== "function") return () => undefined;
+
+  const listener = (_event, payload) => callback(payload);
   ipcRenderer.on(channel, listener);
   return () => ipcRenderer.removeListener(channel, listener);
 }

@@ -1,7 +1,7 @@
 {
   "name": "@careerden/desktop",
   "productName": "Careerden",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "type": "module",
@@ -22,7 +22,9 @@
     "@careerden/contracts": "workspace:*",
     "@careerden/domain": "workspace:*",
     "@careerden/infrastructure": "workspace:*",
+    "electron-updater": "^6.8.9",
     "playwright": "1.60.0",
+    "semver": "^7.7.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -30,6 +32,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/multer": "^2.1.0",
+    "@types/semver": "^7.7.1",
     "electron": "^43.1.0",
     "electron-builder": "^26.15.3",
     "electron-builder-squirrel-windows": "^26.15.3",

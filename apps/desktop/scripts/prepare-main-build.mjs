@@ -9,15 +9,24 @@ const runtimeConfigModule = await import(
   pathToFileURL(resolve(desktopDirectory, "dist", "main", "desktop-runtime-config.js")).toString()
 );
 const configuredApiBaseUrl = process.env.DESKTOP_API_BASE_URL?.trim();
+const configuredUpdateRepository = process.env.DESKTOP_UPDATE_REPOSITORY?.trim();
 const requireConfiguredApiBaseUrl = process.env.CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL === "true";
+const requireConfiguredUpdateRepository =
+  process.env.CAREERDEN_REQUIRE_DESKTOP_UPDATE_REPOSITORY === "true";
 
 if (requireConfiguredApiBaseUrl && !configuredApiBaseUrl) {
   throw new Error("DESKTOP_API_BASE_URL is required for desktop release builds");
+}
+if (requireConfiguredUpdateRepository && !configuredUpdateRepository) {
+  throw new Error("DESKTOP_UPDATE_REPOSITORY is required for desktop release builds");
 }
 
 const apiBaseUrl = runtimeConfigModule.normalizeDesktopApiBaseUrl(
   configuredApiBaseUrl || "http://localhost:3000",
 );
+const desktopUpdateRepository = configuredUpdateRepository
+  ? runtimeConfigModule.normalizeDesktopUpdateRepository(configuredUpdateRepository)
+  : undefined;
 const preloadSource = resolve(desktopDirectory, "src", "preload", "index.cjs");
 const preloadOutput = resolve(desktopDirectory, "dist", "preload", "index.cjs");
 const configOutput = resolve(desktopDirectory, "dist", "main", "desktop-runtime-config.json");
@@ -28,5 +37,16 @@ await Promise.all([
 ]);
 await Promise.all([
   copyFile(preloadSource, preloadOutput),
-  writeFile(configOutput, `${JSON.stringify({ apiBaseUrl }, null, 2)}\n`, "utf8"),
+  writeFile(
+    configOutput,
+    `${JSON.stringify(
+      {
+        apiBaseUrl,
+        ...(desktopUpdateRepository ? { desktopUpdateRepository } : {}),
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  ),
 ]);

@@ -223,8 +223,9 @@ pnpm vitest --filter @careerden/contracts
 
 Desktop releases are built from a `v*.*.*` tag by
 `.github/workflows/desktop-release.yml`. The tag must match the version in
-`apps/desktop/package.json`. The workflow builds the macOS universal DMG, Windows x64
-NSIS installer, and Linux x64 AppImage, then attaches them and `SHA256SUMS.txt` to a
+`apps/desktop/package.json`. The workflow builds the macOS universal DMG and ZIP,
+Windows x64 NSIS installer, and Linux x64 AppImage. It also attaches electron-updater
+metadata, blockmaps, the validated minimum-version policy, and `SHA256SUMS.txt` to a
 draft GitHub release.
 
 Before creating a tag:
@@ -232,13 +233,19 @@ Before creating a tag:
 - Run the full repository verification set and ensure the release commit is on the
   protected/default branch.
 - Confirm the `DESKTOP_API_BASE_URL` repository variable points to the intended API.
+- Keep the workflow's automatic `DESKTOP_UPDATE_REPOSITORY` value unchanged so fork
+  installers use the fork's releases instead of the upstream repository.
 - Confirm the macOS signing and notarization secrets are configured.
+- Review `apps/desktop/release-policy.json`. Raise `minimumSupportedVersion` only when
+  older installed clients must be forced to update; it cannot exceed the release
+  package version.
 - Review the current limitations and full manual checklist in the
   [desktop runtime and release guide](apps/desktop/README.md#draft-release-workflow).
 
-After the workflow succeeds, smoke-test every installer and verify its checksum before
-manually publishing the draft. A workflow rerun may update draft assets, but published
-release tags and assets must never be moved or reused.
+After the workflow succeeds, smoke-test every installer, confirm all `latest*.yml`,
+blockmap, and policy assets exist, and verify checksums before manually publishing the
+draft. Drafts are not visible to installed updaters. A workflow rerun may update draft
+assets, but published release tags and assets must never be moved or reused.
 
 ## Adding New Features
 

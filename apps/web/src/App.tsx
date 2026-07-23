@@ -11,24 +11,29 @@ import Settings from "./pages/Settings";
 import Support from "./pages/Support";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import { DesktopUpdateGate } from "./desktop-updates/DesktopUpdateGate.js";
+import { DesktopUpdateProvider } from "./desktop-updates/DesktopUpdateProvider.js";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route element={<AuthenticatedLayout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/applications" element={<ApplicationsLog />} />
-        <Route path="/applications/:id" element={<AppDetail />} />
-        <Route path="/profile" element={<ProfileManager />} />
-        <Route path="/templates" element={<TemplateManager />} />
-        <Route path="/linkedin" element={<Navigate to="/" replace />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/support" element={<Support />} />
-      </Route>
-    </Routes>
+    <DesktopUpdateProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route element={<AuthenticatedLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/applications" element={<ApplicationsLog />} />
+          <Route path="/applications/:id" element={<AppDetail />} />
+          <Route path="/profile" element={<ProfileManager />} />
+          <Route path="/templates" element={<TemplateManager />} />
+          <Route path="/linkedin" element={<Navigate to="/" replace />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/support" element={<Support />} />
+        </Route>
+      </Routes>
+      <DesktopUpdateGate />
+    </DesktopUpdateProvider>
   );
 }

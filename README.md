@@ -128,7 +128,8 @@ In development, Electron loads the Vite renderer and connects to the standalone 
 packaged app instead serves the bundled renderer from `careerden://app` and proxies
 same-origin `/api` requests to its build-time API URL. See the
 [desktop runtime and release guide](apps/desktop/README.md) for notification behavior,
-packaging, signing, checksums, and the manual release checklist.
+automatic-update behavior, packaging, signing, checksums, and the manual release
+checklist.
 
 Job processing uses explicit states:
 
@@ -200,17 +201,18 @@ the variable is marked required.
 
 ### API, Auth, and Frontend
 
-| Variable               | Description                                              | Default                  |
-| ---------------------- | -------------------------------------------------------- | ------------------------ |
-| `NODE_ENV`             | `development`, `test`, or `production`                   | `development`            |
-| `PORT`                 | API port                                                 | `3000`                   |
-| `DATABASE_URL`         | PostgreSQL connection string                             | Required                 |
-| `REDIS_URL`            | Redis connection string                                  | `redis://localhost:6380` |
-| `BETTER_AUTH_SECRET`   | Better Auth signing secret, minimum 16 characters        | Development-only value   |
-| `BETTER_AUTH_URL`      | Public API/auth base URL                                 | `http://localhost:3000`  |
-| `WEB_ORIGIN`           | Allowed credentialed web origin                          | `http://localhost:5173`  |
-| `VITE_API_BASE_URL`    | API URL used by the web and development desktop renderer | `http://localhost:3000`  |
-| `DESKTOP_API_BASE_URL` | API URL embedded in a production desktop build           | `http://localhost:3000`  |
+| Variable                    | Description                                              | Default                  |
+| --------------------------- | -------------------------------------------------------- | ------------------------ |
+| `NODE_ENV`                  | `development`, `test`, or `production`                   | `development`            |
+| `PORT`                      | API port                                                 | `3000`                   |
+| `DATABASE_URL`              | PostgreSQL connection string                             | Required                 |
+| `REDIS_URL`                 | Redis connection string                                  | `redis://localhost:6380` |
+| `BETTER_AUTH_SECRET`        | Better Auth signing secret, minimum 16 characters        | Development-only value   |
+| `BETTER_AUTH_URL`           | Public API/auth base URL                                 | `http://localhost:3000`  |
+| `WEB_ORIGIN`                | Allowed credentialed web origin                          | `http://localhost:5173`  |
+| `VITE_API_BASE_URL`         | API URL used by the web and development desktop renderer | `http://localhost:3000`  |
+| `DESKTOP_API_BASE_URL`      | API URL embedded in a production desktop build           | `http://localhost:3000`  |
+| `DESKTOP_UPDATE_REPOSITORY` | Public `owner/repository` used for desktop updates       | Unset                    |
 
 ### Queue Operations Dashboard
 
@@ -433,7 +435,9 @@ Use `docker compose up -d` instead of `pnpm dev:services` when local OTP email a
 OpenObserve are also needed.
 
 Desktop installers are produced by the tag-triggered GitHub Actions workflow as a draft
-release. Publishing remains a manual verification step. Follow the complete
+release together with platform updater metadata and the minimum-supported-version
+policy. Publishing remains a manual verification step and is what makes a release
+visible to installed updaters. Follow the complete
 [desktop release checklist](apps/desktop/README.md#draft-release-workflow) before tagging
 or publishing a version.
 

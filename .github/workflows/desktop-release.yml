@@ -23,18 +23,30 @@ jobs:
           - name: macOS universal DMG
             os: macos-latest
             artifact_name: desktop-macos-universal
-            artifact_path: apps/desktop/release/*.dmg
+            artifact_path: |
+              apps/desktop/release/*.dmg
+              apps/desktop/release/*.zip
+              apps/desktop/release/*.blockmap
+              apps/desktop/release/latest-mac.yml
           - name: Windows x64 NSIS
             os: windows-latest
             artifact_name: desktop-windows-x64
-            artifact_path: apps/desktop/release/*.exe
+            artifact_path: |
+              apps/desktop/release/*.exe
+              apps/desktop/release/*.blockmap
+              apps/desktop/release/latest.yml
           - name: Linux x64 AppImage
             os: ubuntu-latest
             artifact_name: desktop-linux-x64
-            artifact_path: apps/desktop/release/*.AppImage
+            artifact_path: |
+              apps/desktop/release/*.AppImage
+              apps/desktop/release/*.blockmap
+              apps/desktop/release/latest-linux.yml
     env:
       DESKTOP_API_BASE_URL: ${{ vars.DESKTOP_API_BASE_URL }}
+      DESKTOP_UPDATE_REPOSITORY: ${{ github.repository }}
       CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL: "true"
+      CAREERDEN_REQUIRE_DESKTOP_UPDATE_REPOSITORY: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -93,10 +105,16 @@ jobs:
             await readFile("./apps/desktop/dist/main/desktop-runtime-config.json", "utf8"),
           );
           const expectedApiBaseUrl = normalizeDesktopApiBaseUrl(process.env.DESKTOP_API_BASE_URL);
+          const expectedUpdateRepository = process.env.DESKTOP_UPDATE_REPOSITORY;
 
           if (config.apiBaseUrl !== expectedApiBaseUrl) {
             throw new Error(
               `Embedded API URL ${JSON.stringify(config.apiBaseUrl)} does not match ${JSON.stringify(expectedApiBaseUrl)}`,
+            );
+          }
+          if (config.desktopUpdateRepository !== expectedUpdateRepository) {
+            throw new Error(
+              `Embedded update repository ${JSON.stringify(config.desktopUpdateRepository)} does not match ${JSON.stringify(expectedUpdateRepository)}`,
             );
           }
           NODE
@@ -119,7 +137,21 @@ jobs:
         if: runner.os == 'Linux'
         run: pnpm --filter @careerden/desktop exec electron-builder --config electron-builder.yml --publish never --linux
 
-      - name: Upload installer
+      - name: Verify updater metadata
+        shell: bash
+        run: |
+          case "${RUNNER_OS}" in
+            macOS) metadata_file="apps/desktop/release/latest-mac.yml" ;;
+            Windows) metadata_file="apps/desktop/release/latest.yml" ;;
+            Linux) metadata_file="apps/desktop/release/latest-linux.yml" ;;
+            *) echo "::error::Unsupported runner ${RUNNER_OS}"; exit 1 ;;
+          esac
+          test -s "${metadata_file}" || {
+            echo "::error::Missing updater metadata ${metadata_file}"
+            exit 1
+          }
+
+      - name: Upload installer and updater metadata
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
@@ -134,12 +166,17 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download installers
+      - uses: actions/checkout@v4
+
+      - name: Download installers and updater metadata
         uses: actions/download-artifact@v4
         with:
           pattern: desktop-*
           merge-multiple: true
           path: release-assets
+
+      - name: Validate and prepare update policy
+        run: node apps/desktop/scripts/prepare-release-policy.mjs release-assets/careerden-desktop-update-policy.json
 
       - name: Generate checksums
         run: |

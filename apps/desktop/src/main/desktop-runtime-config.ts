@@ -4,21 +4,33 @@ import { z } from "zod";
 const desktopRuntimeConfigSchema = z
   .object({
     apiBaseUrl: z.string().trim().min(1),
+    desktopUpdateRepository: z.string().trim().min(1).optional(),
   })
   .strict();
 
-export function loadDesktopApiBaseUrl(options: {
+export interface DesktopRuntimeConfig {
+  apiBaseUrl: string;
+  desktopUpdateRepository?: string;
+}
+
+export function loadDesktopRuntimeConfig(options: {
   configPath: string;
   environment: NodeJS.ProcessEnv;
   isPackaged: boolean;
   readFile?: (path: string) => string;
-}): string {
+}): DesktopRuntimeConfig {
   if (!options.isPackaged) {
-    return normalizeDesktopApiBaseUrl(
-      options.environment.DESKTOP_API_BASE_URL ??
-        options.environment.VITE_API_BASE_URL ??
-        "http://localhost:3000",
-    );
+    const desktopUpdateRepository = options.environment.DESKTOP_UPDATE_REPOSITORY?.trim();
+    return {
+      apiBaseUrl: normalizeDesktopApiBaseUrl(
+        options.environment.DESKTOP_API_BASE_URL ??
+          options.environment.VITE_API_BASE_URL ??
+          "http://localhost:3000",
+      ),
+      ...(desktopUpdateRepository
+        ? { desktopUpdateRepository: normalizeDesktopUpdateRepository(desktopUpdateRepository) }
+        : {}),
+    };
   }
 
   let payload: unknown;
@@ -37,7 +49,16 @@ export function loadDesktopApiBaseUrl(options: {
     throw new Error("The packaged desktop runtime configuration is invalid");
   }
 
-  return normalizeDesktopApiBaseUrl(result.data.apiBaseUrl);
+  return {
+    apiBaseUrl: normalizeDesktopApiBaseUrl(result.data.apiBaseUrl),
+    ...(result.data.desktopUpdateRepository
+      ? {
+          desktopUpdateRepository: normalizeDesktopUpdateRepository(
+            result.data.desktopUpdateRepository,
+          ),
+        }
+      : {}),
+  };
 }
 
 export function normalizeDesktopApiBaseUrl(value: string): string {
@@ -59,4 +80,12 @@ export function normalizeDesktopApiBaseUrl(value: string): string {
 
   url.pathname = url.pathname.replace(/\/+$/, "");
   return url.toString().replace(/\/$/, "");
+}
+
+export function normalizeDesktopUpdateRepository(value: string): string {
+  const repository = value.trim();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    throw new Error("Desktop update repository must use the owner/repository format");
+  }
+  return repository;
 }

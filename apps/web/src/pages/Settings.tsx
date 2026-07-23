@@ -14,6 +14,7 @@ import {
   subscribeToThemeChanges,
   type Theme,
 } from "../theme.js";
+import { useDesktopUpdates } from "../desktop-updates/DesktopUpdateProvider.js";
 import {
   Download,
   Sparkles,
@@ -91,7 +92,12 @@ const themeOptions: { id: Theme; label: string; icon: typeof Sun }[] = [
 ];
 
 export default function Settings() {
-  const [updateOpen, setUpdateOpen] = useState(false);
+  const {
+    checkForUpdates,
+    isSupported: isDesktopUpdaterSupported,
+    restartAndInstall,
+    state: updateState,
+  } = useDesktopUpdates();
   const [theme, setTheme] = useState<Theme>(getStoredTheme);
   const [profile, setProfile] = useState<ApiProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -106,6 +112,7 @@ export default function Settings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isUpToDateModalOpen, setIsUpToDateModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -215,24 +222,51 @@ export default function Settings() {
     setPasswordSuccess("Password updated. Other sessions have been signed out.");
   }
 
+  async function handleManualUpdateCheck() {
+    const result = await checkForUpdates();
+    if (result?.status === "up-to-date") {
+      setIsUpToDateModalOpen(true);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <Panel className="flex flex-col gap-4 border-info/20 bg-info-soft/40 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3.5">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-info-soft text-info">
-            <ArrowUpCircle className="size-5" />
+      {isDesktopUpdaterSupported && updateState && (
+        <Panel className="flex flex-col gap-4 border-info/20 bg-info-soft/40 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3.5">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-info-soft text-info">
+              <ArrowUpCircle className="size-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {getDesktopUpdateTitle(updateState)}
+              </p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {getDesktopUpdateDescription(updateState)}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Careerden is up to date</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              You're running the latest version.
-            </p>
-          </div>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => setUpdateOpen(true)}>
-          <Download className="size-3.5" /> Check for updates
-        </Button>
-      </Panel>
+          {updateState.status === "ready" ? (
+            <Button size="sm" onClick={() => void restartAndInstall()}>
+              <Download className="size-3.5" /> Restart and update
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={
+                updateState.status === "checking" ||
+                updateState.status === "available" ||
+                updateState.status === "downloading"
+              }
+              onClick={() => void handleManualUpdateCheck()}
+            >
+              <Download className="size-3.5" />{" "}
+              {updateState.status === "checking" ? "Checking…" : "Check for updates"}
+            </Button>
+          )}
+        </Panel>
+      )}
 
       <Panel>
         <div className="flex items-center gap-2.5 px-5 py-4">
@@ -374,25 +408,59 @@ export default function Settings() {
         </div>
       </Panel>
 
-      <p className="text-center text-xs text-muted-foreground">Careerden · Version 0.1.5</p>
+      {updateState && (
+        <p className="text-center text-xs text-muted-foreground">
+          Careerden · Version {updateState.currentVersion}
+        </p>
+      )}
 
-      <Modal open={updateOpen} onClose={() => setUpdateOpen(false)}>
+      <Modal open={isUpToDateModalOpen} onClose={() => setIsUpToDateModalOpen(false)}>
         <div className="flex size-11 items-center justify-center rounded-lg bg-info-soft text-info">
           <ArrowUpCircle className="size-6" />
         </div>
-        <h2 className="mt-4 text-lg font-semibold text-foreground">Check for updates</h2>
+        <h2 className="mt-4 text-lg font-semibold text-foreground">Careerden is up to date</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          You are running the latest version of Careerden.
+          You're running the latest available version.
         </p>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setUpdateOpen(false)}>
-            Close
-          </Button>
-          <Button onClick={() => setUpdateOpen(false)}>OK</Button>
+        <div className="mt-6 flex justify-end">
+          <Button onClick={() => setIsUpToDateModalOpen(false)}>OK</Button>
         </div>
       </Modal>
     </div>
   );
+}
+
+function getDesktopUpdateTitle(state: DesktopUpdateState): string {
+  switch (state.status) {
+    case "checking":
+      return "Checking for updates";
+    case "available":
+    case "downloading":
+      return `Downloading Careerden ${state.availableVersion ?? ""}`.trim();
+    case "ready":
+      return `Careerden ${state.availableVersion ?? ""} is ready`.trim();
+    case "error":
+      return "Could not check for updates";
+    default:
+      return "Careerden is up to date";
+  }
+}
+
+function getDesktopUpdateDescription(state: DesktopUpdateState): string {
+  switch (state.status) {
+    case "checking":
+      return "Looking for the latest published desktop release.";
+    case "available":
+      return "The update will download automatically.";
+    case "downloading":
+      return `Download progress: ${state.downloadPercent ?? 0}%`;
+    case "ready":
+      return "Restart now to install it, or keep working and update when you quit.";
+    case "error":
+      return "The update service is unavailable. You can try again.";
+    default:
+      return "You're running the latest version.";
+  }
 }
 
 function SettingsPasswordField({

@@ -87,8 +87,16 @@ documents for review or download.
   Destination. Every runtime uses Redis's private Internal URL through `REDIS_URL`; never
   use the local `redis://localhost:6380` default from a production container.
 - Desktop release tags must match the version in `apps/desktop/package.json`. The
-  GitHub workflow builds platform installers, generates SHA-256 checksums, and creates a
-  draft release; publishing remains a manual verification step.
+  GitHub workflow builds platform installers and electron-updater metadata, validates
+  `apps/desktop/release-policy.json`, generates SHA-256 checksums, and creates a draft
+  release; publishing remains the manual gate that exposes an update to clients.
+- Packaged desktop builds check public GitHub Releases at startup, hourly, and on demand.
+  Update discovery comes from electron-builder's platform `latest*.yml`; the separately
+  published policy controls only `minimumSupportedVersion`. Private or unreachable
+  release metadata fails open unless a cached policy already requires an update.
+- Release builds embed `DESKTOP_UPDATE_REPOSITORY` in `owner/repository` form. The GitHub
+  workflow derives it from the current repository so forks never default to upstream
+  update metadata; packaged local builds without it keep the updater disabled.
 - PostgreSQL migrations are run through Knex during API startup.
 
 ## Runtime Validation Commands
@@ -116,7 +124,9 @@ documents for review or download.
 - Build the desktop main process and production renderer against an explicit API:
   ```bash
   DESKTOP_API_BASE_URL=https://api.example.com \
+    DESKTOP_UPDATE_REPOSITORY=owner/repository \
     CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL=true \
+    CAREERDEN_REQUIRE_DESKTOP_UPDATE_REPOSITORY=true \
     pnpm --filter @careerden/desktop build
   ```
 - Package the already-built desktop app for the current host platform:

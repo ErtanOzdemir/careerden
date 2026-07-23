@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Settings from "./Settings";
 import { THEME_STORAGE_KEY } from "../theme.js";
+import { DesktopUpdateProvider } from "../desktop-updates/DesktopUpdateProvider.js";
 
 const authMocks = vi.hoisted(() => ({
   changePassword: vi.fn(),
@@ -151,6 +152,38 @@ describe("Settings", () => {
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
     expect(document.documentElement).toHaveClass("dark");
     expect(screen.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("confirms when a manual desktop update check finds no new version", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    const upToDateState: DesktopUpdateState = {
+      currentVersion: "0.1.6",
+      required: false,
+      status: "up-to-date",
+    };
+    const checkForDesktopUpdates = vi.fn().mockResolvedValue(upToDateState);
+    window.electronAPI = {
+      getLinkedInSessionStatus: vi.fn(),
+      startLinkedInSession: vi.fn(),
+      saveLinkedInSession: vi.fn(),
+      notifyJobApplicationQueued: vi.fn(),
+      getDesktopUpdateState: vi.fn().mockResolvedValue(upToDateState),
+      checkForDesktopUpdates,
+      restartAndInstallDesktopUpdate: vi.fn(),
+      onDesktopUpdateStateChanged: vi.fn(() => () => undefined),
+    };
+
+    render(
+      <DesktopUpdateProvider>
+        <Settings />
+      </DesktopUpdateProvider>,
+    );
+
+    await screen.findByDisplayValue("Ada Lovelace");
+    fireEvent.click(screen.getByRole("button", { name: "Check for updates" }));
+
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Careerden is up to date");
+    expect(checkForDesktopUpdates).toHaveBeenCalledOnce();
   });
 
   it("synchronizes cross-window theme storage changes", async () => {

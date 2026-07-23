@@ -5,9 +5,30 @@ interface DesktopNotificationActivation {
   jobApplicationId?: string;
 }
 
+type DesktopUpdateStatus =
+  | "disabled"
+  | "idle"
+  | "checking"
+  | "up-to-date"
+  | "available"
+  | "downloading"
+  | "ready"
+  | "error";
+
+interface DesktopUpdateState {
+  availableVersion?: string;
+  currentVersion: string;
+  downloadPercent?: number;
+  errorMessage?: string;
+  minimumSupportedVersion?: string;
+  required: boolean;
+  status: DesktopUpdateStatus;
+}
+
 interface Window {
   electronAPI?: {
     platform?: string;
+    openExternal?: (url: string) => Promise<void>;
     getLinkedInSessionStatus: () => Promise<unknown>;
     startLinkedInSession: () => Promise<unknown>;
     saveLinkedInSession: () => Promise<unknown>;
@@ -20,5 +41,9 @@ interface Window {
     onNativeNotificationActivationAvailable?: (callback: () => void) => () => void;
     consumePendingNativeNotificationActivations?: () => Promise<DesktopNotificationActivation[]>;
     requestNativeNotificationPermission?: () => Promise<void>;
+    getDesktopUpdateState?: () => Promise<DesktopUpdateState>;
+    checkForDesktopUpdates?: () => Promise<DesktopUpdateState | undefined>;
+    restartAndInstallDesktopUpdate?: () => Promise<void>;
+    onDesktopUpdateStateChanged?: (callback: (state: DesktopUpdateState) => void) => () => void;
   };
 }

@@ -12,6 +12,11 @@ describe("getMainWindowOptions", () => {
     expect(options.hasShadow).toBe(true);
     expect(options.autoHideMenuBar).toBe(true);
     expect(options.title).toBe("Careerden");
+    expect(options.webPreferences).toMatchObject({
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    });
   });
 
   it("uses a custom frameless window on non-mac platforms", () => {
@@ -22,5 +27,10 @@ describe("getMainWindowOptions", () => {
     expect(options.hasShadow).toBe(true);
     expect(options.autoHideMenuBar).toBe(true);
     expect(options.title).toBe("Careerden");
+    expect(options.webPreferences).toMatchObject({
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    });
   });
 });

@@ -70,6 +70,18 @@ documents for review or download.
   renderer assets from `careerden://app`, provides React Router fallback, and proxies
   same-origin `/api` requests to the build-time `DESKTOP_API_BASE_URL`. The API remains a
   standalone service.
+- The desktop renderer uses context isolation and Chromium sandboxing without Node
+  integration. Main-window navigation stays on the configured renderer authority,
+  renderer permissions default to denied, and only validated `https:` or `mailto:`
+  destinations may be opened through the operating system.
+- Privileged desktop IPC handlers are registered through one sender policy that accepts
+  only the active main window's main frame. Keep preload capabilities narrow and do not
+  expose arbitrary application-path lookup to the renderer.
+- Packaged renderer responses enforce the CSP and security headers defined by the custom
+  protocol handler. Release packages disable Electron's RunAsNode, Node options/inspector,
+  and extra file-protocol fuses while enabling cookie encryption, ASAR integrity
+  validation, and ASAR-only application loading. Cookie encryption must not be disabled
+  after release because the fuse transition is one-way.
 - The desktop main process consumes the authenticated, profile-scoped notification SSE
   stream with Electron's default session. It refreshes the renderer for every new
   notification and shows an operating-system notification only when the app is

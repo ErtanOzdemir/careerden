@@ -3,6 +3,14 @@ productName: Careerden
 executableName: Careerden
 artifactName: Careerden-${version}-${arch}.${ext}
 asar: true
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
 directories:
   buildResources: build
   output: release

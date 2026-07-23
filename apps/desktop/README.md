@@ -48,6 +48,28 @@ Better Auth expects an HTTP(S) base URL internally. When the renderer runs on
 rewrites those requests to `careerden://app/api/auth`; the `.invalid` address is only a
 local transport placeholder and is never contacted over the network.
 
+## Renderer Security Boundary
+
+The main renderer runs with context isolation and Chromium sandboxing enabled and without
+Node integration. Main-window navigation is limited to the exact development renderer
+authority or packaged `careerden://app` authority. Requests to open a new window are
+always denied; only validated `https:` and `mailto:` destinations may be handed to the
+operating system as external links. Renderer permission checks and requests are denied
+unless a future capability explicitly introduces a narrower policy. Every privileged IPC
+invocation must come from the active main window's main frame; child frames and other
+`WebContents` instances are rejected before a channel handler runs. The preload exposes
+only operations used by the renderer and does not provide arbitrary application-path
+lookup.
+
+Packaged renderer responses include a restrictive CSP and deny embedded frames, workers,
+objects, unexpected connection targets, and inline/evaluated scripts. Additional response
+headers disable content-type sniffing, suppress referrer data, and deny browser permission
+features. The release package flips Electron fuses to disable `ELECTRON_RUN_AS_NODE`,
+`NODE_OPTIONS`, inspector arguments, and extra `file:` privileges. It also enables
+OS-backed cookie encryption, embedded ASAR integrity validation, and loading application
+code only from `app.asar`. Cookie encryption is a one-way packaged-app migration: do not
+disable that fuse in a later release.
+
 ## Native Follow-up Notifications
 
 The notification path is:

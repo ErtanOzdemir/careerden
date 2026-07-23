@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  ipcMain,
   nativeTheme,
   net,
   Notification,
@@ -11,10 +12,11 @@ import {
 import electronUpdater from "electron-updater";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { desktopAppIdentity } from "./desktop-app-identity.js";
 import { loadDesktopRuntimeConfig } from "./desktop-runtime-config.js";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
+import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
 import { DesktopNotificationActivationQueue } from "./notifications/desktop-notification-activation.js";
@@ -32,6 +34,11 @@ import {
   packagedRendererSchemeRegistration,
   packagedRendererUrl,
 } from "./renderer/packaged-renderer-protocol.js";
+import {
+  configureRendererPermissionPolicy,
+  getAllowedExternalUrl,
+  isAllowedRendererNavigation,
+} from "./renderer/renderer-security-policy.js";
 import { DesktopApiClient } from "./scraping/desktop-api-client.js";
 import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
 import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
@@ -42,7 +49,6 @@ import { desktopUpdateIpcChannels } from "./updates/desktop-update-types.js";
 import { applyWindowControl, type WindowControlAction } from "./window-controls.js";
 import {
   CheckLinkedInSessionUseCase,
-  GetAppPathUseCase,
   SaveLinkedInSessionUseCase,
   StartLinkedInSessionUseCase,
 } from "@careerden/application";
@@ -134,15 +140,13 @@ async function initializeDesktopRuntime(): Promise<void> {
     );
   }
 
+  configureRendererPermissionPolicy(session.defaultSession);
   registerAuthCookiePersistence();
 
   const sessionDirectory = join(app.getPath("userData"), "linkedin-session");
   const sessionSecret = process.env.LINKEDIN_SESSION_SECRET ?? "dev-local-linkedin-session-secret";
   const sessionManager = new LinkedInSessionManager(sessionDirectory, sessionSecret);
 
-  const getAppPath = new GetAppPathUseCase({
-    getPath: (name: string) => app.getPath(name as Parameters<typeof app.getPath>[0]),
-  });
   const checkLinkedInSession = new CheckLinkedInSessionUseCase(sessionManager);
   const startLinkedInSession = new StartLinkedInSessionUseCase(sessionManager);
   const saveLinkedInSession = new SaveLinkedInSessionUseCase(sessionManager);
@@ -264,48 +268,40 @@ async function initializeDesktopRuntime(): Promise<void> {
     },
   });
 
-  new IpcHandlerRegistry()
-    .register("open-external", (_event, url: string) => {
-      void shell.openExternal(url);
+  new IpcHandlerRegistry(ipcMain, (event) => isTrustedMainWindowIpcSender(event, getMainWindow()))
+    .register("open-external", (_event, url: unknown) => {
+      const allowedUrl = getAllowedExternalUrl(url);
+      if (!allowedUrl) {
+        return;
+      }
+      void shell.openExternal(allowedUrl);
     })
-    .register("get-app-path", (_event, name: string) => getAppPath.execute(name))
     .register("linkedin-session-status", async () => checkLinkedInSession.execute())
     .register("linkedin-session-start", async () => startLinkedInSession.execute())
     .register("linkedin-session-save", async () => saveLinkedInSession.execute())
     .register("job-application-queued", () => localScrapingWorker?.wake())
-    .register(desktopNotificationIpcChannels.consumeActivations, (event) => {
-      const window = getMainWindow();
-      if (!window || event.sender !== window.webContents) return [];
-      return notificationActivations.takeAll();
-    })
-    .register(desktopNotificationIpcChannels.requestPermission, (event) => {
-      const window = getMainWindow();
-      if (!window || event.sender !== window.webContents) return;
+    .register(desktopNotificationIpcChannels.consumeActivations, () =>
+      notificationActivations.takeAll(),
+    )
+    .register(desktopNotificationIpcChannels.requestPermission, () => {
       nativeNotificationPermissionRequester.request();
     })
-    .register(desktopUpdateIpcChannels.getState, (event) => {
-      const window = getMainWindow();
-      if (!window || event.sender !== window.webContents) return undefined;
-      return desktopUpdateManager?.getState();
-    })
-    .register(desktopUpdateIpcChannels.check, async (event) => {
-      const window = getMainWindow();
-      if (!window || event.sender !== window.webContents || !desktopUpdateManager) {
+    .register(desktopUpdateIpcChannels.getState, () => desktopUpdateManager?.getState())
+    .register(desktopUpdateIpcChannels.check, async () => {
+      if (!desktopUpdateManager) {
         return undefined;
       }
       await desktopUpdateManager.checkForUpdates();
       return desktopUpdateManager.getState();
     })
-    .register(desktopUpdateIpcChannels.restartAndInstall, (event) => {
-      const window = getMainWindow();
-      if (!window || event.sender !== window.webContents) return;
-      return desktopUpdateManager?.restartAndInstall();
-    })
+    .register(desktopUpdateIpcChannels.restartAndInstall, () =>
+      desktopUpdateManager?.restartAndInstall(),
+    )
     .register("set-native-theme-source", (_event, source: unknown) => {
       setNativeThemeSource(nativeTheme, source);
     })
-    .register("window-control", (event, action: WindowControlAction) => {
-      const window = BrowserWindow.fromWebContents(event.sender);
+    .register("window-control", (_event, action: WindowControlAction) => {
+      const window = getMainWindow();
       if (!window) {
         return;
       }
@@ -327,7 +323,10 @@ async function createWindow(): Promise<BrowserWindow> {
   mainWindow = window;
 
   window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    const allowedUrl = getAllowedExternalUrl(url);
+    if (allowedUrl) {
+      void shell.openExternal(allowedUrl);
+    }
     return { action: "deny" };
   });
 
@@ -340,6 +339,20 @@ async function createWindow(): Promise<BrowserWindow> {
 
   const isDev = process.env.NODE_ENV === "development";
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  const localRendererPath = join(__dirname, "..", "..", "renderer", "index.html");
+  const trustedRendererUrl =
+    isDev && devServerUrl
+      ? devServerUrl
+      : app.isPackaged
+        ? packagedRendererUrl
+        : pathToFileURL(localRendererPath).toString();
+
+  window.webContents.on("will-navigate", (event, navigationUrl) => {
+    if (!isAllowedRendererNavigation(navigationUrl, trustedRendererUrl)) {
+      event.preventDefault();
+    }
+  });
+
   let loadWindow: Promise<void>;
 
   if (isDev && devServerUrl) {
@@ -347,7 +360,7 @@ async function createWindow(): Promise<BrowserWindow> {
   } else if (app.isPackaged) {
     loadWindow = window.loadURL(packagedRendererUrl);
   } else {
-    loadWindow = window.loadFile(join(__dirname, "..", "..", "renderer", "index.html"));
+    loadWindow = window.loadFile(localRendererPath);
   }
 
   mainWindowReady = loadWindow

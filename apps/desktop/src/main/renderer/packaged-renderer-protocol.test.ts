@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildProxiedApiUrl,
   createPackagedRendererProtocolHandler,
+  packagedRendererContentSecurityPolicy,
   packagedRendererSchemeRegistration,
 } from "./packaged-renderer-protocol.js";
 
@@ -10,11 +11,29 @@ describe("packaged renderer protocol", () => {
     const fetchFile = vi.fn(async () => new Response("renderer"));
     const handler = createHandler({ fetchFile });
 
-    await handler(new Request("careerden://app/assets/index.js"));
-    await handler(new Request("careerden://app/applications/application-1?tab=timeline"));
+    const assetResponse = await handler(new Request("careerden://app/assets/index.js"));
+    const documentResponse = await handler(
+      new Request("careerden://app/applications/application-1?tab=timeline"),
+    );
 
     expect(fetchFile.mock.calls[0]?.[0]).toMatch(/\/renderer\/assets\/index\.js$/);
     expect(fetchFile.mock.calls[1]?.[0]).toMatch(/\/renderer\/index\.html$/);
+    expect(documentResponse.headers.get("Content-Security-Policy")).toBe(
+      packagedRendererContentSecurityPolicy,
+    );
+    expect(assetResponse.headers.get("Content-Security-Policy")).toBe(
+      packagedRendererContentSecurityPolicy,
+    );
+    expect(documentResponse.headers.get("Permissions-Policy")).toBe(
+      "camera=(), display-capture=(), geolocation=(), microphone=()",
+    );
+    expect(documentResponse.headers.get("Referrer-Policy")).toBe("no-referrer");
+    expect(documentResponse.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(packagedRendererContentSecurityPolicy).toContain("script-src 'self'");
+    expect(packagedRendererContentSecurityPolicy).not.toContain("'unsafe-eval'");
+    expect(packagedRendererContentSecurityPolicy).not.toContain(
+      "script-src 'self' 'unsafe-inline'",
+    );
     expect(packagedRendererSchemeRegistration).toMatchObject({
       scheme: "careerden",
       privileges: { secure: true, standard: true, supportFetchAPI: true },
@@ -74,6 +93,7 @@ describe("packaged renderer protocol", () => {
     expect(init?.body).toBeInstanceOf(ArrayBuffer);
     expect(new Headers(init?.headers).get("Origin")).toBe("https://api.example.com");
     expect(new Headers(init?.headers).has("Cookie")).toBe(false);
+    expect(response.headers.has("Content-Security-Policy")).toBe(false);
     expect(forwardedBody).toBe('{"read":true}');
   });
 

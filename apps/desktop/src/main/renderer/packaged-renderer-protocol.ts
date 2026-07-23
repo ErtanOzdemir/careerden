@@ -5,6 +5,20 @@ import { normalizeDesktopApiBaseUrl } from "../desktop-runtime-config.js";
 export const packagedRendererScheme = "careerden";
 export const packagedRendererOrigin = `${packagedRendererScheme}://app`;
 export const packagedRendererUrl = `${packagedRendererOrigin}/`;
+export const packagedRendererContentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: https:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+  "frame-src 'none'",
+  "form-action 'self'",
+  "worker-src 'none'",
+].join("; ");
 export const packagedRendererSchemeRegistration = {
   scheme: packagedRendererScheme,
   privileges: {
@@ -51,14 +65,29 @@ export function createPackagedRendererProtocolHandler(options: {
     if (!filePath) return textResponse("Invalid renderer path", 400);
 
     try {
-      return await options.fetchFile(pathToFileURL(filePath).toString(), {
+      const response = await options.fetchFile(pathToFileURL(filePath).toString(), {
         method: request.method,
       });
+      return withRendererSecurityHeaders(response);
     } catch (error) {
       options.onError?.(error);
       return textResponse("Renderer asset unavailable", 500);
     }
   };
+}
+
+function withRendererSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("Content-Security-Policy", packagedRendererContentSecurityPolicy);
+  headers.set("Permissions-Policy", "camera=(), display-capture=(), geolocation=(), microphone=()");
+  headers.set("Referrer-Policy", "no-referrer");
+  headers.set("X-Content-Type-Options", "nosniff");
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
 }
 
 export function buildProxiedApiUrl(apiBaseUrl: string, requestUrl: URL): string {

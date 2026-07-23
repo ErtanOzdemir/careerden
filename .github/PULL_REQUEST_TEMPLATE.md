@@ -38,8 +38,11 @@ Describe the tests you ran to verify your changes:
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or my feature works
 - [ ] New and existing unit tests pass locally with my changes
+- [ ] `pnpm lint` passes without errors
+- [ ] `pnpm format:check` passes without errors
 - [ ] `pnpm typecheck` passes without errors
 - [ ] `pnpm test` passes without errors
+- [ ] `pnpm build` passes without errors
 
 ## Screenshots (if applicable)
 

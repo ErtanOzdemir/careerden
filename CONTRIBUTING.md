@@ -60,7 +60,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 ## Development Workflow
 
-1. Create a new branch from `main` (see [Branch Naming](#branch-naming)).
+1. Create a new branch from `master` (see [Branch Naming](#branch-naming)).
 2. Make your changes in small, focused commits.
 3. Write or update tests for your changes.
 4. Run the relevant verification commands before opening a PR.
@@ -75,6 +75,8 @@ pnpm typecheck
 pnpm test
 pnpm build
 ```
+
+GitHub Actions runs the same gates for every pull request targeting `master`.
 
 Use `pnpm lint:fix` and `pnpm format` for mechanical cleanup. Do not hand-format code to work around Prettier; let the formatter own whitespace and wrapping.
 
@@ -137,7 +139,7 @@ test(contracts): add schema validation tests for profiles
 
 ### PR Checklist
 
-- [ ] Branch is up to date with `main`
+- [ ] Branch is up to date with `master`
 - [ ] Lint passes (`pnpm lint`)
 - [ ] Formatting passes (`pnpm format:check`)
 - [ ] Code compiles without errors (`pnpm typecheck`)

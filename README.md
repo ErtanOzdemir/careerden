@@ -339,6 +339,8 @@ network rather than adding custom Docker networks.
 The API listens on port 3000 by default. The Vite development server proxies `/api/*`
 to the same routes after removing the `/api` prefix. Apart from `/health` and Better Auth
 handlers, endpoints require an authenticated session cookie and enforce profile ownership.
+Unexpected failures return the stable `internal` code, the message `Internal server error`,
+and a trace ID that can be used to correlate the response with redacted server logs.
 
 ### Health and Authentication
 

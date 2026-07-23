@@ -23,7 +23,7 @@ describe("traceIdMiddleware", () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
-  it("leaves the response unchanged when there is no active span", () => {
+  it("generates a trace id when there is no active span", () => {
     const request = {} as Request;
     const response = createResponse();
     const next = vi.fn() as NextFunction;
@@ -31,8 +31,17 @@ describe("traceIdMiddleware", () => {
 
     traceIdMiddleware(request, response, next);
 
-    expect(response.setHeader).not.toHaveBeenCalled();
-    expect(request).not.toHaveProperty("traceId");
+    expect(response.setHeader).toHaveBeenCalledWith(
+      "x-trace-id",
+      expect.stringMatching(/^[0-9a-f]{32}$/),
+    );
+    expect(request).toMatchObject({
+      traceId: expect.stringMatching(/^[0-9a-f]{32}$/),
+    });
+    expect(response.setHeader).toHaveBeenCalledWith(
+      "x-trace-id",
+      (request as Request & { traceId: string }).traceId,
+    );
     expect(next).toHaveBeenCalledOnce();
   });
 });

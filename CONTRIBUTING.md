@@ -168,6 +168,10 @@ test(contracts): add schema validation tests for profiles
 
 - Use typed errors, not string messages.
 - Let infrastructure errors propagate to error-handling middleware.
+- Expose typed application error messages only. Unexpected failures must use the generic
+  public message and a trace ID.
+- Keep unexpected-error logs structured and redacted. Do not log request headers, bodies,
+  query parameters, credentials, session data, tokens, or complete profile/scrape payloads.
 
 ### File Structure
 

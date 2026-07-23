@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
 import { ApplicationError } from "@careerden/application";
-import { errorHandler } from "./error-handler.js";
+import { createErrorHandler, errorHandler } from "./error-handler.js";
 import type { TraceIdRequest } from "./trace-id.middleware.js";
 
 describe("errorHandler", () => {
@@ -45,10 +45,16 @@ describe("errorHandler", () => {
 
   it("includes the request trace id in 500 responses when present", () => {
     const response = createResponse();
+    const logger = vi.fn();
+    const handler = createErrorHandler(logger);
 
-    errorHandler(
+    handler(
       new Error("Something failed"),
-      { traceId: "0af7651916cd43dd8448eb211c80319c" } as TraceIdRequest,
+      {
+        method: "GET",
+        path: "/api/job-applications",
+        traceId: "0af7651916cd43dd8448eb211c80319c",
+      } as TraceIdRequest,
       response,
       vi.fn() as NextFunction,
     );
@@ -56,21 +62,90 @@ describe("errorHandler", () => {
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith({
       code: "internal",
-      error: "Something failed",
+      error: "Internal server error",
       traceId: "0af7651916cd43dd8448eb211c80319c",
     });
+    expect(logger).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "api.unexpected_error",
+        request: {
+          method: "GET",
+          path: "/api/job-applications",
+        },
+        traceId: "0af7651916cd43dd8448eb211c80319c",
+      }),
+    );
   });
 
   it("keeps the existing error response shape when no trace id exists", () => {
     const response = createResponse();
+    const handler = createErrorHandler(vi.fn());
 
-    errorHandler(new Error("Something failed"), {} as Request, response, vi.fn() as NextFunction);
+    handler(new Error("Something failed"), {} as Request, response, vi.fn() as NextFunction);
 
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith({
       code: "internal",
-      error: "Something failed",
+      error: "Internal server error",
     });
+  });
+
+  it("redacts secrets from structured unexpected error logs", () => {
+    const response = createResponse();
+    const logger = vi.fn();
+    const handler = createErrorHandler(logger);
+    const error = new Error(
+      [
+        "database failed password=database-password",
+        "token=reset-token",
+        "https://admin:database-password@postgres.internal/careerden",
+        "Authorization: Bearer bearer-secret",
+        "api_key=sk-abcdefghijklmnop",
+      ].join("\n"),
+    );
+    error.stack = [
+      error.message,
+      "Cookie: session=session-secret",
+      "otp=123456",
+      "AKIAIOSFODNN7EXAMPLE",
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.signature",
+    ].join("\n");
+
+    handler(
+      error,
+      {
+        body: { profile: "full-profile-payload" },
+        headers: { authorization: "Bearer request-secret" },
+        method: "POST",
+        path: "/api/job-applications",
+        query: { resetToken: "query-secret" },
+        traceId: "0af7651916cd43dd8448eb211c80319c",
+      } as unknown as TraceIdRequest,
+      response,
+      vi.fn() as NextFunction,
+    );
+
+    const publicPayload = JSON.stringify(response.json.mock.calls);
+    const loggedPayload = JSON.stringify(logger.mock.calls);
+
+    expect(publicPayload).toContain("Internal server error");
+    expect(publicPayload).not.toContain("database failed");
+    expect(loggedPayload).toContain("[REDACTED]");
+    for (const secret of [
+      "database-password",
+      "reset-token",
+      "bearer-secret",
+      "sk-abcdefghijklmnop",
+      "session-secret",
+      "123456",
+      "AKIAIOSFODNN7EXAMPLE",
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.signature",
+      "full-profile-payload",
+      "request-secret",
+      "query-secret",
+    ]) {
+      expect(loggedPayload).not.toContain(secret);
+    }
   });
 });
 

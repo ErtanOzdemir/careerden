@@ -1,17 +1,16 @@
 import { context, trace } from "@opentelemetry/api";
 import type { NextFunction, Request, Response } from "express";
+import { randomBytes } from "node:crypto";
 
 export interface TraceIdRequest extends Request {
   traceId?: string;
 }
 
 export function traceIdMiddleware(request: Request, response: Response, next: NextFunction) {
-  const traceId = getActiveTraceId();
+  const traceId = getActiveTraceId() ?? randomBytes(16).toString("hex");
 
-  if (traceId) {
-    (request as TraceIdRequest).traceId = traceId;
-    response.setHeader("x-trace-id", traceId);
-  }
+  (request as TraceIdRequest).traceId = traceId;
+  response.setHeader("x-trace-id", traceId);
 
   next();
 }

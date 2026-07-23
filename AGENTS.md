@@ -64,6 +64,9 @@ documents for review or download.
   interfaces/adapters so implementations can be swapped.
 - Validate external inputs and AI output with schemas before persisting or rendering.
 - Use explicit workflow status transitions for job applications.
+- Unexpected API exceptions return a fixed internal error message with a trace ID.
+  Centralized logs record only redacted error fields and must not include request payloads,
+  authentication data, credentials, or tokens.
 - The desktop runtime loads the Vite web app in development, where Vite receives
   `VITE_API_BASE_URL` directly from the trusted development environment. Renderer query
   parameters never control the API destination. A packaged build serves bundled

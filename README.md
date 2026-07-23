@@ -356,12 +356,15 @@ stored in `compose.yaml`, anyone with repository access can read them.
 | `GET`, `PATCH` | `/profiles/me`                                                  | Read or update the current profile |
 | `POST`         | `/profiles`                                                     | Create a profile                   |
 | `GET`, `PATCH` | `/profiles/:id`                                                 | Read or update an owned profile    |
-| `GET`, `POST`  | `/profiles/:id/document-templates`                              | List or upload DOCX CV templates   |
+| `GET`, `POST`  | `/profiles/:id/document-templates`                              | List or upload DOCX templates      |
 | `PATCH`        | `/profiles/:id/document-templates/:templateId/mappings`         | Update placeholder field mappings  |
 | `PATCH`        | `/profiles/:id/document-templates/:templateId/variable-aliases` | Update template aliases            |
 | `PATCH`        | `/profiles/:id/document-templates/:templateId/default`          | Select the default template        |
 
-DOCX uploads use `multipart/form-data`, accept a `file` field, and are limited to 5 MB.
+DOCX uploads use `multipart/form-data`, require a `file` field and a `kind` of `cv` or
+`cover_letter`, and are limited to 5 MB. The filename must end in `.docx`, and the upload
+must use the official DOCX content type. Before parsing, the API rejects encrypted, ZIP64,
+duplicate-path, path-traversal, structurally incomplete, or excessively expanded archives.
 
 ### Job Applications
 

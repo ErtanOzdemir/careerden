@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DocxTemplateRenderer, FileStorage, PersistenceUnitOfWork } from "@careerden/domain";
+import {
+  InvalidDocxTemplateError,
+  type DocxTemplateRenderer,
+  type FileStorage,
+  type PersistenceUnitOfWork,
+} from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { createProfileRepository, createTestTemplate } from "./profile-test-helpers.js";
 import { UploadDocumentTemplateUseCase } from "./upload-document-template.use-case.js";
@@ -56,6 +61,33 @@ describe("UploadDocumentTemplateUseCase", () => {
       new ApplicationError(
         "validation",
         "DOCX template must include at least one {{placeholder_name}} field",
+      ),
+    );
+    expect(storage.put).not.toHaveBeenCalled();
+  });
+
+  it("maps unsafe DOCX archives to a validation error before storing them", async () => {
+    const profiles = createProfileRepository();
+    const storage = createStorage();
+    const { unitOfWork } = createUnitOfWork(profiles);
+    const renderer = createRenderer([]);
+    vi.mocked(renderer.extractPlaceholders).mockRejectedValue(
+      new InvalidDocxTemplateError("Invalid DOCX template: expanded archive exceeds the limit"),
+    );
+
+    await expect(
+      new UploadDocumentTemplateUseCase(profiles, storage, renderer, unitOfWork).execute({
+        kind: "cv",
+        profileId: "profile-1",
+        userId: "user-1",
+        fileName: "cv.docx",
+        size: 128,
+        body: Buffer.from("unsafe template"),
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        "validation",
+        "Invalid DOCX template: expanded archive exceeds the limit",
       ),
     );
     expect(storage.put).not.toHaveBeenCalled();

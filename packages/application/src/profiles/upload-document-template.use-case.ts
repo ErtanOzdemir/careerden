@@ -6,6 +6,7 @@ import type {
   PersistenceUnitOfWork,
   UserProfileAccountRepository,
 } from "@careerden/domain";
+import { InvalidDocxTemplateError } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { randomUUID } from "node:crypto";
@@ -32,7 +33,16 @@ export class UploadDocumentTemplateUseCase {
 
   async execute(input: UploadDocumentTemplateInput): Promise<DocumentTemplate> {
     await getAccessibleProfile(this.profiles, input.profileId, input.userId);
-    const placeholders = await this.docxTemplates.extractPlaceholders(input.body);
+    let placeholders: string[];
+    try {
+      placeholders = await this.docxTemplates.extractPlaceholders(input.body);
+    } catch (error) {
+      if (error instanceof InvalidDocxTemplateError) {
+        throw new ApplicationError("validation", error.message);
+      }
+
+      throw error;
+    }
 
     if (placeholders.length === 0) {
       throw new ApplicationError(

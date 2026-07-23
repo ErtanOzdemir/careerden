@@ -1,6 +1,5 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
-import multer from "multer";
 import type {
   CreateProfileUseCase,
   DeleteDocumentTemplateUseCase,
@@ -21,12 +20,7 @@ import {
 } from "@careerden/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
-
-const docxContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
+import { isDocxUpload, uploadDocumentTemplateFile } from "./document-template-upload.js";
 
 export function createProfileRouter(dependencies: {
   createProfile: CreateProfileUseCase;
@@ -121,43 +115,47 @@ export function createProfileRouter(dependencies: {
     }
   });
 
-  router.post("/:id/document-templates", upload.single("file"), async (request, response, next) => {
-    try {
-      if (!request.file) {
-        response.status(400).json({ code: "validation", error: "DOCX file is required" });
-        return;
-      }
+  router.post(
+    "/:id/document-templates",
+    uploadDocumentTemplateFile,
+    async (request, response, next) => {
+      try {
+        if (!request.file) {
+          response.status(400).json({ code: "validation", error: "DOCX file is required" });
+          return;
+        }
 
-      if (!isDocxUpload(request.file)) {
-        response
-          .status(400)
-          .json({ code: "validation", error: "Only .docx templates are supported" });
-        return;
-      }
+        if (!isDocxUpload(request.file)) {
+          response
+            .status(400)
+            .json({ code: "validation", error: "Only .docx templates are supported" });
+          return;
+        }
 
-      const kind = request.body.kind;
-      if (kind !== "cv" && kind !== "cover_letter") {
-        response.status(400).json({
-          code: "validation",
-          error: "Template kind must be cv or cover_letter",
+        const kind = request.body.kind;
+        if (kind !== "cv" && kind !== "cover_letter") {
+          response.status(400).json({
+            code: "validation",
+            error: "Template kind must be cv or cover_letter",
+          });
+          return;
+        }
+
+        const template = await dependencies.uploadDocumentTemplate.execute({
+          kind,
+          profileId: request.params.id,
+          userId: currentUser(request).id,
+          fileName: request.file.originalname,
+          body: request.file.buffer,
+          size: request.file.size,
         });
-        return;
+
+        response.status(201).json(template);
+      } catch (error) {
+        next(error);
       }
-
-      const template = await dependencies.uploadDocumentTemplate.execute({
-        kind,
-        profileId: request.params.id,
-        userId: currentUser(request).id,
-        fileName: request.file.originalname,
-        body: request.file.buffer,
-        size: request.file.size,
-      });
-
-      response.status(201).json(template);
-    } catch (error) {
-      next(error);
-    }
-  });
+    },
+  );
 
   router.patch(
     "/:id/document-templates/:templateId/mappings",
@@ -212,10 +210,6 @@ export function createProfileRouter(dependencies: {
   });
 
   return router;
-}
-
-function isDocxUpload(file: Express.Multer.File): boolean {
-  return file.originalname.toLowerCase().endsWith(".docx") || file.mimetype === docxContentType;
 }
 
 function currentUser(request: Request): AuthenticatedRequest["user"] {

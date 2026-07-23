@@ -10,6 +10,7 @@ import type {
   SelectedExperienceTemplateField,
   SelectedProjectTemplateField,
 } from "@careerden/domain";
+import { validateDocxArchive } from "./docx-archive-validator.js";
 
 const placeholderPattern = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 const sectionPattern = /\{\{\s*#([a-zA-Z0-9_]+)\s*\}\}([\s\S]*?)\{\{\s*\/\1\s*\}\}/g;
@@ -35,6 +36,7 @@ const selectedProjectAliasFields = new Set<string>(["description", "name", "url"
 
 export class DocxtemplaterTemplateRenderer implements DocxTemplateRenderer {
   async extractPlaceholders(template: Buffer): Promise<string[]> {
+    validateDocxArchive(template);
     const zip = new PizZip(template);
     const doc = new Docxtemplater(zip, {
       delimiters: { start: "{{", end: "}}" },
@@ -58,6 +60,7 @@ export class DocxtemplaterTemplateRenderer implements DocxTemplateRenderer {
   }
 
   async isPlaceholderStandalone(template: Buffer, placeholder: string): Promise<boolean> {
+    validateDocxArchive(template);
     const documentXml = new PizZip(template).file("word/document.xml")?.asText();
 
     if (!documentXml) {
@@ -91,6 +94,7 @@ export class DocxtemplaterTemplateRenderer implements DocxTemplateRenderer {
     templateBody: Buffer;
     data: Record<string, unknown>;
   }): Promise<Buffer> {
+    validateDocxArchive(input.templateBody);
     const zip = new PizZip(input.templateBody);
     const doc = new Docxtemplater(zip, {
       delimiters: { start: "{{", end: "}}" },

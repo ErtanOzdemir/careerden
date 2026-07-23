@@ -27,7 +27,7 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
       modulePath: string;
       scrapeTimeoutMs?: number;
       sessionDirectory: string;
-      sessionSecret: string;
+      sessionEncryptionKey: string;
     },
   ) {}
 
@@ -52,7 +52,7 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
         requestId,
         sourceUrl,
         sessionDirectory: this.options.sessionDirectory,
-        sessionSecret: this.options.sessionSecret,
+        sessionEncryptionKey: this.options.sessionEncryptionKey,
       });
     });
   }

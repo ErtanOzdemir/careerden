@@ -11,7 +11,7 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
       scrapeTimeoutMs: 100,
       sessionDirectory: "/user/linkedin-session",
-      sessionSecret: "secret",
+      sessionEncryptionKey: "encoded-key",
     });
 
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
@@ -32,7 +32,7 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
       fork,
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
       sessionDirectory: "/user/linkedin-session",
-      sessionSecret: "secret",
+      sessionEncryptionKey: "encoded-key",
     });
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
     const request = child.messages[0] as { requestId: string };
@@ -57,7 +57,7 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
       type: "scrape",
       sourceUrl: "https://www.linkedin.com/jobs/view/1",
       sessionDirectory: "/user/linkedin-session",
-      sessionSecret: "secret",
+      sessionEncryptionKey: "encoded-key",
     });
   });
 
@@ -67,7 +67,7 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
       fork: vi.fn(() => child),
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
       sessionDirectory: "/user/linkedin-session",
-      sessionSecret: "secret",
+      sessionEncryptionKey: "encoded-key",
     });
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
     const request = child.messages[0] as { requestId: string };
@@ -87,7 +87,7 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
       fork: vi.fn(() => child),
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
       sessionDirectory: "/user/linkedin-session",
-      sessionSecret: "secret",
+      sessionEncryptionKey: "encoded-key",
     });
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
 

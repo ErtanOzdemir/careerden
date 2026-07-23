@@ -11,7 +11,6 @@ export const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   LINKEDIN_SESSION_STORAGE_DIR: z.string().default("./storage/linkedin-session"),
-  LINKEDIN_SESSION_SECRET: z.string().default("dev-only-linkedin-session-secret"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

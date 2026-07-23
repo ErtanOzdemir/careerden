@@ -2,18 +2,24 @@ import { config } from "dotenv";
 import { existsSync } from "node:fs";
 import { dirname, join, parse } from "node:path";
 import { z } from "zod";
-import { normalizeObjectStorageEnv, objectStorageEnvShape } from "@careerden/config";
+import {
+  normalizeObjectStorageEnv,
+  objectStorageEnvShape,
+  validateProductionObjectStorageEnv,
+} from "@careerden/config";
 
 export const documentsWorkerEnvSchema = z.preprocess(
   normalizeObjectStorageEnv,
-  z.object({
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-    DATABASE_URL: z.string().min(1),
-    REDIS_URL: z.string().min(1).default("redis://localhost:6380"),
-    DOCUMENTS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
-    GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
-    ...objectStorageEnvShape,
-  }),
+  z
+    .object({
+      NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+      DATABASE_URL: z.string().min(1),
+      REDIS_URL: z.string().min(1).default("redis://localhost:6380"),
+      DOCUMENTS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+      GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
+      ...objectStorageEnvShape,
+    })
+    .superRefine(validateProductionObjectStorageEnv),
 );
 
 export type DocumentsWorkerEnv = z.infer<typeof documentsWorkerEnvSchema>;

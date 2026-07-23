@@ -86,6 +86,9 @@ documents for review or download.
   stream with Electron's default session. It refreshes the renderer for every new
   notification and shows an operating-system notification only when the app is
   unfocused. Clicking the alert restores the app and opens the related timeline.
+- The desktop LinkedIn session uses a random per-installation AES-256 key protected by
+  Electron `safeStorage`; session/key files use owner-only permissions and no shared
+  environment secret.
 - The API runtime uses PostgreSQL for state, S3-compatible object storage through RustFS
   locally or Cloudflare R2 in production, and Redis/BullMQ for enqueueing job application
   processing.
@@ -112,6 +115,9 @@ documents for review or download.
   workflow derives it from the current repository so forks never default to upstream
   update metadata; packaged local builds without it keep the updater disabled.
 - PostgreSQL migrations are run through Knex during API startup.
+- Production startup fails closed when Better Auth or object-storage credentials use
+  missing, short, or known development values; production object storage must not target
+  localhost.
 
 ## Runtime Validation Commands
 

@@ -30,7 +30,7 @@ async function handleMessage(message: unknown): Promise<void> {
   try {
     const sessionManager = new LinkedInSessionManager(
       request.sessionDirectory,
-      request.sessionSecret,
+      Buffer.from(request.sessionEncryptionKey, "base64"),
     );
     const scrapeLinkedInJob = new ScrapeLinkedInJobUseCase(
       new LinkedInJobScraper(sessionManager),

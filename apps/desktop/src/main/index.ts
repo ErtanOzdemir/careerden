@@ -6,6 +6,7 @@ import {
   net,
   Notification,
   protocol,
+  safeStorage,
   session,
   shell,
 } from "electron";
@@ -42,6 +43,7 @@ import {
 import { DesktopApiClient } from "./scraping/desktop-api-client.js";
 import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
 import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
+import { LinkedInSessionKeyStore } from "./scraping/linkedin-session-key-store.js";
 import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
 import { DesktopUpdateManager, type DesktopUpdater } from "./updates/desktop-update-manager.js";
 import type { DesktopUpdatePolicy } from "./updates/desktop-update-policy.js";
@@ -144,8 +146,11 @@ async function initializeDesktopRuntime(): Promise<void> {
   registerAuthCookiePersistence();
 
   const sessionDirectory = join(app.getPath("userData"), "linkedin-session");
-  const sessionSecret = process.env.LINKEDIN_SESSION_SECRET ?? "dev-local-linkedin-session-secret";
-  const sessionManager = new LinkedInSessionManager(sessionDirectory, sessionSecret);
+  const sessionEncryptionKey = await new LinkedInSessionKeyStore(
+    sessionDirectory,
+    safeStorage,
+  ).getOrCreateKey();
+  const sessionManager = new LinkedInSessionManager(sessionDirectory, sessionEncryptionKey);
 
   const checkLinkedInSession = new CheckLinkedInSessionUseCase(sessionManager);
   const startLinkedInSession = new StartLinkedInSessionUseCase(sessionManager);
@@ -154,7 +159,7 @@ async function initializeDesktopRuntime(): Promise<void> {
   utilityScrapingRunner = new UtilityProcessLinkedInScrapingRunner({
     modulePath: join(__dirname, "scraping", "scraping-utility-process.js"),
     sessionDirectory,
-    sessionSecret,
+    sessionEncryptionKey: sessionEncryptionKey.toString("base64"),
   });
 
   localScrapingWorker = new LocalScrapingWorker({

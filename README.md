@@ -66,8 +66,7 @@ Before starting the app, edit `.env`:
 2. Set the API key for the selected `AI_PROVIDER` if you want to run match analysis and
    produce AI-assisted document guidance. The tracker can still be used without running
    AI jobs.
-3. Replace the development auth and LinkedIn session secrets before using the app
-   outside local development.
+3. Replace the development auth secret before using the app outside local development.
 
 Start the complete desktop development stack:
 
@@ -207,18 +206,18 @@ the variable is marked required.
 
 ### API, Auth, and Frontend
 
-| Variable                    | Description                                              | Default                  |
-| --------------------------- | -------------------------------------------------------- | ------------------------ |
-| `NODE_ENV`                  | `development`, `test`, or `production`                   | `development`            |
-| `PORT`                      | API port                                                 | `3000`                   |
-| `DATABASE_URL`              | PostgreSQL connection string                             | Required                 |
-| `REDIS_URL`                 | Redis connection string                                  | `redis://localhost:6380` |
-| `BETTER_AUTH_SECRET`        | Better Auth signing secret, minimum 16 characters        | Development-only value   |
-| `BETTER_AUTH_URL`           | Public API/auth base URL                                 | `http://localhost:3000`  |
-| `WEB_ORIGIN`                | Allowed credentialed web origin                          | `http://localhost:5173`  |
-| `VITE_API_BASE_URL`         | API URL used by the web and development desktop renderer | `http://localhost:3000`  |
-| `DESKTOP_API_BASE_URL`      | API URL embedded in a production desktop build           | `http://localhost:3000`  |
-| `DESKTOP_UPDATE_REPOSITORY` | Public `owner/repository` used for desktop updates       | Unset                    |
+| Variable                    | Description                                                  | Default                  |
+| --------------------------- | ------------------------------------------------------------ | ------------------------ |
+| `NODE_ENV`                  | `development`, `test`, or `production`                       | `development`            |
+| `PORT`                      | API port                                                     | `3000`                   |
+| `DATABASE_URL`              | PostgreSQL connection string                                 | Required                 |
+| `REDIS_URL`                 | Redis connection string                                      | `redis://localhost:6380` |
+| `BETTER_AUTH_SECRET`        | Better Auth signing secret; 32+ bytes required in production | Development-only value   |
+| `BETTER_AUTH_URL`           | Public API/auth base URL                                     | `http://localhost:3000`  |
+| `WEB_ORIGIN`                | Allowed credentialed web origin                              | `http://localhost:5173`  |
+| `VITE_API_BASE_URL`         | API URL used by the web and development desktop renderer     | `http://localhost:3000`  |
+| `DESKTOP_API_BASE_URL`      | API URL embedded in a production desktop build               | `http://localhost:3000`  |
+| `DESKTOP_UPDATE_REPOSITORY` | Public `owner/repository` used for desktop updates           | Unset                    |
 
 ### Queue Operations Dashboard
 
@@ -243,25 +242,38 @@ the variable is marked required.
 
 ### Email, Storage, Scraping, and Tracing
 
-| Variable                           | Description                                 | Default                                |
-| ---------------------------------- | ------------------------------------------- | -------------------------------------- |
-| `SMTP_HOST`                        | SMTP server host                            | `localhost`                            |
-| `SMTP_PORT`                        | SMTP server port                            | `1025`                                 |
-| `SMTP_FROM`                        | Sender used for OTP and reminder emails     | `Careerden <no-reply@careerden.local>` |
-| `LINKEDIN_SESSION_SECRET`          | Encrypts the local LinkedIn browser session | Development-only value                 |
-| `LINKEDIN_SESSION_STORAGE_DIR`     | Shared-config session storage path          | `./storage/linkedin-session`           |
-| `OBJECT_STORAGE_ENDPOINT`          | S3-compatible storage endpoint              | `http://localhost:9000`                |
-| `OBJECT_STORAGE_BUCKET`            | Generated file/template bucket              | `careerden`                            |
-| `OBJECT_STORAGE_ACCESS_KEY_ID`     | S3-compatible access key                    | `rustfsadmin`                          |
-| `OBJECT_STORAGE_SECRET_ACCESS_KEY` | S3-compatible secret key                    | `rustfsadmin`                          |
-| `OBJECT_STORAGE_REGION`            | S3-compatible region                        | `us-east-1`                            |
-| `OBJECT_STORAGE_FORCE_PATH_STYLE`  | Use S3 path-style addressing                | `true`                                 |
-| `OPEN_OBSERVE_URL`                 | OpenTelemetry HTTP trace endpoint           | `http://localhost:5080`                |
-| `OPEN_OBSERVE_KEY`                 | OpenObserve Basic Auth credential           | Required                               |
+| Variable                           | Description                             | Default                                |
+| ---------------------------------- | --------------------------------------- | -------------------------------------- |
+| `SMTP_HOST`                        | SMTP server host                        | `localhost`                            |
+| `SMTP_PORT`                        | SMTP server port                        | `1025`                                 |
+| `SMTP_FROM`                        | Sender used for OTP and reminder emails | `Careerden <no-reply@careerden.local>` |
+| `LINKEDIN_SESSION_STORAGE_DIR`     | Shared-config session storage path      | `./storage/linkedin-session`           |
+| `OBJECT_STORAGE_ENDPOINT`          | S3-compatible storage endpoint          | Development-only local endpoint        |
+| `OBJECT_STORAGE_BUCKET`            | Generated file/template bucket          | `careerden`                            |
+| `OBJECT_STORAGE_ACCESS_KEY_ID`     | S3-compatible access key                | Development-only `rustfsadmin`         |
+| `OBJECT_STORAGE_SECRET_ACCESS_KEY` | S3-compatible secret key                | Development-only `rustfsadmin`         |
+| `OBJECT_STORAGE_REGION`            | S3-compatible region                    | `us-east-1`                            |
+| `OBJECT_STORAGE_FORCE_PATH_STYLE`  | Use S3 path-style addressing            | `true`                                 |
+| `OPEN_OBSERVE_URL`                 | OpenTelemetry HTTP trace endpoint       | `http://localhost:5080`                |
+| `OPEN_OBSERVE_KEY`                 | OpenObserve Basic Auth credential       | Required                               |
 
 The API, documents worker, and notifications worker must use the same object-storage
 configuration. Existing `RUSTFS_*` names remain accepted for compatibility, but new
 deployments should use `OBJECT_STORAGE_*`.
+
+With `NODE_ENV=production`, the API refuses to start with a missing, known-development,
+or shorter-than-32-byte `BETTER_AUTH_SECRET`. The API, documents worker, and notifications
+worker also reject local object-storage endpoints, known development access keys, and
+missing, known-development, or shorter-than-32-byte object-storage secrets. Generate
+independent random secrets instead of copying the examples:
+
+```bash
+openssl rand -base64 32
+```
+
+Rotate deployed auth and storage credentials if a development/default value was ever
+used. Changing `BETTER_AUTH_SECRET` invalidates existing authenticated sessions, so plan
+for users to sign in again.
 
 ### Cloudflare R2 in production
 

@@ -12,7 +12,6 @@ const envKeys = [
   "GEMINI_API_KEY",
   "DEEPSEEK_API_KEY",
   "LINKEDIN_SESSION_STORAGE_DIR",
-  "LINKEDIN_SESSION_SECRET",
 ];
 
 const originalCwd = process.cwd();
@@ -63,7 +62,6 @@ describe("loadEnv", () => {
 
     expect(Object.keys(env).sort()).toEqual([
       "AI_PROVIDER",
-      "LINKEDIN_SESSION_SECRET",
       "LINKEDIN_SESSION_STORAGE_DIR",
       "NODE_ENV",
       "PORT",

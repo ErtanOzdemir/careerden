@@ -70,6 +70,21 @@ OS-backed cookie encryption, embedded ASAR integrity validation, and loading app
 code only from `app.asar`. Cookie encryption is a one-way packaged-app migration: do not
 disable that fuse in a later release.
 
+## LinkedIn Session Vault
+
+The desktop creates a random 32-byte LinkedIn session encryption key per installation and
+protects it with Electron `safeStorage`, backed by Keychain on macOS, DPAPI on Windows,
+and a supported password manager on Linux. The encrypted key and LinkedIn session remain
+under the application's `userData` directory. On POSIX systems their directory and files
+are tightened to owner-only `0700` and `0600` modes.
+
+The desktop refuses to initialize LinkedIn session storage when operating-system
+encryption is unavailable or Linux does not report a supported libsecret/KWallet backend.
+Install and unlock a supported Linux password manager before starting Careerden. The
+former `LINKEDIN_SESSION_SECRET` environment variable is no longer used. Existing session
+files encrypted with that shared secret cannot be migrated safely and require the user to
+reconnect LinkedIn once after upgrading.
+
 ## Native Follow-up Notifications
 
 The notification path is:

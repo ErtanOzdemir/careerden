@@ -85,6 +85,9 @@ documents for review or download.
   and extra file-protocol fuses while enabling cookie encryption, ASAR integrity
   validation, and ASAR-only application loading. Cookie encryption must not be disabled
   after release because the fuse transition is one-way.
+- API, Vite web, Next.js marketing, and packaged Electron surfaces own separate,
+  regression-tested CSP and security-header policies. Production HTTP surfaces enable
+  HSTS; Vite builds emit `dist/_headers`, which the static host must apply.
 - The desktop main process consumes the authenticated, profile-scoped notification SSE
   stream with Electron's default session. It refreshes the renderer for every new
   notification and shows an operating-system notification only when the app is

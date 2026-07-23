@@ -173,6 +173,16 @@ test(contracts): add schema validation tests for profiles
 - Keep unexpected-error logs structured and redacted. Do not log request headers, bodies,
   query parameters, credentials, session data, tokens, or complete profile/scrape payloads.
 
+### Browser Security Headers
+
+- Keep API, Vite web, Next.js marketing, and packaged Electron CSPs tailored to their
+  actual resource and runtime requirements. Do not widen one policy to solve another
+  surface's integration.
+- Add external origins only from trusted build/runtime configuration and cover policy
+  changes with regression tests.
+- Keep production HSTS out of local development responses. Deployments serving the Vite
+  build must apply its generated `dist/_headers` file or an equivalent edge configuration.
+
 ### File Structure
 
 - Keep files small and focused.

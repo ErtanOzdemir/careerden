@@ -73,6 +73,7 @@ import { requireSession } from "./auth/session.middleware.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { createSecurityHeadersMiddleware } from "./middleware/security-headers.middleware.js";
 import { traceIdMiddleware } from "./middleware/trace-id.middleware.js";
 import { createNotificationRouter } from "./notifications/notifications.routes.js";
 import { createProfileRouter } from "./profiles/profiles.routes.js";
@@ -134,6 +135,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
 
   const app = express();
 
+  app.use(createSecurityHeadersMiddleware({ enableHsts: env.NODE_ENV === "production" }));
   app.use(traceIdMiddleware);
   app.use(
     cors({

@@ -24,6 +24,13 @@ The service listens on http://localhost:3001. Production builds use:
 
 Set public environment variables before the Next.js build because Next.js inlines them into the static output.
 
+## Browser security headers
+
+`next.config.ts` applies the marketing-specific CSP, frame and content-type protections,
+referrer and permissions policies, and production HSTS to every route. Keep the policy
+limited to resources used by this public service; authenticated web or Electron resource
+requirements belong to their own policies.
+
 ## Routes
 
 - / — public landing page, including the five-step product workflow at /#how-it-works

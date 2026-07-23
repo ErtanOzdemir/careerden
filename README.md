@@ -341,6 +341,14 @@ to the same routes after removing the `/api` prefix. Apart from `/health` and Be
 handlers, endpoints require an authenticated session cookie and enforce profile ownership.
 Unexpected failures return the stable `internal` code, the message `Internal server error`,
 and a trace ID that can be used to correlate the response with redacted server logs.
+API responses also enforce a non-rendering CSP, clickjacking/content-sniffing defenses,
+a restrictive permissions policy, and production HSTS.
+
+The Vite web build emits a CSP meta policy and a `dist/_headers` deployment file with
+the full browser security-header set. Static hosting must apply that file (or configure
+equivalent response headers at the edge); the meta policy alone cannot enforce HSTS,
+permissions policy, or frame restrictions. The marketing service and packaged Electron
+renderer enforce their separately tailored policies in their own runtimes.
 
 ### Health and Authentication
 

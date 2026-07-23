@@ -34,6 +34,8 @@ describe("packaged renderer protocol", () => {
     expect(packagedRendererContentSecurityPolicy).not.toContain(
       "script-src 'self' 'unsafe-inline'",
     );
+    expect(packagedRendererContentSecurityPolicy).not.toContain("fonts.googleapis.com");
+    expect(packagedRendererContentSecurityPolicy).not.toContain("fonts.gstatic.com");
     expect(packagedRendererSchemeRegistration).toMatchObject({
       scheme: "careerden",
       privileges: { secure: true, standard: true, supportFetchAPI: true },

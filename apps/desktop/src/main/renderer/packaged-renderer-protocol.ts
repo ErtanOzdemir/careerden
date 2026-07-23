@@ -8,8 +8,8 @@ export const packagedRendererUrl = `${packagedRendererOrigin}/`;
 export const packagedRendererContentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
   "img-src 'self' data: https:",
   "connect-src 'self'",
   "object-src 'none'",

@@ -1,11 +1,23 @@
 import { Router } from "express";
 import type { Router as ExpressRouter } from "express";
 import type { GetCreditBalanceUseCase } from "@careerden/application";
-import { creditBalanceSchema } from "@careerden/contracts";
+import type {
+  CreateBillingPortalUseCase,
+  CreateSubscriptionCheckoutUseCase,
+  GetBillingSubscriptionUseCase,
+} from "@careerden/application";
+import {
+  billingRedirectSchema,
+  billingSubscriptionResponseSchema,
+  creditBalanceSchema,
+} from "@careerden/contracts";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
 export function createBillingRouter(dependencies: {
   getCreditBalance: Pick<GetCreditBalanceUseCase, "execute">;
+  getBillingSubscription: Pick<GetBillingSubscriptionUseCase, "execute">;
+  createCheckout?: Pick<CreateSubscriptionCheckoutUseCase, "execute">;
+  createPortal?: Pick<CreateBillingPortalUseCase, "execute">;
 }) {
   const router: ExpressRouter = Router();
 
@@ -17,6 +29,60 @@ export function createBillingRouter(dependencies: {
       next(error);
     }
   });
+
+  router.get("/subscription", async (request, response, next) => {
+    try {
+      const userId = (request as AuthenticatedRequest).user.id;
+      const subscription = await dependencies.getBillingSubscription.execute(userId);
+      response.json(
+        billingSubscriptionResponseSchema.parse(
+          subscription
+            ? {
+                provider: subscription.provider,
+                planKey: subscription.planKey,
+                status: subscription.status,
+                currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+                currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+                cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+              }
+            : null,
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  if (dependencies.createCheckout) {
+    router.post("/checkout", async (request, response, next) => {
+      try {
+        const user = (request as AuthenticatedRequest).user;
+        response.json(
+          billingRedirectSchema.parse(
+            await dependencies.createCheckout?.execute({
+              id: user.id,
+              email: user.email,
+            }),
+          ),
+        );
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
+
+  if (dependencies.createPortal) {
+    router.post("/portal", async (request, response, next) => {
+      try {
+        const userId = (request as AuthenticatedRequest).user.id;
+        response.json(
+          billingRedirectSchema.parse(await dependencies.createPortal?.execute(userId)),
+        );
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
 
   return router;
 }

@@ -158,6 +158,11 @@ that records the attempt and analysis outbox event. BullMQ retries retain that r
 The LLM worker consumes it only after validated analysis output is persisted; terminal
 failure, deletion, supersession, or a 24-hour timeout releases it without a usage entry.
 
+Creem provides hosted subscription checkout and customer billing management. Each
+confirmed paid period creates one idempotent 100-credit grant that expires at the
+provider-confirmed period end. Scheduled and completed cancellations update subscription
+state without revoking credits from an already-paid period.
+
 In development, Electron loads the Vite renderer and connects to the standalone API. A
 packaged app instead serves the bundled renderer from `careerden://app` and proxies
 same-origin `/api` requests to its build-time API URL. See the
@@ -247,6 +252,22 @@ the variable is marked required.
 | `VITE_API_BASE_URL`         | API URL used by the web and development desktop renderer     | `http://localhost:3000`  |
 | `DESKTOP_API_BASE_URL`      | API URL embedded in a production desktop build               | `http://localhost:3000`  |
 | `DESKTOP_UPDATE_REPOSITORY` | Public `owner/repository` used for desktop updates           | Unset                    |
+
+### Creem Billing
+
+| Variable               | Description                                                  | Default |
+| ---------------------- | ------------------------------------------------------------ | ------- |
+| `CREEM_API_KEY`        | Creem API key                                                | Unset   |
+| `CREEM_WEBHOOK_SECRET` | Secret used to verify the raw `creem-signature` webhook HMAC | Unset   |
+| `CREEM_PRODUCT_ID`     | Creem subscription product used for hosted checkout          | Unset   |
+| `CREEM_PLAN_KEY`       | Internal plan identifier stored with subscriptions           | `pro`   |
+| `CREEM_SUCCESS_URL`    | Browser destination after successful hosted checkout         | Unset   |
+| `CREEM_TEST_MODE`      | Use Creem's test API                                         | `true`  |
+
+Development and test environments may omit all three Creem credentials to disable
+checkout, portal, and webhook routes. Partial Creem configuration is rejected. Production
+requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and requires
+`CREEM_TEST_MODE=false`.
 
 ### Queue Operations Dashboard
 
@@ -366,8 +387,9 @@ network rather than adding custom Docker networks.
 ## API Overview
 
 The API listens on port 3000 by default. The Vite development server proxies `/api/*`
-to the same routes after removing the `/api` prefix. Apart from `/health` and Better Auth
-handlers, endpoints require an authenticated session cookie and enforce profile ownership.
+to the same routes after removing the `/api` prefix. Apart from `/health`, Better Auth
+handlers, and the signature-protected Creem webhook, endpoints require an authenticated
+session cookie and enforce profile ownership.
 Unexpected failures return the stable `internal` code, the message `Internal server error`,
 and a trace ID that can be used to correlate the response with redacted server logs.
 API responses also enforce a non-rendering CSP, clickjacking/content-sniffing defenses,
@@ -386,16 +408,27 @@ renderer enforce their separately tailored policies in their own runtimes.
 | `GET`  | `/health` | API health check                                        |
 | `*`    | `/auth/*` | Better Auth sign-up, sign-in, OTP, and session handlers |
 
-### Billing Credits
+### Billing
 
-| Method | Path               | Description                                         |
-| ------ | ------------------ | --------------------------------------------------- |
-| `GET`  | `/billing/credits` | Read the authenticated user's authoritative balance |
+| Method | Path                      | Description                                                |
+| ------ | ------------------------- | ---------------------------------------------------------- |
+| `GET`  | `/billing/credits`        | Read the authenticated user's authoritative credit balance |
+| `GET`  | `/billing/subscription`   | Read the authenticated user's current subscription state   |
+| `POST` | `/billing/checkout`       | Create a Creem hosted-checkout link                        |
+| `POST` | `/billing/portal`         | Create a Creem customer-portal link                        |
+| `POST` | `/billing/webhooks/creem` | Receive raw, HMAC-verified subscription lifecycle events   |
 
 Starting an explicit match analysis without an available credit returns HTTP `402` with
 the code `payment_required`, plus `requiredCredits` and `availableCredits`. Automatic
 analysis at zero credits preserves the scraped job and records an `insufficient_credits`
 workflow reason instead of queueing AI work.
+
+Configure the Creem dashboard webhook destination as
+`https://<api-host>/billing/webhooks/creem` and use the matching signing secret for
+`CREEM_WEBHOOK_SECRET`. Paid events grant credits exactly once. Scheduled cancellation,
+final cancellation, past-due, expired, and subscription-update events synchronize the
+provider-neutral subscription state; a cancellation does not expire an already-paid
+credit lot before its recorded period end.
 
 Bullstudio runs as a separate, opt-in Docker service and discovers Careerden's BullMQ queues
 from Redis. Start it with:

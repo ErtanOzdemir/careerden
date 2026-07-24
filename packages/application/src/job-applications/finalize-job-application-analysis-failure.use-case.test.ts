@@ -19,6 +19,7 @@ describe("FinalizeJobApplicationAnalysisFailureUseCase", () => {
     const unitOfWork: PersistenceUnitOfWork = {
       execute: (work) =>
         work({
+          billingSubscriptions: {} as never,
           credits,
           jobApplications,
           jobApplicationChanges: { changed, deleted: vi.fn() },

@@ -1,4 +1,5 @@
 export * from "./billing/credit-balance.schema.js";
+export * from "./billing/billing-subscription.schema.js";
 export * from "./documents/document-template.schema.js";
 export * from "./documents/application-pack.schema.js";
 export * from "./documents/rich-document.schema.js";

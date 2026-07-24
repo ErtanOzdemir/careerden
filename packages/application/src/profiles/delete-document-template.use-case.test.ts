@@ -84,6 +84,7 @@ function createUnitOfWork(profiles: ReturnType<typeof createProfileRepository>):
     unitOfWork: {
       execute: async (work) =>
         work({
+          billingSubscriptions: {} as never,
           credits: {} as never,
           jobApplications: { clearApplicationPackTemplateSelection: clearSelection } as never,
           jobApplicationChanges: { changed: recordChanged } as never,

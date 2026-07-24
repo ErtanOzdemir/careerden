@@ -5,6 +5,10 @@ const validProductionEnv = {
   NODE_ENV: "production",
   DATABASE_URL: "postgres://careerden:secret@database.internal:5432/careerden",
   BETTER_AUTH_SECRET: "N6wK2pV9sX4qR8mT7hY3cF5jL1zD0bGa",
+  CREEM_API_KEY: "creem_production_key",
+  CREEM_WEBHOOK_SECRET: "creem-production-webhook-secret",
+  CREEM_PRODUCT_ID: "prod_production",
+  CREEM_TEST_MODE: "false",
   OBJECT_STORAGE_ACCESS_KEY_ID: "production-access-key",
   OBJECT_STORAGE_ENDPOINT: "https://account-id.r2.cloudflarestorage.com",
   OBJECT_STORAGE_FORCE_PATH_STYLE: "false",
@@ -22,6 +26,7 @@ describe("apiEnvSchema production secrets", () => {
     ).toMatchObject({
       BETTER_AUTH_SECRET: "dev-only-careerden-better-auth-secret",
       NODE_ENV: "development",
+      CREEM_TEST_MODE: true,
       OBJECT_STORAGE_ENDPOINT: "http://localhost:9000",
     });
   });
@@ -62,5 +67,23 @@ describe("apiEnvSchema production secrets", () => {
       OBJECT_STORAGE_ENDPOINT: validProductionEnv.OBJECT_STORAGE_ENDPOINT,
       OBJECT_STORAGE_SECRET_ACCESS_KEY: validProductionEnv.OBJECT_STORAGE_SECRET_ACCESS_KEY,
     });
+  });
+
+  it("rejects a partially configured Creem integration", () => {
+    const result = apiEnvSchema.safeParse({
+      DATABASE_URL: "postgres://careerden:careerden@localhost:5432/careerden",
+      OPEN_OBSERVE_KEY: "local-key",
+      CREEM_API_KEY: "creem_test_key",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["CREEM_WEBHOOK_SECRET"] }),
+          expect.objectContaining({ path: ["CREEM_PRODUCT_ID"] }),
+        ]),
+      );
+    }
   });
 });

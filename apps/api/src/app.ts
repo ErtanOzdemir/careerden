@@ -50,6 +50,10 @@ import {
   SubmitSupportRequestUseCase,
   EnsureCurrentMonthlyCreditsUseCase,
   GetCreditBalanceUseCase,
+  CreateBillingPortalUseCase,
+  CreateSubscriptionCheckoutUseCase,
+  GetBillingSubscriptionUseCase,
+  ProcessBillingProviderEventUseCase,
 } from "@careerden/application";
 import {
   DocxtemplaterTemplateRenderer,
@@ -68,11 +72,16 @@ import {
   createPostgresDb,
   runPostgresMigrations,
   MockSupportRequestNotifier,
+  CreemSubscriptionBillingProvider,
+  CreemWebhookEventParser,
+  PostgresBillingSubscriptionRepository,
 } from "@careerden/infrastructure";
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";
 import { createBillingRouter } from "./billing/billing.routes.js";
+import { createCreemWebhookRouter } from "./billing/creem-webhook.routes.js";
+import { isCreemConfigured } from "./env.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -100,6 +109,29 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const unitOfWork = new PostgresPersistenceUnitOfWork(db, changeBus);
   const ensureCurrentMonthlyCredits = new EnsureCurrentMonthlyCreditsUseCase(unitOfWork);
   const getCreditBalance = new GetCreditBalanceUseCase(unitOfWork);
+  const billingSubscriptions = new PostgresBillingSubscriptionRepository(db);
+  const getBillingSubscription = new GetBillingSubscriptionUseCase(billingSubscriptions);
+  const creem = isCreemConfigured(env)
+    ? (() => {
+        const provider = new CreemSubscriptionBillingProvider({
+          apiKey: env.CREEM_API_KEY,
+          productId: env.CREEM_PRODUCT_ID,
+          planKey: env.CREEM_PLAN_KEY,
+          successUrl: env.CREEM_SUCCESS_URL ?? `${env.WEB_ORIGIN}/settings?checkout=success`,
+          testMode: env.CREEM_TEST_MODE,
+        });
+        return {
+          createCheckout: new CreateSubscriptionCheckoutUseCase(provider),
+          createPortal: new CreateBillingPortalUseCase(billingSubscriptions, provider),
+          parser: new CreemWebhookEventParser({
+            webhookSecret: env.CREEM_WEBHOOK_SECRET,
+            productId: env.CREEM_PRODUCT_ID,
+            planKey: env.CREEM_PLAN_KEY,
+          }),
+          processEvent: new ProcessBillingProviderEventUseCase(unitOfWork),
+        };
+      })()
+    : undefined;
   const auth = createAuth({
     emailSender: createSmtpEmailSender({
       from: env.SMTP_FROM,
@@ -150,6 +182,15 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     }),
   );
   app.all("/auth/*", toNodeHandler(auth));
+  if (creem) {
+    app.use(
+      "/billing/webhooks/creem",
+      createCreemWebhookRouter({
+        parser: creem.parser,
+        processEvent: creem.processEvent,
+      }),
+    );
+  }
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/health", (_request, response) => {
@@ -157,7 +198,19 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   });
 
   app.use(requireSession(auth));
-  app.use("/billing", createBillingRouter({ getCreditBalance }));
+  app.use(
+    "/billing",
+    createBillingRouter({
+      getCreditBalance,
+      getBillingSubscription,
+      ...(creem
+        ? {
+            createCheckout: creem.createCheckout,
+            createPortal: creem.createPortal,
+          }
+        : {}),
+    }),
+  );
   app.use(
     "/profiles",
     createProfileRouter({

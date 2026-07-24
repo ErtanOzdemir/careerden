@@ -202,6 +202,7 @@ function createUnitOfWork(
     unitOfWork: {
       execute: async (work) =>
         work({
+          billingSubscriptions: {} as never,
           credits,
           jobApplications,
           jobApplicationChanges: { changed: recordChanged, deleted: vi.fn() },

@@ -128,6 +128,12 @@ documents for review or download.
   by all BullMQ deliveries and retries. Consume it only in the transaction that persists
   validated analysis output. Terminal failure, deletion, supersession, and the LLM
   worker's 24-hour recovery scan release it without writing a usage ledger entry.
+- Creem remains an infrastructure adapter behind provider-neutral application and domain
+  billing interfaces. Its webhook route consumes the exact raw request body before global
+  JSON and authentication middleware, verifies `creem-signature`, records provider events
+  idempotently, and grants subscription-cycle credits only for confirmed paid events.
+- Scheduled or completed Creem cancellation updates subscription state but does not revoke
+  a paid-period credit grant before its provider-confirmed expiration.
 - Production startup fails closed when Better Auth or object-storage credentials use
   missing, short, or known development values; production object storage must not target
   localhost.

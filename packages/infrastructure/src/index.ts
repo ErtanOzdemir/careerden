@@ -1,4 +1,6 @@
 export * from "./matching/ai/ai-provider.factory.js";
+export * from "./billing/creem-subscription-billing.provider.js";
+export * from "./billing/creem-webhook-event.parser.js";
 export * from "./matching/ai/providers/deepseek-ai.provider.js";
 export * from "./matching/ai/providers/gemini-ai.provider.js";
 export * from "./matching/ai/providers/openai-ai.provider.js";
@@ -14,6 +16,9 @@ export * from "./persistence/notifications/postgres-notification.repository.js";
 export * from "./persistence/billing/in-memory-credit.repository.js";
 export * from "./persistence/billing/knex-credit.repository.js";
 export * from "./persistence/billing/postgres-credit.repository.js";
+export * from "./persistence/billing/in-memory-billing-subscription.repository.js";
+export * from "./persistence/billing/knex-billing-subscription.repository.js";
+export * from "./persistence/billing/postgres-billing-subscription.repository.js";
 export * from "./persistence/knex.js";
 export * from "./persistence/postgres-knex.js";
 export * from "./persistence/postgres-outbox.repository.js";

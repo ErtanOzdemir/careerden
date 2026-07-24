@@ -41,6 +41,7 @@ describe("ExpireStaleCreditReservationsUseCase", () => {
     const unitOfWork: PersistenceUnitOfWork = {
       execute: (work) =>
         work({
+          billingSubscriptions: {} as never,
           credits,
           jobApplications,
           jobApplicationChanges: { changed: vi.fn(), deleted: vi.fn() },

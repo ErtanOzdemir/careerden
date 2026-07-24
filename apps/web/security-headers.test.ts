@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createWebContentSecurityPolicy, createWebSecurityHeaders } from "./security-headers.js";
+import {
+  createWebContentSecurityPolicy,
+  createWebMetaContentSecurityPolicy,
+  createWebSecurityHeaders,
+} from "./security-headers.js";
 
 describe("web security headers", () => {
   it("creates a strict production policy with the configured API origin", () => {
@@ -11,7 +15,12 @@ describe("web security headers", () => {
 
     expect(contentSecurityPolicy).toContain("script-src 'self'");
     expect(contentSecurityPolicy).not.toContain("'unsafe-eval'");
+    expect(contentSecurityPolicy).not.toContain(
+      "'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='",
+    );
     expect(contentSecurityPolicy).toContain("connect-src 'self' https://api.example.com");
+    expect(contentSecurityPolicy).toContain("img-src 'self' data: https:");
+    expect(contentSecurityPolicy).not.toContain("http://localhost:*");
     expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
     expect(contentSecurityPolicy).not.toContain("fonts.googleapis.com");
     expect(headers).toMatchObject({
@@ -32,8 +41,28 @@ describe("web security headers", () => {
     const headers = createWebSecurityHeaders({ development: true });
 
     expect(contentSecurityPolicy).toContain("script-src 'self' 'unsafe-eval'");
+    expect(contentSecurityPolicy).toContain(
+      "'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='",
+    );
+    expect(
+      contentSecurityPolicy.split("; ").find((directive) => directive.startsWith("script-src ")),
+    ).not.toContain("'unsafe-inline'");
     expect(contentSecurityPolicy).toContain("connect-src 'self' ws: wss:");
+    expect(contentSecurityPolicy).toContain(
+      "img-src 'self' data: https: http://localhost:* http://127.0.0.1:*",
+    );
     expect(contentSecurityPolicy).not.toContain("javascript:");
     expect(headers).not.toHaveProperty("Strict-Transport-Security");
+  });
+
+  it("keeps frame ancestry in response headers but omits the ineffective meta directive", () => {
+    const contentSecurityPolicy = createWebContentSecurityPolicy({
+      development: false,
+    });
+    const metaContentSecurityPolicy = createWebMetaContentSecurityPolicy(contentSecurityPolicy);
+
+    expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
+    expect(metaContentSecurityPolicy).not.toContain("frame-ancestors");
+    expect(metaContentSecurityPolicy).toContain("script-src 'self'");
   });
 });

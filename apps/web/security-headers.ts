@@ -3,6 +3,7 @@ import type { Plugin } from "vite";
 const permissionsPolicy =
   "camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()";
 const strictTransportSecurity = "max-age=31536000";
+const viteReactRefreshPreambleHash = "'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='";
 
 export type WebSecurityPolicyOptions = {
   apiBaseUrl?: string;
@@ -11,6 +12,7 @@ export type WebSecurityPolicyOptions = {
 
 export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions): string {
   const connectSources = ["'self'"];
+  const imageSources = ["'self'", "data:", "https:"];
   const apiOrigin = getAbsoluteHttpOrigin(options.apiBaseUrl);
 
   if (apiOrigin) {
@@ -19,14 +21,17 @@ export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions
 
   if (options.development) {
     connectSources.push("ws:", "wss:");
+    imageSources.push("http://localhost:*", "http://127.0.0.1:*");
   }
 
   return [
     "default-src 'self'",
-    `script-src 'self'${options.development ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self'${
+      options.development ? ` 'unsafe-eval' ${viteReactRefreshPreambleHash}` : ""
+    }`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
-    "img-src 'self' data: https:",
+    `img-src ${imageSources.join(" ")}`,
     `connect-src ${connectSources.join(" ")}`,
     "object-src 'none'",
     "base-uri 'self'",
@@ -35,6 +40,14 @@ export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions
     "frame-src 'none'",
     "worker-src 'none'",
   ].join("; ");
+}
+
+export function createWebMetaContentSecurityPolicy(contentSecurityPolicy: string): string {
+  return contentSecurityPolicy
+    .split(";")
+    .map((directive) => directive.trim())
+    .filter((directive) => directive && !directive.startsWith("frame-ancestors "))
+    .join("; ");
 }
 
 export function createWebSecurityHeaders(
@@ -58,7 +71,7 @@ export function createWebSecurityHeadersPlugin(headers: Record<string, string>):
       handler: () => [
         {
           attrs: {
-            content: headers["Content-Security-Policy"],
+            content: createWebMetaContentSecurityPolicy(headers["Content-Security-Policy"]),
             "http-equiv": "Content-Security-Policy",
           },
           injectTo: "head-prepend",

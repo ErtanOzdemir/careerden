@@ -132,7 +132,7 @@ Authenticated API -> PostgreSQL + transactional outbox
            |
            +-> Electron claims scrape work -> Playwright -> raw + normalized scrape data
            |
-           +-> BullMQ -> LLM worker -> validated match analysis
+           +-> reserve credit -> BullMQ -> LLM worker -> validated match analysis
            |
            +-> BullMQ -> documents worker -> DOCX/PDF rendering -> S3-compatible storage
            |
@@ -146,6 +146,17 @@ queued work from the API, renews the claim while scraping, and submits both norm
 and raw results. The API persists workflow changes and outbox events transactionally.
 The LLM, documents, and notifications workers consume BullMQ jobs independently from
 the API.
+
+Each authenticated account receives 10 free AI credits for the current UTC calendar
+month. The grant is created idempotently after registration or on the next authenticated
+credit access, expires at the start of the next UTC month, and is never duplicated within
+the same month. `GET /billing/credits` returns the authenticated user's available and
+reserved totals.
+
+One logical match-analysis attempt reserves one credit in the same PostgreSQL transaction
+that records the attempt and analysis outbox event. BullMQ retries retain that reservation.
+The LLM worker consumes it only after validated analysis output is persisted; terminal
+failure, deletion, supersession, or a 24-hour timeout releases it without a usage entry.
 
 In development, Electron loads the Vite renderer and connects to the standalone API. A
 packaged app instead serves the bundled renderer from `careerden://app` and proxies
@@ -374,6 +385,17 @@ renderer enforce their separately tailored policies in their own runtimes.
 | ------ | --------- | ------------------------------------------------------- |
 | `GET`  | `/health` | API health check                                        |
 | `*`    | `/auth/*` | Better Auth sign-up, sign-in, OTP, and session handlers |
+
+### Billing Credits
+
+| Method | Path               | Description                                         |
+| ------ | ------------------ | --------------------------------------------------- |
+| `GET`  | `/billing/credits` | Read the authenticated user's authoritative balance |
+
+Starting an explicit match analysis without an available credit returns HTTP `402` with
+the code `payment_required`, plus `requiredCredits` and `availableCredits`. Automatic
+analysis at zero credits preserves the scraped job and records an `insufficient_credits`
+workflow reason instead of queueing AI work.
 
 Bullstudio runs as a separate, opt-in Docker service and discovers Careerden's BullMQ queues
 from Redis. Start it with:

@@ -5,6 +5,7 @@ import {
   InMemoryUserProfileRepository,
 } from "@careerden/infrastructure";
 import { AnalyzeScrapedJobUseCase } from "./analyze-scraped-job.use-case.js";
+import { createCreditRepositoryDouble } from "./job-application-test-helpers.js";
 import { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 
 describe("AnalyzeScrapedJobUseCase", () => {
@@ -32,7 +33,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
     });
     await jobApplications.updateStatus(jobApplication.id, "scraped");
     await jobApplications.setAnalysisAttempt(jobApplication.id, "attempt-1");
-    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(
+    const { unitOfWork, addOutboxEvent, recordChanged, credits } = createUnitOfWork(
       jobApplications,
       profiles,
     );
@@ -64,6 +65,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
     expect(addOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "application-pack.generation-requested" }),
     );
+    expect(credits.consumeReservation).toHaveBeenCalledOnce();
     expect(recordChanged).toHaveBeenCalledTimes(2);
   });
 
@@ -110,7 +112,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
     );
   });
 
-  it("marks the job failed when required scraped data is missing", async () => {
+  it("leaves the reservation in progress until the worker finalizes a terminal failure", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
     const profile = await profiles.create({
@@ -136,15 +138,13 @@ describe("AnalyzeScrapedJobUseCase", () => {
       ).execute({ jobApplicationId: jobApplication.id, analysisAttemptId: "attempt-1" }),
     ).rejects.toThrow(`No desktop scrape bundle found for job application ${jobApplication.id}`);
 
-    const failed = await jobApplications.findById(jobApplication.id);
+    const inProgress = await jobApplications.findById(jobApplication.id);
     const events = await jobApplications.listEvents(jobApplication.id);
 
-    expect(failed?.status).toBe("failed");
-    expect(failed?.failureReason).toBe(
-      `No desktop scrape bundle found for job application ${jobApplication.id}`,
-    );
-    expect(events.map((event) => event.title)).toContain("AI analysis failed");
-    expect(recordChanged).toHaveBeenCalledTimes(2);
+    expect(inProgress?.status).toBe("analyzing");
+    expect(inProgress?.failureReason).toBeUndefined();
+    expect(events.map((event) => event.title)).not.toContain("AI analysis failed");
+    expect(recordChanged).toHaveBeenCalledOnce();
   });
 
   it("ignores a stale analysis attempt without calling the AI provider", async () => {
@@ -186,6 +186,7 @@ function createUnitOfWork(
   unitOfWork: PersistenceUnitOfWork;
   addOutboxEvent: ReturnType<typeof vi.fn>;
   recordChanged: ReturnType<typeof vi.fn>;
+  credits: ReturnType<typeof createCreditRepositoryDouble>;
 } {
   const addOutboxEvent = vi.fn(async (input) => ({
     ...input,
@@ -193,13 +194,15 @@ function createUnitOfWork(
     attemptCount: 0,
   }));
   const recordChanged = vi.fn();
+  const credits = createCreditRepositoryDouble();
   return {
     addOutboxEvent,
     recordChanged,
+    credits,
     unitOfWork: {
       execute: async (work) =>
         work({
-          credits: {} as never,
+          credits,
           jobApplications,
           jobApplicationChanges: { changed: recordChanged, deleted: vi.fn() },
           profiles: profiles as never,

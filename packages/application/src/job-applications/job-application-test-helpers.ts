@@ -52,8 +52,9 @@ export function createJobApplicationRepository(
     saveScrapeBundle: vi.fn(),
     renewScrapeClaim: vi.fn(async () => null),
     recordScrapeFailure: vi.fn(async () => null),
-    setAnalysisAttempt: vi.fn(),
-    beginAnalysis: vi.fn(async () => true),
+    setAnalysisAttempt: vi.fn(async () => true),
+    clearAnalysisAttempt: vi.fn(async () => true),
+    beginAnalysis: vi.fn(async () => ({ accepted: true, started: true })),
     completeAnalysis: vi.fn(async () => true),
     failAnalysis: vi.fn(async () => true),
     beginDocumentGeneration: vi.fn(async () => ({ started: true })),
@@ -117,6 +118,7 @@ export function createUnitOfWork(
   }));
   const recordChanged = vi.fn();
   const recordDeleted = vi.fn();
+  const credits = createCreditRepositoryDouble();
   return {
     addOutboxEvent,
     recordChanged,
@@ -124,7 +126,7 @@ export function createUnitOfWork(
     unitOfWork: {
       execute: async (work) =>
         work({
-          credits: {} as never,
+          credits,
           jobApplications,
           jobApplicationChanges: { changed: recordChanged, deleted: recordDeleted },
           profiles: profiles as never,
@@ -134,6 +136,41 @@ export function createUnitOfWork(
           outbox: { add: addOutboxEvent },
         }),
     },
+  };
+}
+
+export function createCreditRepositoryDouble() {
+  return {
+    ensureGrant: vi.fn(async () => ({ created: true, grantId: "grant-1" })),
+    getBalance: vi.fn(async () => ({
+      totalCredits: 10,
+      availableCredits: 10,
+      reservedCredits: 0,
+    })),
+    reserve: vi.fn(async (input) => ({
+      reserved: true as const,
+      reservation: {
+        ...input,
+        grantId: "grant-1",
+        status: "reserved" as const,
+      },
+    })),
+    findReservation: vi.fn(async (id: string) => ({
+      id,
+      userId: "user-1",
+      grantId: "grant-1",
+      operationType: "match_analysis" as const,
+      resourceType: "job_application" as const,
+      resourceId: "job-1",
+      amount: 1,
+      status: "reserved" as const,
+      expiresAt: new Date("2026-06-15T00:00:00.000Z"),
+      createdAt: new Date("2026-06-14T00:00:00.000Z"),
+    })),
+    consumeReservation: vi.fn(async () => true),
+    releaseReservation: vi.fn(async () => true),
+    releaseReservationsForResource: vi.fn(async () => 0),
+    listExpiredReservations: vi.fn(async () => []),
   };
 }
 

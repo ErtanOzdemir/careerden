@@ -7,7 +7,7 @@ export class DeleteJobApplicationUseCase {
 
   async execute(jobApplicationId: string, userId: string): Promise<void> {
     await this.unitOfWork.execute(
-      async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
+      async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
         const jobApplication = await getAccessibleJobApplication(
           jobApplications,
           profiles,
@@ -23,6 +23,13 @@ export class DeleteJobApplicationUseCase {
 
         if (companyLogoFileId) fileIds.add(companyLogoFileId);
 
+        await credits.releaseReservationsForResource(
+          "match_analysis",
+          "job_application",
+          jobApplicationId,
+          "deletion",
+          new Date(),
+        );
         await jobApplications.deleteById(jobApplicationId);
         await enqueueStorageDeletions(outbox, fileIds);
         await jobApplicationChanges.deleted(jobApplication.id, jobApplication.profileId);

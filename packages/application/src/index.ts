@@ -35,6 +35,8 @@ export * from "./job-applications/get-job-application-detail.use-case.js";
 export * from "./job-applications/get-job-application-analytics.use-case.js";
 export * from "./job-applications/update-job-application-tracking.use-case.js";
 export * from "./job-applications/request-job-application-analysis.use-case.js";
+export * from "./job-applications/finalize-job-application-analysis-failure.use-case.js";
+export * from "./job-applications/expire-stale-credit-reservations.use-case.js";
 export * from "./job-applications/job-application-read-model.js";
 export * from "./job-applications/claim-next-scrape-job.use-case.js";
 export * from "./job-applications/create-job-application-from-scrape.use-case.js";

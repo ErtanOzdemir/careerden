@@ -4,14 +4,14 @@ import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresAnalysisOutboxDispatcher } from "./postgres-analysis-outbox.dispatcher.js";
 
 describe("PostgresAnalysisOutboxDispatcher", () => {
-  it("uses the outbox event ID as the idempotent BullMQ job ID", async () => {
+  it("keeps the logical attempt ID while using the outbox ID for BullMQ delivery", async () => {
     const outbox = createOutbox();
     const queue = createQueue();
 
     await new PostgresAnalysisOutboxDispatcher(outbox, queue).dispatchPending();
 
     expect(queue.enqueue).toHaveBeenCalledWith(
-      { jobApplicationId: "application-1", analysisAttemptId: "event-1" },
+      { jobApplicationId: "application-1", analysisAttemptId: "attempt-1" },
       { jobId: "event-1" },
     );
     expect(outbox.markProcessed).toHaveBeenCalledWith("event-1", expect.any(String));
@@ -46,7 +46,7 @@ function createOutbox(): PostgresOutboxRepository {
     id: "event-1",
     type: "job-application.analysis-requested",
     aggregateId: "application-1",
-    payload: { jobApplicationId: "application-1" },
+    payload: { jobApplicationId: "application-1", analysisAttemptId: "attempt-1" },
     attemptCount: 1,
   };
 

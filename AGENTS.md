@@ -121,6 +121,13 @@ documents for review or download.
   workflow derives it from the current repository so forks never default to upstream
   update metadata; packaged local builds without it keep the updater disabled.
 - PostgreSQL migrations are run through Knex during API startup.
+- AI credits belong to the Better Auth user. Free access is granted as one idempotent
+  10-credit lot per UTC calendar month; authenticated balance reads and analysis requests
+  lazily recover a missing current-month grant.
+- One logical match-analysis attempt uses one PostgreSQL-backed credit reservation shared
+  by all BullMQ deliveries and retries. Consume it only in the transaction that persists
+  validated analysis output. Terminal failure, deletion, supersession, and the LLM
+  worker's 24-hour recovery scan release it without writing a usage ledger entry.
 - Production startup fails closed when Better Auth or object-storage credentials use
   missing, short, or known development values; production object storage must not target
   localhost.

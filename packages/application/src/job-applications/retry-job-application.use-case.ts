@@ -25,7 +25,7 @@ export class RetryJobApplicationUseCase {
     options: RetryJobApplicationOptions = {},
   ): Promise<RetryJobApplicationResult> {
     return this.unitOfWork.execute(
-      async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
+      async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
         const jobApplication = await getAccessibleJobApplication(
           jobApplications,
           profiles,
@@ -58,6 +58,13 @@ export class RetryJobApplicationUseCase {
 
         if (companyLogoFileId) fileIds.add(companyLogoFileId);
 
+        await credits.releaseReservationsForResource(
+          "match_analysis",
+          "job_application",
+          jobApplicationId,
+          "superseded",
+          new Date(),
+        );
         const reset =
           mode === "analysis"
             ? await jobApplications.resetAnalysis(jobApplicationId)
@@ -73,11 +80,14 @@ export class RetryJobApplicationUseCase {
           const profile = await profiles.findById(reset.profileId);
           if (!profile) throw new ApplicationError("not_found", "Profile not found");
           await enqueueMatchAnalysisIfEnabled({
+            credits,
             jobApplications,
             outbox,
+            userId,
             jobApplicationId,
             autoRunMatchAnalysis: true,
             profileReadiness: assessProfileReadiness(profile),
+            insufficientCreditBehavior: "throw",
           });
         }
 

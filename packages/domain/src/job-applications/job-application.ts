@@ -41,6 +41,7 @@ export interface JobApplication {
   sourceUrl?: string;
   status: JobApplicationStatus;
   failureReason?: string;
+  analysisAttemptId?: string;
   documentGenerationAttemptId?: string;
   scrapeClaimedBy?: string;
   scrapeClaimExpiresAt?: Date;

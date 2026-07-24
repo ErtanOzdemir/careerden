@@ -23,6 +23,28 @@ describe("errorHandler", () => {
     });
   });
 
+  it("maps insufficient credits to HTTP 402 with machine-readable amounts", () => {
+    const response = createResponse();
+
+    errorHandler(
+      new ApplicationError("payment_required", "Not enough credits.", {
+        requiredCredits: 1,
+        availableCredits: 0,
+      }),
+      {} as Request,
+      response,
+      vi.fn() as NextFunction,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(402);
+    expect(response.json).toHaveBeenCalledWith({
+      code: "payment_required",
+      error: "Not enough credits.",
+      requiredCredits: 1,
+      availableCredits: 0,
+    });
+  });
+
   it("does not let application details override stable error fields", () => {
     const response = createResponse();
 

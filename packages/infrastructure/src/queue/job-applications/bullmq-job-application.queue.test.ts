@@ -5,7 +5,7 @@ import { BullMqJobApplicationQueue } from "./bullmq-job-application.queue.js";
 describe("BullMqJobApplicationQueue", () => {
   it("uses the job application id for first-time enqueueing", async () => {
     const queue = createQueue();
-    const payload = { jobApplicationId: "job-1" };
+    const payload = { jobApplicationId: "job-1", analysisAttemptId: "attempt-1" };
 
     await new BullMqJobApplicationQueue(queue).enqueue(payload);
 
@@ -18,7 +18,7 @@ describe("BullMqJobApplicationQueue", () => {
 
   it("uses a supplied idempotency job ID for outbox delivery", async () => {
     const queue = createQueue();
-    const payload = { jobApplicationId: "job-1" };
+    const payload = { jobApplicationId: "job-1", analysisAttemptId: "attempt-1" };
 
     await new BullMqJobApplicationQueue(queue).enqueue(payload, { jobId: "outbox-1" });
 
@@ -34,7 +34,7 @@ describe("BullMqJobApplicationQueue", () => {
     const queue = createQueue({
       existingJobState: "failed",
     });
-    const payload = { jobApplicationId: "job-1" };
+    const payload = { jobApplicationId: "job-1", analysisAttemptId: "attempt-1" };
 
     await new BullMqJobApplicationQueue(queue).enqueue(payload);
 
@@ -49,7 +49,7 @@ describe("BullMqJobApplicationQueue", () => {
 
   it("uses a BullMQ-safe custom id when restarting jobs", async () => {
     const queue = createQueue();
-    const payload = { jobApplicationId: "job-1" };
+    const payload = { jobApplicationId: "job-1", analysisAttemptId: "attempt-1" };
 
     await new BullMqJobApplicationQueue(queue).restart(payload);
 

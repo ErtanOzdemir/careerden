@@ -104,8 +104,9 @@ export interface JobApplicationRepository {
   listByStatus(status: JobApplicationStatus): Promise<JobApplication[]>;
   resetProcessing(id: string): Promise<JobApplication>;
   resetAnalysis(id: string): Promise<JobApplication>;
-  setAnalysisAttempt(id: string, attemptId: string): Promise<void>;
-  beginAnalysis(id: string, attemptId: string): Promise<boolean>;
+  setAnalysisAttempt(id: string, attemptId: string): Promise<boolean>;
+  clearAnalysisAttempt(id: string, attemptId: string): Promise<boolean>;
+  beginAnalysis(id: string, attemptId: string): Promise<{ accepted: boolean; started: boolean }>;
   completeAnalysis(
     id: string,
     attemptId: string,

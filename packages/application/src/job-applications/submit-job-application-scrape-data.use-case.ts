@@ -48,7 +48,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
     });
     try {
       await this.unitOfWork.execute(
-        async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
+        async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
           const current = await getAccessibleJobApplication(
             jobApplications,
             profiles,
@@ -76,11 +76,14 @@ export class SubmitJobApplicationScrapeDataUseCase {
           const profile = await profiles.findById(current.profileId);
           if (!profile) throw new ApplicationError("not_found", "Profile not found");
           await enqueueMatchAnalysisIfEnabled({
+            credits,
             jobApplications,
             outbox,
+            userId,
             jobApplicationId,
             autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
             profileReadiness: assessProfileReadiness(profile),
+            insufficientCreditBehavior: "skip",
           });
           if (previousLogoFileId && previousLogoFileId !== logo.uploadedFileId) {
             await enqueueStorageDeletions(outbox, [previousLogoFileId]);

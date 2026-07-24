@@ -9,7 +9,7 @@ export class RequestJobApplicationAnalysisUseCase {
 
   async execute(jobApplicationId: string, userId: string): Promise<JobApplication> {
     return this.unitOfWork.execute(
-      async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
+      async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
         const jobApplication = await getAccessibleJobApplication(
           jobApplications,
           profiles,
@@ -43,11 +43,14 @@ export class RequestJobApplicationAnalysisUseCase {
           title: "AI analysis requested",
         });
         await enqueueMatchAnalysisIfEnabled({
+          credits,
           jobApplications,
           outbox,
+          userId,
           jobApplicationId,
           autoRunMatchAnalysis: true,
           profileReadiness,
+          insufficientCreditBehavior: "throw",
         });
         await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         return jobApplication;

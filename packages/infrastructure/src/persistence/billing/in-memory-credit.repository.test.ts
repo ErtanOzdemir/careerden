@@ -33,4 +33,80 @@ describe("InMemoryCreditRepository", () => {
     expect(repository.listGrants()).toHaveLength(1);
     expect(repository.listLedgerEntries()).toHaveLength(1);
   });
+
+  it("reserves, consumes, and releases a credit exactly once", async () => {
+    const repository = new InMemoryCreditRepository();
+    const now = new Date("2026-07-24T14:30:00.000Z");
+    await repository.ensureGrant({
+      userId: "user-1",
+      sourceType: "free_monthly",
+      idempotencyKey: "free:user-1:2026-07",
+      amount: 2,
+      validFrom: new Date("2026-07-01T00:00:00.000Z"),
+      expiresAt: new Date("2026-08-01T00:00:00.000Z"),
+      createdAt: now,
+    });
+
+    await expect(
+      repository.reserve({
+        id: "attempt-1",
+        userId: "user-1",
+        operationType: "match_analysis",
+        resourceType: "job_application",
+        resourceId: "job-1",
+        amount: 1,
+        expiresAt: new Date("2026-07-25T14:30:00.000Z"),
+        createdAt: now,
+      }),
+    ).resolves.toMatchObject({ reserved: true });
+    await expect(repository.getBalance("user-1", now)).resolves.toEqual({
+      totalCredits: 2,
+      availableCredits: 1,
+      reservedCredits: 1,
+    });
+
+    await expect(repository.consumeReservation("attempt-1", now)).resolves.toBe(true);
+    await expect(repository.consumeReservation("attempt-1", now)).resolves.toBe(true);
+    await expect(repository.releaseReservation("attempt-1", "failure", now)).resolves.toBe(false);
+    await expect(repository.getBalance("user-1", now)).resolves.toEqual({
+      totalCredits: 1,
+      availableCredits: 1,
+      reservedCredits: 0,
+    });
+    expect(repository.listLedgerEntries()).toHaveLength(2);
+  });
+
+  it("returns a released reservation once and lists abandoned reservations by expiry", async () => {
+    const repository = new InMemoryCreditRepository();
+    const now = new Date("2026-07-24T14:30:00.000Z");
+    await repository.ensureGrant({
+      userId: "user-1",
+      sourceType: "free_monthly",
+      idempotencyKey: "free:user-1:2026-07",
+      amount: 1,
+      validFrom: new Date("2026-07-01T00:00:00.000Z"),
+      expiresAt: new Date("2026-08-01T00:00:00.000Z"),
+      createdAt: now,
+    });
+    await repository.reserve({
+      id: "attempt-1",
+      userId: "user-1",
+      operationType: "match_analysis",
+      resourceType: "job_application",
+      resourceId: "job-1",
+      amount: 1,
+      expiresAt: new Date("2026-07-25T14:30:00.000Z"),
+      createdAt: now,
+    });
+
+    await expect(
+      repository.listExpiredReservations({
+        at: new Date("2026-07-25T14:30:00.000Z"),
+        limit: 10,
+      }),
+    ).resolves.toHaveLength(1);
+    await expect(repository.releaseReservation("attempt-1", "timeout", now)).resolves.toBe(true);
+    await expect(repository.releaseReservation("attempt-1", "timeout", now)).resolves.toBe(false);
+    expect(repository.listLedgerEntries()).toHaveLength(1);
+  });
 });

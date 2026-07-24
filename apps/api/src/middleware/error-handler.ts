@@ -39,6 +39,7 @@ export function createErrorHandler(
         conflict: 409,
         forbidden: 403,
         not_found: 404,
+        payment_required: 402,
         validation: 400,
       }[error.code];
 

@@ -26,13 +26,11 @@ export class PostgresAnalysisOutboxDispatcher {
     for (const event of events) {
       try {
         const jobApplicationId = event.payload.jobApplicationId;
-        if (typeof jobApplicationId !== "string") {
+        const analysisAttemptId = event.payload.analysisAttemptId;
+        if (typeof jobApplicationId !== "string" || typeof analysisAttemptId !== "string") {
           throw new Error("Invalid analysis request outbox payload");
         }
-        await this.queue.enqueue(
-          { jobApplicationId, analysisAttemptId: event.id },
-          { jobId: event.id },
-        );
+        await this.queue.enqueue({ jobApplicationId, analysisAttemptId }, { jobId: event.id });
         await this.outbox.markProcessed(event.id, this.leaseOwner);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

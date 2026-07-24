@@ -27,6 +27,7 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
     sourceUrl: nullableString(row.source_url),
     status: row.status as JobApplicationStatus,
     failureReason: nullableString(row.failure_reason),
+    analysisAttemptId: nullableString(row.analysis_attempt_id),
     documentGenerationAttemptId: nullableString(row.document_generation_attempt_id),
     scrapeClaimedBy: nullableString(row.scrape_claimed_by),
     scrapeClaimExpiresAt: nullableDate(row.scrape_claim_expires_at),

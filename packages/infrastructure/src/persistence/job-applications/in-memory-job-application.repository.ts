@@ -223,6 +223,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status: "queued",
       failureReason: undefined,
+      analysisAttemptId: undefined,
       scrapeClaimedBy: undefined,
       scrapeClaimExpiresAt: undefined,
       scrapeAttemptCount: 0,
@@ -252,6 +253,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status: "scraped",
       failureReason: undefined,
+      analysisAttemptId: undefined,
       scrapeClaimedBy: undefined,
       scrapeClaimExpiresAt: undefined,
       nextScrapeAttemptAt: undefined,
@@ -268,26 +270,43 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     return updated;
   }
 
-  async beginAnalysis(id: string, attemptId: string): Promise<boolean> {
+  async beginAnalysis(
+    id: string,
+    attemptId: string,
+  ): Promise<{ accepted: boolean; started: boolean }> {
     const jobApplication = this.jobApplications.get(id);
-    if (!jobApplication) return false;
+    if (!jobApplication) return { accepted: false, started: false };
     const currentAttempt = this.analysisAttempts.get(id);
-    if (
-      currentAttempt !== attemptId ||
-      !["scraped", "analyzing", "failed"].includes(jobApplication.status)
-    ) {
-      return false;
+    if (currentAttempt !== attemptId || !["scraped", "analyzing"].includes(jobApplication.status)) {
+      return { accepted: false, started: false };
+    }
+    if (jobApplication.status === "analyzing") {
+      return { accepted: true, started: false };
     }
     this.jobApplications.set(id, { ...jobApplication, status: "analyzing" });
+    return { accepted: true, started: true };
+  }
+
+  async setAnalysisAttempt(id: string, attemptId: string): Promise<boolean> {
+    const jobApplication = this.jobApplications.get(id);
+    if (!jobApplication || jobApplication.status !== "scraped" || this.analysisAttempts.has(id))
+      return false;
+    this.analysisAttempts.set(id, attemptId);
+    this.jobApplications.set(id, { ...jobApplication, analysisAttemptId: attemptId });
     return true;
   }
 
-  async setAnalysisAttempt(id: string, attemptId: string): Promise<void> {
+  async clearAnalysisAttempt(id: string, attemptId: string): Promise<boolean> {
     const jobApplication = this.jobApplications.get(id);
-    if (!jobApplication || jobApplication.status !== "scraped") {
-      throw new Error(`Job application ${id} is not ready for analysis`);
-    }
-    this.analysisAttempts.set(id, attemptId);
+    if (
+      !jobApplication ||
+      jobApplication.status !== "scraped" ||
+      this.analysisAttempts.get(id) !== attemptId
+    )
+      return false;
+    this.analysisAttempts.delete(id);
+    this.jobApplications.set(id, { ...jobApplication, analysisAttemptId: undefined });
+    return true;
   }
 
   async completeAnalysis(
@@ -314,7 +333,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
-      jobApplication.status !== "analyzing" ||
+      !["scraped", "analyzing"].includes(jobApplication.status) ||
       this.analysisAttempts.get(id) !== attemptId
     ) {
       return false;

@@ -1,6 +1,11 @@
-import { Worker } from "bullmq";
+import { UnrecoverableError, Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import { AnalyzeScrapedJobUseCase, RunMatchAnalysisUseCase } from "@careerden/application";
+import {
+  AnalyzeScrapedJobUseCase,
+  ExpireStaleCreditReservationsUseCase,
+  FinalizeJobApplicationAnalysisFailureUseCase,
+  RunMatchAnalysisUseCase,
+} from "@careerden/application";
 import type { JobApplicationQueuePayload } from "@careerden/domain";
 import {
   AiProviderFactory,
@@ -63,13 +68,41 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     new RunMatchAnalysisUseCase(aiProviderFactory.create()),
     unitOfWork,
   );
+  const finalizeAnalysisFailure = new FinalizeJobApplicationAnalysisFailureUseCase(unitOfWork);
+  const expireStaleReservations = new ExpireStaleCreditReservationsUseCase(unitOfWork);
+  let isExpiringReservations = false;
+  const expireReservations = async () => {
+    if (isExpiringReservations) return;
+    isExpiringReservations = true;
+    try {
+      await expireStaleReservations.execute();
+    } finally {
+      isExpiringReservations = false;
+    }
+  };
+  await expireReservations();
+  const reservationExpiryInterval = setInterval(() => {
+    void expireReservations().catch((error) => {
+      console.error("LLM worker failed stale credit reservation recovery", error);
+    });
+  }, 60_000);
   const worker = new Worker<JobApplicationQueuePayload>(
     jobApplicationQueueName,
     async (job) => {
       try {
         return await analyzeScrapedJob.execute(job.data);
       } catch (error) {
-        throw toBullMqWorkerError(error);
+        const workerError = toBullMqWorkerError(error);
+        const configuredAttempts = job.opts.attempts ?? 1;
+        const isFinalAttempt = job.attemptsMade + 1 >= configuredAttempts;
+        if (workerError instanceof UnrecoverableError || isFinalAttempt) {
+          await finalizeAnalysisFailure.execute({
+            jobApplicationId: job.data.jobApplicationId,
+            analysisAttemptId: job.data.analysisAttemptId,
+            reason: error instanceof Error ? error.message : "Unknown AI analysis error",
+          });
+        }
+        throw workerError;
       }
     },
     {
@@ -92,6 +125,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     worker,
     close: async () => {
       clearInterval(outboxInterval);
+      clearInterval(reservationExpiryInterval);
       await worker.close();
       await analysisQueue.close();
       await changeBus.close();

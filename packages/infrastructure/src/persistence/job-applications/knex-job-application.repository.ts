@@ -289,24 +289,39 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     });
   }
 
-  async beginAnalysis(id: string, attemptId: string): Promise<boolean> {
-    const updated = await this.db("job_applications")
+  async beginAnalysis(
+    id: string,
+    attemptId: string,
+  ): Promise<{ accepted: boolean; started: boolean }> {
+    const row = await this.db("job_applications")
       .where({ id, analysis_attempt_id: attemptId })
-      .whereIn("status", ["scraped", "analyzing", "failed"])
-      .update({
-        status: "analyzing",
-        analysis_attempt_id: attemptId,
-        failure_reason: null,
-        updated_at: this.db.fn.now(),
-      });
+      .forUpdate()
+      .first<{ status: string }>();
+    if (!row || !["scraped", "analyzing"].includes(row.status)) {
+      return { accepted: false, started: false };
+    }
+    if (row.status === "analyzing") return { accepted: true, started: false };
+    await this.db("job_applications").where({ id, analysis_attempt_id: attemptId }).update({
+      status: "analyzing",
+      failure_reason: null,
+      updated_at: this.db.fn.now(),
+    });
+    return { accepted: true, started: true };
+  }
+
+  async setAnalysisAttempt(id: string, attemptId: string): Promise<boolean> {
+    const updated = await this.db("job_applications")
+      .where({ id, status: "scraped" })
+      .whereNull("analysis_attempt_id")
+      .update({ analysis_attempt_id: attemptId, updated_at: this.db.fn.now() });
     return updated > 0;
   }
 
-  async setAnalysisAttempt(id: string, attemptId: string): Promise<void> {
+  async clearAnalysisAttempt(id: string, attemptId: string): Promise<boolean> {
     const updated = await this.db("job_applications")
-      .where({ id, status: "scraped" })
-      .update({ analysis_attempt_id: attemptId, updated_at: this.db.fn.now() });
-    if (updated === 0) throw new Error(`Job application ${id} is not ready for analysis`);
+      .where({ id, status: "scraped", analysis_attempt_id: attemptId })
+      .update({ analysis_attempt_id: null, updated_at: this.db.fn.now() });
+    return updated > 0;
   }
 
   async completeAnalysis(
@@ -329,7 +344,8 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
 
   async failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean> {
     const updated = await this.db("job_applications")
-      .where({ id, analysis_attempt_id: attemptId, status: "analyzing" })
+      .where({ id, analysis_attempt_id: attemptId })
+      .whereIn("status", ["scraped", "analyzing"])
       .update({
         status: "failed",
         failure_reason: reason,

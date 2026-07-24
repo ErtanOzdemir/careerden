@@ -1,6 +1,6 @@
 export interface JobApplicationQueuePayload {
   jobApplicationId: string;
-  analysisAttemptId?: string;
+  analysisAttemptId: string;
 }
 
 export interface JobApplicationQueue {

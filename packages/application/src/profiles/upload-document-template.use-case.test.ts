@@ -165,6 +165,7 @@ function createUnitOfWork(profiles: ReturnType<typeof createProfileRepository>):
     unitOfWork: {
       execute: async (work) =>
         work({
+          credits: {} as never,
           jobApplications: {} as never,
           jobApplicationChanges: {} as never,
           profiles,

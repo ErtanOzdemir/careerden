@@ -155,6 +155,7 @@ function createUnitOfWork(
   return {
     execute: async (work) =>
       work({
+        credits: {} as never,
         jobApplications,
         jobApplicationChanges: {
           changed: async (applicationId, profileId) => {

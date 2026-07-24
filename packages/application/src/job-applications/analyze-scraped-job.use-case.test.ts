@@ -199,6 +199,7 @@ function createUnitOfWork(
     unitOfWork: {
       execute: async (work) =>
         work({
+          credits: {} as never,
           jobApplications,
           jobApplicationChanges: { changed: recordChanged, deleted: vi.fn() },
           profiles: profiles as never,

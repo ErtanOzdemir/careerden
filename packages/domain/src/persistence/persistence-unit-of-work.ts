@@ -1,3 +1,4 @@
+import type { CreditRepository } from "../billing/credit-repository.js";
 import type { JobApplicationRepository } from "../job-applications/job-application-repository.js";
 import type { JobApplicationChangeRecorder } from "../job-applications/job-application-change.js";
 import type { FollowUpReminderRepository } from "../notifications/follow-up-reminder.js";
@@ -7,6 +8,7 @@ import type { UserProfileAccountRepository } from "../profiles/user-profile-repo
 import type { OutboxRepository } from "./outbox.js";
 
 export interface PersistenceTransaction {
+  credits: CreditRepository;
   jobApplications: JobApplicationRepository;
   jobApplicationChanges: JobApplicationChangeRecorder;
   profiles: UserProfileAccountRepository;

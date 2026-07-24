@@ -1,3 +1,5 @@
+export * from "./billing/ensure-current-monthly-credits.use-case.js";
+export * from "./billing/get-credit-balance.use-case.js";
 export * from "./scraping/get-app-path.use-case.js";
 export * from "./scraping/check-linkedin-session.use-case.js";
 export * from "./scraping/start-linkedin-session.use-case.js";

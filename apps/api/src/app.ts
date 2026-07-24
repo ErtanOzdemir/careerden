@@ -48,6 +48,8 @@ import {
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
   SubmitSupportRequestUseCase,
+  EnsureCurrentMonthlyCreditsUseCase,
+  GetCreditBalanceUseCase,
 } from "@careerden/application";
 import {
   DocxtemplaterTemplateRenderer,
@@ -70,6 +72,7 @@ import {
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";
+import { createBillingRouter } from "./billing/billing.routes.js";
 import type { ApiEnv } from "./env.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -89,23 +92,26 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const db = createPostgresDb(env.DATABASE_URL);
   await runPostgresMigrations(db);
 
-  const auth = createAuth({
-    emailSender: createSmtpEmailSender({
-      from: env.SMTP_FROM,
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-    }),
-    baseUrl: env.BETTER_AUTH_URL,
-    databaseUrl: env.DATABASE_URL,
-    secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
-  });
   const changeBus = RedisJobApplicationChangeBus.create(env.REDIS_URL);
   const notificationChangeBus = RedisNotificationChangeBus.create(env.REDIS_URL);
   const jobApplications = new PostgresJobApplicationRepository(db);
   const notifications = new PostgresNotificationRepository(db);
   const profiles = new PostgresUserProfileRepository(db);
   const unitOfWork = new PostgresPersistenceUnitOfWork(db, changeBus);
+  const ensureCurrentMonthlyCredits = new EnsureCurrentMonthlyCreditsUseCase(unitOfWork);
+  const getCreditBalance = new GetCreditBalanceUseCase(unitOfWork);
+  const auth = createAuth({
+    emailSender: createSmtpEmailSender({
+      from: env.SMTP_FROM,
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+    }),
+    creditProvisioner: ensureCurrentMonthlyCredits,
+    baseUrl: env.BETTER_AUTH_URL,
+    databaseUrl: env.DATABASE_URL,
+    secret: env.BETTER_AUTH_SECRET,
+    trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
+  });
   const storage = new S3CompatibleStorage({
     accessKeyId: env.OBJECT_STORAGE_ACCESS_KEY_ID,
     bucket: env.OBJECT_STORAGE_BUCKET,
@@ -151,6 +157,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   });
 
   app.use(requireSession(auth));
+  app.use("/billing", createBillingRouter({ getCreditBalance }));
   app.use(
     "/profiles",
     createProfileRouter({

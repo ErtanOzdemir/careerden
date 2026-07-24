@@ -11,6 +11,9 @@ export * from "./persistence/job-applications/postgres-job-application.repositor
 export * from "./persistence/notifications/in-memory-notification.repository.js";
 export * from "./persistence/notifications/knex-notification.repository.js";
 export * from "./persistence/notifications/postgres-notification.repository.js";
+export * from "./persistence/billing/in-memory-credit.repository.js";
+export * from "./persistence/billing/knex-credit.repository.js";
+export * from "./persistence/billing/postgres-credit.repository.js";
 export * from "./persistence/knex.js";
 export * from "./persistence/postgres-knex.js";
 export * from "./persistence/postgres-outbox.repository.js";

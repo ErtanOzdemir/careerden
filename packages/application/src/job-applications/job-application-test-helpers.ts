@@ -124,6 +124,7 @@ export function createUnitOfWork(
     unitOfWork: {
       execute: async (work) =>
         work({
+          credits: {} as never,
           jobApplications,
           jobApplicationChanges: { changed: recordChanged, deleted: recordDeleted },
           profiles: profiles as never,

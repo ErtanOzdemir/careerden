@@ -11,6 +11,7 @@ import type {
   PersistenceUnitOfWork,
 } from "@careerden/domain";
 import { PostgresFollowUpReminderRepository } from "../notifications/follow-up-reminder.repository.js";
+import { PostgresCreditRepository } from "./billing/postgres-credit.repository.js";
 import { PostgresJobApplicationRepository } from "./job-applications/postgres-job-application.repository.js";
 import { PostgresNotificationRepository } from "./notifications/postgres-notification.repository.js";
 import { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
@@ -28,6 +29,7 @@ export class PostgresPersistenceUnitOfWork implements PersistenceUnitOfWork {
     const notificationChanges = new BufferedNotificationChangeRecorder();
     const result = await this.db.transaction((transaction) =>
       work({
+        credits: new PostgresCreditRepository(transaction),
         jobApplications: new PostgresJobApplicationRepository(transaction),
         jobApplicationChanges: changes,
         profiles: new PostgresUserProfileRepository(transaction),

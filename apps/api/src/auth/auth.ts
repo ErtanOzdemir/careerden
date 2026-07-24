@@ -13,11 +13,23 @@ interface VerificationOtpInput {
 
 export interface AuthConfig {
   emailSender: EmailSender;
+  creditProvisioner: AuthCreditProvisioner;
   baseUrl: string;
   databaseUrl: string;
   secret: string;
   trustedOrigins: string[];
 }
+
+export interface AuthCreditProvisioner {
+  execute(userId: string): Promise<unknown>;
+}
+
+export interface AuthCreditProvisioningFailure {
+  errorName: string;
+  event: "session.created" | "user.created";
+}
+
+export type AuthCreditProvisioningFailureLogger = (failure: AuthCreditProvisioningFailure) => void;
 
 export interface CareerdenAuth {
   handler: (request: Request) => Promise<Response>;
@@ -41,6 +53,7 @@ export function createAuth(config: AuthConfig): CareerdenAuth {
     database: new Pool({
       connectionString: config.databaseUrl,
     }),
+    databaseHooks: createMonthlyCreditProvisioningHooks(config.creditProvisioner),
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
@@ -58,6 +71,42 @@ export function createAuth(config: AuthConfig): CareerdenAuth {
       }),
     ],
   });
+}
+
+export function createMonthlyCreditProvisioningHooks(
+  creditProvisioner: AuthCreditProvisioner,
+  logFailure: AuthCreditProvisioningFailureLogger = defaultCreditProvisioningFailureLogger,
+) {
+  const provision = async (
+    userId: string,
+    event: AuthCreditProvisioningFailure["event"],
+  ): Promise<void> => {
+    try {
+      await creditProvisioner.execute(userId);
+    } catch (error) {
+      logFailure({
+        event,
+        errorName: error instanceof Error ? error.name : "NonErrorThrown",
+      });
+    }
+  };
+
+  return {
+    user: {
+      create: {
+        after: async (user: { id: string }) => provision(user.id, "user.created"),
+      },
+    },
+    session: {
+      create: {
+        after: async (session: { userId: string }) => provision(session.userId, "session.created"),
+      },
+    },
+  };
+}
+
+function defaultCreditProvisioningFailureLogger(failure: AuthCreditProvisioningFailure): void {
+  console.error("Failed to provision monthly credits from auth lifecycle", failure);
 }
 
 export function createRegistrationOtpHandler(emailSender: EmailSender) {

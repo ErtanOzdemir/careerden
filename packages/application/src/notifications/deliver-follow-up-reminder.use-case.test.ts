@@ -96,6 +96,7 @@ function createUnitOfWork(
   return {
     execute: async (work) =>
       work({
+        credits: {} as never,
         jobApplications: {} as never,
         jobApplicationChanges: {} as never,
         profiles: {} as never,

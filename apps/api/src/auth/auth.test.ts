@@ -1,6 +1,44 @@
 import { describe, expect, it, vi } from "vitest";
 import type { EmailSender } from "@careerden/domain";
-import { createPasswordResetHandler, createRegistrationOtpHandler } from "./auth.js";
+import {
+  createMonthlyCreditProvisioningHooks,
+  createPasswordResetHandler,
+  createRegistrationOtpHandler,
+} from "./auth.js";
+
+describe("createMonthlyCreditProvisioningHooks", () => {
+  it("provisions credits after user registration and session creation", async () => {
+    const creditProvisioner = { execute: vi.fn(async () => undefined) };
+    const hooks = createMonthlyCreditProvisioningHooks(creditProvisioner);
+
+    await hooks.user.create.after({ id: "user-1" });
+    await hooks.session.create.after({ userId: "user-1" });
+
+    expect(creditProvisioner.execute).toHaveBeenNthCalledWith(1, "user-1");
+    expect(creditProvisioner.execute).toHaveBeenNthCalledWith(2, "user-1");
+  });
+
+  it("does not fail registration or login when provisioning needs lazy recovery", async () => {
+    const creditProvisioner = {
+      execute: vi.fn(async () => {
+        throw new Error("database unavailable");
+      }),
+    };
+    const logFailure = vi.fn();
+    const hooks = createMonthlyCreditProvisioningHooks(creditProvisioner, logFailure);
+
+    await expect(hooks.user.create.after({ id: "user-1" })).resolves.toBeUndefined();
+    await expect(hooks.session.create.after({ userId: "user-1" })).resolves.toBeUndefined();
+    expect(logFailure).toHaveBeenCalledWith({
+      event: "user.created",
+      errorName: "Error",
+    });
+    expect(logFailure).toHaveBeenCalledWith({
+      event: "session.created",
+      errorName: "Error",
+    });
+  });
+});
 
 describe("createRegistrationOtpHandler", () => {
   it("sends email verification OTPs", async () => {

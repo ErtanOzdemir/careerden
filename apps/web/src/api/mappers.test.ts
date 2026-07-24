@@ -19,6 +19,17 @@ describe("API mappers", () => {
     expect(mapApiStatusToUi("ghosted")).toBe("Ghosted");
   });
 
+  it("preserves the active analysis attempt for queued UI state", () => {
+    const application = createApplicationDetail();
+    application.analysisAttemptId = "attempt-1";
+    application.status = "scraped";
+
+    expect(mapApiJobApplicationToUi(application)).toMatchObject({
+      analysisAttemptId: "attempt-1",
+      processingStatus: "scraped",
+    });
+  });
+
   it("maps job application detail into the existing UI shape", () => {
     const application = createApplicationDetail();
 

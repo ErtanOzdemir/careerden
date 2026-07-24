@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, buildUrl, requestJson } from "./client";
+import { ApiError, buildUrl, hasApiErrorCode, requestJson } from "./client";
 
 describe("API client", () => {
   afterEach(() => {
@@ -44,5 +44,17 @@ describe("API client", () => {
       message: "Invalid query parameters",
       status: 400,
     } satisfies Partial<ApiError>);
+  });
+
+  it("classifies API failures by stable code instead of message text", () => {
+    const error = new ApiError("Message wording is not part of the contract", 402, {
+      code: "payment_required",
+      requiredCredits: 1,
+      availableCredits: 0,
+    });
+
+    expect(hasApiErrorCode(error, "payment_required")).toBe(true);
+    expect(hasApiErrorCode(error, "conflict")).toBe(false);
+    expect(hasApiErrorCode(new Error("payment_required"), "payment_required")).toBe(false);
   });
 });

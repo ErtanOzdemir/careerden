@@ -78,6 +78,8 @@ export function mapApiJobApplicationToUi(
     .find((description): description is string => Boolean(description));
 
   return {
+    analysisAttemptId: application.analysisAttemptId,
+    analysisSkipReason: detail ? getAnalysisSkipReason(detail.events) : undefined,
     applicationPackPreferences: application.applicationPackPreferences,
     id: application.id,
     profileId: application.profileId,
@@ -133,6 +135,14 @@ export function mapApiJobApplicationToUi(
       detail?.documentContent ??
       (detail?.matchAnalysis ? mapInitialDocumentContent(detail.matchAnalysis) : undefined),
   };
+}
+
+function getAnalysisSkipReason(
+  events: ApiJobApplicationEvent[],
+): JobApplication["analysisSkipReason"] {
+  return events.some((event) => event.metadata.reason === "insufficient_credits")
+    ? "insufficient_credits"
+    : undefined;
 }
 
 function mapInitialDocumentContent(match: ApiMatchAnalysis) {

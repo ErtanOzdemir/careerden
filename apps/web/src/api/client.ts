@@ -19,6 +19,14 @@ export class ApiError extends Error {
   }
 }
 
+export function hasApiErrorCode(error: unknown, code: string): error is ApiError {
+  if (!(error instanceof ApiError) || !error.details || typeof error.details !== "object") {
+    return false;
+  }
+
+  return "code" in error.details && error.details.code === code;
+}
+
 export async function requestJson<T>(path: string, options: RequestJsonOptions = {}): Promise<T> {
   const response = await fetch(buildUrl(path, options.query), {
     method: options.method ?? "GET",

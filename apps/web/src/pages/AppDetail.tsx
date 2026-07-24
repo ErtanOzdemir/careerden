@@ -1,11 +1,13 @@
 import { useEffect, useId, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Button } from "../components/ui/button.js";
+import { Button, buttonVariants } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import { StatusBadge } from "../components/careerden/status-badge.js";
 import type { DisplayStatus } from "../components/careerden/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
+import { hasApiErrorCode } from "../api/client.js";
 import { profilesApi } from "../api/profiles.js";
+import { useCreditBalance } from "../billing/CreditBalanceProvider.js";
 import { mapApiJobApplicationToUi } from "../api/mappers.js";
 import {
   useJobApplicationChanges,
@@ -48,12 +50,14 @@ const tabs: { id: Tab; label: string }[] = [
 ];
 
 export default function AppDetail() {
+  const { refreshBalance } = useCreditBalance();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const [app, setApp] = useState<JobApplication | null>(null);
   const [profile, setProfile] = useState<ApiProfile | null>(null);
   const [templates, setTemplates] = useState<ApiDocumentTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [analysisCreditError, setAnalysisCreditError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get("tab")) ?? "pack");
   const [isUpdatingPack, setIsUpdatingPack] = useState(false);
@@ -126,15 +130,24 @@ export default function AppDetail() {
       if (change.type === "application.deleted") {
         setApp(null);
         setError("Deleted.");
+        await refreshBalance();
         return;
       }
       try {
         await refresh();
       } catch {
         /* ignore */
+      } finally {
+        await refreshBalance();
       }
     },
-    onReconnect: () => refresh(),
+    onReconnect: async () => {
+      try {
+        await refresh();
+      } finally {
+        await refreshBalance();
+      }
+    },
   });
 
   async function refresh() {
@@ -341,6 +354,7 @@ export default function AppDetail() {
     try {
       setIsRetrying(true);
       setError(null);
+      setAnalysisCreditError(false);
       if (app?.processingStatus === "scraped") {
         await jobApplicationsApi.startAnalysis(id);
       } else {
@@ -348,9 +362,14 @@ export default function AppDetail() {
       }
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed.");
+      if (hasApiErrorCode(e, "payment_required")) {
+        setAnalysisCreditError(true);
+      } else {
+        setError(e instanceof Error ? e.message : "Failed.");
+      }
     } finally {
       setIsRetrying(false);
+      void refreshBalance();
     }
   }
 
@@ -386,9 +405,12 @@ export default function AppDetail() {
       </div>
     );
 
-  const isProcessing = ["queued", "scraping", "analyzing", "generating_documents"].includes(
-    app.processingStatus ?? "",
-  );
+  const isAnalysisQueued = app.processingStatus === "scraped" && Boolean(app.analysisAttemptId);
+  const isProcessing =
+    isAnalysisQueued ||
+    ["queued", "scraping", "analyzing", "generating_documents"].includes(
+      app.processingStatus ?? "",
+    );
   const processingLabel = getProcessingLabel(app);
 
   return (
@@ -473,6 +495,11 @@ export default function AppDetail() {
               <Sparkles className="size-3.5" />
               View application pack
             </Button>
+          ) : isAnalysisQueued ? (
+            <Button size="sm" disabled>
+              <Loader2 className="size-3.5 animate-spin" />
+              Analysis queued
+            </Button>
           ) : (
             <Button size="sm" onClick={handleRetry} disabled={isRetrying}>
               <RefreshCw className={`size-3.5 ${isRetrying ? "animate-spin" : ""}`} />
@@ -512,6 +539,22 @@ export default function AppDetail() {
             <RefreshCw className="size-3.5" />
             Retry
           </Button>
+        </div>
+      )}
+
+      {(analysisCreditError ||
+        (app.processingStatus === "scraped" &&
+          app.analysisSkipReason === "insufficient_credits")) && (
+        <div className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">AI analysis needs one credit</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              The scraped job is safe. Add credits, then start the analysis again.
+            </p>
+          </div>
+          <Link className={buttonVariants({ size: "sm", variant: "outline" })} to="/settings">
+            View AI credits
+          </Link>
         </div>
       )}
 
@@ -1524,6 +1567,10 @@ function toDateTimeLocalValue(value?: string) {
 }
 
 function getProcessingLabel(app: JobApplication): string {
+  if (app.processingStatus === "scraped" && app.analysisAttemptId) {
+    return "AI analysis queued";
+  }
+
   switch (app.processingStatus) {
     case "queued":
       return app.processingFailureReason ? "Retry scheduled" : "Scraping waiting";

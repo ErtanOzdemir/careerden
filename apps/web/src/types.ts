@@ -89,6 +89,8 @@ export interface GeneratedApplicationDocument {
 }
 
 export interface JobApplication {
+  analysisAttemptId?: string;
+  analysisSkipReason?: "insufficient_credits";
   applicationPackPreferences?: ApiApplicationPackPreferences;
   id: string;
   profileId?: string;

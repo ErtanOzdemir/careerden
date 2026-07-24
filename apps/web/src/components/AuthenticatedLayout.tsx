@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { authClient } from "../api/auth";
+import { CreditBalanceProvider } from "../billing/CreditBalanceProvider.js";
 import AppShell from "./AppShell";
 
 export default function AuthenticatedLayout() {
@@ -17,5 +18,9 @@ export default function AuthenticatedLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  return <AppShell />;
+  return (
+    <CreditBalanceProvider>
+      <AppShell />
+    </CreditBalanceProvider>
+  );
 }

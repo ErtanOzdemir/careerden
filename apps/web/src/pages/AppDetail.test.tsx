@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { JobApplication } from "../types.js";
 import type { ApiJobApplicationDetail, ApiProfile } from "../api/types.js";
+import { ApiError } from "../api/client.js";
 import AppDetail, {
   CompanyDetailsPanel,
   FollowUpsEmptyState,
@@ -13,6 +14,8 @@ vi.mock("../api/jobApplications.js", () => ({
   jobApplicationsApi: {
     createContact: vi.fn(),
     get: vi.fn(),
+    retry: vi.fn(),
+    startAnalysis: vi.fn(),
   },
 }));
 
@@ -27,8 +30,96 @@ vi.mock("../api/jobApplicationChanges.js", () => ({
   useJobApplicationChanges: vi.fn(),
 }));
 
+const billingMocks = vi.hoisted(() => ({
+  refreshBalance: vi.fn(async () => undefined),
+}));
+
+vi.mock("../billing/CreditBalanceProvider.js", () => ({
+  useCreditBalance: () => ({ refreshBalance: billingMocks.refreshBalance }),
+}));
+
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
+
+describe("AppDetail AI credits", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("handles coded payment_required errors and refreshes the balance", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      status: "scraped",
+    });
+    vi.mocked(jobApplicationsApi.startAnalysis).mockRejectedValue(
+      new ApiError("provider text can change", 402, {
+        code: "payment_required",
+        requiredCredits: 1,
+        availableCredits: 0,
+      }),
+    );
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
+
+    renderAppDetail();
+    fireEvent.click(await screen.findByRole("button", { name: "Start analysis" }));
+
+    expect(await screen.findByText("AI analysis needs one credit")).toBeInTheDocument();
+    expect(
+      screen.getByText("The scraped job is safe. Add credits, then start the analysis again."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View AI credits" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
+    expect(screen.queryByText("provider text can change")).not.toBeInTheDocument();
+    await waitFor(() => expect(billingMocks.refreshBalance).toHaveBeenCalled());
+  });
+
+  it("explains when automatic analysis was skipped without discarding the scrape", async () => {
+    const detail = createApplicationDetail();
+    detail.status = "scraped";
+    detail.events = [
+      {
+        body: "The scrape was saved, but there are not enough credits to run AI analysis.",
+        createdAt: "2026-07-17T08:01:00.000Z",
+        id: "event-1",
+        jobApplicationId: "job-1",
+        metadata: { reason: "insufficient_credits" },
+        occurredAt: "2026-07-17T08:01:00.000Z",
+        title: "AI analysis skipped",
+        type: "processing",
+      },
+    ];
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue(detail);
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
+
+    renderAppDetail();
+
+    expect(await screen.findByText("AI analysis needs one credit")).toBeInTheDocument();
+    expect(
+      screen.getByText("The scraped job is safe. Add credits, then start the analysis again."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a reserved scraped analysis as queued and prevents a duplicate request", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      analysisAttemptId: "attempt-1",
+      status: "scraped",
+    });
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
+
+    renderAppDetail();
+
+    expect(await screen.findByRole("button", { name: "Analysis queued" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
+    expect(jobApplicationsApi.startAnalysis).not.toHaveBeenCalled();
+  });
+});
 
 describe("AppDetail contacts", () => {
   afterEach(() => {
@@ -95,6 +186,16 @@ describe("AppDetail contacts", () => {
     expect(screen.getByText("Contacts")).toBeInTheDocument();
   });
 });
+
+function renderAppDetail() {
+  return render(
+    <MemoryRouter initialEntries={["/applications/job-1"]}>
+      <Routes>
+        <Route path="/applications/:id" element={<AppDetail />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
 
 describe("FollowUpsEmptyState", () => {
   afterEach(cleanup);

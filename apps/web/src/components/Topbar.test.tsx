@@ -5,6 +5,14 @@ import { notificationsApi } from "../api/notifications.js";
 import { notificationsChangedEventName } from "./DesktopNotificationBridge.js";
 import { Topbar } from "./Topbar";
 
+vi.mock("../billing/CreditBalanceProvider.js", () => ({
+  useCreditBalance: () => ({
+    balance: { totalCredits: 10, availableCredits: 8, reservedCredits: 2 },
+    balanceError: null,
+    isLoading: false,
+  }),
+}));
+
 describe("Topbar", () => {
   afterEach(() => {
     cleanup();
@@ -76,6 +84,11 @@ describe("Topbar", () => {
     expect(screen.getByRole("button", { name: "Add LinkedIn job" })).toHaveClass(
       "[-webkit-app-region:no-drag]",
     );
+    expect(screen.getByRole("link", { name: "AI credits" })).toHaveClass(
+      "[-webkit-app-region:no-drag]",
+    );
+    expect(screen.getByRole("link", { name: "AI credits" })).toHaveTextContent("8 credits(2 held)");
+    expect(screen.getByRole("link", { name: "AI credits" })).toHaveAttribute("href", "/settings");
   });
 
   it("closes the notifications dropdown when clicking outside it", () => {

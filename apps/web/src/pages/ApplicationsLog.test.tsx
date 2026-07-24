@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ApplicationsLog from "./ApplicationsLog.js";
@@ -6,6 +6,8 @@ import ApplicationsLog from "./ApplicationsLog.js";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   me: vi.fn(),
+  refreshBalance: vi.fn(),
+  useJobApplicationChanges: vi.fn(),
 }));
 
 vi.mock("../api/jobApplications.js", () => ({
@@ -20,7 +22,11 @@ vi.mock("../api/profiles.js", () => ({
 }));
 
 vi.mock("../api/jobApplicationChanges.js", () => ({
-  useJobApplicationChanges: vi.fn(),
+  useJobApplicationChanges: mocks.useJobApplicationChanges,
+}));
+
+vi.mock("../billing/CreditBalanceProvider.js", () => ({
+  useCreditBalance: () => ({ refreshBalance: mocks.refreshBalance }),
 }));
 
 describe("ApplicationsLog", () => {
@@ -65,6 +71,45 @@ describe("ApplicationsLog", () => {
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })),
     );
+  });
+
+  it("refreshes credits when an application SSE change settles background work", async () => {
+    mocks.me.mockResolvedValue({ id: "profile-1" });
+    mocks.list.mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 20,
+      totalItems: 0,
+      totalPages: 0,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/applications"]}>
+        <Routes>
+          <Route path="/applications" element={<ApplicationsLog />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mocks.useJobApplicationChanges).toHaveBeenCalled());
+    const handlers = mocks.useJobApplicationChanges.mock.calls.at(-1)?.[1] as {
+      onChange: (change: {
+        type: "application.changed";
+        applicationId: string;
+        profileId: string;
+        occurredAt: string;
+      }) => Promise<void>;
+    };
+
+    await act(async () => {
+      await handlers.onChange({
+        type: "application.changed",
+        applicationId: "application-1",
+        profileId: "profile-1",
+        occurredAt: "2026-07-24T00:00:00.000Z",
+      });
+    });
+
+    expect(mocks.refreshBalance).toHaveBeenCalledOnce();
   });
 
   it("places company logos on a light tile and falls back to company initials", async () => {

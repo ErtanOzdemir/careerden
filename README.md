@@ -163,6 +163,13 @@ confirmed paid period creates one idempotent 100-credit grant that expires at th
 provider-confirmed period end. Scheduled and completed cancellations update subscription
 state without revoking credits from an already-paid period.
 
+The authenticated web shell shows available and reserved credits in the top bar. Settings
+explains credit settlement, displays subscription state, and opens Creem checkout or the
+customer portal. Credit state refreshes on focus and application changes, and temporarily
+polls while work has an active reservation so worker settlement becomes visible without a
+page reload. A coded `payment_required` response links the preserved scraped job back to
+credit settings.
+
 In development, Electron loads the Vite renderer and connects to the standalone API. A
 packaged app instead serves the bundled renderer from `careerden://app` and proxies
 same-origin `/api` requests to its build-time API URL. See the

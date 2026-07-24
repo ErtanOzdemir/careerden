@@ -1,10 +1,11 @@
 import { Button } from "./ui/button.js";
-import { Bell, Maximize2, Minus, Plus, X } from "lucide-react";
+import { Bell, Maximize2, Minus, Plus, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { notificationsApi } from "../api/notifications.js";
 import type { ApiNotification } from "../api/types.js";
+import { useCreditBalance } from "../billing/CreditBalanceProvider.js";
 import { notificationsChangedEventName } from "./DesktopNotificationBridge.js";
 import { TopbarApplicationSearch } from "./TopbarApplicationSearch.js";
 
@@ -18,6 +19,7 @@ export function Topbar({
   onAddJob: () => void;
 }) {
   const navigate = useNavigate();
+  const { balance, balanceError, isLoading } = useCreditBalance();
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
@@ -167,6 +169,23 @@ export function Topbar({
         <h1 className="truncate text-base font-semibold text-foreground">{title}</h1>
         {subtitle ? <p className="truncate text-xs text-muted-foreground">{subtitle}</p> : null}
       </div>
+
+      <Link
+        aria-label="AI credits"
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted [-webkit-app-region:no-drag]"
+        title={balanceError ?? "Open AI credit settings"}
+        to="/settings"
+      >
+        <Sparkles className="size-3.5 text-primary" />
+        {isLoading
+          ? "Credits…"
+          : balance
+            ? `${balance.availableCredits} credit${balance.availableCredits === 1 ? "" : "s"}`
+            : "Credits unavailable"}
+        {balance && balance.reservedCredits > 0 ? (
+          <span className="text-muted-foreground">({balance.reservedCredits} held)</span>
+        ) : null}
+      </Link>
 
       <TopbarApplicationSearch open={searchOpen} onOpenChange={handleSearchOpenChange} />
 

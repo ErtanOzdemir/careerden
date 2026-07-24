@@ -134,6 +134,10 @@ documents for review or download.
   idempotently, and grants subscription-cycle credits only for confirmed paid events.
 - Scheduled or completed Creem cancellation updates subscription state but does not revoke
   a paid-period credit grant before its provider-confirmed expiration.
+- The authenticated web shell owns credit and subscription reads through
+  `CreditBalanceProvider`. It coalesces refreshes, retains the last successful balance on
+  background failure, refreshes on focus and application SSE changes, and polls only while
+  credits are reserved.
 - Production startup fails closed when Better Auth or object-storage credentials use
   missing, short, or known development values; production object storage must not target
   localhost.

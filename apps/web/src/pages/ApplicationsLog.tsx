@@ -5,6 +5,7 @@ import { InterestTag, StatusBadge } from "../components/careerden/status-badge.j
 import type { DisplayStatus } from "../components/careerden/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
+import { useCreditBalance } from "../billing/CreditBalanceProvider.js";
 import { mapApiJobApplicationToUi } from "../api/mappers.js";
 import {
   useJobApplicationChanges,
@@ -41,6 +42,7 @@ const filters: { id: DisplayStatus | "all"; label: string }[] = [
 ];
 
 export default function ApplicationsLog() {
+  const { refreshBalance } = useCreditBalance();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -163,8 +165,14 @@ export default function ApplicationsLog() {
   }, [loadApplications]);
 
   useJobApplicationChanges(profileId ?? undefined, {
-    onChange: async (_change: JobApplicationChange) => loadApplications(false),
-    onReconnect: () => loadApplications(false),
+    onChange: async (_change: JobApplicationChange) => {
+      await loadApplications(false);
+      await refreshBalance();
+    },
+    onReconnect: async () => {
+      await loadApplications(false);
+      await refreshBalance();
+    },
   });
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -298,12 +306,11 @@ export default function ApplicationsLog() {
           )}
 
           {visibleRows.map((app) => {
-            const isProcessing = [
-              "queued",
-              "scraping",
-              "analyzing",
-              "generating_documents",
-            ].includes(app.processingStatus ?? "");
+            const isProcessing =
+              (app.processingStatus === "scraped" && Boolean(app.analysisAttemptId)) ||
+              ["queued", "scraping", "analyzing", "generating_documents"].includes(
+                app.processingStatus ?? "",
+              );
             const isFailed = app.processingStatus === "failed";
             return (
               <button

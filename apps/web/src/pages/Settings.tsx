@@ -6,8 +6,10 @@ import { Modal } from "../components/careerden/modal.js";
 import { Field } from "../components/careerden/field.js";
 import { cn } from "../lib/utils.js";
 import { profilesApi } from "../api/profiles.js";
+import { billingApi, redirectToBillingUrl } from "../api/billing.js";
 import type { ApiProfile } from "../api/types.js";
 import { authClient } from "../api/auth.js";
+import { useCreditBalance } from "../billing/CreditBalanceProvider.js";
 import {
   getStoredTheme,
   setThemePreference,
@@ -28,6 +30,7 @@ import {
   Eye,
   EyeOff,
   LockKeyhole,
+  CreditCard,
 } from "lucide-react";
 
 function Toggle({
@@ -93,6 +96,15 @@ const themeOptions: { id: Theme; label: string; icon: typeof Sun }[] = [
 
 export default function Settings() {
   const {
+    balance,
+    balanceError,
+    isLoading: isLoadingBalance,
+    isLoadingSubscription,
+    refresh,
+    subscription,
+    subscriptionError,
+  } = useCreditBalance();
+  const {
     checkForUpdates,
     isSupported: isDesktopUpdaterSupported,
     restartAndInstall,
@@ -113,6 +125,8 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isUpToDateModalOpen, setIsUpToDateModalOpen] = useState(false);
+  const [billingAction, setBillingAction] = useState<"checkout" | "portal" | null>(null);
+  const [billingActionError, setBillingActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -229,6 +243,24 @@ export default function Settings() {
     }
   }
 
+  async function handleBillingAction(action: "checkout" | "portal") {
+    setBillingAction(action);
+    setBillingActionError(null);
+
+    try {
+      const { url } =
+        action === "checkout" ? await billingApi.createCheckout() : await billingApi.createPortal();
+      await redirectToBillingUrl(url);
+    } catch (error) {
+      setBillingActionError(
+        error instanceof Error ? error.message : "Could not open Creem billing.",
+      );
+    } finally {
+      setBillingAction(null);
+      void refresh();
+    }
+  }
+
   return (
     <div className="space-y-6">
       {isDesktopUpdaterSupported && updateState && (
@@ -291,6 +323,78 @@ export default function Settings() {
             {profileError}
           </p>
         )}
+      </Panel>
+
+      <Panel>
+        <div className="flex items-center gap-2.5 px-5 py-4">
+          <CreditCard className="size-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">AI credits</h2>
+        </div>
+        <div className="space-y-5 border-t border-border px-5 py-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <CreditMetric
+              label="Available"
+              value={isLoadingBalance ? "…" : String(balance?.availableCredits ?? "—")}
+            />
+            <CreditMetric
+              label="In progress"
+              value={isLoadingBalance ? "…" : String(balance?.reservedCredits ?? "—")}
+            />
+            <CreditMetric
+              label="Total"
+              value={isLoadingBalance ? "…" : String(balance?.totalCredits ?? "—")}
+            />
+          </div>
+
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p>Every account receives 10 free credits at the start of each UTC month.</p>
+            <p>Each AI match analysis reserves one credit while it runs.</p>
+            <p>
+              A successful analysis uses the reservation. Failed, superseded, deleted, or timed-out
+              work releases it.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {isLoadingSubscription
+                  ? "Loading Creem billing…"
+                  : subscription
+                    ? getSubscriptionTitle(subscription.status)
+                    : "Free credits"}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {isLoadingSubscription
+                  ? "Checking your current subscription."
+                  : subscription
+                    ? getSubscriptionDescription(subscription)
+                    : "Subscribe through Creem to add 100 credits for each confirmed paid period."}
+              </p>
+            </div>
+            <Button
+              className="shrink-0"
+              disabled={billingAction !== null || isLoadingSubscription}
+              onClick={() => void handleBillingAction(subscription ? "portal" : "checkout")}
+              size="sm"
+              variant={subscription ? "outline" : "default"}
+            >
+              {isLoadingSubscription
+                ? "Loading…"
+                : billingAction
+                  ? "Opening…"
+                  : subscription
+                    ? "Manage billing"
+                    : "Subscribe with Creem"}
+            </Button>
+          </div>
+
+          {(balanceError || subscriptionError || billingActionError) && (
+            <p role="alert" className="text-sm text-destructive">
+              {billingActionError ?? balanceError ?? subscriptionError}
+            </p>
+          )}
+        </div>
       </Panel>
 
       <Panel>
@@ -428,6 +532,50 @@ export default function Settings() {
       </Modal>
     </div>
   );
+}
+
+function CreditMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function getSubscriptionTitle(status: "active" | "past_due" | "canceled" | "expired"): string {
+  switch (status) {
+    case "active":
+      return "Creem subscription active";
+    case "past_due":
+      return "Creem payment needs attention";
+    case "canceled":
+      return "Creem subscription canceled";
+    case "expired":
+      return "Creem subscription expired";
+  }
+}
+
+function getSubscriptionDescription(subscription: {
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string;
+  status: "active" | "past_due" | "canceled" | "expired";
+}): string {
+  const periodEnd = new Date(subscription.currentPeriodEnd);
+  const formattedPeriodEnd = Number.isNaN(periodEnd.getTime())
+    ? "the paid period end"
+    : periodEnd.toLocaleDateString();
+
+  if (subscription.cancelAtPeriodEnd) {
+    return `Cancellation is scheduled. Paid-period credits remain valid through ${formattedPeriodEnd}.`;
+  }
+  if (subscription.status === "canceled" || subscription.status === "expired") {
+    return `Unused paid-period credits remain valid until ${formattedPeriodEnd}.`;
+  }
+  if (subscription.status === "past_due") {
+    return `Manage payment details in Creem. Existing paid-period credits remain valid through ${formattedPeriodEnd}.`;
+  }
+  return `The current paid period runs through ${formattedPeriodEnd}.`;
 }
 
 function getDesktopUpdateTitle(state: DesktopUpdateState): string {

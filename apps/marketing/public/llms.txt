@@ -4,7 +4,7 @@
 
 ## Public pages
 
-- [Home](/): Product overview, five-step workflow, features, privacy principles, and FAQ.
+- [Home](/): Product overview, five-step workflow, pricing, features, privacy principles, and FAQ.
 - [Download](/download): OS-aware downloads for the latest verified macOS, Windows, and Linux installers.
 - [Privacy Policy](/privacy): Intended personal-data practices and explicit owner/legal placeholders.
 - [Cookie Policy](/cookies): Browser storage and cookie information.
@@ -19,6 +19,9 @@
   Rejected, and Ghosted stages and keeps follow-ups, contacts, notes, job context, and documents with
   each application.
 - Generated analysis and documents require human review.
+- Every authenticated account receives 10 AI credits per UTC calendar month. The current
+  subscription is $10 USD per month before applicable taxes and grants 100 credits for each
+  confirmed paid period.
 - The public workflow shows fictional replicas of the profile, template upload, variable mapping,
   job submission, and application-pack review screens.
 - Automatic LinkedIn capture currently uses the desktop app and its connected LinkedIn session.

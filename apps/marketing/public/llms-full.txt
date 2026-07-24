@@ -30,6 +30,13 @@ browser-application links. Its `/download` page detects the visitor's desktop op
 promotes the matching installer from the latest verified release, while also listing direct macOS
 DMG, Windows EXE, and Linux AppImage downloads.
 
+The public pricing section describes the current credit model. Every authenticated account receives
+10 AI credits for each UTC calendar month. The $10 USD monthly subscription grants 100 credits for
+each confirmed paid period, with applicable taxes potentially added at checkout. One completed
+match analysis costs one credit; tracking remains available without credits. Unused credits expire
+at the end of their applicable free month or paid period, and cancellation does not revoke credits
+from a period already paid.
+
 The public site links directly to the Careerden repository at
 https://github.com/ErtanOzdemir/careerden. The repository is licensed under the GNU Affero General
 Public License v3.0.
@@ -46,7 +53,7 @@ does not claim a separate AI-regeneration action; it describes the current edit-
 
 The intended workflow may process account and authentication data; professional profile information; job and company source/normalized data; application workflow events and preferences; match analysis; generated and uploaded documents; rendered files; support messages; reminders; security records; and essential technical/browser data.
 
-Production controller details, lawful-basis mapping, subprocessor names, provider regions, international transfer mechanisms, retention periods, deletion timelines, security-control descriptions, analytics choices, contact details, company identity, billing terms, governing law, and related business/legal details are not yet confirmed. The published draft pages mark these items explicitly for owner and legal review and do not claim GDPR certification or guaranteed compliance.
+Production controller details, lawful-basis mapping, subprocessor names, provider regions, international transfer mechanisms, retention periods, deletion timelines, security-control descriptions, analytics choices, contact details, company identity, complete billing and refund terms, governing law, and related business/legal details are not yet confirmed. The published draft pages mark these items explicitly for owner and legal review and do not claim GDPR certification or guaranteed compliance.
 
 ## Crawling guidance
 

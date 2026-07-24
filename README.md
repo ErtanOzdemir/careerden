@@ -160,8 +160,9 @@ failure, deletion, supersession, or a 24-hour timeout releases it without a usag
 
 Creem provides hosted subscription checkout and customer billing management. Each
 confirmed paid period creates one idempotent 100-credit grant that expires at the
-provider-confirmed period end. Scheduled and completed cancellations update subscription
-state without revoking credits from an already-paid period.
+provider-confirmed period end. The current recurring product is $10 USD per month before
+applicable taxes. Scheduled and completed cancellations update subscription state without
+revoking credits from an already-paid period.
 
 The authenticated web shell shows available and reserved credits in the top bar. Settings
 explains credit settlement, displays subscription state, and opens Creem checkout or the

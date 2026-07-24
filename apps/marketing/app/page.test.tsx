@@ -28,6 +28,24 @@ describe("marketing workflow story", () => {
     expect(screen.getAllByText("Job application tracker").length).toBeGreaterThan(0);
     expect(screen.getByText("CV creator")).toBeVisible();
     expect(screen.getByText("Cover letter creator")).toBeVisible();
+    expect(
+      screen.getByRole("heading", {
+        name: "Track for free. Add more AI credits when you need them.",
+      }),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "$0 forever" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "$10 USD / month" })).toBeVisible();
+    expect(screen.getByText("10 AI credits every UTC calendar month")).toBeVisible();
+    expect(screen.getByText("100 credits for each confirmed paid period")).toBeVisible();
+    expect(screen.getByText("Taxes may be added at checkout.")).toBeVisible();
+    expect(screen.getByText("What does a UTC calendar month mean?")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Your 10 free credits apply to that shared month—not one month/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Subscribe in the desktop app" })).toHaveAttribute(
+      "href",
+      "/download",
+    );
     expect(screen.getByRole("link", { name: "Explore Careerden on GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/ErtanOzdemir/careerden",

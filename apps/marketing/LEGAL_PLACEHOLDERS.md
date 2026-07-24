@@ -8,7 +8,8 @@ The public legal copy is a working product draft, not legal advice or a complian
 - `NEXT_PUBLIC_COMPANY_NAME`, legal entity type, registration number, jurisdiction, and registered address.
 - `NEXT_PUBLIC_CONTACT_EMAIL`, privacy/data-rights contact, legal notice contact, support contact, and deletion-request channel.
 - Product availability, eligible markets, minimum user age, account eligibility, and effective dates.
-- Pricing, taxes, billing cycle, renewals, trials, refunds, cancellation, and price-change terms—or confirmation that the service is free.
+- Approval of the current $10 USD monthly product price and 100-credit paid-period scope, plus final
+  taxes, renewals, trials, refunds, cancellation, and price-change terms.
 
 ## Privacy and data governance
 

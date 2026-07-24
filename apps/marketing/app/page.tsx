@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarClock, LayoutDashboard, Link2, ListChecks } from "lucide-react";
+import { CalendarClock, Check, LayoutDashboard, Link2, ListChecks } from "lucide-react";
 import { GitHubMark } from "@/components/GitHubMark";
 import { ProductPreview } from "@/components/product-preview";
 import {
@@ -48,6 +48,10 @@ const faqs = [
   [
     "Is Careerden also a CV creator?",
     "Yes. The profile-aware CV creator and cover letter creator use your factual profile and each job's requirements to prepare editable drafts. You review and update every draft before use.",
+  ],
+  [
+    "What does a UTC calendar month mean?",
+    "UTC is the shared global time standard. A calendar month starts at 00:00 UTC on its first day and ends when the next month begins in UTC. Your 10 free credits apply to that shared month—not one month from your signup date—and unused free credits expire at the month boundary. The local reset time depends on your time zone.",
   ],
   [
     "How is my data handled?",
@@ -292,6 +296,93 @@ export default function HomePage() {
               </div>
             </article>
           </div>
+        </div>
+      </section>
+
+      <section className="section-pad pricing-section" id="pricing">
+        <div className="container">
+          <div className="section-heading centered">
+            <span className="kicker">Simple pricing</span>
+            <h2>Track for free. Add more AI credits when you need them.</h2>
+            <p>
+              The complete tracking workspace stays available without credits. Credits are used only
+              when Careerden completes an AI match analysis.
+            </p>
+          </div>
+
+          <div className="pricing-grid" aria-label="Pricing plans">
+            <article className="pricing-card">
+              <div className="pricing-card-heading">
+                <div>
+                  <span className="pricing-plan-name">Free</span>
+                  <h3>
+                    $0 <small>forever</small>
+                  </h3>
+                </div>
+                <span className="pricing-plan-mark">For every account</span>
+              </div>
+              <p className="pricing-description">
+                Organize applications and use a monthly allowance for occasional AI-assisted
+                matching.
+              </p>
+              <ul>
+                <li>
+                  <Check aria-hidden="true" /> Complete application tracker
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> Profiles, templates, documents, and follow-ups
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> 10 AI credits every UTC calendar month
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> One credit per completed match analysis
+                </li>
+              </ul>
+              <Link className="button button-outline button-large" href="/download">
+                Download and start free
+              </Link>
+            </article>
+
+            <article className="pricing-card pricing-card-featured">
+              <div className="pricing-card-heading">
+                <div>
+                  <span className="pricing-plan-name">Basic</span>
+                  <h3>
+                    $10 <small>USD / month</small>
+                  </h3>
+                </div>
+                <span className="pricing-plan-mark">More AI-assisted applications</span>
+              </div>
+              <p className="pricing-description">
+                Add a larger paid-period credit grant while keeping the same focused Careerden
+                workspace.
+              </p>
+              <ul>
+                <li>
+                  <Check aria-hidden="true" /> Everything in Free
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> 100 credits for each confirmed paid period
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> Credits stay valid through the paid period
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> Manage renewal and cancellation through Creem
+                </li>
+              </ul>
+              <Link className="button button-primary button-large" href="/download">
+                Subscribe in the desktop app
+              </Link>
+              <p className="pricing-tax-note">Taxes may be added at checkout.</p>
+            </article>
+          </div>
+
+          <p className="pricing-footnote">
+            Unused credits expire at the end of their applicable UTC month or paid subscription
+            period. Canceling stops renewal but does not remove credits from a period already paid.
+          </p>
         </div>
       </section>
 

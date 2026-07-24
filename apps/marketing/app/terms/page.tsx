@@ -85,9 +85,10 @@ const sections: LegalSection[] = [
     title: "Plans, payment, and cancellation",
     content: (
       <p>
-        Commercial terms are not yet specified. Before accepting payment, add plan scope, taxes,
-        billing cycle, renewals, cancellation, refunds, trials, and price-change notice:{" "}
-        <Placeholder>[PRICING AND BILLING TERMS OR CONFIRM FREE SERVICE]</Placeholder>.
+        The current recurring subscription is $10 USD per month, may have taxes added at checkout,
+        and grants 100 credits for each confirmed paid period. Before accepting production payments,
+        confirm the complete plan scope, taxes, renewals, cancellation, refunds, trials, and
+        price-change notice: <Placeholder>[FINAL BILLING TERMS]</Placeholder>.
       </p>
     ),
   },

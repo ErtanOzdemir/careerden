@@ -13,6 +13,7 @@ export function SiteHeader() {
           <Link href="/#application-tracking">Job application tracker</Link>
           <Link href="/#how-it-works">How it works</Link>
           <Link href="/#application-pack">Application pack</Link>
+          <Link href="/#pricing">Pricing</Link>
           <Link href="/download">Download</Link>
           <Link href="/privacy">Privacy</Link>
         </nav>

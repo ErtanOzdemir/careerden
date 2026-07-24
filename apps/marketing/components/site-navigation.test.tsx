@@ -21,6 +21,9 @@ describe("marketing navigation", () => {
     for (const link of screen.getAllByRole("link", { name: "Application pack" })) {
       expect(link).toHaveAttribute("href", "/#application-pack");
     }
+    for (const link of screen.getAllByRole("link", { name: "Pricing" })) {
+      expect(link).toHaveAttribute("href", "/#pricing");
+    }
     for (const link of screen.getAllByRole("link", { name: "Download" })) {
       expect(link).toHaveAttribute("href", "/download");
     }

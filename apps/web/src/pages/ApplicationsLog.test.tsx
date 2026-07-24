@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ApplicationsLog from "./ApplicationsLog.js";
@@ -156,6 +156,11 @@ describe("ApplicationsLog", () => {
     expect(screen.getByText("Salary")).toBeInTheDocument();
     expect(screen.queryByText("Follow-up")).not.toBeInTheDocument();
     expect(screen.getByText("90,000 – 120,000 EUR / year · Gross")).toBeInTheDocument();
+    const applicationRow = screen.getByRole("link", {
+      name: "Software Engineer at Acme",
+    });
+    expect(applicationRow.tagName).toBe("DIV");
+    expect(within(applicationRow).getByRole("button", { name: "Actions" })).toBeInTheDocument();
 
     fireEvent.error(logo);
 

@@ -61,14 +61,15 @@ invocation must come from the active main window's main frame; child frames and 
 only operations used by the renderer and does not provide arbitrary application-path
 lookup.
 
-Packaged renderer responses include a restrictive CSP and deny embedded frames, workers,
-objects, unexpected connection targets, and inline/evaluated scripts. Additional response
-headers disable content-type sniffing, suppress referrer data, and deny browser permission
-features. The release package flips Electron fuses to disable `ELECTRON_RUN_AS_NODE`,
-`NODE_OPTIONS`, inspector arguments, and extra `file:` privileges. It also enables
-OS-backed cookie encryption, embedded ASAR integrity validation, and loading application
-code only from `app.asar`. Cookie encryption is a one-way packaged-app migration: do not
-disable that fuse in a later release.
+Packaged renderer responses include a restrictive CSP. Same-origin and HTTPS frames are
+allowed for signed PDF document previews; workers, objects, unexpected connection targets,
+and inline/evaluated scripts remain denied. Additional response headers disable
+content-type sniffing, suppress referrer data, and deny browser permission features. The
+release package flips Electron fuses to disable `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS`,
+inspector arguments, and extra `file:` privileges. It also enables OS-backed cookie
+encryption, embedded ASAR integrity validation, and loading application code only from
+`app.asar`. Cookie encryption is a one-way packaged-app migration: do not disable that
+fuse in a later release.
 
 ## LinkedIn Session Vault
 

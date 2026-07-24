@@ -12,6 +12,7 @@ export type WebSecurityPolicyOptions = {
 
 export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions): string {
   const connectSources = ["'self'"];
+  const frameSources = ["'self'", "https:"];
   const imageSources = ["'self'", "data:", "https:"];
   const apiOrigin = getAbsoluteHttpOrigin(options.apiBaseUrl);
 
@@ -21,6 +22,7 @@ export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions
 
   if (options.development) {
     connectSources.push("ws:", "wss:");
+    frameSources.push("http://localhost:*", "http://127.0.0.1:*");
     imageSources.push("http://localhost:*", "http://127.0.0.1:*");
   }
 
@@ -37,7 +39,7 @@ export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "frame-src 'none'",
+    `frame-src ${frameSources.join(" ")}`,
     "worker-src 'none'",
   ].join("; ");
 }

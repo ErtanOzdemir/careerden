@@ -313,9 +313,21 @@ export default function ApplicationsLog() {
               );
             const isFailed = app.processingStatus === "failed";
             return (
-              <button
+              <div
+                aria-label={`${app.role} at ${app.company}`}
                 key={app.id}
                 onClick={() => navigate(`/applications/${app.id}`)}
+                onKeyDown={(event) => {
+                  if (
+                    event.target === event.currentTarget &&
+                    (event.key === "Enter" || event.key === " ")
+                  ) {
+                    event.preventDefault();
+                    navigate(`/applications/${app.id}`);
+                  }
+                }}
+                role="link"
+                tabIndex={0}
                 className={cn(
                   "grid w-full grid-cols-1 items-center gap-2 px-5 py-3.5 text-left transition-colors hover:bg-muted/50 md:gap-4",
                   applicationsGridColumns,
@@ -378,6 +390,7 @@ export default function ApplicationsLog() {
                 >
                   <div className="relative">
                     <button
+                      type="button"
                       onClick={() => setOpenMenuId(openMenuId === app.id ? null : app.id)}
                       className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                       aria-label="Actions"
@@ -390,6 +403,7 @@ export default function ApplicationsLog() {
                         className="absolute top-full right-0 z-50 min-w-[120px] overflow-hidden rounded-lg border border-border bg-popover p-1 shadow-lg"
                       >
                         <button
+                          type="button"
                           onClick={() => handleDelete(app.id)}
                           className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-danger-soft"
                         >
@@ -400,7 +414,7 @@ export default function ApplicationsLog() {
                     )}
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

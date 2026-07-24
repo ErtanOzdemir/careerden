@@ -15,7 +15,7 @@ export const packagedRendererContentSecurityPolicy = [
   "object-src 'none'",
   "base-uri 'none'",
   "frame-ancestors 'none'",
-  "frame-src 'none'",
+  "frame-src 'self' https:",
   "form-action 'self'",
   "worker-src 'none'",
 ].join("; ");

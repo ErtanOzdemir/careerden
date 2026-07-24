@@ -19,6 +19,7 @@ describe("web security headers", () => {
       "'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='",
     );
     expect(contentSecurityPolicy).toContain("connect-src 'self' https://api.example.com");
+    expect(contentSecurityPolicy).toContain("frame-src 'self' https:");
     expect(contentSecurityPolicy).toContain("img-src 'self' data: https:");
     expect(contentSecurityPolicy).not.toContain("http://localhost:*");
     expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
@@ -48,6 +49,9 @@ describe("web security headers", () => {
       contentSecurityPolicy.split("; ").find((directive) => directive.startsWith("script-src ")),
     ).not.toContain("'unsafe-inline'");
     expect(contentSecurityPolicy).toContain("connect-src 'self' ws: wss:");
+    expect(contentSecurityPolicy).toContain(
+      "frame-src 'self' https: http://localhost:* http://127.0.0.1:*",
+    );
     expect(contentSecurityPolicy).toContain(
       "img-src 'self' data: https: http://localhost:* http://127.0.0.1:*",
     );

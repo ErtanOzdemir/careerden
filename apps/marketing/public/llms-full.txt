@@ -31,9 +31,8 @@ promotes the matching installer from the latest verified release, while also lis
 DMG, Windows EXE, and Linux AppImage downloads.
 
 The public site links directly to the Careerden repository at
-https://github.com/ErtanOzdemir/careerden. The current repository license is Business Source License
-1.1, which permits the uses described in its LICENSE file and is scheduled to convert to Apache
-License 2.0 under its stated terms.
+https://github.com/ErtanOzdemir/careerden. The repository is licensed under the GNU Affero General
+Public License v3.0.
 
 ## Public workflow demonstration
 

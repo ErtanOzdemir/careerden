@@ -50,7 +50,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="container footer-bottom">
-        <p>© {new Date().getFullYear()} Careerden. Currently licensed under BSL 1.1.</p>
+        <p>© {new Date().getFullYear()} Careerden. Licensed under AGPL-3.0.</p>
         <p>
           LinkedIn is a trademark of LinkedIn Corporation. Careerden is not affiliated with
           LinkedIn.

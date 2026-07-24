@@ -1,16 +1,34 @@
 <div align="center">
   <img src="./apps/desktop/build/icon.png" alt="Careerden logo" width="112" />
   <h1>Careerden</h1>
-  <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/License-BSL%201.1-blue.svg" alt="License: BSL 1.1" />
-  </a>
-</div>
 
-Careerden is a desktop-first job application tracker that turns LinkedIn job postings into
-profile-aware match analysis, tailored CVs, and cover letters. It combines local
-Playwright scraping with an authenticated React app, durable PostgreSQL state, BullMQ
-workers, editable document content, custom DOCX templates, and S3-compatible file
-storage.
+<strong>Open-source desktop job application tracker and profile-aware CV and cover-letter creator.</strong>
+<br />
+Capture LinkedIn jobs. Match your profile. Create tailored documents. Track every opportunity.
+<br /><br />
+
+  <a href="https://github.com/ErtanOzdemir/careerden/releases/latest">
+    <img src="https://img.shields.io/github/v/release/ErtanOzdemir/careerden?display_name=tag&sort=semver&label=release" alt="Latest release" />
+  </a>
+  <a href="https://github.com/ErtanOzdemir/careerden/releases">
+    <img src="https://img.shields.io/github/downloads/ErtanOzdemir/careerden/total?label=downloads" alt="Total downloads" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0" />
+  </a>
+  <a href="https://github.com/ErtanOzdemir/careerden/actions/workflows/ci.yml">
+    <img src="https://github.com/ErtanOzdemir/careerden/actions/workflows/ci.yml/badge.svg?event=pull_request" alt="CI status" />
+  </a>
+
+<br /><br />
+
+<a href="https://careerden.app/download"><strong>Download</strong></a>
+·
+<a href="https://careerden.app"><strong>Website</strong></a>
+·
+<a href="https://github.com/ErtanOzdemir/careerden/releases"><strong>Releases</strong></a>
+
+</div>
 
 ![Fictional Careerden application tracking dashboard](./docs/images/application-tracking-dashboard.png)
 
@@ -513,15 +531,5 @@ and pull request checklist. Security issues should follow [SECURITY.md](SECURITY
 
 ## License
 
-Careerden is licensed under the [Business Source License 1.1](LICENSE).
-
-- Personal, non-commercial use: free
-- Education and research: free
-- Testing and contribution: free
-- Commercial use: requires a commercial license
-
-The license converts to [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-on **2036-06-13** (or four years after the first public release of each version,
-whichever comes first).
-
-For commercial licensing inquiries, contact mail@ozdemirertan.com.
+Careerden is free and open-source software licensed under the
+[GNU Affero General Public License v3.0](LICENSE).

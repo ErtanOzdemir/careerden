@@ -43,6 +43,6 @@ The landing page positions Careerden as an open-source desktop job application t
 
 The public service does not link to browser-based login, signup, or authenticated application routes. Careerden is presented as a desktop-only product. The `/download` page detects macOS, Windows, or Linux in the browser and promotes the matching installer from the latest verified release. It also lists direct DMG, EXE, and AppImage links for visitors who need another platform.
 
-The landing page links directly to https://github.com/ErtanOzdemir/careerden and presents Careerden as an open-source project while keeping the current BSL 1.1 license disclosure visible. Confirm that anonymous visitors can access the repository before production deployment.
+The landing page links directly to https://github.com/ErtanOzdemir/careerden and presents Careerden as an open-source project under the GNU Affero General Public License v3.0. Confirm that anonymous visitors can access the repository before production deployment.
 
 See [LEGAL_PLACEHOLDERS.md](./LEGAL_PLACEHOLDERS.md) before any production launch.

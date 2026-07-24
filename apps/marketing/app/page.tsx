@@ -312,11 +312,7 @@ export default function HomePage() {
               <h3>Built in the open</h3>
               <p>
                 Explore the Careerden codebase, follow development, report issues, and contribute on
-                GitHub under the repository's current BSL 1.1 license.
-              </p>
-              <p>
-                It is scheduled to convert to the open-source Apache License 2.0 under the license's
-                stated terms.
+                GitHub under the GNU Affero General Public License v3.0.
               </p>
             </article>
             <article>

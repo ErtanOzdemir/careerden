@@ -28,8 +28,7 @@
   download page detects the visitor's desktop operating system and promotes the matching installer,
   with direct macOS DMG, Windows EXE, and Linux AppImage links also available.
 - Careerden links directly to its repository at https://github.com/ErtanOzdemir/careerden. The current
-  repository license is Business Source License 1.1 and is scheduled to convert to Apache License
-  2.0 under the license's stated terms.
+  repository license is GNU Affero General Public License v3.0.
 - DOCX template upload and mapping is the recommended setup for custom document layouts; built-in
   layouts may also be available in the authenticated product.
 - Users can review generated CV and cover-letter content, edit it, and apply changes with Update

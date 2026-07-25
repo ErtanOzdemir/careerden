@@ -52,5 +52,8 @@ USER node
 
 RUN node node_modules/@careerden/infrastructure/scripts/smoke-playwright-pdf.mjs
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:' + (process.env.DOCUMENTS_WORKER_HEALTH_PORT || '3102') + '/health/ready').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+
 ENTRYPOINT ["tini", "--"]
 CMD ["node", "dist/server.js"]

@@ -11,3 +11,19 @@ describe("notificationsWorkerEnvSchema production storage", () => {
     ).toBe(false);
   });
 });
+
+describe("notificationsWorkerEnvSchema health port", () => {
+  it("provides a dedicated default and accepts a configured port", () => {
+    expect(
+      notificationsWorkerEnvSchema.parse({
+        DATABASE_URL: "postgres://localhost/careerden",
+      }).NOTIFICATIONS_WORKER_HEALTH_PORT,
+    ).toBe(3103);
+    expect(
+      notificationsWorkerEnvSchema.parse({
+        DATABASE_URL: "postgres://localhost/careerden",
+        NOTIFICATIONS_WORKER_HEALTH_PORT: "4103",
+      }).NOTIFICATIONS_WORKER_HEALTH_PORT,
+    ).toBe(4103);
+  });
+});

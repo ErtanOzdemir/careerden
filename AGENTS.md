@@ -106,6 +106,10 @@ documents for review or download.
   documents-worker images install Playwright's matching Chromium headless shell and
   validate PDF rendering during the image build; other worker images do not install a
   browser.
+- Each worker exposes loopback-only `/health/live` and `/health/ready` endpoints on its
+  configured worker health port. Docker checks readiness, which requires an active,
+  unpaused BullMQ worker plus working Redis and PostgreSQL connections; worker health
+  ports must not be publicly exposed.
 - On Coolify, the API, workers, and Redis Database Resource must share the same Server and
   Destination. Every runtime uses Redis's private Internal URL through `REDIS_URL`; never
   use the local `redis://localhost:6380` default from a production container.

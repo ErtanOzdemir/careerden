@@ -19,6 +19,7 @@ export const notificationsWorkerEnvSchema = z.preprocess(
       SMTP_PORT: z.coerce.number().int().positive().default(1025),
       SMTP_FROM: z.string().min(1).default("Careerden <no-reply@careerden.local>"),
       NOTIFICATIONS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+      NOTIFICATIONS_WORKER_HEALTH_PORT: z.coerce.number().int().min(1).max(65_535).default(3103),
       NOTIFICATION_EMAIL_ENABLED: z
         .preprocess((value) => {
           if (value === "true") return true;

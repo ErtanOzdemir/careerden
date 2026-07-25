@@ -11,3 +11,19 @@ describe("documentsWorkerEnvSchema production storage", () => {
     ).toBe(false);
   });
 });
+
+describe("documentsWorkerEnvSchema health port", () => {
+  it("provides a dedicated default and accepts a configured port", () => {
+    expect(
+      documentsWorkerEnvSchema.parse({
+        DATABASE_URL: "postgres://localhost/careerden",
+      }).DOCUMENTS_WORKER_HEALTH_PORT,
+    ).toBe(3102);
+    expect(
+      documentsWorkerEnvSchema.parse({
+        DATABASE_URL: "postgres://localhost/careerden",
+        DOCUMENTS_WORKER_HEALTH_PORT: "4102",
+      }).DOCUMENTS_WORKER_HEALTH_PORT,
+    ).toBe(4102);
+  });
+});

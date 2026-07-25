@@ -16,6 +16,7 @@ export const documentsWorkerEnvSchema = z.preprocess(
       DATABASE_URL: z.string().min(1),
       REDIS_URL: z.string().min(1).default("redis://localhost:6380"),
       DOCUMENTS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+      DOCUMENTS_WORKER_HEALTH_PORT: z.coerce.number().int().min(1).max(65_535).default(3102),
       GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
       ...objectStorageEnvShape,
     })

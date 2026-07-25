@@ -39,6 +39,7 @@ export * from "./queue/job-applications/bullmq-job-application.queue.js";
 export * from "./queue/job-applications/bullmq-application-pack-generation.queue.js";
 export * from "./queue/job-applications/self-processing-job-application.queue.js";
 export * from "./queue/notifications/bullmq-follow-up-reminder.queue.js";
+export * from "./queue/bullmq-worker-health.server.js";
 export * from "./notifications/follow-up-reminder.repository.js";
 export * from "./notifications/redis-notification-change.bus.js";
 export * from "./notifications/smtp-email.sender.js";

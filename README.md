@@ -293,8 +293,11 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 | `GEMINI_API_KEY`                   | Google Gemini API key              | —                       |
 | `DEEPSEEK_API_KEY`                 | DeepSeek API key                   | —                       |
 | `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs       | `1`                     |
+| `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port     | `3101`                  |
 | `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs     | `1`                     |
+| `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port      | `3102`                  |
 | `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs   | `1`                     |
+| `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port  | `3103`                  |
 | `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through SMTP  | `false`                 |
 | `GOTENBERG_URL`                    | DOCX-to-PDF conversion service URL | `http://localhost:3002` |
 
@@ -377,6 +380,11 @@ the Base Directory:
 | LLM worker           | `/apps/llm-worker/Dockerfile`           | No public port or domain |
 | Documents worker     | `/apps/documents-worker/Dockerfile`     | No public port or domain |
 | Notifications worker | `/apps/notifications-worker/Dockerfile` | No public port or domain |
+
+Each worker image has an internal Docker health check against its loopback-only
+`/health/ready` endpoint. Readiness requires an active, unpaused BullMQ worker plus
+successful Redis and PostgreSQL checks. The endpoints and health ports are operational
+inside the container only; do not assign public Coolify domains to worker applications.
 
 Assign the Redis Database Resource and all four applications to the same Coolify Server
 and Destination. Copy Redis's **Internal URL** into an environment-level shared variable,

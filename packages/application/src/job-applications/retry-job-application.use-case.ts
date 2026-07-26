@@ -2,10 +2,11 @@ import type { JobApplication, PersistenceUnitOfWork } from "@careerden/domain";
 import { assessProfileReadiness } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
+import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 
-export type JobApplicationRetryMode = "analysis" | "scraping";
+export type JobApplicationRetryMode = "analysis" | "documents" | "scraping";
 
 export interface RetryJobApplicationResult {
   jobApplication: JobApplication;
@@ -38,14 +39,44 @@ export class RetryJobApplicationUseCase {
         }
 
         const scrape = await jobApplications.getScrapeBundle(jobApplicationId);
+        const matchAnalysis =
+          options.mode === "scraping" || !scrape
+            ? null
+            : await jobApplications.getMatchAnalysis(jobApplicationId);
         const mode: JobApplicationRetryMode =
-          options.mode === "scraping" || !scrape ? "scraping" : "analysis";
+          options.mode === "scraping" || !scrape
+            ? "scraping"
+            : matchAnalysis
+              ? "documents"
+              : "analysis";
 
         if (mode === "scraping" && !jobApplication.sourceUrl) {
           throw new ApplicationError(
             "validation",
             "Job application does not have a source URL to retry",
           );
+        }
+
+        if (mode === "documents") {
+          const generationAttemptId = await enqueueApplicationPackGeneration({
+            jobApplications,
+            outbox,
+            jobApplication,
+          });
+          if (!generationAttemptId) {
+            throw new ApplicationError(
+              "validation",
+              "Application pack generation is not available in the current processing state",
+            );
+          }
+          const retried = await jobApplications.findById(jobApplicationId);
+          if (!retried) throw new ApplicationError("not_found", "Job application not found");
+
+          await jobApplicationChanges.changed(retried.id, retried.profileId);
+          return {
+            jobApplication: retried,
+            mode,
+          };
         }
 
         const [documents, companyLogoFileId] = await Promise.all([

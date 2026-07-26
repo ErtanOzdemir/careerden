@@ -108,6 +108,7 @@ export function createUnitOfWork(
 ): {
   unitOfWork: PersistenceUnitOfWork;
   addOutboxEvent: ReturnType<typeof vi.fn>;
+  credits: ReturnType<typeof createCreditRepositoryDouble>;
   recordChanged: ReturnType<typeof vi.fn>;
   recordDeleted: ReturnType<typeof vi.fn>;
 } {
@@ -121,6 +122,7 @@ export function createUnitOfWork(
   const credits = createCreditRepositoryDouble();
   return {
     addOutboxEvent,
+    credits,
     recordChanged,
     recordDeleted,
     unitOfWork: {

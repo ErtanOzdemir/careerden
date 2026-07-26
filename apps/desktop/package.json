@@ -1,7 +1,7 @@
 {
   "name": "@careerden/desktop",
   "productName": "Careerden",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "type": "module",
@@ -23,7 +23,6 @@
     "@careerden/domain": "workspace:*",
     "@careerden/infrastructure": "workspace:*",
     "electron-updater": "^6.8.9",
-    "playwright": "1.60.0",
     "semver": "^7.7.3",
     "zod": "^3.24.1"
   },

@@ -28,9 +28,6 @@ export interface DesktopUpdateState {
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   openExternal: (url: string) => Promise<void>;
-  getLinkedInSessionStatus: () => Promise<unknown>;
-  startLinkedInSession: () => Promise<unknown>;
-  saveLinkedInSession: () => Promise<unknown>;
   notifyJobApplicationQueued: () => Promise<void>;
   setNativeThemeSource: (source: NativeThemeSource) => Promise<void>;
   minimizeWindow: () => Promise<void>;

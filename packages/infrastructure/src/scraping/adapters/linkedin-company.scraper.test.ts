@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   chooseExternalCompanyWebsiteUrl,
-  chooseLinkedInAboutWebsiteUrl,
   chooseLinkedInCompanyLogoUrl,
   LinkedInCompanyScraper,
   linkedInGuestCompanyParserVersion,
-  normalizeLinkedInCompanyAboutUrl,
   normalizeLinkedInCompanyUrl,
   parseLinkedInGuestCompanyHtml,
 } from "./linkedin-company.scraper.js";
@@ -40,18 +38,6 @@ describe("LinkedInCompanyScraper", () => {
     ).toBe("https://media.licdn.com/dms/image/lazy-logo");
   });
 
-  it("normalizes LinkedIn company URLs to the about page", () => {
-    expect(normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun")).toBe(
-      "https://www.linkedin.com/company/ogretmenbulun/about/",
-    );
-    expect(
-      normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun/"),
-    ).toBe("https://www.linkedin.com/company/ogretmenbulun/about/");
-    expect(
-      normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/company/ogretmenbulun/about/"),
-    ).toBe("https://www.linkedin.com/company/ogretmenbulun/about/");
-  });
-
   it("normalizes LinkedIn company URLs to the public company root", () => {
     expect(
       normalizeLinkedInCompanyUrl(
@@ -61,13 +47,10 @@ describe("LinkedInCompanyScraper", () => {
   });
 
   it("ignores missing or non-LinkedIn company URLs", () => {
-    expect(normalizeLinkedInCompanyAboutUrl()).toBeUndefined();
     expect(
-      normalizeLinkedInCompanyAboutUrl("https://example.com/company/ogretmenbulun"),
+      normalizeLinkedInCompanyUrl("https://example.com/company/ogretmenbulun"),
     ).toBeUndefined();
-    expect(
-      normalizeLinkedInCompanyAboutUrl("https://www.linkedin.com/jobs/view/123"),
-    ).toBeUndefined();
+    expect(normalizeLinkedInCompanyUrl("https://www.linkedin.com/jobs/view/123")).toBeUndefined();
   });
 
   it("extracts a direct external website candidate", () => {
@@ -99,40 +82,6 @@ describe("LinkedInCompanyScraper", () => {
       chooseExternalCompanyWebsiteUrl([
         "https://www.linkedin.com/company/ogretmenbulun/about/",
         "https://www.linkedin.com/feed/",
-      ]),
-    ).toBeUndefined();
-  });
-
-  it("extracts the website from the LinkedIn about Website definition field", () => {
-    expect(
-      chooseLinkedInAboutWebsiteUrl([
-        { label: "Verified page", text: "September 12, 2023" },
-        { label: "Website", href: "https://withcherry.com/", text: "https://withcherry.com/" },
-        { label: "Industry", text: "Financial Services" },
-      ]),
-    ).toBe("https://withcherry.com/");
-  });
-
-  it("falls back to Website definition text when no anchor exists", () => {
-    expect(chooseLinkedInAboutWebsiteUrl([{ label: "Website", text: "www.withcherry.com" }])).toBe(
-      "https://www.withcherry.com/",
-    );
-  });
-
-  it("does not infer a website from non-Website definition fields", () => {
-    expect(
-      chooseLinkedInAboutWebsiteUrl([
-        { label: "Industry", text: "Financial Services" },
-        { label: "Company size", href: "https://withcherry.com/", text: "851 associated members" },
-      ]),
-    ).toBeUndefined();
-  });
-
-  it("returns undefined when the Website definition field is absent", () => {
-    expect(
-      chooseLinkedInAboutWebsiteUrl([
-        { label: "Verified page", text: "September 12, 2023" },
-        { label: "Headquarters", text: "San Francisco, California" },
       ]),
     ).toBeUndefined();
   });
@@ -185,7 +134,7 @@ describe("LinkedInCompanyScraper", () => {
         </head>
       </html>
     `;
-    const scraper = new LinkedInCompanyScraper(undefined, {
+    const scraper = new LinkedInCompanyScraper({
       fetch: async (request) => {
         fetchCalls.push(String(request));
         return new Response(html, { status: 200 });
@@ -216,7 +165,7 @@ describe("LinkedInCompanyScraper", () => {
   });
 
   it("rejects a guest response that redirects to LinkedIn authentication", async () => {
-    const scraper = new LinkedInCompanyScraper(undefined, {
+    const scraper = new LinkedInCompanyScraper({
       fetch: async () =>
         new Response("<html><title>Sign Up | LinkedIn</title></html>", { status: 200 }),
     });
@@ -227,19 +176,6 @@ describe("LinkedInCompanyScraper", () => {
         linkedInUrl: "https://www.linkedin.com/company/acme",
       }),
     ).rejects.toThrow("linkedin_guest_company_unavailable");
-  });
-
-  it("keeps the saved-session company strategy available explicitly", async () => {
-    const scraper = new LinkedInCompanyScraper(undefined, {
-      strategy: "browser-session",
-    });
-
-    await expect(
-      scraper.scrapeCompany({
-        companyName: "Ogretmen Bulun",
-        linkedInUrl: "https://www.linkedin.com/company/ogretmenbulun/about/",
-      }),
-    ).rejects.toThrow("linkedin_session_required");
   });
 });
 

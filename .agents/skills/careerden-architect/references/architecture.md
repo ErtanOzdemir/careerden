@@ -7,7 +7,7 @@
 - `packages/domain`: entities, workflow policies, repository/provider/queue interfaces, and stable constants.
 - `packages/contracts`: shared Zod schemas and transport DTO types; it must not depend on application or infrastructure.
 - `packages/infrastructure`: PostgreSQL/Knex repositories, Redis/BullMQ adapters, site scrapers, AI adapters, storage, DOCX/HTML/PDF renderers, and migrations.
-- `apps/desktop`: Electron runtime and local Playwright scraping worker; it claims API work, heartbeats claims, and submits scrape results.
+- `apps/desktop`: Electron runtime and local guest-HTTP scraping worker; it claims API work, heartbeats claims, and submits scrape results.
 - `apps/llm-worker`: BullMQ consumer for match analysis.
 - `apps/notifications-worker`: BullMQ consumer and recovery loop for follow-up reminders.
 - `apps/web`: React client using shared REST behavior through its API client/mappers.
@@ -20,7 +20,7 @@ Use the same context name across layers:
 
 - `profiles`: user-linked profiles, ownership access, document templates, mappings, and aliases.
 - `job-applications`: tracking lifecycle, scrape claims, events, contacts, follow-ups, analysis, read models, and documents.
-- `scraping`: scrape/session contracts and site-specific adapters.
+- `scraping`: scrape contracts and site-specific adapters.
 - `matching`: AI provider contracts, requirement extraction, and match analysis.
 - `documents`: content, templates, deterministic rendering, and generated files.
 - `notifications`: reminders, notification persistence, delivery, and recovery.
@@ -52,7 +52,7 @@ Do not reintroduce cross-context generic source buckets. Keep package barrels st
 - Redis/BullMQ for LLM processing and reminder delivery/recovery.
 - S3-compatible object storage via RustFS locally and Cloudflare R2 in production for
   generated/template/logo files.
-- Playwright for local desktop scraping and PDF rendering.
+- Public guest HTTP responses and HTML parsing for desktop scraping; Playwright for PDF rendering.
 - Vercel AI SDK providers behind AI interfaces.
 
 ## Non-Negotiables

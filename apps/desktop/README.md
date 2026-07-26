@@ -71,20 +71,12 @@ encryption, embedded ASAR integrity validation, and loading application code onl
 `app.asar`. Cookie encryption is a one-way packaged-app migration: do not disable that
 fuse in a later release.
 
-## LinkedIn Session Vault
+## Local LinkedIn Scraping
 
-The desktop creates a random 32-byte LinkedIn session encryption key per installation and
-protects it with Electron `safeStorage`, backed by Keychain on macOS, DPAPI on Windows,
-and a supported password manager on Linux. The encrypted key and LinkedIn session remain
-under the application's `userData` directory. On POSIX systems their directory and files
-are tightened to owner-only `0700` and `0600` modes.
-
-The desktop refuses to initialize LinkedIn session storage when operating-system
-encryption is unavailable or Linux does not report a supported libsecret/KWallet backend.
-Install and unlock a supported Linux password manager before starting Careerden. The
-former `LINKEDIN_SESSION_SECRET` environment variable is no longer used. Existing session
-files encrypted with that shared secret cannot be migrated safely and require the user to
-reconnect LinkedIn once after upgrading.
+The desktop claims queued LinkedIn URLs and processes them in an isolated Electron utility
+process. The job and company adapters fetch public guest HTTP responses, preserve the raw
+source material, and return normalized scrape data without connecting or storing a user's
+LinkedIn account session.
 
 ## Native Follow-up Notifications
 
@@ -277,8 +269,6 @@ version tag.
 
 - Windows installers are unsigned and may trigger operating-system reputation warnings.
 - Linux AppImages are not signed by this workflow.
-- Playwright browser binaries are not bundled in the installers; production distribution
-  must provision a compatible browser before relying on local LinkedIn scraping.
 - macOS signing and notarization require real Apple credentials and should be verified in
   GitHub Actions before publishing.
 - Automatic updates require a public published GitHub Release; private repository assets

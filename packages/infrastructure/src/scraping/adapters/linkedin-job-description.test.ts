@@ -135,7 +135,7 @@ describe("extractLinkedInCompanyLogoUrlFromHtml", () => {
 describe("LinkedInJobScraper", () => {
   it("uses the guest endpoint as the default strategy", async () => {
     const fetchCalls: string[] = [];
-    const scraper = new LinkedInJobScraper(undefined, {
+    const scraper = new LinkedInJobScraper({
       fetch: async (input) => {
         fetchCalls.push(String(input));
 
@@ -155,25 +155,5 @@ describe("LinkedInJobScraper", () => {
     expect(fetchCalls).toEqual([`${linkedinGuestJobDetailEndpoint}/4300011451`]);
     expect(job.title).toBe("Frontend Engineer");
     expect(job.companyName).toBe("Acme");
-  });
-
-  it("keeps browser-session as an explicit disabled strategy for future use", async () => {
-    const scraper = new LinkedInJobScraper(undefined, {
-      strategy: "browser-session",
-    });
-
-    await expect(
-      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
-    ).rejects.toThrow("linkedin_browser_session_disabled");
-  });
-
-  it("does not scrape URLs with the manual strategy", async () => {
-    const scraper = new LinkedInJobScraper(undefined, {
-      strategy: "manual",
-    });
-
-    await expect(
-      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
-    ).rejects.toThrow("manually created job applications");
   });
 });

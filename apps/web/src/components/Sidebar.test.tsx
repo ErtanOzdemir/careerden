@@ -29,16 +29,6 @@ describe("Sidebar", () => {
     expect(screen.getByTestId("sidebar-brand")).toHaveClass("h-24", "items-end", "pb-4");
   });
 
-  it("does not expose LinkedIn session navigation while browser-session scraping is disabled", () => {
-    render(
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole("link", { name: /linkedin session/i })).not.toBeInTheDocument();
-  });
-
   it("links to the help and support page", () => {
     render(
       <MemoryRouter>

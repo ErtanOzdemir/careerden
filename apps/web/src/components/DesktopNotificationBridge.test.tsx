@@ -125,10 +125,7 @@ function createElectronApi(
   >,
 ): NonNullable<Window["electronAPI"]> {
   return {
-    getLinkedInSessionStatus: vi.fn(),
     notifyJobApplicationQueued: vi.fn(),
-    saveLinkedInSession: vi.fn(),
-    startLinkedInSession: vi.fn(),
     ...overrides,
   };
 }

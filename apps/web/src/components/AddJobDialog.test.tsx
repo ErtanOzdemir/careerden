@@ -38,13 +38,10 @@ describe("AddJobDialog", () => {
 
     window.electronAPI = {
       closeWindow: vi.fn(),
-      getLinkedInSessionStatus: vi.fn(),
       maximizeWindow: vi.fn(),
       minimizeWindow: vi.fn(),
       platform: "darwin",
-      saveLinkedInSession: vi.fn(),
       notifyJobApplicationQueued,
-      startLinkedInSession: vi.fn(),
     };
     vi.mocked(profilesApi.me).mockResolvedValue({ id: "profile-1" } as never);
     vi.mocked(jobApplicationsApi.create).mockReturnValue(create.promise as never);

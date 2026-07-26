@@ -7,8 +7,6 @@ describe("parseScrapingUtilityRequest", () => {
       type: "scrape",
       requestId: "request-a",
       sourceUrl: "https://www.linkedin.com/jobs/view/1",
-      sessionDirectory: "/user/linkedin-session",
-      sessionEncryptionKey: "encoded-key",
     };
 
     expect(parseScrapingUtilityRequest({ data: request, ports: [] })).toEqual(request);

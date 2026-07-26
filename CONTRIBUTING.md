@@ -43,6 +43,7 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
    ```bash
    pnpm install
+   # Required for Playwright PDF rendering and its smoke test.
    pnpm exec playwright install chromium
    ```
 

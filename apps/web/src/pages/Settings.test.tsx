@@ -258,9 +258,6 @@ describe("Settings", () => {
     };
     const checkForDesktopUpdates = vi.fn().mockResolvedValue(upToDateState);
     window.electronAPI = {
-      getLinkedInSessionStatus: vi.fn(),
-      startLinkedInSession: vi.fn(),
-      saveLinkedInSession: vi.fn(),
       notifyJobApplicationQueued: vi.fn(),
       getDesktopUpdateState: vi.fn().mockResolvedValue(upToDateState),
       checkForDesktopUpdates,
@@ -308,9 +305,6 @@ describe("Settings", () => {
 function installElectronApi() {
   const setNativeThemeSource = vi.fn().mockResolvedValue(undefined);
   window.electronAPI = {
-    getLinkedInSessionStatus: vi.fn(),
-    startLinkedInSession: vi.fn(),
-    saveLinkedInSession: vi.fn(),
     notifyJobApplicationQueued: vi.fn(),
     setNativeThemeSource,
   };

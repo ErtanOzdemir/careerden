@@ -165,9 +165,6 @@ importers:
       electron-updater:
         specifier: ^6.8.9
         version: 6.8.9
-      playwright:
-        specifier: 1.60.0
-        version: 1.60.0
       semver:
         specifier: ^7.7.3
         version: 7.8.1

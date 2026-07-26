@@ -331,7 +331,7 @@ describe("InMemoryJobApplicationRepository", () => {
     });
     await repository.recordScrapeFailure(job.id, {
       claimedBy: "desktop-a",
-      reason: "LinkedIn session expired",
+      reason: "LinkedIn public job details unavailable",
       maxAttempts: 3,
       backoffMs: 60_000,
       now: new Date("2026-06-30T10:00:10.000Z"),

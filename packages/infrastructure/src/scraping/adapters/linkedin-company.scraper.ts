@@ -4,31 +4,18 @@ import type {
   ScrapedCompany,
   ScrapedJob,
 } from "@careerden/domain";
-import { chromium } from "playwright";
-import type { Page } from "playwright";
-import type { LinkedInSessionManager } from "../linkedin-session.manager.js";
-
-export type LinkedInCompanyFetchStrategy = "guest" | "browser-session";
 
 export interface LinkedInCompanyScraperOptions {
   fetch?: typeof fetch;
-  strategy?: LinkedInCompanyFetchStrategy;
 }
 
 export const linkedInGuestCompanyParserVersion = "linkedin-guest-company-v1";
 
 export class LinkedInCompanyScraper implements JobSiteScraper {
-  private readonly strategy: LinkedInCompanyScrapeStrategy;
+  private readonly fetchImpl: typeof fetch;
 
-  constructor(
-    linkedInSessionManager?: LinkedInSessionManager,
-    options: LinkedInCompanyScraperOptions = {},
-  ) {
-    this.strategy = createLinkedInCompanyScrapeStrategy({
-      fetchImpl: options.fetch ?? fetch,
-      linkedInSessionManager,
-      strategy: options.strategy ?? "guest",
-    });
+  constructor(options: LinkedInCompanyScraperOptions = {}) {
+    this.fetchImpl = options.fetch ?? fetch;
   }
 
   canHandle(url: string): boolean {
@@ -59,113 +46,14 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
       };
     }
 
-    return this.strategy.scrape(input, companyUrl);
-  }
-}
-
-interface LinkedInCompanyScrapeStrategy {
-  readonly name: LinkedInCompanyFetchStrategy;
-  scrape(input: CompanyLookupInput, companyUrl: string): Promise<ScrapedCompany>;
-}
-
-function createLinkedInCompanyScrapeStrategy(input: {
-  fetchImpl: typeof fetch;
-  linkedInSessionManager?: LinkedInSessionManager;
-  strategy: LinkedInCompanyFetchStrategy;
-}): LinkedInCompanyScrapeStrategy {
-  switch (input.strategy) {
-    case "guest":
-      return new LinkedInGuestCompanyScrapeStrategy(input.fetchImpl);
-    case "browser-session":
-      return new LinkedInBrowserSessionCompanyScrapeStrategy(input.linkedInSessionManager);
-  }
-}
-
-class LinkedInGuestCompanyScrapeStrategy implements LinkedInCompanyScrapeStrategy {
-  readonly name = "guest";
-
-  constructor(private readonly fetchImpl: typeof fetch) {}
-
-  async scrape(input: CompanyLookupInput, companyUrl: string): Promise<ScrapedCompany> {
     const response = await fetchLinkedInGuestCompanyHtml(this.fetchImpl, companyUrl);
 
     return parseLinkedInGuestCompanyHtml(response.html, {
       companyUrl,
       finalUrl: response.finalUrl,
       input,
-      strategy: this.name,
+      strategy: "guest",
     });
-  }
-}
-
-class LinkedInBrowserSessionCompanyScrapeStrategy implements LinkedInCompanyScrapeStrategy {
-  readonly name = "browser-session";
-
-  constructor(private readonly linkedInSessionManager?: LinkedInSessionManager) {}
-
-  async scrape(input: CompanyLookupInput, companyUrl: string): Promise<ScrapedCompany> {
-    const aboutUrl = normalizeLinkedInCompanyAboutUrl(companyUrl);
-
-    if (!aboutUrl) {
-      throw new Error("LinkedIn company URL could not be normalized");
-    }
-
-    if (!this.linkedInSessionManager) {
-      throw new Error(
-        "linkedin_session_required: LinkedIn company scraping requires a saved browser session",
-      );
-    }
-
-    const storageState = await this.linkedInSessionManager
-      .getStorageState()
-      .catch((error: unknown) => {
-        const message =
-          error instanceof Error ? error.message : "LinkedIn session is not connected";
-        throw new Error(`linkedin_session_required: ${message}`);
-      });
-    const browser = await chromium.launch({ headless: true });
-
-    try {
-      const context = await browser.newContext({ storageState });
-      const page = await context.newPage();
-
-      await page.goto(aboutUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
-      await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => undefined);
-
-      if (page.url().includes("/login")) {
-        throw new Error("linkedin_session_required: LinkedIn redirected to login");
-      }
-
-      const websiteUrl = await extractLinkedInCompanyWebsiteUrl(page);
-      const logoUrl =
-        chooseLinkedInCompanyLogoUrl([{ src: input.logoUrl }]) ??
-        (await extractLinkedInCompanyLogoUrl(page));
-      const description = await firstText(page, [
-        ".org-about-us-organization-description__text",
-        ".org-page-details__definition-text",
-        "section.org-page-details-module",
-      ]);
-
-      return {
-        name: input.companyName,
-        linkedInUrl: input.linkedInUrl,
-        websiteUrl,
-        description: description || undefined,
-        logoUrl,
-        raw: {
-          adapter: "linkedin-company",
-          strategy: this.name,
-          input,
-          aboutUrl,
-          finalUrl: page.url(),
-          websiteExtracted: Boolean(websiteUrl),
-          logoExtracted: Boolean(logoUrl),
-          scrapedAt: new Date().toISOString(),
-        },
-      };
-    } finally {
-      await browser.close();
-    }
   }
 }
 
@@ -173,7 +61,7 @@ export interface ParseLinkedInGuestCompanyInput {
   companyUrl: string;
   finalUrl: string;
   input: CompanyLookupInput;
-  strategy: Extract<LinkedInCompanyFetchStrategy, "guest">;
+  strategy: "guest";
 }
 
 export function parseLinkedInGuestCompanyHtml(
@@ -264,12 +152,6 @@ export function normalizeLinkedInCompanyUrl(linkedInUrl?: string): string | unde
   }
 
   return `${parsed.origin}/company/${slug}/`;
-}
-
-export function normalizeLinkedInCompanyAboutUrl(linkedInUrl?: string): string | undefined {
-  const companyUrl = normalizeLinkedInCompanyUrl(linkedInUrl);
-
-  return companyUrl ? `${companyUrl}about/` : undefined;
 }
 
 async function fetchLinkedInGuestCompanyHtml(
@@ -454,33 +336,6 @@ function isLinkedInHostname(hostname: string): boolean {
   return hostname === "linkedin.com" || hostname.endsWith(".linkedin.com");
 }
 
-async function extractLinkedInCompanyLogoUrl(page: Page): Promise<string | undefined> {
-  const selectors = [
-    ".org-top-card-primary-content__logo-container img",
-    "img.org-top-card-primary-content__logo",
-    ".org-top-card-primary-content__logo img",
-    'img[alt*="logo" i]',
-  ];
-  const candidates: Array<{ delayedUrl?: string; src?: string; srcset?: string }> = [];
-
-  for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-
-    if ((await locator.count()) === 0) {
-      continue;
-    }
-
-    candidates.push({
-      delayedUrl:
-        (await locator.getAttribute("data-delayed-url").catch(() => undefined)) ?? undefined,
-      src: (await locator.getAttribute("src").catch(() => undefined)) ?? undefined,
-      srcset: (await locator.getAttribute("srcset").catch(() => undefined)) ?? undefined,
-    });
-  }
-
-  return chooseLinkedInCompanyLogoUrl(candidates);
-}
-
 export function chooseExternalCompanyWebsiteUrl(
   candidates: Array<string | undefined>,
 ): string | undefined {
@@ -493,63 +348,6 @@ export function chooseExternalCompanyWebsiteUrl(
   }
 
   return undefined;
-}
-
-export function chooseLinkedInAboutWebsiteUrl(
-  fields: Array<{ label: string; href?: string; text?: string }>,
-): string | undefined {
-  const websiteField = fields.find(
-    (field) => normalizeWhitespace(field.label).toLowerCase() === "website",
-  );
-
-  if (!websiteField) {
-    return undefined;
-  }
-
-  return chooseExternalCompanyWebsiteUrl([websiteField.href, websiteField.text]);
-}
-
-async function extractLinkedInCompanyWebsiteUrl(page: Page): Promise<string | undefined> {
-  const websiteDefinition = page
-    .locator("dt")
-    .filter({ hasText: /^\s*Website\s*$/i })
-    .first();
-
-  if ((await websiteDefinition.count()) === 0) {
-    return undefined;
-  }
-
-  const value = websiteDefinition.locator("xpath=following-sibling::dd[1]");
-  const link = value.locator("a[href]").first();
-  const href =
-    (await link.count()) > 0 ? await link.getAttribute("href").catch(() => undefined) : undefined;
-  const text = await value.textContent().catch(() => undefined);
-
-  return chooseLinkedInAboutWebsiteUrl([
-    {
-      label: "Website",
-      href: href ?? undefined,
-      text: text ?? undefined,
-    },
-  ]);
-}
-
-async function firstText(page: Page, selectors: string[]): Promise<string> {
-  for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-
-    if ((await locator.count()) === 0) {
-      continue;
-    }
-
-    const text = await locator.textContent().catch(() => undefined);
-
-    if (text?.trim()) {
-      return normalizeWhitespace(text);
-    }
-  }
-
-  return "";
 }
 
 function normalizeExternalWebsiteCandidate(candidate: string | undefined): string | undefined {

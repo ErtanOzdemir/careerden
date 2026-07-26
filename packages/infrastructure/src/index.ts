@@ -45,7 +45,6 @@ export * from "./notifications/redis-notification-change.bus.js";
 export * from "./notifications/smtp-email.sender.js";
 export * from "./scraping/adapters/linkedin-company.scraper.js";
 export * from "./scraping/adapters/linkedin-job.scraper.js";
-export * from "./scraping/linkedin-session.manager.js";
 export * from "./scraping/http-remote-image.fetcher.js";
 export * from "./scraping/scraper-factory.js";
 export * from "./storage/local-file.storage.js";

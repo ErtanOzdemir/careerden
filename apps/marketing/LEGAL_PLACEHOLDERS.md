@@ -42,7 +42,7 @@ The public legal copy is a working product draft, not legal advice or a complian
 ## Implementation limitations to resolve
 
 - The public five-step workflow is a static, fictional product demonstration. It does not upload templates, create a backend profile, submit a job, or store onboarding progress.
-- Automatic LinkedIn capture currently requires the desktop app and a connected LinkedIn session. Direct manual application entry from other sources is planned but is not exposed as a complete user-facing flow; do not market it as currently available until that flow is implemented and verified.
+- Automatic LinkedIn capture currently uses public guest responses through the desktop app and does not connect the user's LinkedIn account. Direct manual application entry from other sources is planned but is not exposed as a complete user-facing flow; do not market it as currently available until that flow is implemented and verified.
 - Uploading and mapping DOCX templates is presented as the recommended custom-layout setup. Do not describe it as a technical prerequisite while the authenticated product also provides built-in layouts.
 - The current authenticated review flow lets users edit generated content and apply changes with `Update pack`. Do not claim a separate AI-regeneration action until that capability is implemented and verified.
 - The current authenticated settings UI does not expose a verified self-service account-deletion control. The deletion page must not claim one until implemented and tested.

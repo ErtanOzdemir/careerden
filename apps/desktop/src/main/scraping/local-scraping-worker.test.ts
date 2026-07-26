@@ -155,14 +155,17 @@ describe("LocalScrapingWorker", () => {
     });
     const runner = createRunner({
       scrape: vi.fn(async () => {
-        throw new Error("LinkedIn session expired");
+        throw new Error("LinkedIn public job details unavailable");
       }),
     });
     const worker = new LocalScrapingWorker({ api, runner });
 
     await worker.runOnce();
 
-    expect(api.failScrapeJob).toHaveBeenCalledWith("job-1", "LinkedIn session expired");
+    expect(api.failScrapeJob).toHaveBeenCalledWith(
+      "job-1",
+      "LinkedIn public job details unavailable",
+    );
     expect(api.submitScrapeData).not.toHaveBeenCalled();
   });
 

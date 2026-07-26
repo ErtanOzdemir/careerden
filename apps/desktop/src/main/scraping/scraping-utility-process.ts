@@ -1,10 +1,6 @@
 import process from "node:process";
 import { ScrapeLinkedInJobUseCase } from "@careerden/application";
-import {
-  LinkedInCompanyScraper,
-  LinkedInJobScraper,
-  LinkedInSessionManager,
-} from "@careerden/infrastructure";
+import { LinkedInCompanyScraper, LinkedInJobScraper } from "@careerden/infrastructure";
 import {
   parseScrapingUtilityRequest,
   type ScrapingUtilityResponse,
@@ -28,13 +24,9 @@ async function handleMessage(message: unknown): Promise<void> {
   }
 
   try {
-    const sessionManager = new LinkedInSessionManager(
-      request.sessionDirectory,
-      Buffer.from(request.sessionEncryptionKey, "base64"),
-    );
     const scrapeLinkedInJob = new ScrapeLinkedInJobUseCase(
-      new LinkedInJobScraper(sessionManager),
-      new LinkedInCompanyScraper(sessionManager, { strategy: "guest" }),
+      new LinkedInJobScraper(),
+      new LinkedInCompanyScraper(),
     );
     const scrapeBundle = await scrapeLinkedInJob.execute(request.sourceUrl);
 

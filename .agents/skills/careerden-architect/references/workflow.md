@@ -4,7 +4,7 @@
 
 1. The API validates submission and creates a `queued` job application through an application use case.
 2. The Electron desktop worker authenticates, claims eligible queued or expired scraping work, and receives a time-limited claim.
-3. The desktop worker heartbeats while Playwright scrapes the job and related company sources.
+3. The desktop worker heartbeats while site adapters fetch and parse public guest job and company responses.
 4. The desktop submits the raw/normalized scrape bundle with its claim identity.
 5. The application layer validates status and claim ownership, stores the scrape and optional logo, updates tracking fields, emits events, and transitions to `scraped`.
 6. If the profile enables automatic analysis, enqueue the LLM job; otherwise emit an explicit skipped event.

@@ -469,11 +469,3 @@ export interface ApiNotification {
   title: string;
   type: "follow_up_reminder";
 }
-
-export type ApiLinkedInSessionStatus = "connected" | "expired" | "login_in_progress" | "missing";
-
-export interface ApiLinkedInSessionStatusResult {
-  message?: string;
-  status: ApiLinkedInSessionStatus;
-  updatedAt?: string;
-}

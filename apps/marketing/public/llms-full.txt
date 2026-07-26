@@ -1,6 +1,6 @@
 # Careerden: product and public-site context
 
-Careerden is a TypeScript open-source desktop job application tracker with a profile-aware CV creator and cover letter creator. It keeps opportunities, stages, salary and work-style context, interest, follow-ups, contacts, notes, match analysis, and application documents together from discovery through outcome. A user also maintains reusable profile details such as professional summary, skills, experience, education, projects, and certifications. In the current desktop workflow, a user submits a LinkedIn job-posting URL through a connected LinkedIn session and the application captures source and normalized job/company information. LinkedIn is the current automated capture source; direct manual application entry from other sources is planned and is not available in the current release. Depending on operator configuration and profile readiness, Careerden can run AI-supported requirement extraction and match analysis, then prepare editable CV and cover-letter drafts and rendered documents inside the tracked application.
+Careerden is a TypeScript open-source desktop job application tracker with a profile-aware CV creator and cover letter creator. It keeps opportunities, stages, salary and work-style context, interest, follow-ups, contacts, notes, match analysis, and application documents together from discovery through outcome. A user also maintains reusable profile details such as professional summary, skills, experience, education, projects, and certifications. In the current desktop workflow, a user submits a LinkedIn job-posting URL and the application captures source and normalized job/company information from public guest responses without connecting the user's LinkedIn account. LinkedIn is the current automated capture source; direct manual application entry from other sources is planned and is not available in the current release. Depending on operator configuration and profile readiness, Careerden can run AI-supported requirement extraction and match analysis, then prepare editable CV and cover-letter drafts and rendered documents inside the tracked application.
 
 ## Intended workflow
 
@@ -10,7 +10,7 @@ Careerden is a TypeScript open-source desktop job application tracker with a pro
    walkthrough presents this as the recommended setup; the product may also provide built-in layouts.
 3. The user maps detected template variables to profile data and saves the mapping. Cover-letter
    content is mapped to the generated document-content field.
-4. In the connected desktop app, the user submits a LinkedIn job-posting URL and may choose output
+4. In the desktop app, the user submits a LinkedIn job-posting URL and may choose output
    language and tone. Careerden queues and processes the posting while preserving source material for
    traceability. Direct manual application entry from other sources is planned and is not available
    in the current release.

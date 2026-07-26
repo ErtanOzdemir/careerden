@@ -29,10 +29,7 @@ describe("Topbar", () => {
       platform: "win32",
       maximizeWindow,
       minimizeWindow,
-      saveLinkedInSession: vi.fn(),
       notifyJobApplicationQueued: vi.fn(),
-      startLinkedInSession: vi.fn(),
-      getLinkedInSessionStatus: vi.fn(),
     };
 
     renderTopbar();
@@ -56,10 +53,7 @@ describe("Topbar", () => {
       platform: "darwin",
       maximizeWindow: vi.fn(),
       minimizeWindow: vi.fn(),
-      saveLinkedInSession: vi.fn(),
       notifyJobApplicationQueued: vi.fn(),
-      startLinkedInSession: vi.fn(),
-      getLinkedInSessionStatus: vi.fn(),
     };
 
     renderTopbar();

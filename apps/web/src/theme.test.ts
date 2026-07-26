@@ -132,9 +132,6 @@ describe("theme preferences", () => {
 function installElectronApi() {
   const setNativeThemeSource = vi.fn().mockResolvedValue(undefined);
   window.electronAPI = {
-    getLinkedInSessionStatus: vi.fn(),
-    startLinkedInSession: vi.fn(),
-    saveLinkedInSession: vi.fn(),
     notifyJobApplicationQueued: vi.fn(),
     setNativeThemeSource,
   };

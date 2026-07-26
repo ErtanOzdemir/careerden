@@ -4,8 +4,6 @@ export interface ScrapeRequestMessage {
   type: "scrape";
   requestId: string;
   sourceUrl: string;
-  sessionDirectory: string;
-  sessionEncryptionKey: string;
 }
 
 export interface ScrapeSuccessMessage {
@@ -35,9 +33,7 @@ export function parseScrapingUtilityRequest(message: unknown): ScrapingUtilityRe
   if (
     request.type === "scrape" &&
     typeof request.requestId === "string" &&
-    typeof request.sourceUrl === "string" &&
-    typeof request.sessionDirectory === "string" &&
-    typeof request.sessionEncryptionKey === "string"
+    typeof request.sourceUrl === "string"
   ) {
     return request as unknown as ScrapingUtilityRequest;
   }

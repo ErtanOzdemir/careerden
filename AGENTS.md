@@ -21,7 +21,7 @@ documents for review or download.
 - Web app: React 19, React Router 7, Vite 6, Tailwind CSS 4, Tiptap 3
 - Persistence: PostgreSQL via `pg` and Knex 3.1 for API database access and
   migrations
-- Scraping and rendering: Playwright 1.60
+- Scraping: public LinkedIn guest HTTP responses and HTML parsing
 - AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
 - Document generation: HTML templates, Docxtemplater, Gotenberg/Playwright PDF rendering
 - Storage: S3-compatible object storage via RustFS locally and Cloudflare R2 in production
@@ -92,9 +92,8 @@ documents for review or download.
   stream with Electron's default session. It refreshes the renderer for every new
   notification and shows an operating-system notification only when the app is
   unfocused. Clicking the alert restores the app and opens the related timeline.
-- The desktop LinkedIn session uses a random per-installation AES-256 key protected by
-  Electron `safeStorage`; session/key files use owner-only permissions and no shared
-  environment secret.
+- Desktop LinkedIn scraping uses public guest HTTP responses in an isolated utility
+  process and does not require or persist a user's LinkedIn account session.
 - The API runtime uses PostgreSQL for state, S3-compatible object storage through RustFS
   locally or Cloudflare R2 in production, and Redis/BullMQ for enqueueing job application
   processing.

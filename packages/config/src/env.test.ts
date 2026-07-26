@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,7 +11,6 @@ const envKeys = [
   "OPENAI_API_KEY",
   "GEMINI_API_KEY",
   "DEEPSEEK_API_KEY",
-  "LINKEDIN_SESSION_STORAGE_DIR",
 ];
 
 const originalCwd = process.cwd();
@@ -60,35 +59,6 @@ describe("loadEnv", () => {
       PORT: "3200",
     });
 
-    expect(Object.keys(env).sort()).toEqual([
-      "AI_PROVIDER",
-      "LINKEDIN_SESSION_STORAGE_DIR",
-      "NODE_ENV",
-      "PORT",
-    ]);
-  });
-
-  it("resolves LinkedIn session storage directory relative to the loaded .env file", () => {
-    for (const key of envKeys) {
-      delete process.env[key];
-    }
-
-    tempDirectory = mkdtempSync(join(tmpdir(), "careerden-config-"));
-    const nestedDirectory = join(tempDirectory, "apps", "desktop");
-    mkdirSync(nestedDirectory, { recursive: true });
-    writeFileSync(
-      join(tempDirectory, ".env"),
-      "LINKEDIN_SESSION_STORAGE_DIR=./storage/linkedin-session",
-    );
-
-    process.chdir(nestedDirectory);
-
-    const env = loadEnv();
-
-    const resolvedTempDirectory = realpathSync(tempDirectory);
-
-    expect(env.LINKEDIN_SESSION_STORAGE_DIR).toBe(
-      join(resolvedTempDirectory, "storage", "linkedin-session"),
-    );
+    expect(Object.keys(env).sort()).toEqual(["AI_PROVIDER", "NODE_ENV", "PORT"]);
   });
 });

@@ -69,9 +69,6 @@ function installUpdateBridge(
 ) {
   const checkForDesktopUpdates = vi.fn().mockResolvedValue(undefined);
   window.electronAPI = {
-    getLinkedInSessionStatus: vi.fn(),
-    startLinkedInSession: vi.fn(),
-    saveLinkedInSession: vi.fn(),
     notifyJobApplicationQueued: vi.fn(),
     getDesktopUpdateState: vi.fn().mockResolvedValue(state),
     checkForDesktopUpdates,

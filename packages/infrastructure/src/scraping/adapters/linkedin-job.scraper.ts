@@ -4,15 +4,9 @@ import type {
   ScrapedCompany,
   ScrapedJob,
 } from "@careerden/domain";
-import { chromium } from "playwright";
-import type { Page } from "playwright";
-import type { LinkedInSessionManager } from "../linkedin-session.manager.js";
-
-export type LinkedInFetchStrategy = "guest" | "manual" | "browser-session";
 
 export interface LinkedInJobScraperOptions {
   fetch?: typeof fetch;
-  strategy?: LinkedInFetchStrategy;
 }
 
 export const linkedinGuestJobDetailEndpoint =
@@ -20,17 +14,10 @@ export const linkedinGuestJobDetailEndpoint =
 export const linkedInGuestParserVersion = "linkedin-guest-detail-v1";
 
 export class LinkedInJobScraper implements JobSiteScraper {
-  private readonly strategy: LinkedInJobScrapeStrategy;
+  private readonly fetchImpl: typeof fetch;
 
-  constructor(
-    private readonly linkedInSessionManager?: LinkedInSessionManager,
-    options: LinkedInJobScraperOptions = {},
-  ) {
-    this.strategy = createLinkedInJobScrapeStrategy({
-      fetchImpl: options.fetch ?? fetch,
-      linkedInSessionManager,
-      strategy: options.strategy ?? "guest",
-    });
+  constructor(options: LinkedInJobScraperOptions = {}) {
+    this.fetchImpl = options.fetch ?? fetch;
   }
 
   canHandle(url: string): boolean {
@@ -39,140 +26,6 @@ export class LinkedInJobScraper implements JobSiteScraper {
   }
 
   async scrapeJob(url: string): Promise<ScrapedJob> {
-    return this.strategy.scrape(url);
-  }
-
-  private async scrapeJobWithBrowserSession(url: string): Promise<ScrapedJob> {
-    if (!this.linkedInSessionManager) {
-      throw new Error(
-        "linkedin_session_required: LinkedIn job scraping requires a saved browser session",
-      );
-    }
-
-    const storageState = await this.linkedInSessionManager
-      .getStorageState()
-      .catch((error: unknown) => {
-        const message =
-          error instanceof Error ? error.message : "LinkedIn session is not connected";
-        throw new Error(`linkedin_session_required: ${message}`);
-      });
-    const browser = await chromium.launch({ headless: true });
-
-    try {
-      const context = await browser.newContext({ storageState });
-      const page = await context.newPage();
-
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
-      await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => undefined);
-
-      if (page.url().includes("/login")) {
-        throw new Error("linkedin_session_required: LinkedIn redirected to login");
-      }
-
-      const title = await firstText(page, [
-        "h1",
-        ".job-details-jobs-unified-top-card__job-title",
-        ".top-card-layout__title",
-      ]);
-      const companyName = await firstText(page, [
-        ".job-details-jobs-unified-top-card__company-name a",
-        ".job-details-jobs-unified-top-card__company-name",
-        ".topcard__org-name-link",
-        ".top-card-layout__second-subline a",
-      ]);
-      const location = await firstText(page, [
-        ".job-details-jobs-unified-top-card__primary-description-container span",
-        ".topcard__flavor--bullet",
-        ".job-search-card__location",
-      ]);
-      const description = await extractLinkedInJobDescription(page);
-      let descriptionText = description.text;
-      const rawDescriptionHtml = description.rawHtml;
-      const descriptionHtml = description.html;
-      if (!descriptionText) {
-        descriptionText = await firstText(page, [
-          "#job-details",
-          ".jobs-description-content__text",
-          ".description__text",
-        ]);
-      }
-      const companyLinkedInUrl = await firstHref(page, [
-        ".job-details-jobs-unified-top-card__company-name a",
-        ".topcard__org-name-link",
-      ]);
-      const companyLogoUrl = chooseLinkedInJobCompanyLogoUrl(
-        await collectLinkedInJobCompanyLogoCandidates(page),
-      );
-
-      if (!descriptionText || title.toLowerCase().includes("sign in")) {
-        throw new Error(
-          "linkedin_session_required: LinkedIn did not expose job details for this session",
-        );
-      }
-
-      return {
-        title: title || "Untitled LinkedIn job",
-        companyName: companyName || "Unknown company",
-        location,
-        description: descriptionText,
-        ...(descriptionHtml ? { descriptionHtml } : {}),
-        requirements: [],
-        companyLinkedInUrl,
-        ...(companyLogoUrl ? { companyLogoUrl } : {}),
-        raw: {
-          sourceUrl: url,
-          finalUrl: page.url(),
-          adapter: "linkedin-job",
-          strategy: "browser-session",
-          parserVersion: "linkedin-browser-session-v1",
-          scrapedAt: new Date().toISOString(),
-          companyLogoUrl,
-          ...(rawDescriptionHtml ? { descriptionHtml: rawDescriptionHtml } : {}),
-        },
-      };
-    } finally {
-      await browser.close();
-    }
-  }
-
-  async scrapeCompany(input: CompanyLookupInput): Promise<ScrapedCompany> {
-    return {
-      name: input.companyName,
-      linkedInUrl: input.linkedInUrl,
-      raw: {
-        adapter: "linkedin-company",
-        input,
-      },
-    };
-  }
-}
-
-interface LinkedInJobScrapeStrategy {
-  readonly name: LinkedInFetchStrategy;
-  scrape(url: string): Promise<ScrapedJob>;
-}
-
-function createLinkedInJobScrapeStrategy(input: {
-  fetchImpl: typeof fetch;
-  linkedInSessionManager?: LinkedInSessionManager;
-  strategy: LinkedInFetchStrategy;
-}): LinkedInJobScrapeStrategy {
-  switch (input.strategy) {
-    case "guest":
-      return new LinkedInGuestJobScrapeStrategy(input.fetchImpl);
-    case "manual":
-      return new LinkedInManualJobScrapeStrategy();
-    case "browser-session":
-      return new DisabledLinkedInBrowserSessionJobScrapeStrategy();
-  }
-}
-
-class LinkedInGuestJobScrapeStrategy implements LinkedInJobScrapeStrategy {
-  readonly name = "guest";
-
-  constructor(private readonly fetchImpl: typeof fetch) {}
-
-  async scrape(url: string): Promise<ScrapedJob> {
     const jobId = extractLinkedInJobId(url);
 
     if (!jobId) {
@@ -189,23 +42,16 @@ class LinkedInGuestJobScrapeStrategy implements LinkedInJobScrapeStrategy {
       sourceJobId: jobId,
     });
   }
-}
 
-class LinkedInManualJobScrapeStrategy implements LinkedInJobScrapeStrategy {
-  readonly name = "manual";
-
-  async scrape(): Promise<ScrapedJob> {
-    throw new Error("manual LinkedIn strategy is handled by manually created job applications");
-  }
-}
-
-class DisabledLinkedInBrowserSessionJobScrapeStrategy implements LinkedInJobScrapeStrategy {
-  readonly name = "browser-session";
-
-  async scrape(): Promise<ScrapedJob> {
-    throw new Error(
-      "linkedin_browser_session_disabled: browser-session strategy is reserved for future use",
-    );
+  async scrapeCompany(input: CompanyLookupInput): Promise<ScrapedCompany> {
+    return {
+      name: input.companyName,
+      linkedInUrl: input.linkedInUrl,
+      raw: {
+        adapter: "linkedin-company",
+        input,
+      },
+    };
   }
 }
 
@@ -213,7 +59,7 @@ export interface ParseLinkedInGuestJobDetailInput {
   finalUrl: string;
   sourceJobId?: string;
   sourceUrl: string;
-  strategy: Extract<LinkedInFetchStrategy, "guest">;
+  strategy: "guest";
 }
 
 export function parseLinkedInGuestJobDetailHtml(
@@ -319,40 +165,6 @@ export function extractLinkedInCompanyLogoUrlFromHtml(html: string): string | un
   }
 
   return chooseLinkedInJobCompanyLogoUrl(candidates);
-}
-
-interface LinkedInJobDescription {
-  html?: string;
-  rawHtml?: string;
-  text: string;
-}
-
-export async function extractLinkedInJobDescription(page: Page): Promise<LinkedInJobDescription> {
-  for (const selector of [
-    "#job-details",
-    ".jobs-description-content__text",
-    ".description__text",
-  ]) {
-    const locator = page.locator(selector).first();
-
-    if ((await locator.count()) === 0) {
-      continue;
-    }
-
-    const rawHtml = await locator.innerHTML().catch(() => undefined);
-    const text = rawHtml ? htmlToLinkedInJobDescriptionText(rawHtml) : "";
-    const html = rawHtml ? sanitizeLinkedInJobDescriptionHtml(rawHtml) : "";
-
-    if (text) {
-      return {
-        text,
-        ...(html ? { html } : {}),
-        ...(rawHtml ? { rawHtml } : {}),
-      };
-    }
-  }
-
-  return { text: "" };
 }
 
 const allowedBlockTags = new Set(["p", "h1", "h2", "h3", "ul", "ol", "li"]);
@@ -523,42 +335,6 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
-async function firstText(page: Page, selectors: string[]): Promise<string> {
-  for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-
-    if ((await locator.count()) === 0) {
-      continue;
-    }
-
-    const text = await locator.textContent().catch(() => undefined);
-
-    if (text?.trim()) {
-      return normalizeWhitespace(text);
-    }
-  }
-
-  return "";
-}
-
-async function firstHref(page: Page, selectors: string[]): Promise<string | undefined> {
-  for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-
-    if ((await locator.count()) === 0) {
-      continue;
-    }
-
-    const href = await locator.getAttribute("href").catch(() => undefined);
-
-    if (href?.trim()) {
-      return href.startsWith("http") ? href : `https://www.linkedin.com${href}`;
-    }
-  }
-
-  return undefined;
-}
-
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -637,35 +413,6 @@ function getHtmlAttribute(tag: string, name: string): string | undefined {
   const value = match?.[1] ?? match?.[2] ?? match?.[3];
 
   return value ? decodeHtml(value) : undefined;
-}
-
-async function collectLinkedInJobCompanyLogoCandidates(
-  page: Page,
-): Promise<Array<{ delayedUrl?: string; src?: string; srcset?: string }>> {
-  const selectors = [
-    ".job-details-jobs-unified-top-card__company-logo img",
-    ".top-card-layout__entity-image",
-    ".artdeco-entity-image",
-    'img[alt*="logo" i]',
-  ];
-  const candidates: Array<{ delayedUrl?: string; src?: string; srcset?: string }> = [];
-
-  for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-
-    if ((await locator.count()) === 0) {
-      continue;
-    }
-
-    candidates.push({
-      delayedUrl:
-        (await locator.getAttribute("data-delayed-url").catch(() => undefined)) ?? undefined,
-      src: (await locator.getAttribute("src").catch(() => undefined)) ?? undefined,
-      srcset: (await locator.getAttribute("srcset").catch(() => undefined)) ?? undefined,
-    });
-  }
-
-  return candidates;
 }
 
 function chooseLinkedInJobCompanyLogoUrl(

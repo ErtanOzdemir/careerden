@@ -10,8 +10,6 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
       fork: vi.fn(() => child),
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
       scrapeTimeoutMs: 100,
-      sessionDirectory: "/user/linkedin-session",
-      sessionEncryptionKey: "encoded-key",
     });
 
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
@@ -31,8 +29,6 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
     const runner = new UtilityProcessLinkedInScrapingRunner({
       fork,
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
-      sessionDirectory: "/user/linkedin-session",
-      sessionEncryptionKey: "encoded-key",
     });
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
     const request = child.messages[0] as { requestId: string };
@@ -53,11 +49,10 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
     });
 
     await expect(scrapePromise).resolves.toEqual(scrapeBundle);
-    expect(child.messages[0]).toMatchObject({
+    expect(child.messages[0]).toEqual({
       type: "scrape",
+      requestId: expect.any(String),
       sourceUrl: "https://www.linkedin.com/jobs/view/1",
-      sessionDirectory: "/user/linkedin-session",
-      sessionEncryptionKey: "encoded-key",
     });
   });
 
@@ -66,8 +61,6 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
     const runner = new UtilityProcessLinkedInScrapingRunner({
       fork: vi.fn(() => child),
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
-      sessionDirectory: "/user/linkedin-session",
-      sessionEncryptionKey: "encoded-key",
     });
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
     const request = child.messages[0] as { requestId: string };
@@ -86,8 +79,6 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
     const runner = new UtilityProcessLinkedInScrapingRunner({
       fork: vi.fn(() => child),
       modulePath: "/dist/main/scraping/scraping-utility-process.js",
-      sessionDirectory: "/user/linkedin-session",
-      sessionEncryptionKey: "encoded-key",
     });
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
 

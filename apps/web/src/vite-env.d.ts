@@ -29,9 +29,6 @@ interface Window {
   electronAPI?: {
     platform?: string;
     openExternal?: (url: string) => Promise<void>;
-    getLinkedInSessionStatus: () => Promise<unknown>;
-    startLinkedInSession: () => Promise<unknown>;
-    saveLinkedInSession: () => Promise<unknown>;
     notifyJobApplicationQueued: () => Promise<void>;
     minimizeWindow?: () => Promise<void>;
     maximizeWindow?: () => Promise<void>;

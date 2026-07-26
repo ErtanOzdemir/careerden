@@ -263,9 +263,9 @@ export default function HomePage() {
                 <span className="kicker">Application capture</span>
                 <h3>Add your first application</h3>
                 <p>
-                  In the connected desktop app, paste a LinkedIn job URL. Careerden captures the
-                  role as a tracked application, compares its requirements with your profile, and
-                  opens the complete Overview shown below.
+                  In the desktop app, paste a LinkedIn job URL. Careerden captures the role as a
+                  tracked application, compares its requirements with your profile, and opens the
+                  complete Overview shown below.
                 </p>
                 <small className="workflow-step-note">
                   LinkedIn is the current automated capture source. Direct manual application entry

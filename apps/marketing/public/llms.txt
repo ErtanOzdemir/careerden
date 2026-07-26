@@ -24,7 +24,8 @@
   confirmed paid period.
 - The public workflow shows fictional replicas of the profile, template upload, variable mapping,
   job submission, and application-pack review screens.
-- Automatic LinkedIn capture currently uses the desktop app and its connected LinkedIn session.
+- Automatic LinkedIn capture currently uses public guest responses through the desktop app and does
+  not connect the user's LinkedIn account.
 - LinkedIn is the current automated capture source, not the product boundary. Direct manual
   application entry is planned and is not available in the current release.
 - The public marketing website does not expose login, signup, or browser-application links. Its

@@ -56,7 +56,6 @@ When deploying Careerden:
 
 - Use environment variables for all secrets (API keys, database URLs, session secrets).
 - Never commit `.env` files to version control.
-- Use strong, unique values for `LINKEDIN_SESSION_SECRET`.
 - Keep dependencies updated regularly.
 - Use HTTPS in production.
 - Restrict database access to trusted networks.

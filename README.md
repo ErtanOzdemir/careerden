@@ -59,7 +59,7 @@ Capture LinkedIn jobs. Match your profile. Create tailored documents. Track ever
 - Node.js 22 (the version is pinned in `.nvmrc`)
 - pnpm 9.15.0
 - Docker with Docker Compose
-- A Chromium browser installed for Playwright
+- A Chromium browser installed for Playwright PDF rendering
 
 ### Setup
 
@@ -94,8 +94,8 @@ pnpm dev:desktop
 
 The command starts the API, React/Vite web app, LLM worker, documents worker,
 notifications worker, and Electron desktop app. On first use, create an account and open MailHog at
-<http://localhost:8025> to read the verification OTP. Connect a LinkedIn session from
-the desktop app before submitting LinkedIn URLs for authenticated scraping.
+<http://localhost:8025> to read the verification OTP. The desktop app can then process submitted
+LinkedIn URLs through public guest endpoints without connecting a LinkedIn account.
 
 The example environment also enables follow-up reminder email delivery, so those messages appear in
 the same MailHog inbox. Keep `NOTIFICATION_EMAIL_ENABLED=false` in environments where reminder
@@ -130,7 +130,7 @@ LinkedIn URL or manual entry
            v
 Authenticated API -> PostgreSQL + transactional outbox
            |
-           +-> Electron claims scrape work -> Playwright -> raw + normalized scrape data
+           +-> Electron claims scrape work -> guest HTTP fetch -> raw + normalized scrape data
            |
            +-> reserve credit -> BullMQ -> LLM worker -> validated match analysis
            |
@@ -141,9 +141,10 @@ Authenticated API -> PostgreSQL + transactional outbox
                                                         +-> Redis -> API SSE -> Electron native alert
 ```
 
-LinkedIn scraping runs locally in an Electron utility process. The desktop worker claims
-queued work from the API, renews the claim while scraping, and submits both normalized
-and raw results. The API persists workflow changes and outbox events transactionally.
+LinkedIn scraping runs locally in an Electron utility process through public guest HTTP
+responses and HTML parsing; it does not require a LinkedIn account. The desktop worker
+claims queued work from the API, renews the claim while scraping, and submits both
+normalized and raw results. The API persists workflow changes and outbox events transactionally.
 The LLM, documents, and notifications workers consume BullMQ jobs independently from
 the API.
 
@@ -234,7 +235,8 @@ ownership checks and business workflows live in application use cases.
 | Database            | PostgreSQL 16 via Knex 3 and `pg`                |
 | Queues and realtime | Redis 7 and BullMQ 5                             |
 | AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek    |
-| Scraping and PDF    | Playwright 1.60                                  |
+| Scraping            | Public guest HTTP responses and HTML parsing     |
+| PDF                 | Playwright 1.60 and Gotenberg                    |
 | Documents           | HTML templates, Docxtemplater, Gotenberg         |
 | Storage             | AWS S3 SDK with RustFS locally and Cloudflare R2 |
 | Observability       | OpenTelemetry and OpenObserve                    |
@@ -308,7 +310,6 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 | `SMTP_HOST`                        | SMTP server host                        | `localhost`                            |
 | `SMTP_PORT`                        | SMTP server port                        | `1025`                                 |
 | `SMTP_FROM`                        | Sender used for OTP and reminder emails | `Careerden <no-reply@careerden.local>` |
-| `LINKEDIN_SESSION_STORAGE_DIR`     | Shared-config session storage path      | `./storage/linkedin-session`           |
 | `OBJECT_STORAGE_ENDPOINT`          | S3-compatible storage endpoint          | Development-only local endpoint        |
 | `OBJECT_STORAGE_BUCKET`            | Generated file/template bucket          | `careerden`                            |
 | `OBJECT_STORAGE_ACCESS_KEY_ID`     | S3-compatible access key                | Development-only `rustfsadmin`         |
@@ -513,9 +514,6 @@ The desktop scraping worker additionally uses these authenticated endpoints:
 | `POST` | `/job-applications/:id/scraping/heartbeat` | Renew a scrape claim       |
 | `POST` | `/job-applications/:id/scraping/fail`      | Report a scrape failure    |
 | `POST` | `/job-applications/:id/scraping/retry`     | Retry scraping             |
-
-LinkedIn login/session actions are exposed to the React renderer through Electron IPC;
-they are not part of the mounted HTTP API.
 
 ### Notifications
 

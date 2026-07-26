@@ -10,7 +10,6 @@ export const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
-  LINKEDIN_SESSION_STORAGE_DIR: z.string().default("./storage/linkedin-session"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -18,13 +17,7 @@ export type AppEnv = z.infer<typeof envSchema>;
 export function loadEnv(input?: NodeJS.ProcessEnv): AppEnv {
   const envFilePath = findNearestEnvFile();
   config(envFilePath ? { path: envFilePath } : undefined);
-  const parsed = envSchema.parse(input ?? process.env);
-  const baseDirectory = envFilePath ? dirname(envFilePath) : process.cwd();
-
-  return {
-    ...parsed,
-    LINKEDIN_SESSION_STORAGE_DIR: resolvePath(baseDirectory, parsed.LINKEDIN_SESSION_STORAGE_DIR),
-  };
+  return envSchema.parse(input ?? process.env);
 }
 
 function findNearestEnvFile(startDirectory = process.cwd()): string | undefined {
@@ -44,8 +37,4 @@ function findNearestEnvFile(startDirectory = process.cwd()): string | undefined 
 
     currentDirectory = dirname(currentDirectory);
   }
-}
-
-function resolvePath(baseDirectory: string, value: string): string {
-  return value.startsWith("/") ? value : join(baseDirectory, value);
 }

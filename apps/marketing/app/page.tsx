@@ -35,7 +35,7 @@ const faqs = [
   ],
   [
     "Is Careerden only for LinkedIn jobs?",
-    "No. Careerden is a job-application tracking workspace. LinkedIn is the automated capture source currently supported by the desktop helper. Direct manual entry for applications from other sources is planned and is not available in the current release.",
+    "No. Careerden is a job-application tracking workspace. LinkedIn is the automated capture source supported by the desktop helper, and you can paste job and company details manually for applications from any other source.",
   ],
   [
     "What can I track for each application?",
@@ -184,9 +184,8 @@ export default function HomePage() {
           <div className="tracking-source-note">
             <strong>Designed beyond a single job board</strong>
             <span>
-              Automated LinkedIn capture is available today. Direct manual application entry for
-              other job boards, referrals, and company career pages is planned and is not available
-              in the current release.
+              Use automated LinkedIn capture in the desktop app, or paste job and company details
+              manually for other job boards, referrals, and company career pages.
             </span>
           </div>
         </div>
@@ -263,13 +262,13 @@ export default function HomePage() {
                 <span className="kicker">Application capture</span>
                 <h3>Add your first application</h3>
                 <p>
-                  In the desktop app, paste a LinkedIn job URL. Careerden captures the role as a
-                  tracked application, compares its requirements with your profile, and opens the
-                  complete Overview shown below.
+                  Import a LinkedIn URL in the desktop app or paste job and company details
+                  manually. Careerden tracks the role, compares its requirements with your profile,
+                  and opens the complete Overview shown below.
                 </p>
                 <small className="workflow-step-note">
-                  LinkedIn is the current automated capture source. Direct manual application entry
-                  is planned and is not available in the current release.
+                  LinkedIn remains the automated desktop capture source; manual copy-and-paste works
+                  for applications from any source.
                 </small>
               </div>
               <div className="workflow-preview-wrap">

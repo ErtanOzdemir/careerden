@@ -496,8 +496,13 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
       updated_at: this.db.fn.now(),
     };
 
-    if (scrape.companyLinkedIn?.logoFileId) {
-      update.company_logo_file_id = scrape.companyLinkedIn.logoFileId;
+    const companyLogoFileId =
+      scrape.companyManual?.logoFileId ??
+      scrape.companyLinkedIn?.logoFileId ??
+      scrape.companyWebsite?.logoFileId ??
+      scrape.careerPage?.logoFileId;
+    if (companyLogoFileId) {
+      update.company_logo_file_id = companyLogoFileId;
     }
 
     await this.db("job_applications").where({ id }).update(update);

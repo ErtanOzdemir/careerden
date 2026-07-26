@@ -149,10 +149,10 @@ export default function Dashboard() {
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">
-              Turn a LinkedIn posting into a tailored application
+              Turn any job posting into a tailored application
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Paste a job URL and Careerden handles extraction, analysis, and drafting.
+              Import from LinkedIn Desktop or paste the role details manually.
             </p>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function Dashboard() {
           }}
           className="shrink-0"
         >
-          Add LinkedIn job
+          Add job application
         </Button>
       </div>
 

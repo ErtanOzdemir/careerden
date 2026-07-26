@@ -3,11 +3,25 @@ import { applicationPackPreferencesSchema } from "../documents/application-pack.
 
 export const linkedInJobUrlSchema = z
   .string()
+  .trim()
+  .max(2_048)
   .url()
   .refine((value) => {
     const url = new URL(value);
-    return url.hostname.endsWith("linkedin.com") && url.pathname.includes("/jobs/");
+    return (
+      (url.hostname === "linkedin.com" || url.hostname.endsWith(".linkedin.com")) &&
+      url.pathname.includes("/jobs/")
+    );
   }, "Expected a LinkedIn job URL");
+
+const httpUrlSchema = z
+  .string()
+  .trim()
+  .max(2_048)
+  .url()
+  .refine((value) => ["http:", "https:"].includes(new URL(value).protocol), {
+    message: "Expected an HTTP or HTTPS URL",
+  });
 
 export const applicationStatusSchema = z.enum([
   "saved",
@@ -29,10 +43,14 @@ export const createJobApplicationSchema = z
     profileId: z.string().min(1),
     applicationPackPreferences: applicationPackPreferencesSchema.default({}),
     sourceUrl: linkedInJobUrlSchema.optional(),
-    companyName: z.string().min(1).optional(),
-    roleTitle: z.string().min(1).optional(),
+    companyName: z.string().trim().min(1).max(200).optional(),
+    roleTitle: z.string().trim().min(1).max(200).optional(),
+    jobDescription: z.string().trim().min(1).max(250_000).optional(),
+    companyDescription: z.string().trim().min(1).max(50_000).optional(),
+    companyWebsiteUrl: httpUrlSchema.optional(),
+    jobLocation: z.string().trim().min(1).max(200).optional(),
     roleType: z.string().min(1).optional(),
-    jobUrl: z.string().url().optional(),
+    jobUrl: httpUrlSchema.optional(),
     dateApplied: z.string().min(1).optional(),
     applicationStatus: applicationStatusSchema.default("saved"),
     priority: applicationPrioritySchema.optional(),
@@ -41,7 +59,7 @@ export const createJobApplicationSchema = z
     metadata: metadataSchema,
   })
   .superRefine((value, context) => {
-    if (value.sourceUrl || value.jobUrl) {
+    if (value.sourceUrl) {
       return;
     }
 
@@ -60,7 +78,23 @@ export const createJobApplicationSchema = z
         path: ["roleTitle"],
       });
     }
+
+    if (!value.jobDescription) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "jobDescription is required when sourceUrl is not provided",
+        path: ["jobDescription"],
+      });
+    }
   });
+
+export const createManualJobApplicationSchema = createJobApplicationSchema.refine(
+  (value) => !value.sourceUrl,
+  {
+    message: "sourceUrl is not accepted for manual job applications",
+    path: ["sourceUrl"],
+  },
+);
 
 export const scrapedJobSchema = z.object({
   title: z.string().min(1),
@@ -86,6 +120,7 @@ export const scrapedCompanySchema = z.object({
 
 export const scrapeBundleSchema = z.object({
   job: scrapedJobSchema,
+  companyManual: scrapedCompanySchema.optional(),
   companyLinkedIn: scrapedCompanySchema.optional(),
   companyWebsite: scrapedCompanySchema.optional(),
   careerPage: scrapedCompanySchema.optional(),
@@ -324,6 +359,7 @@ export const jobApplicationAnalyticsQuerySchema = z.object({
 });
 
 export type CreateJobApplicationDto = z.infer<typeof createJobApplicationSchema>;
+export type CreateManualJobApplicationDto = z.infer<typeof createManualJobApplicationSchema>;
 export type CreateJobApplicationFromScrapeDto = z.infer<
   typeof createJobApplicationFromScrapeSchema
 >;

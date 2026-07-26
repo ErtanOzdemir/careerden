@@ -1,4 +1,4 @@
-import { ApiError, buildUrl, requestJson } from "./client";
+import { requestForm, requestJson } from "./client";
 import type {
   ApiDocumentTemplate,
   ApiDocumentTemplateField,
@@ -77,45 +77,3 @@ export const profilesApi = {
     return profile;
   },
 };
-
-async function requestForm<T>(path: string, body: FormData): Promise<T> {
-  const response = await fetch(buildUrl(path), {
-    body,
-    credentials: "include",
-    method: "POST",
-  });
-  const payload = await parseResponse(response);
-
-  if (!response.ok) {
-    throw new ApiError(getErrorMessage(payload, response.statusText), response.status, payload);
-  }
-
-  return payload as T;
-}
-
-async function parseResponse(response: Response): Promise<unknown> {
-  const text = await response.text();
-
-  if (!text) {
-    return undefined;
-  }
-
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
-  }
-}
-
-function getErrorMessage(payload: unknown, fallback: string): string {
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "error" in payload &&
-    typeof payload.error === "string"
-  ) {
-    return payload.error;
-  }
-
-  return fallback || "API request failed";
-}

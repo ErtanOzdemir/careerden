@@ -50,10 +50,9 @@ describe("marketing workflow story", () => {
       "href",
       "https://github.com/ErtanOzdemir/careerden",
     );
-    expect(screen.getAllByText(/manual application entry.*not available/i).length).toBeGreaterThan(
+    expect(screen.getAllByText(/paste job and company details manually/i).length).toBeGreaterThan(
       0,
     );
-    expect(screen.queryByText(/browser-only.*manual job/i)).not.toBeInTheDocument();
     const structuredData = container.querySelector(
       'script[type="application/ld+json"]',
     )?.textContent;

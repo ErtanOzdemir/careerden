@@ -1,4 +1,4 @@
-import { requestJson } from "./client";
+import { requestForm, requestJson } from "./client";
 import type {
   ApiApplicationPriority,
   ApiApplicationStatus,
@@ -37,6 +37,19 @@ export interface CreateJobApplicationInput {
   profileId: string;
   sourceUrl?: string;
   jobUrl?: string;
+}
+
+export interface CreateManualJobApplicationInput {
+  applicationPackPreferences?: ApiApplicationPackPreferences;
+  companyDescription?: string;
+  companyLogo?: File;
+  companyName: string;
+  companyWebsiteUrl?: string;
+  jobDescription: string;
+  jobLocation?: string;
+  jobUrl?: string;
+  profileId: string;
+  roleTitle: string;
 }
 
 export interface RequestApplicationPackGenerationInput {
@@ -117,6 +130,24 @@ export const jobApplicationsApi = {
       method: "POST",
       body: input,
     });
+  },
+
+  createManual(input: CreateManualJobApplicationInput): Promise<ApiJobApplication> {
+    const body = new FormData();
+    body.set("profileId", input.profileId);
+    body.set("companyName", input.companyName);
+    body.set("roleTitle", input.roleTitle);
+    body.set("jobDescription", input.jobDescription);
+    if (input.companyDescription) body.set("companyDescription", input.companyDescription);
+    if (input.companyWebsiteUrl) body.set("companyWebsiteUrl", input.companyWebsiteUrl);
+    if (input.jobLocation) body.set("jobLocation", input.jobLocation);
+    if (input.jobUrl) body.set("jobUrl", input.jobUrl);
+    if (input.companyLogo) body.set("companyLogo", input.companyLogo);
+    if (input.applicationPackPreferences) {
+      body.set("applicationPackPreferences", JSON.stringify(input.applicationPackPreferences));
+    }
+
+    return requestForm<ApiJobApplication>("/job-applications/manual", body);
   },
 
   createFromScrape(input: CreateJobApplicationFromScrapeInput): Promise<ApiJobApplication> {

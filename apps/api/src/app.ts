@@ -4,6 +4,7 @@ import express from "express";
 import type { Express } from "express";
 import {
   CreateProfileUseCase,
+  CreateManualJobApplicationUseCase,
   DeleteDocumentTemplateUseCase,
   DeleteJobApplicationUseCase,
   GenerateDocumentsUseCase,
@@ -240,6 +241,11 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   app.use(
     "/job-applications",
     createJobApplicationRouter({
+      createManualJobApplication: new CreateManualJobApplicationUseCase(
+        profiles,
+        storage,
+        unitOfWork,
+      ),
       submitJobApplication: new SubmitJobApplicationUseCase(unitOfWork),
       deleteJobApplication: new DeleteJobApplicationUseCase(unitOfWork),
       generateJobApplicationDocuments: new GenerateJobApplicationDocumentsUseCase(

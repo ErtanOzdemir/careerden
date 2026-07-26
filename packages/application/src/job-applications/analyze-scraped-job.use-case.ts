@@ -6,6 +6,7 @@ import type {
 } from "@careerden/domain";
 import { assessProfileReadiness, documentContentFromMatchAnalysis } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
+import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.use-case.js";
 import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";
 import { validateApplicationPackPreferences } from "./request-application-pack-generation.use-case.js";
@@ -16,6 +17,7 @@ export class AnalyzeScrapedJobUseCase {
     private readonly profiles: UserProfileRepository,
     private readonly matching: RunMatchAnalysisUseCase,
     private readonly unitOfWork: PersistenceUnitOfWork,
+    private readonly extractRequirements?: Pick<ExtractJobRequirementsUseCase, "execute">,
   ) {}
 
   async execute(payload: JobApplicationQueuePayload): Promise<void> {
@@ -57,13 +59,31 @@ export class AnalyzeScrapedJobUseCase {
       throw new ApplicationError("not_found", `Profile ${jobApplication.profileId} was not found`);
     }
 
-    const scrape = await this.jobApplications.getScrapeBundle(jobApplication.id);
+    let scrape = await this.jobApplications.getScrapeBundle(jobApplication.id);
 
     if (!scrape) {
       throw new ApplicationError(
         "validation",
         `No desktop scrape bundle found for job application ${jobApplication.id}`,
       );
+    }
+
+    if (scrape.job.requirements.length === 0 && this.extractRequirements) {
+      const job = await this.extractRequirements.execute({
+        jobApplicationId: jobApplication.id,
+        job: scrape.job,
+      });
+      scrape = { ...scrape, job };
+      await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
+        await jobApplications.saveScrapeBundle(jobApplication.id, scrape!);
+        await jobApplications.addEvent({
+          jobApplicationId: jobApplication.id,
+          type: "processing",
+          title: "Job requirements extracted",
+          metadata: { requirementCount: job.requirements.length },
+        });
+        await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
+      });
     }
 
     const analysis = await this.matching.execute({

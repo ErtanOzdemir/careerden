@@ -216,6 +216,7 @@ export interface ApiJobApplicationFollowUp {
 
 export interface ApiScrapeBundle {
   careerPage?: ApiScrapedCompany;
+  companyManual?: ApiScrapedCompany;
   companyLinkedIn?: ApiScrapedCompany;
   companyWebsite?: ApiScrapedCompany;
   job: {

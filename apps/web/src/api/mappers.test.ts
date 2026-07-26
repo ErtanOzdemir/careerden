@@ -143,6 +143,21 @@ describe("API mappers", () => {
     );
   });
 
+  it("prefers manually entered company context", () => {
+    const application = createApplicationDetail();
+    application.scrapeBundle.companyManual = {
+      name: "Manual Co",
+      description: "Pasted company description.",
+      raw: { strategy: "manual" },
+      websiteUrl: "https://manual.example",
+    };
+
+    expect(mapApiJobApplicationToUi(application)).toMatchObject({
+      companyDescription: "Pasted company description.",
+      companyWebsiteUrl: "https://manual.example",
+    });
+  });
+
   it("omits blank company descriptions", () => {
     const application = createApplicationDetail();
     application.scrapeBundle.companyLinkedIn = {

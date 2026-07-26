@@ -28,6 +28,15 @@ describe("job application schemas", () => {
     });
   });
 
+  it("rejects lookalike LinkedIn hostnames", () => {
+    expect(
+      createJobApplicationSchema.safeParse({
+        profileId: "profile-1",
+        sourceUrl: "https://notlinkedin.com/jobs/view/123",
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts application-pack preferences for LinkedIn submissions", () => {
     const result = createJobApplicationSchema.parse({
       profileId: "profile-1",
@@ -86,7 +95,7 @@ describe("job application schemas", () => {
     ).toBe(false);
   });
 
-  it("requires company and role for manual submissions", () => {
+  it("requires company, role, and job description for manual submissions", () => {
     const result = createJobApplicationSchema.safeParse({
       profileId: "profile-1",
     });
@@ -95,7 +104,29 @@ describe("job application schemas", () => {
     expect(result.error?.issues.map((issue) => issue.path.join("."))).toEqual([
       "companyName",
       "roleTitle",
+      "jobDescription",
     ]);
+  });
+
+  it("accepts complete manual application details", () => {
+    const result = createJobApplicationSchema.parse({
+      profileId: "profile-1",
+      companyName: "Example Inc",
+      roleTitle: "Backend Engineer",
+      jobDescription: "Build TypeScript services.",
+      companyDescription: "Developer tools company.",
+      companyWebsiteUrl: "https://example.com",
+      jobLocation: "Remote",
+      jobUrl: "https://jobs.example.com/backend",
+    });
+
+    expect(result).toMatchObject({
+      companyName: "Example Inc",
+      roleTitle: "Backend Engineer",
+      jobDescription: "Build TypeScript services.",
+      companyWebsiteUrl: "https://example.com",
+      jobLocation: "Remote",
+    });
   });
 
   it("accepts tracker updates", () => {

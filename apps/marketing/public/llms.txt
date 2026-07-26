@@ -26,8 +26,8 @@
   job submission, and application-pack review screens.
 - Automatic LinkedIn capture currently uses public guest responses through the desktop app and does
   not connect the user's LinkedIn account.
-- LinkedIn is the current automated capture source, not the product boundary. Direct manual
-  application entry is planned and is not available in the current release.
+- LinkedIn is the automated desktop capture source, not the product boundary. Users can also paste
+  job and company details manually for applications from any source.
 - The public marketing website does not expose login, signup, or browser-application links. Its
   download page detects the visitor's desktop operating system and promotes the matching installer,
   with direct macOS DMG, Windows EXE, and Linux AppImage links also available.

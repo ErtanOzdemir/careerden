@@ -122,7 +122,7 @@ function ApplicationPreviewFrame({
                 </span>
                 <span className="native-primary-button">
                   <Plus />
-                  Add LinkedIn job
+                  Add job application
                 </span>
               </div>
             </header>

@@ -30,6 +30,7 @@ export interface ScrapedCompany {
 
 export interface ScrapeBundle {
   job: ScrapedJob;
+  companyManual?: ScrapedCompany;
   companyLinkedIn?: ScrapedCompany;
   companyWebsite?: ScrapedCompany;
   careerPage?: ScrapedCompany;

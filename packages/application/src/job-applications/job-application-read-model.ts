@@ -108,6 +108,7 @@ function toPublicScrapeBundle(scrape: ScrapeBundle | null): ScrapeBundle | null 
   if (!scrape) return null;
   return {
     ...scrape,
+    companyManual: withoutInternalLogoFields(scrape.companyManual),
     companyLinkedIn: withoutInternalLogoFields(scrape.companyLinkedIn),
     companyWebsite: withoutInternalLogoFields(scrape.companyWebsite),
     careerPage: withoutInternalLogoFields(scrape.careerPage),
@@ -115,8 +116,8 @@ function toPublicScrapeBundle(scrape: ScrapeBundle | null): ScrapeBundle | null 
 }
 
 function withoutInternalLogoFields(
-  company: ScrapeBundle["companyLinkedIn"],
-): ScrapeBundle["companyLinkedIn"] {
+  company: ScrapeBundle["companyManual"],
+): ScrapeBundle["companyManual"] {
   if (!company) return undefined;
   const publicCompany = { ...company };
   delete publicCompany.logoFileId;

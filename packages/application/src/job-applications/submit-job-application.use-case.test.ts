@@ -56,7 +56,7 @@ describe("SubmitJobApplicationUseCase", () => {
     );
   });
 
-  it("creates manual applications with a manual scrape bundle", async () => {
+  it("rejects submissions without a LinkedIn source URL", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
     const profile = await profiles.create({
@@ -67,45 +67,13 @@ describe("SubmitJobApplicationUseCase", () => {
     });
     const changes: JobApplicationChange[] = [];
 
-    const jobApplication = await new SubmitJobApplicationUseCase(
-      createUnitOfWork(jobApplications, withAccountOwnership(profiles), changes),
-    ).execute(
-      {
-        profileId: profile.id,
-        companyName: "Example Inc",
-        roleTitle: "Backend Engineer",
-        priority: "high",
-        tags: ["Remote"],
-      },
-      "user-1",
-    );
+    await expect(
+      new SubmitJobApplicationUseCase(
+        createUnitOfWork(jobApplications, withAccountOwnership(profiles), changes),
+      ).execute({ profileId: profile.id }, "user-1"),
+    ).rejects.toThrow("A LinkedIn source URL is required");
 
-    const scrape = await jobApplications.getScrapeBundle(jobApplication.id);
-
-    expect(jobApplication.status).toBe("scraped");
-    expect(jobApplication.tracking.applicationStatus).toBe("saved");
-    expect(jobApplication.sourceUrl).toBeUndefined();
-    expect(jobApplication.tracking.companyName).toBe("Example Inc");
-    expect(jobApplication.tracking.roleTitle).toBe("Backend Engineer");
-    expect(jobApplication.tracking.priority).toBe("high");
-    expect(scrape?.job).toMatchObject({
-      title: "Backend Engineer",
-      companyName: "Example Inc",
-      description: "Manual job entry for Backend Engineer at Example Inc.",
-      raw: {
-        adapter: "manual-job",
-        strategy: "manual",
-        source: "user-created-job-application",
-      },
-    });
-    expect(changes).toHaveLength(1);
-    expect(changes[0]).toEqual(
-      expect.objectContaining({
-        type: "application.changed",
-        applicationId: jobApplication.id,
-        profileId: profile.id,
-      }),
-    );
+    expect(changes).toHaveLength(0);
   });
 
   it("does not publish when profile access is denied before creation", async () => {
@@ -130,7 +98,13 @@ describe("SubmitJobApplicationUseCase", () => {
           }),
           changes,
         ),
-      ).execute({ profileId: profile.id }, "user-1"),
+      ).execute(
+        {
+          profileId: profile.id,
+          sourceUrl: "https://www.linkedin.com/jobs/view/123",
+        },
+        "user-1",
+      ),
     ).rejects.toThrow("Profile not found");
 
     expect(changes).toHaveLength(0);

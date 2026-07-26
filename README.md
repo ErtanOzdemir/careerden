@@ -4,7 +4,7 @@
 
 <strong>Open-source desktop job application tracker and profile-aware CV and cover-letter creator.</strong>
 <br />
-Capture LinkedIn jobs. Match your profile. Create tailored documents. Track every opportunity.
+Import LinkedIn jobs or paste any posting manually. Match your profile. Create tailored documents.
 <br /><br />
 
   <a href="https://github.com/ErtanOzdemir/careerden/releases/latest">
@@ -34,7 +34,8 @@ Capture LinkedIn jobs. Match your profile. Create tailored documents. Track ever
 
 ## Features
 
-- Track applications manually or add a LinkedIn job URL for desktop scraping.
+- Add applications by pasting company and job details manually, with an optional company logo,
+  website, location, and source URL, or import a LinkedIn job through the desktop app.
 - Manage application stages, interest level, tags, salary range and type, work style,
   contacts, timeline events, and multiple follow-ups.
 - Filter, sort, search, and paginate the application log, with dashboard analytics and
@@ -483,6 +484,7 @@ duplicate-path, path-traversal, structurally incomplete, or excessively expanded
 | Method                   | Path                                                   | Description                            |
 | ------------------------ | ------------------------------------------------------ | -------------------------------------- |
 | `POST`, `GET`            | `/job-applications`                                    | Create or list applications            |
+| `POST`                   | `/job-applications/manual`                             | Create from pasted manual job details  |
 | `GET`                    | `/job-applications/analytics`                          | Read profile-scoped dashboard stats    |
 | `GET`                    | `/job-applications/stream`                             | Stream profile-scoped changes (SSE)    |
 | `POST`                   | `/job-applications/from-scrape`                        | Create from an existing scrape         |
@@ -504,6 +506,12 @@ Listing requires `profileId`. Supported filters include processing/application s
 company, role, role type, priority, tag, date range, and free-text search. Pagination uses
 `page` and `pageSize` (default 20, maximum 100), with `sortBy` and `sortDirection` for
 ordering.
+
+Manual creation uses `multipart/form-data`. It requires `profileId`, `companyName`, `roleTitle`,
+and `jobDescription`; it optionally accepts `companyDescription`, `companyWebsiteUrl`,
+`jobLocation`, `jobUrl`, JSON-encoded `applicationPackPreferences`, and a `companyLogo` PNG, JPEG,
+or WebP file up to 5 MB. Manual applications transition directly to `scraped` and follow the
+profile's automatic match-analysis preference.
 
 The desktop scraping worker additionally uses these authenticated endpoints:
 

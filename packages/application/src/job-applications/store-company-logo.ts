@@ -7,13 +7,15 @@ export async function storeCompanyLogo(input: {
   storage: FileStorage;
 }): Promise<{ scrape: ScrapeBundle; uploadedFileId?: string }> {
   const { jobApplicationId, scrape, remoteImages, storage } = input;
-  const companyWithLogo = scrape.companyLinkedIn?.logoUrl
-    ? scrape.companyLinkedIn
-    : scrape.companyWebsite?.logoUrl
-      ? scrape.companyWebsite
-      : scrape.careerPage?.logoUrl
-        ? scrape.careerPage
-        : undefined;
+  const companyWithLogo = scrape.companyManual?.logoUrl
+    ? scrape.companyManual
+    : scrape.companyLinkedIn?.logoUrl
+      ? scrape.companyLinkedIn
+      : scrape.companyWebsite?.logoUrl
+        ? scrape.companyWebsite
+        : scrape.careerPage?.logoUrl
+          ? scrape.careerPage
+          : undefined;
 
   if (!companyWithLogo?.logoUrl) return { scrape };
 
@@ -32,6 +34,8 @@ export async function storeCompanyLogo(input: {
       uploadedFileId: stored.id,
       scrape: {
         ...scrape,
+        companyManual:
+          scrape.companyManual === companyWithLogo ? updatedCompany : scrape.companyManual,
         companyLinkedIn:
           scrape.companyLinkedIn === companyWithLogo ? updatedCompany : scrape.companyLinkedIn,
         companyWebsite:

@@ -256,7 +256,7 @@ export function Topbar({
 
       <Button className="[-webkit-app-region:no-drag]" onClick={onAddJob}>
         <Plus className="size-4" />
-        Add LinkedIn job
+        Add job application
       </Button>
     </header>
   );

@@ -2,59 +2,26 @@ import type {
   CreateJobApplicationInput,
   JobApplication,
   PersistenceUnitOfWork,
-  ScrapeBundle,
 } from "@careerden/domain";
+import { ApplicationError } from "../application-error.js";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
 
 export class SubmitJobApplicationUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
 
   async execute(input: CreateJobApplicationInput, userId: string): Promise<JobApplication> {
+    if (!input.sourceUrl) {
+      throw new ApplicationError("validation", "A LinkedIn source URL is required");
+    }
+
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
       await getAccessibleProfile(profiles, input.profileId, userId);
 
       const jobApplication = await jobApplications.create(input);
 
-      if (!input.sourceUrl) {
-        await jobApplications.saveScrapeBundle(jobApplication.id, createManualScrapeBundle(input));
-        await jobApplications.updateStatus(jobApplication.id, "scraped");
-        await jobApplications.addEvent({
-          jobApplicationId: jobApplication.id,
-          type: "processing",
-          title: "Manual job details saved",
-          metadata: { strategy: "manual" },
-        });
-      }
-
       await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
 
-      return {
-        ...jobApplication,
-        ...(!input.sourceUrl ? { status: "scraped" as const } : {}),
-      };
+      return jobApplication;
     });
   }
-}
-
-function createManualScrapeBundle(input: CreateJobApplicationInput): ScrapeBundle {
-  const title = input.roleTitle ?? "Untitled role";
-  const companyName = input.companyName ?? "Unknown company";
-
-  return {
-    job: {
-      title,
-      companyName,
-      ...(input.roleType ? { location: input.roleType } : {}),
-      description: `Manual job entry for ${title} at ${companyName}.`,
-      requirements: [],
-      raw: {
-        adapter: "manual-job",
-        strategy: "manual",
-        source: "user-created-job-application",
-        jobUrl: input.jobUrl,
-        metadata: input.metadata ?? {},
-        scrapedAt: new Date().toISOString(),
-      },
-    },
-  };
 }

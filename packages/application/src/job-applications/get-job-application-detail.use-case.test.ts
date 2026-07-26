@@ -21,7 +21,7 @@ describe("GetJobApplicationDetailUseCase", () => {
           requirements: [],
           raw: {},
         },
-        companyLinkedIn: {
+        companyManual: {
           name: "Acme",
           description: "Acme builds reliable products.",
           logoFileId: "logo-1",
@@ -57,7 +57,7 @@ describe("GetJobApplicationDetailUseCase", () => {
       richDocumentToPlainText(detail.documentContent!.experienceEnhancements[0]!.description!),
     ).toBe("Tailored experience. Legacy achievement.");
     expect(detail.documentContent?.experienceEnhancements[0]?.achievements).toEqual([]);
-    expect(detail.scrapeBundle?.companyLinkedIn).toEqual({
+    expect(detail.scrapeBundle?.companyManual).toEqual({
       name: "Acme",
       description: "Acme builds reliable products.",
       raw: {},

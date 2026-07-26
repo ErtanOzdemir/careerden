@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
 import type {
+  CreateManualJobApplicationUseCase,
   DeleteJobApplicationUseCase,
   GenerateDocumentsWithAiUseCase,
   GenerateJobApplicationDocumentsUseCase,
@@ -43,6 +44,7 @@ import {
   failScrapeJobSchema,
   heartbeatScrapeJobSchema,
   createJobApplicationSchema,
+  createManualJobApplicationSchema,
   jobApplicationAnalyticsQuerySchema,
   listJobApplicationsQuerySchema,
   submitScrapeDataSchema,
@@ -55,8 +57,10 @@ import {
 } from "@careerden/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
+import { parseCompanyLogoUpload, uploadCompanyLogo } from "./company-logo-upload.js";
 
 export function createJobApplicationRouter(dependencies: {
+  createManualJobApplication: CreateManualJobApplicationUseCase;
   submitJobApplication: SubmitJobApplicationUseCase;
   deleteJobApplication: DeleteJobApplicationUseCase;
   generateJobApplicationDocuments: GenerateJobApplicationDocumentsUseCase;
@@ -91,6 +95,50 @@ export function createJobApplicationRouter(dependencies: {
   getGeneratedDocumentDownloadUrl: GetGeneratedDocumentDownloadUrlUseCase;
 }): ExpressRouter {
   const router = Router();
+
+  router.post("/manual", uploadCompanyLogo, async (request, response, next) => {
+    try {
+      const applicationPackPreferences = parseApplicationPackPreferences(
+        request.body.applicationPackPreferences,
+      );
+      const result = createManualJobApplicationSchema.safeParse({
+        ...request.body,
+        ...(applicationPackPreferences ? { applicationPackPreferences } : {}),
+      });
+
+      if (!result.success) {
+        response.status(400).json({
+          code: "validation",
+          error: "Invalid request body",
+          issues: result.error.issues,
+        });
+        return;
+      }
+
+      const jobApplication = await dependencies.createManualJobApplication.execute(
+        {
+          profileId: result.data.profileId,
+          companyName: result.data.companyName!,
+          roleTitle: result.data.roleTitle!,
+          jobDescription: result.data.jobDescription!,
+          applicationPackPreferences: result.data.applicationPackPreferences,
+          ...(result.data.companyDescription
+            ? { companyDescription: result.data.companyDescription }
+            : {}),
+          ...(result.data.companyWebsiteUrl
+            ? { companyWebsiteUrl: result.data.companyWebsiteUrl }
+            : {}),
+          ...(result.data.jobLocation ? { jobLocation: result.data.jobLocation } : {}),
+          ...(result.data.jobUrl ? { jobUrl: result.data.jobUrl } : {}),
+          ...(request.file ? { companyLogo: parseCompanyLogoUpload(request.file) } : {}),
+        },
+        currentUser(request).id,
+      );
+      response.status(201).json(jobApplication);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.param("id", async (request, response, next, id: string) => {
     try {
@@ -178,10 +226,12 @@ export function createJobApplicationRouter(dependencies: {
 
   router.post("/", validateBody(createJobApplicationSchema), async (request, response, next) => {
     try {
-      const jobApplication = await dependencies.submitJobApplication.execute(
-        request.body,
-        currentUser(request).id,
-      );
+      const jobApplication = request.body.sourceUrl
+        ? await dependencies.submitJobApplication.execute(request.body, currentUser(request).id)
+        : await dependencies.createManualJobApplication.execute(
+            request.body,
+            currentUser(request).id,
+          );
       response.status(201).json(jobApplication);
     } catch (error) {
       next(error);
@@ -647,6 +697,16 @@ export function createJobApplicationRouter(dependencies: {
   });
 
   return router;
+}
+
+function parseApplicationPackPreferences(value: unknown): unknown {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return Symbol("invalid-application-pack-preferences");
+  }
 }
 
 function currentUser(request: Request): AuthenticatedRequest["user"] {

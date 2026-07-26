@@ -3,6 +3,7 @@ import type { Worker as BullMqWorker } from "bullmq";
 import {
   AnalyzeScrapedJobUseCase,
   ExpireStaleCreditReservationsUseCase,
+  ExtractJobRequirementsUseCase,
   FinalizeJobApplicationAnalysisFailureUseCase,
   RunMatchAnalysisUseCase,
 } from "@careerden/application";
@@ -62,11 +63,13 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     geminiApiKey: env.GEMINI_API_KEY,
     deepseekApiKey: env.DEEPSEEK_API_KEY,
   });
+  const aiProvider = aiProviderFactory.create();
   const analyzeScrapedJob = new AnalyzeScrapedJobUseCase(
     jobApplications,
     profiles,
-    new RunMatchAnalysisUseCase(aiProviderFactory.create()),
+    new RunMatchAnalysisUseCase(aiProvider),
     unitOfWork,
+    new ExtractJobRequirementsUseCase(aiProvider),
   );
   const finalizeAnalysisFailure = new FinalizeJobApplicationAnalysisFailureUseCase(unitOfWork);
   const expireStaleReservations = new ExpireStaleCreditReservationsUseCase(unitOfWork);

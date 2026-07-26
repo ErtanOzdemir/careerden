@@ -260,6 +260,31 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
   });
 
+  it("reads a manually uploaded company logo from the scrape bundle", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      companyName: "Manual Co",
+      roleTitle: "Engineer",
+    });
+    await repository.saveScrapeBundle(job.id, {
+      job: {
+        title: "Engineer",
+        companyName: "Manual Co",
+        description: "Build products.",
+        requirements: [],
+        raw: { strategy: "manual" },
+      },
+      companyManual: {
+        name: "Manual Co",
+        logoFileId: "logos/manual.png",
+        raw: { strategy: "manual" },
+      },
+    });
+
+    await expect(repository.getCompanyLogoFileId(job.id)).resolves.toBe("logos/manual.png");
+  });
+
   it("starts document regeneration from failed and clears the failure reason", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({ profileId: "profile-1" });

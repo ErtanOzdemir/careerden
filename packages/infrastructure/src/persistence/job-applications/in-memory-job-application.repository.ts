@@ -545,7 +545,14 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   }
 
   async getCompanyLogoFileId(id: string): Promise<string | null> {
-    return this.scrapeBundles.get(id)?.companyLinkedIn?.logoFileId ?? null;
+    const scrape = this.scrapeBundles.get(id);
+    return (
+      scrape?.companyManual?.logoFileId ??
+      scrape?.companyLinkedIn?.logoFileId ??
+      scrape?.companyWebsite?.logoFileId ??
+      scrape?.careerPage?.logoFileId ??
+      null
+    );
   }
 
   async saveMatchAnalysis(id: string, result: MatchAnalysisResult): Promise<void> {

@@ -2,10 +2,10 @@
 
 ## Project Overview
 
-Careerden is a TypeScript monorepo for turning LinkedIn job postings into profile-aware
-CV and cover-letter documents. The app scrapes job and company data, stores raw and
-normalized scrape results, optionally runs AI matching/document generation, and renders
-documents for review or download.
+Careerden is a TypeScript monorepo for turning imported LinkedIn or manually pasted job
+postings into profile-aware CV and cover-letter documents. The app stores raw and normalized
+job/company data, optionally runs AI matching/document generation, and renders documents for
+review or download.
 
 ## Tech Stack
 

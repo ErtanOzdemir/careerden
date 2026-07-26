@@ -45,6 +45,7 @@ export class RunMatchAnalysisUseCase {
         userProfile: toPlainTextProfile(input.profile),
         scrapedJob: input.scrape.job,
         scrapedCompany: {
+          manual: input.scrape.companyManual,
           linkedIn: input.scrape.companyLinkedIn,
           website: input.scrape.companyWebsite,
           careerPage: input.scrape.careerPage,

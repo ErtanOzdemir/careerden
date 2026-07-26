@@ -66,10 +66,12 @@ export function mapApiJobApplicationToUi(
   const role = application.tracking.roleTitle ?? scrapeJob?.title ?? "Untitled role";
   const dateSource = application.tracking.dateApplied ?? application.createdAt;
   const scrapedCompanyWebsiteUrl =
+    detail?.scrapeBundle?.companyManual?.websiteUrl ??
     detail?.scrapeBundle?.companyLinkedIn?.websiteUrl ??
     detail?.scrapeBundle?.companyWebsite?.websiteUrl;
   const companyWebsiteUrl = scrapedCompanyWebsiteUrl?.trim();
   const companyDescription = [
+    detail?.scrapeBundle?.companyManual?.description,
     detail?.scrapeBundle?.companyLinkedIn?.description,
     detail?.scrapeBundle?.companyWebsite?.description,
     detail?.scrapeBundle?.careerPage?.description,

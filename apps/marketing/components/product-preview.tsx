@@ -103,7 +103,7 @@ export function ProductPreview() {
               </i>
               <b>
                 <Plus aria-hidden="true" className="preview-icon" />
-                Add LinkedIn job
+                Add job application
               </b>
             </div>
           </div>
@@ -119,7 +119,7 @@ export function ProductPreview() {
               </div>
               <b>
                 <Plus aria-hidden="true" className="preview-icon" />
-                Add LinkedIn job
+                Add job application
               </b>
             </section>
 

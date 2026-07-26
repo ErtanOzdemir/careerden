@@ -48,6 +48,21 @@ export async function requestJson<T>(path: string, options: RequestJsonOptions =
   return payload as T;
 }
 
+export async function requestForm<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(buildUrl(path), {
+    body,
+    credentials: "include",
+    method: "POST",
+  });
+  const payload = await parseJson(response);
+
+  if (!response.ok) {
+    throw new ApiError(getErrorMessage(payload, response.statusText), response.status, payload);
+  }
+
+  return payload as T;
+}
+
 export function buildUrl(path: string, query?: Record<string, QueryValue>): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;

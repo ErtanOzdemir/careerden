@@ -75,7 +75,7 @@ describe("Topbar", () => {
     expect(screen.getByRole("button", { name: "Notifications" })).toHaveClass(
       "[-webkit-app-region:no-drag]",
     );
-    expect(screen.getByRole("button", { name: "Add LinkedIn job" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Add job application" })).toHaveClass(
       "[-webkit-app-region:no-drag]",
     );
     expect(screen.getByRole("link", { name: "AI credits" })).toHaveClass(

@@ -16,6 +16,7 @@ vi.mock("../api/jobApplications.js", () => ({
     get: vi.fn(),
     retry: vi.fn(),
     startAnalysis: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -184,6 +185,64 @@ describe("AppDetail contacts", () => {
 
     expect(await screen.findByText("Follow-ups")).toBeInTheDocument();
     expect(screen.getByText("Contacts")).toBeInTheDocument();
+  });
+});
+
+describe("AppDetail notes", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("loads persisted notes and saves edits without discarding other metadata", async () => {
+    const detail = createApplicationDetail();
+    detail.tracking.metadata = {
+      notes: "Ask about the engineering ladder.",
+      source: "manual",
+    };
+    const updatedDetail = {
+      ...detail,
+      tracking: {
+        ...detail.tracking,
+        metadata: {
+          notes: "Confirm the interview format.",
+          source: "manual",
+        },
+      },
+    };
+    vi.mocked(jobApplicationsApi.get)
+      .mockResolvedValueOnce(detail)
+      .mockResolvedValue(updatedDetail);
+    vi.mocked(jobApplicationsApi.update).mockResolvedValue(updatedDetail);
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
+
+    renderAppDetail();
+    fireEvent.click(await screen.findByRole("button", { name: "Follow-ups & notes" }));
+
+    const notes = screen.getByPlaceholderText("Add context, reminders, or recruiter details...");
+    const saveButton = screen.getByRole("button", { name: "Save" });
+    expect(notes).toHaveValue("Ask about the engineering ladder.");
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.change(notes, {
+      target: { value: "  Confirm the interview format.  " },
+    });
+    expect(saveButton).toBeEnabled();
+    fireEvent.click(saveButton);
+
+    await waitFor(() =>
+      expect(jobApplicationsApi.update).toHaveBeenCalledWith("job-1", {
+        metadata: {
+          notes: "Confirm the interview format.",
+          source: "manual",
+        },
+      }),
+    );
+    await waitFor(() => {
+      expect(notes).toHaveValue("Confirm the interview format.");
+      expect(saveButton).toBeDisabled();
+    });
   });
 });
 

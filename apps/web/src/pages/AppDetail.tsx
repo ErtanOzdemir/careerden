@@ -107,9 +107,13 @@ export default function AppDetail() {
           profilesApi.listDocumentTemplates(detail.profileId),
         ]);
         if (isMounted) {
-          setApp(mapApiJobApplicationToUi(detail, profileData));
+          const mapped = mapApiJobApplicationToUi(detail, profileData);
+          const notesValue = mapped.metadata?.notes;
+
+          setApp(mapped);
           setProfile(profileData);
           setTemplates(templateData);
+          setNotes(typeof notesValue === "string" ? notesValue : "");
         }
       } catch (e) {
         if (isMounted) setError(e instanceof Error ? e.message : "Failed to load.");
@@ -412,6 +416,8 @@ export default function AppDetail() {
       app.processingStatus ?? "",
     );
   const processingLabel = getProcessingLabel(app);
+  const persistedNotes = typeof app.metadata?.notes === "string" ? app.metadata.notes.trim() : "";
+  const isNotesDirty = notes.trim() !== persistedNotes;
 
   return (
     <div className="space-y-6">
@@ -611,6 +617,7 @@ export default function AppDetail() {
           showFollowUpForm={showFollowUpForm}
           isSavingFollowUp={isSavingFollowUp}
           isSavingNotes={isSavingNotes}
+          isNotesDirty={isNotesDirty}
           contactForm={contactForm}
           showContactForm={showContactForm}
           isAddingContact={isAddingContact}
@@ -1234,6 +1241,7 @@ function TimelineTab({
   showFollowUpForm,
   isSavingFollowUp,
   isSavingNotes,
+  isNotesDirty,
   contactForm,
   showContactForm,
   isAddingContact,
@@ -1254,6 +1262,7 @@ function TimelineTab({
   showFollowUpForm: boolean;
   isSavingFollowUp: boolean;
   isSavingNotes: boolean;
+  isNotesDirty: boolean;
   contactForm: { name: string; role: string; email: string; phone: string };
   showContactForm: boolean;
   isAddingContact: boolean;
@@ -1408,7 +1417,7 @@ function TimelineTab({
                 variant="ghost"
                 size="sm"
                 onClick={() => void onSaveNotes()}
-                disabled={isSavingNotes}
+                disabled={isSavingNotes || !isNotesDirty}
               >
                 {isSavingNotes ? "Saving..." : "Save"}
               </Button>

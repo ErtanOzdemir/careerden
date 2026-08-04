@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { EmailSender } from "@careerden/domain";
 import {
+  createEmailChangeHooks,
   createMonthlyCreditProvisioningHooks,
   createPasswordResetHandler,
-  createRegistrationOtpHandler,
+  createVerificationOtpHandler,
 } from "./auth.js";
 
 describe("createMonthlyCreditProvisioningHooks", () => {
@@ -40,10 +41,10 @@ describe("createMonthlyCreditProvisioningHooks", () => {
   });
 });
 
-describe("createRegistrationOtpHandler", () => {
+describe("createVerificationOtpHandler", () => {
   it("sends email verification OTPs", async () => {
     const emailSender = createEmailSender();
-    const sendVerificationOTP = createRegistrationOtpHandler(emailSender);
+    const sendVerificationOTP = createVerificationOtpHandler(emailSender);
 
     await sendVerificationOTP({
       email: "ada@example.com",
@@ -59,9 +60,27 @@ describe("createRegistrationOtpHandler", () => {
     });
   });
 
-  it("does not send OTP emails for non-registration flows", async () => {
+  it("sends email-change OTPs to the new address", async () => {
     const emailSender = createEmailSender();
-    const sendVerificationOTP = createRegistrationOtpHandler(emailSender);
+    const sendVerificationOTP = createVerificationOtpHandler(emailSender);
+
+    await sendVerificationOTP({
+      email: "new@example.com",
+      otp: "654321",
+      type: "change-email",
+    });
+
+    expect(emailSender.send).toHaveBeenCalledWith({
+      to: "new@example.com",
+      subject: "Confirm your new Careerden email",
+      text: "Your Careerden email change code is 654321. It expires in 5 minutes. If you did not request this change, you can ignore this email.",
+      html: "<p>Your Careerden email change code is <strong>654321</strong>.</p><p>It expires in 5 minutes. If you did not request this change, you can ignore this email.</p>",
+    });
+  });
+
+  it("does not send OTP emails for unsupported flows", async () => {
+    const emailSender = createEmailSender();
+    const sendVerificationOTP = createVerificationOtpHandler(emailSender);
 
     await sendVerificationOTP({ email: "ada@example.com", otp: "123456", type: "sign-in" });
     await sendVerificationOTP({
@@ -69,13 +88,92 @@ describe("createRegistrationOtpHandler", () => {
       otp: "123456",
       type: "forget-password",
     });
-    await sendVerificationOTP({
-      email: "ada@example.com",
-      otp: "123456",
-      type: "change-email",
-    });
-
     expect(emailSender.send).not.toHaveBeenCalled();
+  });
+});
+
+describe("createEmailChangeHooks", () => {
+  it("requires the current credential password before requesting an OTP", async () => {
+    const verify = vi.fn(async () => true);
+    const hooks = createEmailChangeHooks();
+
+    await hooks.before(
+      createEmailChangeHookContext({
+        body: { currentPassword: "correct-password", newEmail: "new@example.com" },
+        passwordVerify: verify,
+        path: "/email-otp/request-email-change",
+      }),
+    );
+
+    expect(verify).toHaveBeenCalledWith({
+      hash: "stored-password-hash",
+      password: "correct-password",
+    });
+  });
+
+  it("rejects an incorrect current password", async () => {
+    const hooks = createEmailChangeHooks();
+
+    await expect(
+      hooks.before(
+        createEmailChangeHookContext({
+          body: { currentPassword: "wrong-password", newEmail: "new@example.com" },
+          passwordVerify: vi.fn(async () => false),
+          path: "/email-otp/request-email-change",
+        }),
+      ),
+    ).rejects.toMatchObject({
+      body: {
+        code: "INVALID_PASSWORD",
+        message: "Current password is incorrect",
+      },
+    });
+  });
+
+  it("revokes every active session except the email-changing session", async () => {
+    const deleteSession = vi.fn(async () => undefined);
+    const hooks = createEmailChangeHooks();
+
+    const result = await hooks.after(
+      createEmailChangeHookContext({
+        deleteSession,
+        path: "/email-otp/change-email",
+        returned: { success: true },
+        sessions: [
+          { token: "current-session" },
+          { token: "other-session-1" },
+          { token: "other-session-2" },
+        ],
+      }),
+    );
+
+    expect(deleteSession).toHaveBeenCalledTimes(2);
+    expect(deleteSession).toHaveBeenCalledWith("other-session-1");
+    expect(deleteSession).toHaveBeenCalledWith("other-session-2");
+    expect(result).toEqual({ success: true, otherSessionsRevoked: true });
+  });
+
+  it("reports a redacted partial success when other sessions cannot be revoked", async () => {
+    const logFailure = vi.fn();
+    const hooks = createEmailChangeHooks(logFailure);
+
+    const result = await hooks.after(
+      createEmailChangeHookContext({
+        deleteSession: vi.fn(async () => {
+          throw new Error("database details must stay private");
+        }),
+        path: "/email-otp/change-email",
+        returned: { success: true },
+        sessions: [{ token: "current-session" }, { token: "other-session" }],
+      }),
+    );
+
+    expect(result).toEqual({ success: true, otherSessionsRevoked: false });
+    expect(logFailure).toHaveBeenCalledWith({
+      event: "email-change.other-sessions-revocation",
+      errorName: "Error",
+    });
+    expect(JSON.stringify(logFailure.mock.calls)).not.toContain("database details");
   });
 });
 
@@ -102,4 +200,54 @@ function createEmailSender(): EmailSender {
   return {
     send: vi.fn(async () => undefined),
   };
+}
+
+function createEmailChangeHookContext({
+  body = {},
+  deleteSession = vi.fn(async () => undefined),
+  passwordVerify = vi.fn(async () => true),
+  path,
+  returned,
+  sessions = [],
+}: {
+  body?: Record<string, unknown>;
+  deleteSession?: ReturnType<typeof vi.fn>;
+  passwordVerify?: ReturnType<typeof vi.fn>;
+  path: string;
+  returned?: unknown;
+  sessions?: Array<{ token: string }>;
+}) {
+  return {
+    body,
+    context: {
+      internalAdapter: {
+        deleteSession,
+        findAccounts: vi.fn(async () => [
+          {
+            password: "stored-password-hash",
+            providerId: "credential",
+          },
+        ]),
+        listSessions: vi.fn(async () => sessions),
+      },
+      options: {},
+      password: {
+        verify: passwordVerify,
+      },
+      responseHeaders: new Headers(),
+      returned,
+      session: {
+        session: {
+          token: "current-session",
+        },
+        user: {
+          id: "user-1",
+        },
+      },
+    },
+    headers: new Headers(),
+    method: "POST",
+    path,
+    query: {},
+  } as never;
 }

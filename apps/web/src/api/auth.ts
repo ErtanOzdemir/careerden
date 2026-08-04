@@ -13,6 +13,26 @@ export const authClient = createAuthClient({
   plugins: [emailOTPClient()],
 });
 
+export interface ConfirmAccountEmailChangeResult {
+  otherSessionsRevoked: boolean;
+  success: boolean;
+}
+
+export const accountEmailApi = {
+  requestChange(input: { currentPassword: string; newEmail: string }) {
+    return authClient.$fetch<{ success: boolean }>("/email-otp/request-email-change", {
+      body: input,
+      method: "POST",
+    });
+  },
+  confirmChange(input: { newEmail: string; otp: string }) {
+    return authClient.$fetch<ConfirmAccountEmailChangeResult>("/email-otp/change-email", {
+      body: input,
+      method: "POST",
+    });
+  },
+};
+
 export function resolveAuthClientTransport(
   baseUrl: string,
   origin = defaultOrigin(),

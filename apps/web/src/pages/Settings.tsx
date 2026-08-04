@@ -8,7 +8,7 @@ import { cn } from "../lib/utils.js";
 import { profilesApi } from "../api/profiles.js";
 import { billingApi, redirectToBillingUrl } from "../api/billing.js";
 import type { ApiProfile } from "../api/types.js";
-import { authClient } from "../api/auth.js";
+import { accountEmailApi, authClient } from "../api/auth.js";
 import { useCreditBalance } from "../billing/CreditBalanceProvider.js";
 import {
   getStoredTheme,
@@ -95,7 +95,11 @@ const themeOptions: { id: Theme; label: string; icon: typeof Sun }[] = [
 ];
 
 export default function Settings() {
-  const { data: session, isPending: isLoadingSession } = authClient.useSession();
+  const {
+    data: session,
+    isPending: isLoadingSession,
+    refetch: refetchSession,
+  } = authClient.useSession();
   const {
     balance,
     balanceError,
@@ -125,6 +129,21 @@ export default function Settings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isEmailChangeModalOpen, setIsEmailChangeModalOpen] = useState(false);
+  const [emailChangeStep, setEmailChangeStep] = useState<"credentials" | "otp">("credentials");
+  const [newAccountEmail, setNewAccountEmail] = useState("");
+  const [emailChangePassword, setEmailChangePassword] = useState("");
+  const [isEmailChangePasswordVisible, setIsEmailChangePasswordVisible] = useState(false);
+  const [emailChangeOtp, setEmailChangeOtp] = useState("");
+  const [isRequestingEmailChange, setIsRequestingEmailChange] = useState(false);
+  const [isConfirmingEmailChange, setIsConfirmingEmailChange] = useState(false);
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
+  const [emailChangeNotice, setEmailChangeNotice] = useState<string | null>(null);
+  const [accountEmailOverride, setAccountEmailOverride] = useState<string | null>(null);
+  const [emailChangeResult, setEmailChangeResult] = useState<{
+    kind: "success" | "warning";
+    message: string;
+  } | null>(null);
   const [isUpToDateModalOpen, setIsUpToDateModalOpen] = useState(false);
   const [billingAction, setBillingAction] = useState<"checkout" | "portal" | null>(null);
   const [billingActionError, setBillingActionError] = useState<string | null>(null);
@@ -237,6 +256,109 @@ export default function Settings() {
     setPasswordSuccess("Password updated. Other sessions have been signed out.");
   }
 
+  function openEmailChangeModal() {
+    resetEmailChangeForm();
+    setEmailChangeResult(null);
+    setIsEmailChangeModalOpen(true);
+  }
+
+  function closeEmailChangeModal() {
+    if (isRequestingEmailChange || isConfirmingEmailChange) return;
+    setIsEmailChangeModalOpen(false);
+    resetEmailChangeForm();
+  }
+
+  function resetEmailChangeForm() {
+    setEmailChangeStep("credentials");
+    setNewAccountEmail("");
+    setEmailChangePassword("");
+    setIsEmailChangePasswordVisible(false);
+    setEmailChangeOtp("");
+    setEmailChangeError(null);
+    setEmailChangeNotice(null);
+  }
+
+  async function requestEmailChange(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    setEmailChangeError(null);
+    setEmailChangeNotice(null);
+
+    const normalizedEmail = newAccountEmail.trim().toLowerCase();
+    const currentEmail = (accountEmailOverride ?? session?.user.email ?? "").toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setEmailChangeError("Enter a valid new email address.");
+      return;
+    }
+    if (normalizedEmail === currentEmail) {
+      setEmailChangeError("Enter an email address different from your current one.");
+      return;
+    }
+    if (!emailChangePassword) {
+      setEmailChangeError("Enter your current password.");
+      return;
+    }
+
+    setIsRequestingEmailChange(true);
+    const result = await accountEmailApi.requestChange({
+      currentPassword: emailChangePassword,
+      newEmail: normalizedEmail,
+    });
+    setIsRequestingEmailChange(false);
+
+    if (result.error) {
+      setEmailChangeError(result.error.message ?? "Could not send a verification code.");
+      return;
+    }
+
+    setNewAccountEmail(normalizedEmail);
+    setEmailChangeOtp("");
+    setEmailChangeStep("otp");
+    setEmailChangeNotice(`A verification code was sent to ${normalizedEmail}.`);
+  }
+
+  async function confirmEmailChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEmailChangeError(null);
+    setEmailChangeNotice(null);
+
+    const normalizedOtp = emailChangeOtp.trim();
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      setEmailChangeError("Enter the 6-digit verification code.");
+      return;
+    }
+
+    setIsConfirmingEmailChange(true);
+    const result = await accountEmailApi.confirmChange({
+      newEmail: newAccountEmail,
+      otp: normalizedOtp,
+    });
+
+    if (result.error) {
+      setIsConfirmingEmailChange(false);
+      setEmailChangeError(result.error.message ?? "Could not verify the code.");
+      return;
+    }
+
+    setAccountEmailOverride(newAccountEmail);
+    await refetchSession();
+    setIsConfirmingEmailChange(false);
+    setIsEmailChangeModalOpen(false);
+    resetEmailChangeForm();
+    setEmailChangeResult(
+      result.data.otherSessionsRevoked
+        ? {
+            kind: "success",
+            message: "Account email updated. Other sessions have been signed out.",
+          }
+        : {
+            kind: "warning",
+            message:
+              "Account email updated, but some other sessions could not be signed out. Sign out those devices manually if needed.",
+          },
+    );
+  }
+
   async function handleManualUpdateCheck() {
     const result = await checkForUpdates();
     if (result?.status === "up-to-date") {
@@ -312,16 +434,45 @@ export default function Settings() {
             value={profile?.fullName ?? (isLoadingProfile ? "Loading..." : "")}
             readOnly
           />
-          <Field
-            label="Email"
-            type="email"
-            value={session?.user.email ?? (isLoadingSession ? "Loading..." : "")}
-            readOnly
-          />
+          <div className="space-y-2">
+            <Field
+              label="Account email"
+              type="email"
+              value={
+                accountEmailOverride ??
+                session?.user.email ??
+                (isLoadingSession ? "Loading..." : "")
+              }
+              readOnly
+            />
+            <div className="flex justify-end">
+              <Button
+                className="shrink-0"
+                disabled={!session || isLoadingSession}
+                onClick={openEmailChangeModal}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Change email
+              </Button>
+            </div>
+          </div>
         </div>
         {profileError && (
           <p className="border-t border-border px-5 py-3 text-sm text-destructive">
             {profileError}
+          </p>
+        )}
+        {emailChangeResult && (
+          <p
+            className={cn(
+              "border-t border-border px-5 py-3 text-sm",
+              emailChangeResult.kind === "success" ? "text-success" : "text-warning",
+            )}
+            role={emailChangeResult.kind === "success" ? "status" : "alert"}
+          >
+            {emailChangeResult.message}
           </p>
         )}
       </Panel>
@@ -519,6 +670,97 @@ export default function Settings() {
         </p>
       )}
 
+      <Modal open={isEmailChangeModalOpen} onClose={closeEmailChangeModal}>
+        <h2 className="text-lg font-semibold text-foreground">Change account email</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {emailChangeStep === "credentials"
+            ? "Confirm your password, then verify the new email address."
+            : `Enter the code sent to ${newAccountEmail}.`}
+        </p>
+
+        {emailChangeStep === "credentials" ? (
+          <form className="mt-5 space-y-4" onSubmit={(event) => void requestEmailChange(event)}>
+            <SettingsTextField
+              autoComplete="email"
+              label="New email address"
+              onChange={setNewAccountEmail}
+              required
+              type="email"
+              value={newAccountEmail}
+            />
+            <SettingsPasswordField
+              autoComplete="current-password"
+              isVisible={isEmailChangePasswordVisible}
+              label="Current password"
+              onChange={setEmailChangePassword}
+              onToggleVisibility={() => setIsEmailChangePasswordVisible((isVisible) => !isVisible)}
+              value={emailChangePassword}
+            />
+            {emailChangeError && (
+              <p role="alert" className="text-sm text-destructive">
+                {emailChangeError}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button onClick={closeEmailChangeModal} type="button" variant="outline">
+                Cancel
+              </Button>
+              <Button disabled={isRequestingEmailChange} type="submit">
+                {isRequestingEmailChange ? "Sending..." : "Send verification code"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <form className="mt-5 space-y-4" onSubmit={(event) => void confirmEmailChange(event)}>
+            <SettingsTextField
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              label="Verification code"
+              maxLength={6}
+              onChange={(value) => setEmailChangeOtp(value.replace(/\D/g, "").slice(0, 6))}
+              required
+              value={emailChangeOtp}
+            />
+            {emailChangeNotice && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {emailChangeNotice}
+              </p>
+            )}
+            {emailChangeError && (
+              <p role="alert" className="text-sm text-destructive">
+                {emailChangeError}
+              </p>
+            )}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                disabled={isRequestingEmailChange || isConfirmingEmailChange}
+                onClick={() => {
+                  setEmailChangeStep("credentials");
+                  setEmailChangeOtp("");
+                  setEmailChangeError(null);
+                  setEmailChangeNotice(null);
+                }}
+                type="button"
+                variant="ghost"
+              >
+                Back
+              </Button>
+              <Button
+                disabled={isRequestingEmailChange || isConfirmingEmailChange}
+                onClick={() => void requestEmailChange()}
+                type="button"
+                variant="outline"
+              >
+                {isRequestingEmailChange ? "Sending..." : "Send new code"}
+              </Button>
+              <Button disabled={isRequestingEmailChange || isConfirmingEmailChange} type="submit">
+                {isConfirmingEmailChange ? "Verifying..." : "Verify and change email"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
       <Modal open={isUpToDateModalOpen} onClose={() => setIsUpToDateModalOpen(false)}>
         <div className="flex size-11 items-center justify-center rounded-lg bg-info-soft text-info">
           <ArrowUpCircle className="size-6" />
@@ -663,4 +905,49 @@ function SettingsPasswordField({
       </div>
     </div>
   );
+}
+
+function SettingsTextField({
+  autoComplete,
+  inputMode,
+  label,
+  maxLength,
+  onChange,
+  required = false,
+  type = "text",
+  value,
+}: {
+  autoComplete?: string;
+  inputMode?: "numeric";
+  label: string;
+  maxLength?: number;
+  onChange: (value: string) => void;
+  required?: boolean;
+  type?: string;
+  value: string;
+}) {
+  const id = useId();
+
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-foreground">
+        {label}
+      </label>
+      <input
+        id={id}
+        autoComplete={autoComplete}
+        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20"
+        inputMode={inputMode}
+        maxLength={maxLength}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        type={type}
+        value={value}
+      />
+    </div>
+  );
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }

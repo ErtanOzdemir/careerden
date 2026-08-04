@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Settings from "./Settings";
 import { THEME_STORAGE_KEY } from "../theme.js";
@@ -6,6 +6,9 @@ import { DesktopUpdateProvider } from "../desktop-updates/DesktopUpdateProvider.
 
 const authMocks = vi.hoisted(() => ({
   changePassword: vi.fn(),
+  confirmEmailChange: vi.fn(),
+  refetchSession: vi.fn(async () => undefined),
+  requestEmailChange: vi.fn(),
   useSession: vi.fn(),
 }));
 const billingMocks = vi.hoisted(() => ({
@@ -17,6 +20,10 @@ const billingMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../api/auth.js", () => ({
+  accountEmailApi: {
+    confirmChange: authMocks.confirmEmailChange,
+    requestChange: authMocks.requestEmailChange,
+  },
   authClient: authMocks,
 }));
 
@@ -57,6 +64,7 @@ describe("Settings", () => {
         },
       },
       isPending: false,
+      refetch: authMocks.refetchSession,
     });
     billingMocks.useCreditBalance.mockReturnValue({
       balance: { totalCredits: 10, availableCredits: 9, reservedCredits: 1 },
@@ -91,6 +99,151 @@ describe("Settings", () => {
     expect(screen.getByRole("heading", { name: "AI credits" })).toBeInTheDocument();
     expect(screen.getByText("9")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("changes the account email after password and new-address OTP verification", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile({ email: "cv@example.com" }));
+    authMocks.requestEmailChange.mockResolvedValue({ data: { success: true }, error: null });
+    authMocks.confirmEmailChange.mockResolvedValue({
+      data: { success: true, otherSessionsRevoked: true },
+      error: null,
+    });
+
+    render(<Settings />);
+    fireEvent.click(await screen.findByRole("button", { name: "Change email" }));
+
+    let dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("New email address"), {
+      target: { value: " New.Account@Example.com " },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Current password"), {
+      target: { value: "current-password" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send verification code" }));
+
+    await waitFor(() => {
+      expect(authMocks.requestEmailChange).toHaveBeenCalledWith({
+        currentPassword: "current-password",
+        newEmail: "new.account@example.com",
+      });
+    });
+
+    dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Verification code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Verify and change email" }));
+
+    await waitFor(() => {
+      expect(authMocks.confirmEmailChange).toHaveBeenCalledWith({
+        newEmail: "new.account@example.com",
+        otp: "123456",
+      });
+    });
+    expect(authMocks.refetchSession).toHaveBeenCalledOnce();
+    expect(await screen.findByDisplayValue("new.account@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Account email updated. Other sessions have been signed out.",
+    );
+    expect(screen.queryByDisplayValue("cv@example.com")).not.toBeInTheDocument();
+    expect(profilesApi.update).not.toHaveBeenCalled();
+  });
+
+  it("shows password errors without advancing to the OTP step", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    authMocks.requestEmailChange.mockResolvedValue({
+      data: null,
+      error: { message: "Current password is incorrect" },
+    });
+
+    render(<Settings />);
+    fireEvent.click(await screen.findByRole("button", { name: "Change email" }));
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("New email address"), {
+      target: { value: "new@example.com" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Current password"), {
+      target: { value: "wrong-password" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send verification code" }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Current password is incorrect",
+    );
+    expect(within(dialog).getByLabelText("New email address")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Verification code")).not.toBeInTheDocument();
+    expect(authMocks.confirmEmailChange).not.toHaveBeenCalled();
+  });
+
+  it("validates a changed email locally and reports partial session cleanup", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    authMocks.requestEmailChange.mockResolvedValue({ data: { success: true }, error: null });
+    authMocks.confirmEmailChange.mockResolvedValue({
+      data: { success: true, otherSessionsRevoked: false },
+      error: null,
+    });
+
+    render(<Settings />);
+    fireEvent.click(await screen.findByRole("button", { name: "Change email" }));
+    let dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("New email address"), {
+      target: { value: "REGISTERED@example.com" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Current password"), {
+      target: { value: "current-password" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send verification code" }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Enter an email address different from your current one.",
+    );
+    expect(authMocks.requestEmailChange).not.toHaveBeenCalled();
+
+    fireEvent.change(within(dialog).getByLabelText("New email address"), {
+      target: { value: "new@example.com" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send verification code" }));
+    dialog = await screen.findByRole("dialog");
+    const codeInput = await within(dialog).findByLabelText("Verification code");
+    fireEvent.change(codeInput, { target: { value: "456789" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Verify and change email" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Account email updated, but some other sessions could not be signed out.",
+    );
+  });
+
+  it("resends with the verified password and clears sensitive fields when canceled", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+    authMocks.requestEmailChange.mockResolvedValue({ data: { success: true }, error: null });
+
+    render(<Settings />);
+    fireEvent.click(await screen.findByRole("button", { name: "Change email" }));
+    let dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("New email address"), {
+      target: { value: "new@example.com" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Current password"), {
+      target: { value: "current-password" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send verification code" }));
+
+    dialog = await screen.findByRole("dialog");
+    await within(dialog).findByLabelText("Verification code");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send new code" }));
+    await waitFor(() => expect(authMocks.requestEmailChange).toHaveBeenCalledTimes(2));
+    expect(authMocks.requestEmailChange).toHaveBeenLastCalledWith({
+      currentPassword: "current-password",
+      newEmail: "new@example.com",
+    });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Back" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Change email" }));
+    dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByLabelText("New email address")).toHaveValue("");
+    expect(within(dialog).getByLabelText("Current password")).toHaveValue("");
   });
 
   it("opens Creem checkout for an account without a subscription", async () => {

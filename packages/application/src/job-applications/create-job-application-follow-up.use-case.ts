@@ -1,5 +1,5 @@
 import type { JobApplicationFollowUp, PersistenceUnitOfWork } from "@careerden/domain";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 import { scheduleFollowUpReminder } from "./schedule-follow-up-reminder.js";
 
 export class CreateJobApplicationFollowUpUseCase {
@@ -11,7 +11,7 @@ export class CreateJobApplicationFollowUpUseCase {
   ): Promise<JobApplicationFollowUp> {
     return this.unitOfWork.execute(
       async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
-        const jobApplication = await getAccessibleJobApplication(
+        const jobApplication = await getActiveAccessibleJobApplication(
           jobApplications,
           profiles,
           jobApplicationId,

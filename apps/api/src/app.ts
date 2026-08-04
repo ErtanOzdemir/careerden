@@ -5,6 +5,8 @@ import type { Express } from "express";
 import {
   CreateProfileUseCase,
   CreateManualJobApplicationUseCase,
+  ArchiveJobApplicationUseCase,
+  RestoreJobApplicationUseCase,
   DeleteDocumentTemplateUseCase,
   DeleteJobApplicationUseCase,
   GenerateDocumentsUseCase,
@@ -247,6 +249,8 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         unitOfWork,
       ),
       submitJobApplication: new SubmitJobApplicationUseCase(unitOfWork),
+      archiveJobApplication: new ArchiveJobApplicationUseCase(unitOfWork),
+      restoreJobApplication: new RestoreJobApplicationUseCase(unitOfWork),
       deleteJobApplication: new DeleteJobApplicationUseCase(unitOfWork),
       generateJobApplicationDocuments: new GenerateJobApplicationDocumentsUseCase(
         jobApplications,

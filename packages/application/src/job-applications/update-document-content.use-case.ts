@@ -1,7 +1,7 @@
 import type { DocumentContent, PersistenceUnitOfWork } from "@careerden/domain";
 import { normalizeDescriptionOnlyDocumentContent } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 export class UpdateDocumentContentUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -12,7 +12,7 @@ export class UpdateDocumentContentUseCase {
     documentContent: DocumentContent,
   ): Promise<DocumentContent> {
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
-      const jobApplication = await getAccessibleJobApplication(
+      const jobApplication = await getActiveAccessibleJobApplication(
         jobApplications,
         profiles,
         jobApplicationId,

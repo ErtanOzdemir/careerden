@@ -81,6 +81,7 @@ export function mapApiJobApplicationToUi(
 
   return {
     analysisAttemptId: application.analysisAttemptId,
+    archivedAt: application.archivedAt,
     analysisSkipReason: detail ? getAnalysisSkipReason(detail.events) : undefined,
     applicationPackPreferences: application.applicationPackPreferences,
     id: application.id,

@@ -9,7 +9,7 @@ import { normalizeApplicationPackPreferences } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { hasValidCoverLetterContentMapping } from "../profiles/document-template-mapping.js";
 import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 export interface RequestApplicationPackGenerationInput {
   jobApplicationId: string;
@@ -30,7 +30,7 @@ export class RequestApplicationPackGenerationUseCase {
   ): Promise<RequestApplicationPackGenerationResult> {
     return this.unitOfWork.execute(
       async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
-        let jobApplication = await getAccessibleJobApplication(
+        let jobApplication = await getActiveAccessibleJobApplication(
           jobApplications,
           profiles,
           input.jobApplicationId,

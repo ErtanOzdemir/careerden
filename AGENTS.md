@@ -64,6 +64,12 @@ review or download.
   interfaces/adapters so implementations can be swapped.
 - Validate external inputs and AI output with schemas before persisting or rendering.
 - Use explicit workflow status transitions for job applications.
+- Job application archiving is orthogonal to tracker and processing status. Only stable
+  `scraped` applications without queued analysis, `review_ready`, `completed`, or `failed`
+  applications may be archived. Archived applications remain readable and downloadable but are
+  excluded from active lists, analytics, scraping, and reminder delivery; restore them before any
+  mutation or processing command other than permanent deletion. Active and archived applications
+  may both be permanently deleted.
 - Unexpected API exceptions return a fixed internal error message with a trace ID.
   Centralized logs record only redacted error fields and must not include request payloads,
   authentication data, credentials, or tokens.

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { JobApplication } from "../types.js";
@@ -12,8 +12,11 @@ import AppDetail, {
 
 vi.mock("../api/jobApplications.js", () => ({
   jobApplicationsApi: {
+    archive: vi.fn(),
     createContact: vi.fn(),
+    delete: vi.fn(),
     get: vi.fn(),
+    restore: vi.fn(),
     retry: vi.fn(),
     startAnalysis: vi.fn(),
     update: vi.fn(),
@@ -185,6 +188,73 @@ describe("AppDetail contacts", () => {
 
     expect(await screen.findByText("Follow-ups")).toBeInTheDocument();
     expect(screen.getByText("Contacts")).toBeInTheDocument();
+  });
+});
+
+describe("AppDetail archiving", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("renders archived applications read-only and restores them", async () => {
+    const archived = {
+      ...createApplicationDetail(),
+      archivedAt: "2026-07-31T12:00:00.000Z",
+    };
+    vi.mocked(jobApplicationsApi.get)
+      .mockResolvedValueOnce(archived)
+      .mockResolvedValue(createApplicationDetail());
+    vi.mocked(jobApplicationsApi.restore).mockResolvedValue(createApplicationDetail());
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
+
+    renderAppDetail();
+
+    expect(await screen.findByText("This application is archived")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Follow-ups & notes" }));
+    expect(screen.queryByRole("button", { name: "+ Add" })).not.toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Add context, reminders, or recruiter details..."),
+    ).toHaveAttribute("readonly");
+
+    fireEvent.click(screen.getByRole("button", { name: "Application actions" }));
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Restore" }));
+    await waitFor(() => expect(jobApplicationsApi.restore).toHaveBeenCalledWith("job-1"));
+    await waitFor(() =>
+      expect(screen.queryByText("This application is archived")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("permanently deletes an active application after confirmation", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue(createApplicationDetail());
+    vi.mocked(jobApplicationsApi.delete).mockResolvedValue(undefined as never);
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
+
+    render(
+      <MemoryRouter initialEntries={["/applications/job-1"]}>
+        <Routes>
+          <Route path="/applications/:id" element={<AppDetail />} />
+          <Route path="/applications" element={<p>Active applications</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Application actions" }));
+    expect(screen.getByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Delete permanently",
+      }),
+    );
+
+    await waitFor(() => expect(jobApplicationsApi.delete).toHaveBeenCalledWith("job-1"));
+    expect(await screen.findByText("Active applications")).toBeInTheDocument();
   });
 });
 

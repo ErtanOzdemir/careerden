@@ -116,6 +116,47 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(secondPage).toMatchObject({ totalItems: 2, items: [{ id: lowMatch.id }] });
   });
 
+  it("hides archived applications by default and restores them", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const active = await repository.create({ profileId: "profile-1", companyName: "Active" });
+    const archived = await repository.create({
+      profileId: "profile-1",
+      companyName: "Archived",
+    });
+    const archivedAt = new Date("2026-07-31T12:00:00.000Z");
+
+    await expect(repository.archive(archived.id, archivedAt)).resolves.toMatchObject({
+      archivedAt,
+    });
+    await expect(repository.listByProfileId("profile-1")).resolves.toMatchObject({
+      items: [{ id: active.id }],
+      totalItems: 1,
+    });
+    await expect(
+      repository.listByProfileId("profile-1", {
+        archiveState: "archived",
+        sortBy: "archivedAt",
+      }),
+    ).resolves.toMatchObject({ items: [{ id: archived.id }], totalItems: 1 });
+
+    await expect(
+      repository.restore(archived.id, new Date("2026-07-31T13:00:00.000Z")),
+    ).resolves.toMatchObject({ archivedAt: undefined });
+    await expect(repository.listByProfileId("profile-1")).resolves.toMatchObject({
+      totalItems: 2,
+    });
+  });
+
+  it("does not archive queued or running applications", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const queued = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    });
+
+    await expect(repository.archive(queued.id, new Date())).resolves.toBeNull();
+  });
+
   it("creates applications without interest and supports setting and clearing it", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({ profileId: "profile-1" });

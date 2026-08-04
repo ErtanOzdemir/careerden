@@ -3,7 +3,7 @@ import type {
   JobApplicationContact,
   PersistenceUnitOfWork,
 } from "@careerden/domain";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 export class CreateJobApplicationContactUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -13,7 +13,7 @@ export class CreateJobApplicationContactUseCase {
     input: Omit<CreateJobApplicationContactInput, "jobApplicationId">,
   ): Promise<JobApplicationContact> {
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
-      const jobApplication = await getAccessibleJobApplication(
+      const jobApplication = await getActiveAccessibleJobApplication(
         jobApplications,
         profiles,
         jobApplicationId,

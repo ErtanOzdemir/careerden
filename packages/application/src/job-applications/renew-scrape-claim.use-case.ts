@@ -1,6 +1,6 @@
 import type { JobApplication, PersistenceUnitOfWork } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 const scrapeClaimDurationMs = 600_000;
 
@@ -13,7 +13,7 @@ export class RenewScrapeClaimUseCase {
     claimedBy: string,
   ): Promise<JobApplication> {
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
-      await getAccessibleJobApplication(jobApplications, profiles, jobApplicationId, userId);
+      await getActiveAccessibleJobApplication(jobApplications, profiles, jobApplicationId, userId);
       const renewed = await jobApplications.renewScrapeClaim(jobApplicationId, {
         claimedBy,
         claimDurationMs: scrapeClaimDurationMs,

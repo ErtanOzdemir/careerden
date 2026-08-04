@@ -23,6 +23,7 @@ import type {
 import type { CreateJobApplicationInput } from "@careerden/domain";
 import type { JobApplicationStatus } from "@careerden/domain";
 import { normalizeApplicationPackPreferences } from "@careerden/domain";
+import { canArchiveJobApplication } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 
 export class InMemoryJobApplicationRepository implements JobApplicationRepository {
@@ -84,11 +85,32 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     return this.jobApplications.get(id) ?? null;
   }
 
+  async archive(id: string, archivedAt: Date): Promise<JobApplication | null> {
+    const existing = this.jobApplications.get(id);
+    if (!existing || !canArchiveJobApplication(existing)) return null;
+    if (existing.archivedAt) return existing;
+
+    const updated = { ...existing, archivedAt, updatedAt: archivedAt };
+    this.jobApplications.set(id, updated);
+    return updated;
+  }
+
+  async restore(id: string, restoredAt: Date): Promise<JobApplication | null> {
+    const existing = this.jobApplications.get(id);
+    if (!existing) return null;
+    if (!existing.archivedAt) return existing;
+
+    const updated = { ...existing, archivedAt: undefined, updatedAt: restoredAt };
+    this.jobApplications.set(id, updated);
+    return updated;
+  }
+
   async claimNextScrapeJob(input: ClaimNextScrapeJobInput): Promise<JobApplication | null> {
     const now = input.now ?? new Date();
     const claimExpiresAt = new Date(now.getTime() + input.claimDurationMs);
     const claimable = [...this.jobApplications.values()]
       .filter((job) => job.profileId === input.profileId)
+      .filter((job) => !job.archivedAt)
       .filter((job) => Boolean(job.sourceUrl))
       .filter((job) => isClaimable(job, now))
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())[0];
@@ -209,7 +231,9 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
   }
 
   async listByStatus(status: JobApplicationStatus): Promise<JobApplication[]> {
-    return [...this.jobApplications.values()].filter((job) => job.status === status);
+    return [...this.jobApplications.values()].filter(
+      (job) => job.status === status && !job.archivedAt,
+    );
   }
 
   async resetProcessing(id: string): Promise<JobApplication> {
@@ -275,7 +299,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     attemptId: string,
   ): Promise<{ accepted: boolean; started: boolean }> {
     const jobApplication = this.jobApplications.get(id);
-    if (!jobApplication) return { accepted: false, started: false };
+    if (!jobApplication || jobApplication.archivedAt) return { accepted: false, started: false };
     const currentAttempt = this.analysisAttempts.get(id);
     if (currentAttempt !== attemptId || !["scraped", "analyzing"].includes(jobApplication.status)) {
       return { accepted: false, started: false };
@@ -289,7 +313,12 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
 
   async setAnalysisAttempt(id: string, attemptId: string): Promise<boolean> {
     const jobApplication = this.jobApplications.get(id);
-    if (!jobApplication || jobApplication.status !== "scraped" || this.analysisAttempts.has(id))
+    if (
+      !jobApplication ||
+      jobApplication.archivedAt ||
+      jobApplication.status !== "scraped" ||
+      this.analysisAttempts.has(id)
+    )
       return false;
     this.analysisAttempts.set(id, attemptId);
     this.jobApplications.set(id, { ...jobApplication, analysisAttemptId: attemptId });
@@ -300,6 +329,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
+      jobApplication.archivedAt ||
       jobApplication.status !== "scraped" ||
       this.analysisAttempts.get(id) !== attemptId
     )
@@ -318,6 +348,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
+      jobApplication.archivedAt ||
       jobApplication.status !== "analyzing" ||
       this.analysisAttempts.get(id) !== attemptId
     ) {
@@ -333,6 +364,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
+      jobApplication.archivedAt ||
       !["scraped", "analyzing"].includes(jobApplication.status) ||
       this.analysisAttempts.get(id) !== attemptId
     ) {
@@ -349,6 +381,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
+      jobApplication.archivedAt ||
       !["review_ready", "generating_documents", "completed", "failed"].includes(
         jobApplication.status,
       )
@@ -373,6 +406,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
+      jobApplication.archivedAt ||
       jobApplication.status !== "generating_documents" ||
       this.documentGenerationAttempts.get(id) !== attemptId
     ) {
@@ -386,6 +420,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
+      jobApplication.archivedAt ||
       jobApplication.status !== "generating_documents" ||
       this.documentGenerationAttempts.get(id) !== attemptId
     ) {
@@ -797,6 +832,10 @@ function isClaimable(job: JobApplication, now: Date): boolean {
 }
 
 function matchesFilter(job: JobApplication, filter: ListJobApplicationsFilter): boolean {
+  if (filter.archiveState === "archived" ? !job.archivedAt : Boolean(job.archivedAt)) {
+    return false;
+  }
+
   if (filter.applicationStatus && job.tracking.applicationStatus !== filter.applicationStatus) {
     return false;
   }
@@ -890,6 +929,9 @@ function sortableValue(
   }
   if (sortBy === "updatedAt") {
     return job.updatedAt.toISOString();
+  }
+  if (sortBy === "archivedAt") {
+    return job.archivedAt?.toISOString() ?? "";
   }
 
   return job.tracking[sortBy] ?? "";

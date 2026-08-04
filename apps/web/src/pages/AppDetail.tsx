@@ -1,6 +1,7 @@
-import { useEffect, useId, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useId, useRef, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, buttonVariants } from "../components/ui/button.js";
+import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
 import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import { StatusBadge } from "../components/careerden/status-badge.js";
 import type { DisplayStatus } from "../components/careerden/status-badge.js";
@@ -39,6 +40,9 @@ import {
   Mail,
   Loader2,
   Trash2,
+  Archive,
+  ArchiveRestore,
+  EllipsisVertical,
 } from "lucide-react";
 
 type Tab = "overview" | "pack" | "timeline";
@@ -51,6 +55,7 @@ const tabs: { id: Tab; label: string }[] = [
 
 export default function AppDetail() {
   const { refreshBalance } = useCreditBalance();
+  const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const [app, setApp] = useState<JobApplication | null>(null);
@@ -70,12 +75,31 @@ export default function AppDetail() {
   const [isSavingSalary, setIsSavingSalary] = useState(false);
   const [isSavingInterest, setIsSavingInterest] = useState(false);
   const [isSavingWorkStyle, setIsSavingWorkStyle] = useState(false);
+  const [isChangingArchiveState, setIsChangingArchiveState] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const [followUpForm, setFollowUpForm] = useState({
     id: "",
     title: "",
     description: "",
     nextFollowUpAt: "",
   });
+
+  useEffect(() => {
+    if (!actionsMenuOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+        setActionsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [actionsMenuOpen]);
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState({ name: "", role: "", email: "", phone: "" });
@@ -397,6 +421,48 @@ export default function AppDetail() {
     return (await jobApplicationsApi.getDocumentDownloadUrl(id, { id: docId })).url;
   }
 
+  async function handleArchive() {
+    if (!id) return;
+    try {
+      setIsChangingArchiveState(true);
+      setError(null);
+      await jobApplicationsApi.archive(id);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to archive application.");
+    } finally {
+      setIsChangingArchiveState(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (!id) return;
+    try {
+      setIsChangingArchiveState(true);
+      setError(null);
+      await jobApplicationsApi.restore(id);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to restore application.");
+    } finally {
+      setIsChangingArchiveState(false);
+    }
+  }
+
+  async function handlePermanentDelete() {
+    if (!id) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await jobApplicationsApi.delete(id);
+      navigate(app?.archivedAt ? "/applications/archived" : "/applications");
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Failed to delete application.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   if (isLoading) return <div className="py-16 text-center text-muted-foreground">Loading...</div>;
   if (!app)
     return (
@@ -418,15 +484,29 @@ export default function AppDetail() {
   const processingLabel = getProcessingLabel(app);
   const persistedNotes = typeof app.metadata?.notes === "string" ? app.metadata.notes.trim() : "";
   const isNotesDirty = notes.trim() !== persistedNotes;
+  const isArchived = Boolean(app.archivedAt);
+  const canArchive = canArchiveApplication(app);
 
   return (
     <div className="space-y-6">
       <Link
-        to="/applications"
+        to={isArchived ? "/applications/archived" : "/applications"}
         className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="size-4" /> Back to applications
+        <ArrowLeft className="size-4" /> Back to {isArchived ? "archive" : "applications"}
       </Link>
+
+      {app.archivedAt && (
+        <div className="rounded-xl border border-border bg-muted/50 p-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">This application is archived</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Archived {new Date(app.archivedAt).toLocaleString()}. Restore it before making changes
+              or starting processing.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-5 rounded-xl border border-border bg-card p-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex gap-4">
@@ -441,18 +521,20 @@ export default function AppDetail() {
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-lg font-semibold text-foreground">{app.role}</h2>
               <StatusBadge status={mapStatus(app)} />
-              <select
-                value={app.status}
-                onChange={(e) => void handleStatusChange(e.target.value)}
-                disabled={isUpdatingStatus}
-                className="rounded-lg border border-input bg-card px-2 py-0.5 text-xs font-medium text-foreground outline-none focus:border-ring"
-              >
-                {["Saved", "Applied", "Interviewing", "Offer", "Rejected", "Ghosted"].map((s) => (
-                  <option key={s} value={s}>
-                    {s === app.status ? `${s} (current)` : `→ ${s}`}
-                  </option>
-                ))}
-              </select>
+              {!isArchived && (
+                <select
+                  value={app.status}
+                  onChange={(e) => void handleStatusChange(e.target.value)}
+                  disabled={isUpdatingStatus}
+                  className="rounded-lg border border-input bg-card px-2 py-0.5 text-xs font-medium text-foreground outline-none focus:border-ring"
+                >
+                  {["Saved", "Applied", "Interviewing", "Offer", "Rejected", "Ghosted"].map((s) => (
+                    <option key={s} value={s}>
+                      {s === app.status ? `${s} (current)` : `→ ${s}`}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">{app.company}</p>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
@@ -496,22 +578,87 @@ export default function AppDetail() {
             <ExternalLink className="size-3.5" />
             View on LinkedIn
           </Button>
-          {app.aiMatch ? (
-            <Button size="sm" onClick={() => setTab("pack")}>
-              <Sparkles className="size-3.5" />
-              View application pack
+          {!isArchived &&
+            (app.aiMatch ? (
+              <Button size="sm" onClick={() => setTab("pack")}>
+                <Sparkles className="size-3.5" />
+                View application pack
+              </Button>
+            ) : isAnalysisQueued ? (
+              <Button size="sm" disabled>
+                <Loader2 className="size-3.5 animate-spin" />
+                Analysis queued
+              </Button>
+            ) : (
+              <Button size="sm" onClick={handleRetry} disabled={isRetrying}>
+                <RefreshCw className={`size-3.5 ${isRetrying ? "animate-spin" : ""}`} />
+                Start analysis
+              </Button>
+            ))}
+          <div ref={actionsMenuRef} className="relative">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setActionsMenuOpen((open) => !open)}
+              aria-expanded={actionsMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Application actions"
+            >
+              <EllipsisVertical className="size-4" />
             </Button>
-          ) : isAnalysisQueued ? (
-            <Button size="sm" disabled>
-              <Loader2 className="size-3.5 animate-spin" />
-              Analysis queued
-            </Button>
-          ) : (
-            <Button size="sm" onClick={handleRetry} disabled={isRetrying}>
-              <RefreshCw className={`size-3.5 ${isRetrying ? "animate-spin" : ""}`} />
-              Start analysis
-            </Button>
-          )}
+            {actionsMenuOpen && (
+              <div
+                role="menu"
+                className="absolute top-full right-0 z-50 mt-1 min-w-[140px] overflow-hidden rounded-lg border border-border bg-popover p-1 shadow-lg"
+              >
+                {isArchived ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      void handleRestore();
+                    }}
+                    disabled={isChangingArchiveState}
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ArchiveRestore className="size-3.5" />
+                    {isChangingArchiveState ? "Restoring..." : "Restore"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setActionsMenuOpen(false);
+                      void handleArchive();
+                    }}
+                    disabled={!canArchive || isChangingArchiveState}
+                    title={
+                      canArchive
+                        ? "Archive application"
+                        : "Processing must finish before this application can be archived"
+                    }
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Archive className="size-3.5" />
+                    {isChangingArchiveState ? "Archiving..." : "Archive"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionsMenuOpen(false);
+                    setDeleteDialogOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-danger-soft"
+                >
+                  <Trash2 className="size-3.5" /> Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -541,10 +688,12 @@ export default function AppDetail() {
           <p className="text-sm text-destructive">
             {app.processingFailureReason ?? "Processing failed"}
           </p>
-          <Button variant="outline" size="sm" onClick={handleRetry} disabled={isRetrying}>
-            <RefreshCw className="size-3.5" />
-            Retry
-          </Button>
+          {!isArchived && (
+            <Button variant="outline" size="sm" onClick={handleRetry} disabled={isRetrying}>
+              <RefreshCw className="size-3.5" />
+              Retry
+            </Button>
+          )}
         </div>
       )}
 
@@ -590,6 +739,7 @@ export default function AppDetail() {
       {tab === "overview" && (
         <OverviewTab
           app={app}
+          readOnly={isArchived}
           isSavingInterest={isSavingInterest}
           isSavingSalary={isSavingSalary}
           isSavingWorkStyle={isSavingWorkStyle}
@@ -601,6 +751,7 @@ export default function AppDetail() {
       {tab === "pack" && (
         <ApplicationPackWorkspace
           app={app}
+          readOnly={isArchived}
           downloadingId={downloadingId}
           isUpdating={isUpdatingPack}
           onDownload={handleDownload}
@@ -613,6 +764,7 @@ export default function AppDetail() {
       {tab === "timeline" && (
         <TimelineTab
           app={app}
+          readOnly={isArchived}
           followUpForm={followUpForm}
           showFollowUpForm={showFollowUpForm}
           isSavingFollowUp={isSavingFollowUp}
@@ -637,6 +789,19 @@ export default function AppDetail() {
           onSaveNotes={handleSaveNotes}
         />
       )}
+      <ConfirmDialog
+        confirmLabel="Delete permanently"
+        description={`${app.role} at ${app.company} and all related documents will be permanently deleted.`}
+        error={deleteError}
+        isPending={isDeleting}
+        onConfirm={() => void handlePermanentDelete()}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) setDeleteError(null);
+        }}
+        open={deleteDialogOpen}
+        title="Delete application?"
+      />
     </div>
   );
 }
@@ -649,6 +814,7 @@ function parseTab(value: string | null): Tab | null {
 
 function OverviewTab({
   app,
+  readOnly,
   isSavingInterest,
   isSavingSalary,
   isSavingWorkStyle,
@@ -657,6 +823,7 @@ function OverviewTab({
   onSaveWorkStyle,
 }: {
   app: JobApplication;
+  readOnly: boolean;
   isSavingInterest: boolean;
   isSavingSalary: boolean;
   isSavingWorkStyle: boolean;
@@ -717,6 +884,7 @@ function OverviewTab({
         </Panel>
         <JobDetailsPanel
           app={app}
+          readOnly={readOnly}
           isSavingInterest={isSavingInterest}
           isSavingSalary={isSavingSalary}
           isSavingWorkStyle={isSavingWorkStyle}
@@ -838,6 +1006,7 @@ const interestOptions: UnifiedSelectOption[] = [
 
 export function JobDetailsPanel({
   app,
+  readOnly = false,
   isSavingInterest,
   isSavingSalary,
   isSavingWorkStyle,
@@ -846,6 +1015,7 @@ export function JobDetailsPanel({
   onSaveWorkStyle,
 }: {
   app: JobApplication;
+  readOnly?: boolean;
   isSavingInterest: boolean;
   isSavingSalary: boolean;
   isSavingWorkStyle: boolean;
@@ -971,6 +1141,26 @@ export function JobDetailsPanel({
   }
 
   const salaryValue = formatSalary(app);
+
+  if (readOnly) {
+    return (
+      <Panel>
+        <PanelHeader title="Job details" />
+        <dl className="divide-y divide-border border-t border-border text-sm">
+          {[
+            ["Interest", app.interestLevel ?? "Not set"],
+            ["Salary", salaryValue],
+            ["Work style", app.workStyle ? formatWorkStyle(app.workStyle) : "Not set"],
+          ].map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-4 px-5 py-2.5">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="text-right font-medium text-foreground">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </Panel>
+    );
+  }
 
   return (
     <Panel>
@@ -1237,6 +1427,7 @@ function SalaryInput({
 
 function TimelineTab({
   app,
+  readOnly,
   followUpForm,
   showFollowUpForm,
   isSavingFollowUp,
@@ -1258,6 +1449,7 @@ function TimelineTab({
   onSaveNotes,
 }: {
   app: JobApplication;
+  readOnly: boolean;
   followUpForm: { id: string; title: string; description: string; nextFollowUpAt: string };
   showFollowUpForm: boolean;
   isSavingFollowUp: boolean;
@@ -1289,12 +1481,14 @@ function TimelineTab({
         <PanelHeader
           title="Follow-ups"
           action={
-            <Button variant="ghost" size="sm" onClick={onToggleFollowUpForm}>
-              + Add follow-up
-            </Button>
+            !readOnly ? (
+              <Button variant="ghost" size="sm" onClick={onToggleFollowUpForm}>
+                + Add follow-up
+              </Button>
+            ) : undefined
           }
         />
-        {showFollowUpForm && (
+        {!readOnly && showFollowUpForm && (
           <form onSubmit={onSaveFollowUp} className="space-y-3 border-t border-border px-5 py-4">
             <div>
               <label
@@ -1359,9 +1553,15 @@ function TimelineTab({
             </div>
           </form>
         )}
-        {(!app.followUps || app.followUps.length === 0) && !showFollowUpForm && (
-          <FollowUpsEmptyState onAdd={onToggleFollowUpForm} />
-        )}
+        {(!app.followUps || app.followUps.length === 0) &&
+          !showFollowUpForm &&
+          (readOnly ? (
+            <p className="border-t border-border px-5 py-4 text-sm text-muted-foreground">
+              No follow-ups were scheduled before this application was archived.
+            </p>
+          ) : (
+            <FollowUpsEmptyState onAdd={onToggleFollowUpForm} />
+          ))}
         {app.followUps && app.followUps.length > 0 && (
           <div className="divide-y divide-border border-t border-border">
             {app.followUps.map((f) => (
@@ -1383,25 +1583,27 @@ function TimelineTab({
                     )}
                   </p>
                 </div>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEditFollowUp(f.id)}
-                    disabled={isSavingFollowUp}
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void onDeleteFollowUp(f.id)}
-                    disabled={isSavingFollowUp}
-                    aria-label={`Delete ${f.title}`}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
+                {!readOnly && (
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditFollowUp(f.id)}
+                      disabled={isSavingFollowUp}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void onDeleteFollowUp(f.id)}
+                      disabled={isSavingFollowUp}
+                      aria-label={`Delete ${f.title}`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1413,20 +1615,23 @@ function TimelineTab({
           <PanelHeader
             title="Notes"
             action={
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void onSaveNotes()}
-                disabled={isSavingNotes || !isNotesDirty}
-              >
-                {isSavingNotes ? "Saving..." : "Save"}
-              </Button>
+              !readOnly ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void onSaveNotes()}
+                  disabled={isSavingNotes || !isNotesDirty}
+                >
+                  {isSavingNotes ? "Saving..." : "Save"}
+                </Button>
+              ) : undefined
             }
           />
           <div className="border-t border-border px-5 py-4">
             <textarea
               value={notes}
               onChange={(e) => onNotesChange(e.target.value)}
+              readOnly={readOnly}
               placeholder="Add context, reminders, or recruiter details..."
               rows={5}
               className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none focus:border-ring"
@@ -1438,12 +1643,14 @@ function TimelineTab({
           <PanelHeader
             title="Contacts"
             action={
-              <Button variant="ghost" size="sm" onClick={onToggleContactForm}>
-                + Add
-              </Button>
+              !readOnly ? (
+                <Button variant="ghost" size="sm" onClick={onToggleContactForm}>
+                  + Add
+                </Button>
+              ) : undefined
             }
           />
-          {showContactForm && (
+          {!readOnly && showContactForm && (
             <form onSubmit={onAddContact} className="border-t border-border px-5 py-4 space-y-3">
               <input
                 placeholder="Name"
@@ -1558,6 +1765,11 @@ function mapStatus(app: JobApplication): DisplayStatus {
     default:
       return "saved";
   }
+}
+
+function canArchiveApplication(app: JobApplication): boolean {
+  if (app.processingStatus === "scraped") return !app.analysisAttemptId;
+  return ["review_ready", "completed", "failed"].includes(app.processingStatus ?? "");
 }
 
 function toDateTimeLocalValue(value?: string) {

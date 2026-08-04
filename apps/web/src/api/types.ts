@@ -153,6 +153,7 @@ export interface ApiDocumentTemplate {
 
 export interface ApiJobApplication {
   analysisAttemptId?: string;
+  archivedAt?: string;
   applicationPackPreferences: ApiApplicationPackPreferences;
   companyLogoUrl?: string;
   createdAt: string;

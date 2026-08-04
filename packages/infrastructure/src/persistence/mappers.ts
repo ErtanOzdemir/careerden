@@ -21,6 +21,7 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
   return {
     id: String(row.id),
     profileId: String(row.profile_id),
+    archivedAt: nullableDate(row.archived_at),
     applicationPackPreferences: normalizeApplicationPackPreferences(
       record(row.application_pack_preferences),
     ),

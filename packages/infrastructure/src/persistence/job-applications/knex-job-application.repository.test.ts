@@ -12,6 +12,18 @@ afterAll(async () => {
 });
 
 describe("applyJobApplicationFilters", () => {
+  it("defaults to active applications and can select archived applications", () => {
+    const activeStatement = db("job_applications")
+      .modify((query) => applyJobApplicationFilters(query, {}))
+      .toSQL();
+    const archivedStatement = db("job_applications")
+      .modify((query) => applyJobApplicationFilters(query, { archiveState: "archived" }))
+      .toSQL();
+
+    expect(activeStatement.sql).toContain('"archived_at" is null');
+    expect(archivedStatement.sql).toContain('"archived_at" is not null');
+  });
+
   it("searches JSONB tag values without applying LIKE to the JSONB column", () => {
     const query = db("job_applications");
 

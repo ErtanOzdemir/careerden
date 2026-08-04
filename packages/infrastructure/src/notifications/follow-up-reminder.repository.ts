@@ -86,6 +86,13 @@ export class PostgresFollowUpReminderRepository implements FollowUpReminderRepos
       .whereNull("reminder_sent_at")
       .where("scheduled_at", new Date(input.followUpAt))
       .where("reminder_scheduled_for", new Date(input.scheduledFor))
+      .whereExists((query) => {
+        query
+          .select(this.db.raw("1"))
+          .from("job_applications")
+          .whereRaw("job_applications.id = job_application_follow_ups.job_application_id")
+          .whereNull("job_applications.archived_at");
+      })
       .update({
         reminder_sent_at: sentAt,
         updated_at: this.db.fn.now(),
@@ -96,41 +103,52 @@ export class PostgresFollowUpReminderRepository implements FollowUpReminderRepos
 
   async isPendingScheduleCurrent(input: FollowUpReminderQueuePayload): Promise<boolean> {
     const row = await this.db("job_application_follow_ups")
-      .where({
-        id: input.followUpId,
-        job_application_id: input.jobApplicationId,
-        profile_id: input.profileId,
-        scheduled_at: new Date(input.followUpAt),
-      })
-      .whereNull("reminder_sent_at")
-      .first();
-    return Boolean(row);
-  }
-
-  private baseQuery() {
-    return this.db("job_application_follow_ups")
-      .join("user_profiles", "user_profiles.id", "job_application_follow_ups.profile_id")
       .join(
         "job_applications",
         "job_applications.id",
         "job_application_follow_ups.job_application_id",
       )
-      .select(
-        "job_application_follow_ups.id as follow_up_id",
-        "job_application_follow_ups.job_application_id",
-        "job_application_follow_ups.profile_id",
-        "user_profiles.email as profile_email",
-        "user_profiles.follow_up_reminders_enabled",
-        "job_applications.company_name",
-        "job_applications.role_title",
-        "job_application_follow_ups.title",
-        "job_application_follow_ups.description",
-        "job_application_follow_ups.scheduled_at",
-        "job_application_follow_ups.reminder_job_id",
-        "job_application_follow_ups.reminder_scheduled_for",
-        "job_application_follow_ups.reminder_sent_at",
-      );
+      .where({
+        "job_application_follow_ups.id": input.followUpId,
+        "job_application_follow_ups.job_application_id": input.jobApplicationId,
+        "job_application_follow_ups.profile_id": input.profileId,
+        "job_application_follow_ups.scheduled_at": new Date(input.followUpAt),
+      })
+      .whereNull("job_application_follow_ups.reminder_sent_at")
+      .whereNull("job_applications.archived_at")
+      .first();
+    return Boolean(row);
   }
+
+  private baseQuery() {
+    return buildFollowUpReminderBaseQuery(this.db);
+  }
+}
+
+export function buildFollowUpReminderBaseQuery(db: Knex): Knex.QueryBuilder {
+  return db("job_application_follow_ups")
+    .join("user_profiles", "user_profiles.id", "job_application_follow_ups.profile_id")
+    .join(
+      "job_applications",
+      "job_applications.id",
+      "job_application_follow_ups.job_application_id",
+    )
+    .whereNull("job_applications.archived_at")
+    .select(
+      "job_application_follow_ups.id as follow_up_id",
+      "job_application_follow_ups.job_application_id",
+      "job_application_follow_ups.profile_id",
+      "user_profiles.email as profile_email",
+      "user_profiles.follow_up_reminders_enabled",
+      "job_applications.company_name",
+      "job_applications.role_title",
+      "job_application_follow_ups.title",
+      "job_application_follow_ups.description",
+      "job_application_follow_ups.scheduled_at",
+      "job_application_follow_ups.reminder_job_id",
+      "job_application_follow_ups.reminder_scheduled_for",
+      "job_application_follow_ups.reminder_sent_at",
+    );
 }
 
 export function getFollowUpReminderScheduledFor(followUpAt: Date): Date {

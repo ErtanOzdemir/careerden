@@ -3,7 +3,7 @@ import { assessProfileReadiness } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 
 export type JobApplicationRetryMode = "analysis" | "documents" | "scraping";
@@ -27,7 +27,7 @@ export class RetryJobApplicationUseCase {
   ): Promise<RetryJobApplicationResult> {
     return this.unitOfWork.execute(
       async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
-        const jobApplication = await getAccessibleJobApplication(
+        const jobApplication = await getActiveAccessibleJobApplication(
           jobApplications,
           profiles,
           jobApplicationId,

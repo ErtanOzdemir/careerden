@@ -14,6 +14,7 @@ import type {
 } from "./types";
 
 export interface ListJobApplicationsParams {
+  archiveState?: "active" | "archived";
   applicationStatus?: ApiApplicationStatus;
   priority?: ApiApplicationPriority;
   processingStatus?: string;
@@ -23,6 +24,7 @@ export interface ListJobApplicationsParams {
   pageSize?: number;
   search?: string;
   sortBy?:
+    | "archivedAt"
     | "applicationStatus"
     | "companyName"
     | "dateApplied"
@@ -123,6 +125,18 @@ export const jobApplicationsApi = {
 
   get(id: string): Promise<ApiJobApplicationDetail> {
     return requestJson<ApiJobApplicationDetail>(`/job-applications/${id}`);
+  },
+
+  archive(id: string): Promise<ApiJobApplication> {
+    return requestJson<ApiJobApplication>(`/job-applications/${id}/archive`, {
+      method: "PUT",
+    });
+  },
+
+  restore(id: string): Promise<ApiJobApplication> {
+    return requestJson<ApiJobApplication>(`/job-applications/${id}/archive`, {
+      method: "DELETE",
+    });
   },
 
   create(input: CreateJobApplicationInput): Promise<ApiJobApplication> {

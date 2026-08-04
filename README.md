@@ -37,7 +37,7 @@ Import LinkedIn jobs or paste any posting manually. Match your profile. Create t
 - Add applications by pasting company and job details manually, with an optional company logo,
   website, location, and source URL, or import a LinkedIn job through the desktop app.
 - Manage application stages, interest level, tags, salary range and type, work style,
-  contacts, timeline events, and multiple follow-ups.
+  contacts, timeline events, multiple follow-ups, and a reversible archive for inactive roles.
 - Filter, sort, search, and paginate the application log, with dashboard analytics and
   real-time updates over server-sent events.
 - Maintain a reusable profile with experience, education, projects, certifications,
@@ -481,31 +481,39 @@ duplicate-path, path-traversal, structurally incomplete, or excessively expanded
 
 ### Job Applications
 
-| Method                   | Path                                                   | Description                            |
-| ------------------------ | ------------------------------------------------------ | -------------------------------------- |
-| `POST`, `GET`            | `/job-applications`                                    | Create or list applications            |
-| `POST`                   | `/job-applications/manual`                             | Create from pasted manual job details  |
-| `GET`                    | `/job-applications/analytics`                          | Read profile-scoped dashboard stats    |
-| `GET`                    | `/job-applications/stream`                             | Stream profile-scoped changes (SSE)    |
-| `POST`                   | `/job-applications/from-scrape`                        | Create from an existing scrape         |
-| `GET`, `PATCH`, `DELETE` | `/job-applications/:id`                                | Read, update, or delete an application |
-| `PUT`                    | `/job-applications/:id/status`                         | Advance processing status              |
-| `POST`                   | `/job-applications/:id/retry`                          | Retry failed processing                |
-| `POST`                   | `/job-applications/:id/analysis`                       | Queue match analysis                   |
-| `POST`                   | `/job-applications/:id/application-pack/generations`   | Queue CV and cover-letter generation   |
-| `GET`, `POST`            | `/job-applications/:id/events`                         | List or add timeline events            |
-| `GET`, `POST`            | `/job-applications/:id/contacts`                       | List or add contacts                   |
-| `PATCH`, `DELETE`        | `/job-applications/:id/contacts/:contactId`            | Update or delete a contact             |
-| `GET`, `POST`            | `/job-applications/:id/follow-ups`                     | List or schedule follow-ups            |
-| `PATCH`, `DELETE`        | `/job-applications/:id/follow-ups/:followUpId`         | Update or delete a follow-up           |
-| `PUT`                    | `/job-applications/:id/document-content`               | Save editable document content         |
-| `POST`                   | `/job-applications/:id/documents/generate`             | Generate CV and cover-letter files     |
-| `GET`                    | `/job-applications/:id/documents/:documentId/download` | Create a signed download URL           |
+| Method                   | Path                                                   | Description                                        |
+| ------------------------ | ------------------------------------------------------ | -------------------------------------------------- |
+| `POST`, `GET`            | `/job-applications`                                    | Create or list applications                        |
+| `POST`                   | `/job-applications/manual`                             | Create from pasted manual job details              |
+| `GET`                    | `/job-applications/analytics`                          | Read profile-scoped dashboard stats                |
+| `GET`                    | `/job-applications/stream`                             | Stream profile-scoped changes (SSE)                |
+| `POST`                   | `/job-applications/from-scrape`                        | Create from an existing scrape                     |
+| `GET`, `PATCH`, `DELETE` | `/job-applications/:id`                                | Read, update, or permanently delete an application |
+| `PUT`, `DELETE`          | `/job-applications/:id/archive`                        | Archive or restore an application                  |
+| `PUT`                    | `/job-applications/:id/status`                         | Advance processing status                          |
+| `POST`                   | `/job-applications/:id/retry`                          | Retry failed processing                            |
+| `POST`                   | `/job-applications/:id/analysis`                       | Queue match analysis                               |
+| `POST`                   | `/job-applications/:id/application-pack/generations`   | Queue CV and cover-letter generation               |
+| `GET`, `POST`            | `/job-applications/:id/events`                         | List or add timeline events                        |
+| `GET`, `POST`            | `/job-applications/:id/contacts`                       | List or add contacts                               |
+| `PATCH`, `DELETE`        | `/job-applications/:id/contacts/:contactId`            | Update or delete a contact                         |
+| `GET`, `POST`            | `/job-applications/:id/follow-ups`                     | List or schedule follow-ups                        |
+| `PATCH`, `DELETE`        | `/job-applications/:id/follow-ups/:followUpId`         | Update or delete a follow-up                       |
+| `PUT`                    | `/job-applications/:id/document-content`               | Save editable document content                     |
+| `POST`                   | `/job-applications/:id/documents/generate`             | Generate CV and cover-letter files                 |
+| `GET`                    | `/job-applications/:id/documents/:documentId/download` | Create a signed download URL                       |
 
 Listing requires `profileId`. Supported filters include processing/application status,
-company, role, role type, priority, tag, date range, and free-text search. Pagination uses
-`page` and `pageSize` (default 20, maximum 100), with `sortBy` and `sortDirection` for
-ordering.
+archive state, company, role, role type, priority, tag, date range, and free-text search.
+`archiveState` defaults to `active` and accepts `archived` for the dedicated archive view.
+Pagination uses `page` and `pageSize` (default 20, maximum 100), with `sortBy` and
+`sortDirection` for ordering; archived results may be sorted by `archivedAt`.
+
+Archiving preserves the application's tracker stage, processing results, documents, contacts,
+events, and follow-ups. Only stable applications can be archived. Archived applications are
+read-only, excluded from dashboard metrics, global search, scraping, and reminder delivery, and
+must be restored before processing or editing. Active and archived applications can both be
+permanently deleted; restoring reschedules unsent follow-ups that are still in the future.
 
 Manual creation uses `multipart/form-data`. It requires `profileId`, `companyName`, `roleTitle`,
 and `jobDescription`; it optionally accepts `companyDescription`, `companyWebsiteUrl`,

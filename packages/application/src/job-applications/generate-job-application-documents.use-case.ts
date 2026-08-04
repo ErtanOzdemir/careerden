@@ -10,6 +10,7 @@ import {
   type GenerateDocumentsUseCase,
 } from "../documents/generate-documents.use-case.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
+import { assertJobApplicationActive } from "./job-application-access.js";
 
 export class GenerateJobApplicationDocumentsUseCase {
   constructor(
@@ -25,6 +26,7 @@ export class GenerateJobApplicationDocumentsUseCase {
     if (!jobApplication) {
       throw new Error(`Job application ${jobApplicationId} was not found`);
     }
+    assertJobApplicationActive(jobApplication);
 
     const profile = await this.profiles.findById(jobApplication.profileId);
 

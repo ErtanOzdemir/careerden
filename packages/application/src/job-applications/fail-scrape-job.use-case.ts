@@ -1,6 +1,6 @@
 import type { PersistenceUnitOfWork } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 const maxScrapeAttempts = 3;
 const scrapeRetryBackoffMs = [60_000, 300_000];
@@ -17,7 +17,7 @@ export class FailScrapeJobUseCase {
     now = new Date(),
   ): Promise<FailScrapeJobResult> {
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
-      const jobApplication = await getAccessibleJobApplication(
+      const jobApplication = await getActiveAccessibleJobApplication(
         jobApplications,
         profiles,
         jobApplicationId,

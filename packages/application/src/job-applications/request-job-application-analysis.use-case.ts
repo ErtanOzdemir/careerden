@@ -1,7 +1,7 @@
 import type { JobApplication, PersistenceUnitOfWork } from "@careerden/domain";
 import { assessProfileReadiness } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 
 export class RequestJobApplicationAnalysisUseCase {
@@ -10,7 +10,7 @@ export class RequestJobApplicationAnalysisUseCase {
   async execute(jobApplicationId: string, userId: string): Promise<JobApplication> {
     return this.unitOfWork.execute(
       async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
-        const jobApplication = await getAccessibleJobApplication(
+        const jobApplication = await getActiveAccessibleJobApplication(
           jobApplications,
           profiles,
           jobApplicationId,

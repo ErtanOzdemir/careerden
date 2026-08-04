@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/button.js";
+import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
 import { InterestTag, StatusBadge } from "../components/careerden/status-badge.js";
 import type { DisplayStatus } from "../components/careerden/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
@@ -16,6 +17,8 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpDown,
+  Archive,
+  ArchiveRestore,
   EllipsisVertical,
   Search,
   SlidersHorizontal,
@@ -41,7 +44,7 @@ const filters: { id: DisplayStatus | "all"; label: string }[] = [
   { id: "ghosted", label: "Ghosted" },
 ];
 
-export default function ApplicationsLog() {
+export default function ApplicationsLog({ archiveMode = false }: { archiveMode?: boolean }) {
   const { refreshBalance } = useCreditBalance();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -51,7 +54,10 @@ export default function ApplicationsLog() {
   const [totalPages, setTotalPages] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const filter = parseFilter(searchParams.get("status"));
+  const visibleFilters = archiveMode
+    ? filters.filter((candidate) => candidate.id !== "processing")
+    : filters;
+  const filter = parseFilter(searchParams.get("status"), visibleFilters);
   const sort = parseSort(searchParams.get("sort"));
   const page = parsePage(searchParams.get("page"));
   const urlQuery = searchParams.get("q") ?? "";
@@ -116,6 +122,7 @@ export default function ApplicationsLog() {
         else if (filter === "ghosted") apiStatus = "ghosted";
         const result = await jobApplicationsApi.list({
           profileId,
+          archiveState: archiveMode ? "archived" : "active",
           applicationStatus: apiStatus,
           processingStatuses:
             filter === "processing"
@@ -127,7 +134,13 @@ export default function ApplicationsLog() {
           page,
           pageSize: PAGE_SIZE,
           sortBy:
-            sort === "match" ? "matchScore" : sort === "company" ? "companyName" : "updatedAt",
+            sort === "match"
+              ? "matchScore"
+              : sort === "company"
+                ? "companyName"
+                : archiveMode
+                  ? "archivedAt"
+                  : "updatedAt",
           sortDirection: sort === "company" ? "asc" : "desc",
         });
         if (sequence === loadSequence.current) {
@@ -149,7 +162,7 @@ export default function ApplicationsLog() {
         if (showLoading && sequence === loadSequence.current) setIsLoading(false);
       }
     },
-    [filter, page, profileId, sort, updateSearchParams, urlQuery],
+    [archiveMode, filter, page, profileId, sort, updateSearchParams, urlQuery],
   );
 
   useEffect(() => {
@@ -176,6 +189,9 @@ export default function ApplicationsLog() {
   });
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<JobApplication | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -192,18 +208,47 @@ export default function ApplicationsLog() {
     };
   }, [openMenuId]);
 
-  const handleDelete = useCallback(
+  const handleArchive = useCallback(
     async (id: string) => {
       try {
-        await jobApplicationsApi.delete(id);
+        await jobApplicationsApi.archive(id);
         setOpenMenuId(null);
         await loadApplications(false);
-      } catch {
-        // keep row visible on error
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to archive application.");
       }
     },
     [loadApplications],
   );
+
+  const handleRestore = useCallback(
+    async (id: string) => {
+      try {
+        await jobApplicationsApi.restore(id);
+        setOpenMenuId(null);
+        await loadApplications(false);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to restore application.");
+      }
+    },
+    [loadApplications],
+  );
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteCandidate) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await jobApplicationsApi.delete(deleteCandidate.id);
+      setDeleteCandidate(null);
+      setOpenMenuId(null);
+      await loadApplications(false);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Failed to delete application.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteCandidate, loadApplications]);
 
   const rows = useMemo(() => applications, [applications]);
   const visibleRows = isLoading ? [] : rows;
@@ -221,7 +266,15 @@ export default function ApplicationsLog() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(archiveMode ? "/applications" : "/applications/archived")}
+          >
+            {archiveMode ? <ArrowLeft className="size-3.5" /> : <Archive className="size-3.5" />}
+            {archiveMode ? "Active applications" : "Archived applications"}
+          </Button>
           <div className="flex items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 py-1.5">
             <ArrowUpDown className="size-3.5 text-muted-foreground" />
             <select
@@ -247,7 +300,7 @@ export default function ApplicationsLog() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {filters.map((f) => (
+        {visibleFilters.map((f) => (
           <button
             key={f.id}
             onClick={() =>
@@ -273,7 +326,7 @@ export default function ApplicationsLog() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="rounded-xl border border-border bg-card">
         <div
           className={cn(
             "hidden gap-4 border-b border-border px-5 py-2.5 text-xs font-medium text-muted-foreground md:grid",
@@ -285,7 +338,7 @@ export default function ApplicationsLog() {
           <div>Match</div>
           <div>Interest</div>
           <div className="md:pl-2">Salary</div>
-          <div className="text-right">Added</div>
+          <div className="text-right">{archiveMode ? "Archived" : "Added"}</div>
           <div className="text-center">Actions</div>
         </div>
 
@@ -382,7 +435,10 @@ export default function ApplicationsLog() {
                   {formatSalary(app)}
                 </div>
                 <div className="flex min-w-0 items-center justify-end gap-1 text-xs text-muted-foreground">
-                  {app.dateApplied.replace(/, \d{4}$/, "")}
+                  {(archiveMode && app.archivedAt
+                    ? new Date(app.archivedAt).toLocaleDateString()
+                    : app.dateApplied
+                  ).replace(/, \d{4}$/, "")}
                 </div>
                 <div
                   className="flex min-w-0 items-center justify-center"
@@ -402,14 +458,57 @@ export default function ApplicationsLog() {
                         ref={menuRef}
                         className="absolute top-full right-0 z-50 min-w-[120px] overflow-hidden rounded-lg border border-border bg-popover p-1 shadow-lg"
                       >
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(app.id)}
-                          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-danger-soft"
-                        >
-                          <Trash2 className="size-3.5" />
-                          Delete
-                        </button>
+                        {archiveMode ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => void handleRestore(app.id)}
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+                            >
+                              <ArchiveRestore className="size-3.5" />
+                              Restore
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteError(null);
+                                setDeleteCandidate(app);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-danger-soft"
+                            >
+                              <Trash2 className="size-3.5" />
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => void handleArchive(app.id)}
+                              disabled={!canArchiveApplication(app)}
+                              title={
+                                canArchiveApplication(app)
+                                  ? "Archive application"
+                                  : "Processing must finish before this application can be archived"
+                              }
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Archive className="size-3.5" />
+                              Archive
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteError(null);
+                                setDeleteCandidate(app);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive transition-colors hover:bg-danger-soft"
+                            >
+                              <Trash2 className="size-3.5" />
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -475,12 +574,37 @@ export default function ApplicationsLog() {
           </nav>
         )}
       </div>
+
+      <ConfirmDialog
+        confirmLabel="Delete permanently"
+        description={
+          deleteCandidate
+            ? `${deleteCandidate.role} at ${deleteCandidate.company} and all related documents will be permanently deleted.`
+            : "This application will be permanently deleted."
+        }
+        error={deleteError}
+        isPending={isDeleting}
+        onConfirm={() => void handleDelete()}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteCandidate(null);
+            setDeleteError(null);
+          }
+        }}
+        open={Boolean(deleteCandidate)}
+        title="Delete application?"
+      />
     </div>
   );
 }
 
-function parseFilter(value: string | null): DisplayStatus | "all" {
-  return filters.some((filter) => filter.id === value) ? (value as DisplayStatus | "all") : "all";
+function parseFilter(
+  value: string | null,
+  availableFilters: typeof filters,
+): DisplayStatus | "all" {
+  return availableFilters.some((filter) => filter.id === value)
+    ? (value as DisplayStatus | "all")
+    : "all";
 }
 
 function parseSort(value: string | null): SortKey {
@@ -521,6 +645,11 @@ function mapUiStatusToDisplay(app: JobApplication): DisplayStatus {
     default:
       return "saved";
   }
+}
+
+function canArchiveApplication(app: JobApplication): boolean {
+  if (app.processingStatus === "scraped") return !app.analysisAttemptId;
+  return ["review_ready", "completed", "failed"].includes(app.processingStatus ?? "");
 }
 
 function matchScoreBarColor(score: number): string {

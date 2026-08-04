@@ -90,6 +90,7 @@ export interface GeneratedApplicationDocument {
 
 export interface JobApplication {
   analysisAttemptId?: string;
+  archivedAt?: string;
   analysisSkipReason?: "insufficient_credits";
   applicationPackPreferences?: ApiApplicationPackPreferences;
   id: string;

@@ -11,7 +11,7 @@ import { ApplicationError } from "../application-error.js";
 import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 import type { GetJobApplicationDetailUseCase } from "./get-job-application-detail.use-case.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 import type { JobApplicationDetail } from "./job-application-read-model.js";
 import { storeCompanyLogo } from "./store-company-logo.js";
 
@@ -30,7 +30,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
     userId: string,
     input: { claimedBy: string; scrapeBundle: ScrapeBundle },
   ): Promise<JobApplicationDetail> {
-    const jobApplication = await getAccessibleJobApplication(
+    const jobApplication = await getActiveAccessibleJobApplication(
       this.jobApplications,
       this.profiles,
       jobApplicationId,
@@ -49,7 +49,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
     try {
       await this.unitOfWork.execute(
         async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
-          const current = await getAccessibleJobApplication(
+          const current = await getActiveAccessibleJobApplication(
             jobApplications,
             profiles,
             jobApplicationId,
@@ -106,7 +106,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
 }
 
 function assertScrapeSubmissionAllowed(
-  jobApplication: Awaited<ReturnType<typeof getAccessibleJobApplication>>,
+  jobApplication: Awaited<ReturnType<typeof getActiveAccessibleJobApplication>>,
   claimedBy: string,
 ): void {
   if (!canTransitionJobApplicationStatus(jobApplication.status, "scraped")) {

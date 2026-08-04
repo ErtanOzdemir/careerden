@@ -25,6 +25,7 @@ import {
 
 interface ApplicationPackWorkspaceProps {
   app: JobApplication;
+  readOnly?: boolean;
   profile?: ApiProfile;
   templates: ApiDocumentTemplate[];
   isUpdating: boolean;
@@ -46,6 +47,7 @@ type PreviewMode = "live" | "rendered";
 
 export function ApplicationPackWorkspace({
   app,
+  readOnly = false,
   profile,
   templates,
   isUpdating,
@@ -109,6 +111,7 @@ export function ApplicationPackWorkspace({
 
   const readiness = app.profileReadiness;
   const canUpdate =
+    !readOnly &&
     Boolean(app.aiMatch && draftContent) &&
     readiness?.state !== "blocked" &&
     ["completed", "failed", "review_ready"].includes(app.processingStatus ?? "");
@@ -277,7 +280,7 @@ export function ApplicationPackWorkspace({
         />
       </div>
 
-      {app.aiMatch && draftContent && (
+      {!readOnly && app.aiMatch && draftContent && (
         <ApplicationPackCustomizer
           content={draftContent}
           onContentChange={handleContentChange}
@@ -294,7 +297,9 @@ export function ApplicationPackWorkspace({
             {isDirty ? "You have unapplied changes" : packActionDescription(app)}
           </p>
           <p className="text-xs text-muted-foreground">
-            Updates run in the background; you can leave this page safely.
+            {readOnly
+              ? "Restore this application to customize or regenerate its pack."
+              : "Updates run in the background; you can leave this page safely."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -308,14 +313,16 @@ export function ApplicationPackWorkspace({
               {isDownloadingBoth ? "Preparing..." : "Download both PDFs"}
             </Button>
           )}
-          <Button onClick={() => void handleUpdate()} disabled={!canUpdate || isUpdating}>
-            {isUpdating ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="size-3.5" />
-            )}
-            {app.generatedDocuments?.length ? "Update pack" : "Create pack"}
-          </Button>
+          {!readOnly && (
+            <Button onClick={() => void handleUpdate()} disabled={!canUpdate || isUpdating}>
+              {isUpdating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="size-3.5" />
+              )}
+              {app.generatedDocuments?.length ? "Update pack" : "Create pack"}
+            </Button>
+          )}
         </div>
       </section>
     </div>

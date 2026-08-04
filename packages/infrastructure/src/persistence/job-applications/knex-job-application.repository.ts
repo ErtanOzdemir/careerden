@@ -22,6 +22,7 @@ import type {
   UpdateJobApplicationTrackingInput,
 } from "@careerden/domain";
 import type { CreateJobApplicationInput, JobApplicationStatus } from "@careerden/domain";
+import { archivableJobApplicationStatuses } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import {
   toGeneratedDocument,
@@ -79,6 +80,30 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     return row ? toJobApplication(row) : null;
   }
 
+  async archive(id: string, archivedAt: Date): Promise<JobApplication | null> {
+    const [row] = await this.db("job_applications")
+      .where({ id })
+      .whereNull("archived_at")
+      .whereIn("status", archivableJobApplicationStatuses)
+      .andWhere((query) => {
+        query.whereNot("status", "scraped").orWhereNull("analysis_attempt_id");
+      })
+      .update({ archived_at: archivedAt, updated_at: archivedAt })
+      .returning("*");
+
+    return row ? toJobApplication(row) : null;
+  }
+
+  async restore(id: string, restoredAt: Date): Promise<JobApplication | null> {
+    const [row] = await this.db("job_applications")
+      .where({ id })
+      .whereNotNull("archived_at")
+      .update({ archived_at: null, updated_at: restoredAt })
+      .returning("*");
+
+    return row ? toJobApplication(row) : null;
+  }
+
   async claimNextScrapeJob(input: ClaimNextScrapeJobInput): Promise<JobApplication | null> {
     const now = input.now ?? new Date();
     const claimExpiresAt = new Date(now.getTime() + input.claimDurationMs);
@@ -86,6 +111,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     return this.db.transaction(async (transaction) => {
       const row = await transaction("job_applications")
         .where({ profile_id: input.profileId })
+        .whereNull("archived_at")
         .whereNotNull("source_url")
         .andWhere((builder) => {
           builder
@@ -140,6 +166,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     const now = input.now ?? new Date();
     const [row] = await this.db("job_applications")
       .where({ id, scrape_claimed_by: input.claimedBy })
+      .whereNull("archived_at")
       .update({
         scrape_claim_expires_at: new Date(now.getTime() + input.claimDurationMs),
         updated_at: now,
@@ -164,6 +191,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     return this.db.transaction(async (transaction) => {
       const row = await transaction("job_applications")
         .where({ id, scrape_claimed_by: input.claimedBy })
+        .whereNull("archived_at")
         .forUpdate()
         .first();
 
@@ -227,7 +255,10 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   }
 
   async listByStatus(status: JobApplicationStatus): Promise<JobApplication[]> {
-    const rows = await this.db("job_applications").where({ status }).orderBy("created_at", "asc");
+    const rows = await this.db("job_applications")
+      .where({ status })
+      .whereNull("archived_at")
+      .orderBy("created_at", "asc");
 
     return rows.map(toJobApplication);
   }
@@ -295,6 +326,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   ): Promise<{ accepted: boolean; started: boolean }> {
     const row = await this.db("job_applications")
       .where({ id, analysis_attempt_id: attemptId })
+      .whereNull("archived_at")
       .forUpdate()
       .first<{ status: string }>();
     if (!row || !["scraped", "analyzing"].includes(row.status)) {
@@ -312,6 +344,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async setAnalysisAttempt(id: string, attemptId: string): Promise<boolean> {
     const updated = await this.db("job_applications")
       .where({ id, status: "scraped" })
+      .whereNull("archived_at")
       .whereNull("analysis_attempt_id")
       .update({ analysis_attempt_id: attemptId, updated_at: this.db.fn.now() });
     return updated > 0;
@@ -320,6 +353,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async clearAnalysisAttempt(id: string, attemptId: string): Promise<boolean> {
     const updated = await this.db("job_applications")
       .where({ id, status: "scraped", analysis_attempt_id: attemptId })
+      .whereNull("archived_at")
       .update({ analysis_attempt_id: null, updated_at: this.db.fn.now() });
     return updated > 0;
   }
@@ -332,6 +366,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   ): Promise<boolean> {
     const updated = await this.db("job_applications")
       .where({ id, analysis_attempt_id: attemptId, status: "analyzing" })
+      .whereNull("archived_at")
       .update({
         match_analysis: JSON.stringify(result),
         document_content: JSON.stringify(content),
@@ -345,6 +380,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean> {
     const updated = await this.db("job_applications")
       .where({ id, analysis_attempt_id: attemptId })
+      .whereNull("archived_at")
       .whereIn("status", ["scraped", "analyzing"])
       .update({
         status: "failed",
@@ -362,6 +398,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
       const row = await transaction("job_applications").where({ id }).forUpdate().first();
       if (
         !row ||
+        row.archived_at != null ||
         !["review_ready", "generating_documents", "completed", "failed"].includes(
           String(row.status),
         )
@@ -386,6 +423,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async completeDocumentGeneration(id: string, attemptId: string): Promise<boolean> {
     const updated = await this.db("job_applications")
       .where({ id, document_generation_attempt_id: attemptId, status: "generating_documents" })
+      .whereNull("archived_at")
       .update({ status: "completed", failure_reason: null, updated_at: this.db.fn.now() });
     return updated > 0;
   }
@@ -393,6 +431,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
   async failDocumentGeneration(id: string, attemptId: string, reason: string): Promise<boolean> {
     const updated = await this.db("job_applications")
       .where({ id, document_generation_attempt_id: attemptId, status: "generating_documents" })
+      .whereNull("archived_at")
       .update({ status: "failed", failure_reason: reason, updated_at: this.db.fn.now() });
     return updated > 0;
   }
@@ -816,6 +855,8 @@ export function applyJobApplicationFilters(
   query: Knex.QueryBuilder,
   filter: ListJobApplicationsFilter,
 ): void {
+  if (filter.archiveState === "archived") query.whereNotNull("archived_at");
+  else query.whereNull("archived_at");
   if (filter.applicationStatus) query.where("application_status", filter.applicationStatus);
   if (filter.processingStatus) query.where("status", filter.processingStatus);
   if (filter.processingStatuses) query.whereIn("status", filter.processingStatuses);
@@ -855,6 +896,7 @@ function applySort(query: Knex.QueryBuilder, filter: ListJobApplicationsFilter):
 }
 
 function toColumnName(sortBy: ListJobApplicationsFilter["sortBy"]): string {
+  if (sortBy === "archivedAt") return "archived_at";
   if (sortBy === "dateApplied") return "date_applied";
   if (sortBy === "companyName") return "company_name";
   if (sortBy === "roleTitle") return "role_title";

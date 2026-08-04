@@ -266,6 +266,7 @@ export const updateJobApplicationContactSchema = z.object({
 
 export const listJobApplicationsQuerySchema = z.object({
   profileId: z.string().min(1),
+  archiveState: z.enum(["active", "archived"]).default("active"),
   processingStatus: z
     .enum([
       "queued",
@@ -311,6 +312,7 @@ export const listJobApplicationsQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(100).default(20),
   sortBy: z
     .enum([
+      "archivedAt",
       "dateApplied",
       "companyName",
       "roleTitle",

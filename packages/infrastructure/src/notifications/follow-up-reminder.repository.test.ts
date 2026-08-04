@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import knex from "knex";
+import { afterAll, describe, expect, it } from "vitest";
 import {
+  buildFollowUpReminderBaseQuery,
   getFollowUpReminderScheduledFor,
   shouldRecoverFollowUpReminder,
 } from "./follow-up-reminder.repository.js";
+
+const db = knex({ client: "pg" });
+
+afterAll(async () => {
+  await db.destroy();
+});
 
 describe("follow-up reminder recovery selection", () => {
   const now = new Date("2026-07-09T12:00:00.000Z");
@@ -73,5 +81,13 @@ describe("follow-up reminder recovery selection", () => {
         now,
       ),
     ).toBe(false);
+  });
+});
+
+describe("follow-up reminder persistence selection", () => {
+  it("excludes reminders belonging to archived applications", () => {
+    const statement = buildFollowUpReminderBaseQuery(db).toSQL();
+
+    expect(statement.sql).toContain('"job_applications"."archived_at" is null');
   });
 });

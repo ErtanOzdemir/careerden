@@ -2,6 +2,8 @@ import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
 import type {
   CreateManualJobApplicationUseCase,
+  ArchiveJobApplicationUseCase,
+  RestoreJobApplicationUseCase,
   DeleteJobApplicationUseCase,
   GenerateDocumentsWithAiUseCase,
   GenerateJobApplicationDocumentsUseCase,
@@ -61,6 +63,8 @@ import { parseCompanyLogoUpload, uploadCompanyLogo } from "./company-logo-upload
 
 export function createJobApplicationRouter(dependencies: {
   createManualJobApplication: CreateManualJobApplicationUseCase;
+  archiveJobApplication: ArchiveJobApplicationUseCase;
+  restoreJobApplication: RestoreJobApplicationUseCase;
   submitJobApplication: SubmitJobApplicationUseCase;
   deleteJobApplication: DeleteJobApplicationUseCase;
   generateJobApplicationDocuments: GenerateJobApplicationDocumentsUseCase;
@@ -144,6 +148,32 @@ export function createJobApplicationRouter(dependencies: {
     try {
       await dependencies.ensureJobApplicationAccess.execute(id, currentUser(request).id);
       next();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.put("/:id/archive", async (request, response, next) => {
+    try {
+      response.json(
+        await dependencies.archiveJobApplication.execute(
+          request.params.id,
+          currentUser(request).id,
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/:id/archive", async (request, response, next) => {
+    try {
+      response.json(
+        await dependencies.restoreJobApplication.execute(
+          request.params.id,
+          currentUser(request).id,
+        ),
+      );
     } catch (error) {
       next(error);
     }

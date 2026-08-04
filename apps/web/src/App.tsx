@@ -25,6 +25,7 @@ export default function App() {
         <Route element={<AuthenticatedLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/applications" element={<ApplicationsLog />} />
+          <Route path="/applications/archived" element={<ApplicationsLog archiveMode />} />
           <Route path="/applications/:id" element={<AppDetail />} />
           <Route path="/profile" element={<ProfileManager />} />
           <Route path="/templates" element={<TemplateManager />} />

@@ -28,6 +28,8 @@ export * from "./job-applications/request-application-pack-generation.use-case.j
 export * from "./job-applications/generate-requested-application-pack.use-case.js";
 export * from "./job-applications/fail-application-pack-generation.use-case.js";
 export * from "./job-applications/delete-job-application.use-case.js";
+export * from "./job-applications/archive-job-application.use-case.js";
+export * from "./job-applications/restore-job-application.use-case.js";
 export * from "./job-applications/retry-job-application.use-case.js";
 export * from "./job-applications/ensure-job-application-access.use-case.js";
 export * from "./job-applications/update-job-application-status.use-case.js";

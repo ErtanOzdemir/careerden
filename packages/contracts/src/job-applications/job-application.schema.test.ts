@@ -73,11 +73,19 @@ describe("job application schemas", () => {
         sortBy: "matchScore",
       }),
     ).toMatchObject({
+      archiveState: "active",
       page: 1,
       pageSize: 20,
       processingStatuses: ["queued", "scraping", "analyzing"],
       sortBy: "matchScore",
     });
+    expect(
+      listJobApplicationsQuerySchema.parse({
+        profileId: "profile-1",
+        archiveState: "archived",
+        sortBy: "archivedAt",
+      }),
+    ).toMatchObject({ archiveState: "archived", sortBy: "archivedAt" });
   });
 
   it("rejects invalid list page boundaries and processing statuses", () => {

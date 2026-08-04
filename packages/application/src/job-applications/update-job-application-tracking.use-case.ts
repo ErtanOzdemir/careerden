@@ -3,7 +3,7 @@ import type {
   PersistenceUnitOfWork,
   UpdateJobApplicationTrackingInput,
 } from "@careerden/domain";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 export class UpdateJobApplicationTrackingUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -14,7 +14,7 @@ export class UpdateJobApplicationTrackingUseCase {
     input: UpdateJobApplicationTrackingInput,
   ): Promise<JobApplication> {
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
-      const existing = await getAccessibleJobApplication(
+      const existing = await getActiveAccessibleJobApplication(
         jobApplications,
         profiles,
         jobApplicationId,

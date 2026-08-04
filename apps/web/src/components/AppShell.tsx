@@ -14,6 +14,10 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
     title: "Applications",
     subtitle: "Every role you're tracking, in one organized place.",
   },
+  "/applications/archived": {
+    title: "Archived applications",
+    subtitle: "Review, restore, or permanently delete archived roles.",
+  },
   "/profile": {
     title: "Career profile",
     subtitle: "The foundation for every tailored document.",

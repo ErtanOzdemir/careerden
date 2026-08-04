@@ -6,7 +6,7 @@ import type {
   UserProfileAccessRepository,
 } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 export async function getAccessibleContact(
   jobApplications: JobApplicationRepository,
@@ -15,7 +15,7 @@ export async function getAccessibleContact(
   contactId: string,
   userId: string,
 ): Promise<{ contact: JobApplicationContact; jobApplication: JobApplication }> {
-  const jobApplication = await getAccessibleJobApplication(
+  const jobApplication = await getActiveAccessibleJobApplication(
     jobApplications,
     profiles,
     jobApplicationId,
@@ -35,7 +35,7 @@ export async function getAccessibleFollowUp(
   followUpId: string,
   userId: string,
 ): Promise<{ followUp: JobApplicationFollowUp; jobApplication: JobApplication }> {
-  const jobApplication = await getAccessibleJobApplication(
+  const jobApplication = await getActiveAccessibleJobApplication(
     jobApplications,
     profiles,
     jobApplicationId,

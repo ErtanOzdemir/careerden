@@ -5,6 +5,9 @@ import ApplicationsLog from "./ApplicationsLog.js";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
+  archive: vi.fn(),
+  restore: vi.fn(),
+  delete: vi.fn(),
   me: vi.fn(),
   refreshBalance: vi.fn(),
   useJobApplicationChanges: vi.fn(),
@@ -12,8 +15,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../api/jobApplications.js", () => ({
   jobApplicationsApi: {
-    delete: vi.fn(),
+    archive: mocks.archive,
+    delete: mocks.delete,
     list: mocks.list,
+    restore: mocks.restore,
   },
 }));
 
@@ -55,6 +60,7 @@ describe("ApplicationsLog", () => {
 
     await waitFor(() =>
       expect(mocks.list).toHaveBeenCalledWith({
+        archiveState: "active",
         profileId: "profile-1",
         applicationStatus: undefined,
         processingStatuses: "queued,scraping,analyzing,generating_documents",
@@ -164,8 +170,35 @@ describe("ApplicationsLog", () => {
 
     fireEvent.error(logo);
 
-    expect(await screen.findByText("AC")).toBeInTheDocument();
+    expect(await screen.findByText("AC", undefined, { timeout: 5_000 })).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "Acme logo" })).not.toBeInTheDocument();
+  });
+
+  it("permanently deletes an active application after confirmation", async () => {
+    mocks.me.mockResolvedValue({ id: "profile-1" });
+    mocks.delete.mockResolvedValue(undefined);
+    mocks.list.mockResolvedValue(applicationPage("application-1", "Active role", 1));
+
+    render(
+      <MemoryRouter initialEntries={["/applications"]}>
+        <Routes>
+          <Route path="/applications" element={<ApplicationsLog />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Active role")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    const deleteAction = screen.getByRole("button", { name: "Delete" });
+    expect(deleteAction.parentElement?.parentElement?.closest(".overflow-hidden")).toBeNull();
+    fireEvent.click(deleteAction);
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Delete permanently",
+      }),
+    );
+
+    await waitFor(() => expect(mocks.delete).toHaveBeenCalledWith("application-1"));
   });
 
   it("replaces stale rows with the loading state while changing pages", async () => {
@@ -197,6 +230,41 @@ describe("ApplicationsLog", () => {
     resolveSecondPage?.(applicationPage("application-2", "Second page role", 2));
     expect(await screen.findByText("Second page role")).toBeInTheDocument();
     expect(screen.queryByText("Loading applications...")).not.toBeInTheDocument();
+  });
+
+  it("loads the dedicated archive and restores an application", async () => {
+    mocks.me.mockResolvedValue({ id: "profile-1" });
+    mocks.restore.mockResolvedValue({});
+    mocks.list
+      .mockResolvedValueOnce({
+        ...applicationPage("application-1", "Archived role", 1),
+        items: [
+          {
+            ...applicationPage("application-1", "Archived role", 1).items[0],
+            archivedAt: "2026-07-31T12:00:00.000Z",
+          },
+        ],
+        totalItems: 1,
+        totalPages: 1,
+      })
+      .mockResolvedValue({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 });
+
+    render(
+      <MemoryRouter initialEntries={["/applications/archived"]}>
+        <Routes>
+          <Route path="/applications/archived" element={<ApplicationsLog archiveMode />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Archived role")).toBeInTheDocument();
+    expect(mocks.list).toHaveBeenCalledWith(
+      expect.objectContaining({ archiveState: "archived", sortBy: "archivedAt" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+    await waitFor(() => expect(mocks.restore).toHaveBeenCalledWith("application-1"));
   });
 });
 

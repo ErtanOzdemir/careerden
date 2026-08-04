@@ -39,6 +39,7 @@ export interface AttachGeneratedDocumentInput {
 export type ReplaceGeneratedDocumentInput = Omit<AttachGeneratedDocumentInput, "jobApplicationId">;
 
 export type JobApplicationSortField =
+  | "archivedAt"
   | "dateApplied"
   | "companyName"
   | "roleTitle"
@@ -47,6 +48,7 @@ export type JobApplicationSortField =
   | "updatedAt";
 
 export interface ListJobApplicationsFilter {
+  archiveState?: "active" | "archived";
   applicationStatus?: ApplicationStatus;
   processingStatus?: JobApplicationStatus;
   processingStatuses?: JobApplicationStatus[];
@@ -92,6 +94,8 @@ export interface RecordScrapeFailureInput {
 
 export interface JobApplicationRepository {
   create(input: CreateJobApplicationInput): Promise<JobApplication>;
+  archive(id: string, archivedAt: Date): Promise<JobApplication | null>;
+  restore(id: string, restoredAt: Date): Promise<JobApplication | null>;
   claimNextScrapeJob(input: ClaimNextScrapeJobInput): Promise<JobApplication | null>;
   renewScrapeClaim(id: string, input: RenewScrapeClaimInput): Promise<JobApplication | null>;
   recordScrapeFailure(id: string, input: RecordScrapeFailureInput): Promise<JobApplication | null>;

@@ -5,7 +5,7 @@ import type {
 } from "@careerden/domain";
 import { canTransitionJobApplicationStatus } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
-import { getAccessibleJobApplication } from "./job-application-access.js";
+import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 export class UpdateJobApplicationStatusUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
@@ -16,7 +16,7 @@ export class UpdateJobApplicationStatusUseCase {
     status: JobApplicationStatus,
   ): Promise<JobApplication> {
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
-      const jobApplication = await getAccessibleJobApplication(
+      const jobApplication = await getActiveAccessibleJobApplication(
         jobApplications,
         profiles,
         jobApplicationId,

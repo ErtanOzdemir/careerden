@@ -37,6 +37,7 @@ export interface JobApplicationTrackingFields {
 export interface JobApplication {
   id: string;
   profileId: string;
+  archivedAt?: Date;
   applicationPackPreferences: ApplicationPackPreferences;
   sourceUrl?: string;
   status: JobApplicationStatus;

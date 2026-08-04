@@ -6,6 +6,7 @@ import { DesktopUpdateProvider } from "../desktop-updates/DesktopUpdateProvider.
 
 const authMocks = vi.hoisted(() => ({
   changePassword: vi.fn(),
+  useSession: vi.fn(),
 }));
 const billingMocks = vi.hoisted(() => ({
   createCheckout: vi.fn(),
@@ -47,6 +48,16 @@ describe("Settings", () => {
     window.localStorage.clear();
     document.documentElement.classList.remove("light", "dark");
     delete window.electronAPI;
+    authMocks.useSession.mockReturnValue({
+      data: {
+        user: {
+          id: "user-1",
+          email: "registered@example.com",
+          name: "Ada Account",
+        },
+      },
+      isPending: false,
+    });
     billingMocks.useCreditBalance.mockReturnValue({
       balance: { totalCredits: 10, availableCredits: 9, reservedCredits: 1 },
       balanceError: null,
@@ -63,13 +74,14 @@ describe("Settings", () => {
     vi.restoreAllMocks();
   });
 
-  it("loads account details from the profile and removes unused processing preferences", async () => {
-    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
+  it("shows the registered account email instead of the CV profile email", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile({ email: "cv@example.com" }));
 
     render(<Settings />);
 
     expect(await screen.findByDisplayValue("Ada Lovelace")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("ada@example.com")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("registered@example.com")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("cv@example.com")).not.toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Auto-run match analysis" })).toHaveAttribute(
       "aria-checked",
       "true",

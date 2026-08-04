@@ -95,6 +95,7 @@ const themeOptions: { id: Theme; label: string; icon: typeof Sun }[] = [
 ];
 
 export default function Settings() {
+  const { data: session, isPending: isLoadingSession } = authClient.useSession();
   const {
     balance,
     balanceError,
@@ -314,7 +315,7 @@ export default function Settings() {
           <Field
             label="Email"
             type="email"
-            value={profile?.email ?? (isLoadingProfile ? "Loading..." : "")}
+            value={session?.user.email ?? (isLoadingSession ? "Loading..." : "")}
             readOnly
           />
         </div>

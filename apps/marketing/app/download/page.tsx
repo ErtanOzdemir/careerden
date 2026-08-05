@@ -82,7 +82,7 @@ export default function DownloadPage() {
           <div className="download-release-links">
             <p>
               <Check aria-hidden="true" />
-              macOS builds are universal for Apple silicon and Intel.
+              macOS downloads support Apple silicon and Intel.
             </p>
             <div>
               <a href={desktopRelease.releaseNotesUrl} rel="noreferrer" target="_blank">

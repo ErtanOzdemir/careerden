@@ -244,10 +244,10 @@ pnpm vitest --filter @careerden/contracts
 
 Desktop releases are built from a `v*.*.*` tag by
 `.github/workflows/desktop-release.yml`. The tag must match the version in
-`apps/desktop/package.json`. The workflow builds the macOS universal DMG and ZIP,
-Windows x64 NSIS installer, and Linux x64 AppImage. It also attaches electron-updater
-metadata, blockmaps, the validated minimum-version policy, and `SHA256SUMS.txt` to a
-draft GitHub release.
+`apps/desktop/package.json`. The workflow builds separate macOS x64 and arm64 DMGs and
+ZIPs, a Windows x64 NSIS installer, and a Linux x64 AppImage. It also attaches
+electron-updater metadata, blockmaps, the validated minimum-version policy, and
+`SHA256SUMS.txt` to a draft GitHub release.
 
 Before creating a tag:
 
@@ -263,10 +263,11 @@ Before creating a tag:
 - Review the current limitations and full manual checklist in the
   [desktop runtime and release guide](apps/desktop/README.md#draft-release-workflow).
 
-After the workflow succeeds, smoke-test every installer, confirm all `latest*.yml`,
-blockmap, and policy assets exist, and verify checksums before manually publishing the
-draft. Drafts are not visible to installed updaters. A workflow rerun may update draft
-assets, but published release tags and assets must never be moved or reused.
+After the workflow succeeds, smoke-test both macOS architectures and every other
+installer, confirm all `latest*.yml`, blockmap, and policy assets exist, and verify
+checksums before manually publishing the draft. Drafts are not visible to installed
+updaters. A workflow rerun may update draft assets, but published release tags and assets
+must never be moved or reused.
 
 ## Adding New Features
 

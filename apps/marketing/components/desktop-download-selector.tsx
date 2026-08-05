@@ -18,6 +18,12 @@ type NavigatorDetails = {
   };
 };
 
+type DesktopDownloadRelease = {
+  version: string;
+  publishedLabel: string;
+  downloads: readonly DesktopDownload[];
+};
+
 export function detectDesktopPlatform({
   platform = "",
   userAgent = "",
@@ -63,11 +69,21 @@ function useDetectedPlatform() {
   return detectedPlatform;
 }
 
-export function DetectedDownloadButton() {
+function formatArchitectureChoices(downloads: readonly DesktopDownload[]) {
+  return downloads.map(({ architecture }) => architecture).join(" or ");
+}
+
+export function DetectedDownloadButton({
+  release = desktopRelease,
+}: {
+  release?: DesktopDownloadRelease;
+} = {}) {
   const detectedPlatform = useDetectedPlatform();
-  const detectedDownload = desktopRelease.downloads.find(
+  const detectedDownloads = release.downloads.filter(
     ({ platform }) => platform === detectedPlatform,
   );
+  const detectedDownload = detectedDownloads.length === 1 ? detectedDownloads[0] : undefined;
+  const detectedPlatformName = detectedDownloads[0]?.platformName;
 
   return (
     <div className="download-primary-action" aria-live="polite">
@@ -79,8 +95,20 @@ export function DetectedDownloadButton() {
             <Download aria-hidden="true" />
           </DownloadLink>
           <p>
-            Version {desktopRelease.version} · {detectedDownload.architecture} ·{" "}
-            {detectedDownload.size} · {desktopRelease.publishedLabel}
+            Version {release.version} · {detectedDownload.architecture} · {detectedDownload.size} ·{" "}
+            {release.publishedLabel}
+          </p>
+        </>
+      ) : detectedDownloads.length > 1 && detectedPlatform && detectedPlatformName ? (
+        <>
+          <a className="download-primary-button" href={`#download-${detectedPlatform}`}>
+            <DownloadIcon platform={detectedPlatform} />
+            <span>Choose your {detectedPlatformName} download</span>
+            <ArrowDown aria-hidden="true" />
+          </a>
+          <p>
+            Version {release.version} · {formatArchitectureChoices(detectedDownloads)} ·{" "}
+            {release.publishedLabel}
           </p>
         </>
       ) : (
@@ -97,38 +125,86 @@ export function DetectedDownloadButton() {
   );
 }
 
-export function DesktopDownloadGrid() {
+export function DesktopDownloadGrid({
+  downloads = desktopRelease.downloads,
+}: {
+  downloads?: readonly DesktopDownload[];
+} = {}) {
   const detectedPlatform = useDetectedPlatform();
+  const downloadGroups = groupDownloadsByPlatform(downloads);
 
   return (
     <div className="download-platform-grid" id="all-downloads">
-      {desktopRelease.downloads.map((download) => (
+      {downloadGroups.map(({ downloads: platformDownloads, platform, platformName }) => (
         <article
-          className={download.platform === detectedPlatform ? "is-detected" : undefined}
-          key={download.platform}
+          className={platform === detectedPlatform ? "is-detected" : undefined}
+          id={`download-${platform}`}
+          key={platform}
         >
           <div className="download-platform-heading">
             <span className="download-platform-icon">
-              <DownloadIcon platform={download.platform} />
+              <DownloadIcon platform={platform} />
             </span>
             <div>
-              <h3>{download.platformName}</h3>
+              <h3>{platformName}</h3>
               <p>
-                {download.architecture} · {download.format}
+                {formatArchitectureChoices(platformDownloads)} ·{" "}
+                {formatDownloadFormats(platformDownloads)}
               </p>
             </div>
-            {download.platform === detectedPlatform ? <small>Detected</small> : null}
+            {platform === detectedPlatform ? <small>Detected</small> : null}
           </div>
 
-          <DownloadLink download={download} className="download-file-link">
-            <span>
-              <strong>{download.fileName}</strong>
-              <small>{download.size}</small>
-            </span>
-            <Download aria-hidden="true" />
-          </DownloadLink>
+          <div className="download-file-list">
+            {platformDownloads.map((download) => (
+              <DownloadLink
+                download={download}
+                className="download-file-link"
+                key={download.fileName}
+              >
+                <span>
+                  <strong>{download.fileName}</strong>
+                  <small>
+                    {platformDownloads.length > 1 ? `${download.architecture} · ` : null}
+                    {download.size}
+                  </small>
+                </span>
+                <Download aria-hidden="true" />
+              </DownloadLink>
+            ))}
+          </div>
         </article>
       ))}
     </div>
   );
+}
+
+function groupDownloadsByPlatform(downloads: readonly DesktopDownload[]) {
+  const groups = new Map<
+    DesktopPlatformId,
+    {
+      platform: DesktopPlatformId;
+      platformName: string;
+      downloads: DesktopDownload[];
+    }
+  >();
+
+  for (const download of downloads) {
+    const existingGroup = groups.get(download.platform);
+    if (existingGroup) {
+      existingGroup.downloads.push(download);
+    } else {
+      groups.set(download.platform, {
+        platform: download.platform,
+        platformName: download.platformName,
+        downloads: [download],
+      });
+    }
+  }
+
+  return [...groups.values()];
+}
+
+function formatDownloadFormats(downloads: readonly DesktopDownload[]) {
+  return [...new Set(downloads.map(({ format }) => format))].join(" / ");
 }

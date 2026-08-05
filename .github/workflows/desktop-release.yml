@@ -20,9 +20,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: macOS universal DMG
+          - name: macOS x64 and arm64
             os: macos-latest
-            artifact_name: desktop-macos-universal
+            artifact_name: desktop-macos
             artifact_path: |
               apps/desktop/release/*.dmg
               apps/desktop/release/*.zip
@@ -159,7 +159,41 @@ jobs:
         shell: bash
         run: |
           case "${RUNNER_OS}" in
-            macOS) metadata_file="apps/desktop/release/latest-mac.yml" ;;
+            macOS)
+              metadata_file="apps/desktop/release/latest-mac.yml"
+              package_version="$(node -p "require('./apps/desktop/package.json').version")"
+              node --input-type=module - "${package_version}" <<'NODE'
+              import { readFile, stat } from "node:fs/promises";
+
+              const version = process.argv[2];
+              const releaseDirectory = "apps/desktop/release";
+              const metadataFile = `${releaseDirectory}/latest-mac.yml`;
+              const metadata = await readFile(metadataFile, "utf8");
+
+              for (const architecture of ["x64", "arm64"]) {
+                const artifactBase = `Careerden-${version}-${architecture}`;
+                for (const extension of ["dmg", "zip", "dmg.blockmap", "zip.blockmap"]) {
+                  const artifactPath = `${releaseDirectory}/${artifactBase}.${extension}`;
+                  if ((await stat(artifactPath)).size === 0) {
+                    throw new Error(`Empty macOS release artifact ${artifactPath}`);
+                  }
+                }
+
+                if (!metadata.includes(`url: ${artifactBase}.zip`)) {
+                  throw new Error(`Updater metadata does not reference ${artifactBase}.zip`);
+                }
+              }
+
+              if (metadata.includes("-universal.")) {
+                throw new Error("Updater metadata unexpectedly references a universal macOS artifact");
+              }
+              NODE
+
+              if compgen -G "apps/desktop/release/*-universal.*" > /dev/null; then
+                echo "::error::Universal macOS artifacts must not be generated"
+                exit 1
+              fi
+              ;;
             Windows) metadata_file="apps/desktop/release/latest.yml" ;;
             Linux) metadata_file="apps/desktop/release/latest-linux.yml" ;;
             *) echo "::error::Unsupported runner ${RUNNER_OS}"; exit 1 ;;

@@ -22,8 +22,8 @@ files:
   - dist/**/*
   - renderer/**/*
   - node_modules/**/*
-  # msgpackr's native extractor is optional. Exclude host-only binaries so universal
-  # packages consistently use its JavaScript fallback on both architectures.
+  # msgpackr's native extractor is optional. Exclude host-only binaries so cross-architecture
+  # packages consistently use its JavaScript fallback.
   - "!node_modules/@msgpackr-extract/**/*"
   - "!node_modules/msgpackr-extract/**/*"
   - package.json
@@ -38,10 +38,12 @@ mac:
   target:
     - target: dmg
       arch:
-        - universal
+        - x64
+        - arm64
     - target: zip
       arch:
-        - universal
+        - x64
+        - arm64
 dmg:
   icon: build/icon.icns
 win:

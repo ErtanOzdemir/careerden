@@ -332,7 +332,11 @@ Before deploying, add and verify the `EMAIL_FROM` domain or subdomain in Resend,
 DKIM records it supplies, and create an API key. The sender domain must exactly match the verified
 domain. Set `RESEND_API_KEY` and `EMAIL_FROM` on the API and, when reminder email is enabled, the
 notifications worker. Follow-up outbox retries reuse their persisted message ID as Resend's
-idempotency key.
+idempotency key. Reminder email delivery stops after 20 failed attempts or when its 23-hour retry
+window expires, before Resend's 24-hour idempotency window expires; permanent provider rejections
+and exhausted or stale events are dead-lettered instead of being sent indefinitely. The
+notifications worker logs retry and dead-letter transitions using event identifiers without email
+content.
 
 The API, documents worker, and notifications worker must use the same object-storage
 configuration. Existing `RUSTFS_*` names remain accepted for compatibility, but new

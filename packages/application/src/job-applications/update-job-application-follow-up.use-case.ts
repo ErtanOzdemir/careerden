@@ -16,7 +16,7 @@ export class UpdateJobApplicationFollowUpUseCase {
   ): Promise<JobApplicationFollowUp> {
     return this.unitOfWork.execute(
       async ({ jobApplications, jobApplicationChanges, outbox, profiles }) => {
-        await getAccessibleFollowUp(
+        const { followUp: existing } = await getAccessibleFollowUp(
           jobApplications,
           profiles,
           jobApplicationId,
@@ -24,7 +24,10 @@ export class UpdateJobApplicationFollowUpUseCase {
           userId,
         );
         const updated = await jobApplications.updateFollowUp(followUpId, input);
-        if ("scheduledAt" in input) {
+        const scheduleChanged =
+          input.scheduledAt !== undefined &&
+          input.scheduledAt.getTime() !== existing.scheduledAt.getTime();
+        if (scheduleChanged) {
           await cancelFollowUpReminder(outbox, followUpId);
           await scheduleFollowUpReminder({ followUp: updated, outbox });
           await jobApplications.addEvent({

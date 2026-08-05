@@ -17,6 +17,7 @@ export interface AddOutboxEventInput {
 export interface OutboxEvent extends AddOutboxEventInput {
   id: string;
   attemptCount: number;
+  createdAt: Date;
 }
 
 export interface OutboxRepository {

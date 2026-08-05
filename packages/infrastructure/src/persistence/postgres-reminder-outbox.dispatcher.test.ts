@@ -53,6 +53,7 @@ const scheduleEvent: OutboxEvent = {
     scheduledFor: "2026-07-02T08:50:00.000Z",
   },
   attemptCount: 1,
+  createdAt: new Date("2026-07-02T08:45:00.000Z"),
 };
 
 function createOutbox(event: OutboxEvent): PostgresOutboxRepository {

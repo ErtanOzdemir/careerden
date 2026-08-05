@@ -51,6 +51,7 @@ function createOutbox(overrides: Record<string, unknown> = {}): PostgresOutboxRe
     aggregateId: "files/cv.pdf",
     payload: { fileId: "files/cv.pdf" },
     attemptCount: 1,
+    createdAt: new Date("2026-07-02T08:45:00.000Z"),
   };
   return {
     claimPending: vi.fn(async (input: { leaseOwner: string }) => [

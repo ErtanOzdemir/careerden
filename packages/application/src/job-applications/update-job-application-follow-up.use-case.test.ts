@@ -41,6 +41,32 @@ describe("UpdateJobApplicationFollowUpUseCase", () => {
     );
     expect(recordChanged).toHaveBeenCalledOnce();
   });
+
+  it("does not replace the reminder when the submitted schedule is unchanged", async () => {
+    const job = createTestJobApplication();
+    const existing = createFollowUp({ reminderJobId: "existing-reminder" });
+    const updated = createFollowUp({ title: "Updated note" });
+    const repository = createJobApplicationRepository({
+      findById: vi.fn(async () => job),
+      findFollowUpById: vi.fn(async () => existing),
+      updateFollowUp: vi.fn(async () => updated),
+    });
+    const { unitOfWork, addOutboxEvent, recordChanged } = createUnitOfWork(
+      repository,
+      createProfiles(),
+    );
+
+    await new UpdateJobApplicationFollowUpUseCase(unitOfWork).execute(
+      job.id,
+      existing.id,
+      "user-1",
+      { title: updated.title, scheduledAt: new Date(existing.scheduledAt) },
+    );
+
+    expect(addOutboxEvent).not.toHaveBeenCalled();
+    expect(repository.addEvent).not.toHaveBeenCalled();
+    expect(recordChanged).toHaveBeenCalledOnce();
+  });
 });
 
 function createFollowUp(overrides: Partial<JobApplicationFollowUp> = {}): JobApplicationFollowUp {

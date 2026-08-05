@@ -1,11 +1,21 @@
+import { EmailDeliveryError, outboxEventTypes } from "@careerden/domain";
 import type { EmailSender } from "@careerden/domain";
-import { outboxEventTypes } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import type { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 
 const batchSize = 25;
 const leaseDurationMs = 60_000;
 const maximumBackoffMs = 15 * 60_000;
+export const maximumEmailOutboxAttempts = 20;
+export const maximumEmailOutboxAgeMs = 23 * 60 * 60_000;
+
+export interface EmailOutboxDispatchFailure {
+  eventId: string;
+  aggregateId?: string;
+  attemptCount: number;
+  outcome: "retry_scheduled" | "dead_lettered";
+  errorCode: string;
+}
 
 export class PostgresEmailOutboxDispatcher {
   private readonly leaseOwner = randomUUID();
@@ -13,16 +23,33 @@ export class PostgresEmailOutboxDispatcher {
   constructor(
     private readonly outbox: PostgresOutboxRepository,
     private readonly sender: EmailSender,
+    private readonly onFailure?: (failure: EmailOutboxDispatchFailure) => void,
   ) {}
 
-  async dispatchPending(): Promise<number> {
+  async dispatchPending(now = new Date()): Promise<number> {
     const events = await this.outbox.claimPending({
       types: [outboxEventTypes.followUpReminderEmail],
       leaseOwner: this.leaseOwner,
       leaseDurationMs,
       limit: batchSize,
+      now,
     });
     for (const event of events) {
+      if (now.getTime() - event.createdAt.getTime() >= maximumEmailOutboxAgeMs) {
+        const message = "Reminder email retry window expired";
+        if (!(await this.outbox.markDeadLettered(event.id, this.leaseOwner, message, now))) {
+          throw new Error("Email outbox lease was lost before dead-letter acknowledgement");
+        }
+        this.onFailure?.({
+          eventId: event.id,
+          aggregateId: event.aggregateId,
+          attemptCount: event.attemptCount,
+          outcome: "dead_lettered",
+          errorCode: "retry_window_expired",
+        });
+        continue;
+      }
+
       try {
         const companyName = optionalString(event.payload, "companyName");
         const roleTitle = optionalString(event.payload, "roleTitle");
@@ -39,23 +66,79 @@ export class PostgresEmailOutboxDispatcher {
           text: `Reminder: ${title} — follow up on ${target} at ${formattedFollowUpAt}.${description ? `\n\n${description}` : ""}`,
           html: `<p>Reminder: <strong>${escapeHtml(title)}</strong> — follow up on <strong>${escapeHtml(target)}</strong> at ${escapeHtml(formattedFollowUpAt)}.</p>${description ? `<p>${escapeHtml(description)}</p>` : ""}`,
         });
-        await this.outbox.markProcessed(event.id, this.leaseOwner);
+        if (!(await this.outbox.markProcessed(event.id, this.leaseOwner))) {
+          throw new Error("Email outbox lease was lost before processing acknowledgement");
+        }
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const failure = toEmailFailure(error);
+        const message = failure.message;
+        const terminal =
+          (error instanceof EmailDeliveryError && !error.retryable) ||
+          event.attemptCount >= maximumEmailOutboxAttempts;
+        const errorCode = failure.code;
+
+        if (terminal) {
+          if (!(await this.outbox.markDeadLettered(event.id, this.leaseOwner, message))) {
+            throw new Error("Email outbox lease was lost before dead-letter acknowledgement", {
+              cause: error,
+            });
+          }
+          this.onFailure?.({
+            eventId: event.id,
+            aggregateId: event.aggregateId,
+            attemptCount: event.attemptCount,
+            outcome: "dead_lettered",
+            errorCode,
+          });
+          continue;
+        }
+
         const backoffMs = Math.min(
           5_000 * 2 ** Math.max(0, event.attemptCount - 1),
           maximumBackoffMs,
         );
-        await this.outbox.markFailed(
-          event.id,
-          this.leaseOwner,
-          message,
-          new Date(Date.now() + backoffMs),
-        );
+        if (
+          !(await this.outbox.markFailed(
+            event.id,
+            this.leaseOwner,
+            message,
+            new Date(now.getTime() + backoffMs),
+          ))
+        ) {
+          throw new Error("Email outbox lease was lost before retry acknowledgement", {
+            cause: error,
+          });
+        }
+        this.onFailure?.({
+          eventId: event.id,
+          aggregateId: event.aggregateId,
+          attemptCount: event.attemptCount,
+          outcome: "retry_scheduled",
+          errorCode,
+        });
       }
     }
     return events.length;
   }
+}
+
+function toEmailFailure(error: unknown): { code: string; message: string } {
+  if (error instanceof EmailDeliveryError) {
+    return { code: error.code, message: error.message };
+  }
+
+  const transportCode =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    /^[A-Za-z0-9_]{1,64}$/.test(error.code)
+      ? error.code
+      : "delivery_error";
+  return {
+    code: transportCode,
+    message: `Email delivery failed: ${transportCode}`,
+  };
 }
 
 function requireString(payload: Record<string, unknown>, key: string): string {

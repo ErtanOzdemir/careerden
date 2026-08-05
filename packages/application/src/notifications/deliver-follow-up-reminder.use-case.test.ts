@@ -105,7 +105,12 @@ function createUnitOfWork(
         notificationChanges,
         followUpReminders: reminders,
         outbox: {
-          add: vi.fn(async (input) => ({ ...input, id: "outbox-1", attemptCount: 0 })),
+          add: vi.fn(async (input) => ({
+            ...input,
+            id: "outbox-1",
+            attemptCount: 0,
+            createdAt: new Date(),
+          })),
         },
       }),
   };

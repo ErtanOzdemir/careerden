@@ -37,6 +37,7 @@ export class PostgresOutboxRepository implements OutboxRepository {
       const rows = await transaction("outbox_events")
         .whereIn("type", input.types)
         .whereNull("processed_at")
+        .whereNull("dead_lettered_at")
         .where("available_at", "<=", now)
         .andWhere((query) =>
           query.whereNull("lease_expires_at").orWhere("lease_expires_at", "<=", now),
@@ -67,11 +68,11 @@ export class PostgresOutboxRepository implements OutboxRepository {
     const updated = await this.db("outbox_events")
       .where({ id, lease_owner: leaseOwner })
       .whereNull("processed_at")
+      .whereNull("dead_lettered_at")
       .update({
         processed_at: now,
         lease_owner: null,
         lease_expires_at: null,
-        last_error: null,
         updated_at: now,
       });
     return updated > 0;
@@ -86,12 +87,35 @@ export class PostgresOutboxRepository implements OutboxRepository {
     const updated = await this.db("outbox_events")
       .where({ id, lease_owner: leaseOwner })
       .whereNull("processed_at")
+      .whereNull("dead_lettered_at")
       .update({
         available_at: availableAt,
         lease_owner: null,
         lease_expires_at: null,
         last_error: error,
+        last_error_at: this.db.fn.now(),
         updated_at: this.db.fn.now(),
+      });
+    return updated > 0;
+  }
+
+  async markDeadLettered(
+    id: string,
+    leaseOwner: string,
+    error: string,
+    now = new Date(),
+  ): Promise<boolean> {
+    const updated = await this.db("outbox_events")
+      .where({ id, lease_owner: leaseOwner })
+      .whereNull("processed_at")
+      .whereNull("dead_lettered_at")
+      .update({
+        dead_lettered_at: now,
+        lease_owner: null,
+        lease_expires_at: null,
+        last_error: error,
+        last_error_at: now,
+        updated_at: now,
       });
     return updated > 0;
   }
@@ -109,5 +133,6 @@ function toOutboxEvent(row: Record<string, unknown>): OutboxEvent {
     payload,
     availableAt: new Date(String(row.available_at)),
     attemptCount: Number(row.attempt_count),
+    createdAt: new Date(String(row.created_at)),
   };
 }

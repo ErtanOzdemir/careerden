@@ -248,6 +248,7 @@ function createUnitOfWork(
     ...input,
     id: `outbox-${addOutboxEvent.mock.calls.length}`,
     attemptCount: 0,
+    createdAt: new Date(),
   }));
   const recordChanged = vi.fn();
   const credits = createCreditRepositoryDouble();

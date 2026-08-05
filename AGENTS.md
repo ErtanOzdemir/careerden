@@ -107,7 +107,9 @@ review or download.
 - The API sends authentication and account emails through local SMTP outside production and
   Resend in production. The notifications worker uses the same provider selection when reminder
   email is enabled. Keep both behind the domain `EmailSender`; follow-up outbox retries pass their
-  stable message ID to Resend as an idempotency key.
+  stable message ID to Resend as an idempotency key. Reminder email retries stop after 20 attempts
+  or a 23-hour retry window, permanent provider failures dead-letter immediately, and dead-lettered
+  outbox events retain redacted failure metadata without being claimed again.
 - Backend `tsx watch` development scripts use Node's `development` export condition, and internal
   packages expose `src/index.ts` under that condition. Preserve this source-resolution path so
   shared-package edits restart consuming apps; normal builds and starts must keep using `dist`.

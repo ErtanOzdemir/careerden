@@ -148,7 +148,21 @@ export function createEmailOutboxDispatcher(
   outbox: PostgresOutboxRepository,
   createEmailSender: () => EmailSender,
 ): PostgresEmailOutboxDispatcher | undefined {
-  return enabled ? new PostgresEmailOutboxDispatcher(outbox, createEmailSender()) : undefined;
+  return enabled
+    ? new PostgresEmailOutboxDispatcher(outbox, createEmailSender(), (failure) => {
+        const context = {
+          outboxEventId: failure.eventId,
+          aggregateId: failure.aggregateId,
+          attemptCount: failure.attemptCount,
+          errorCode: failure.errorCode,
+        };
+        if (failure.outcome === "dead_lettered") {
+          console.error("Notifications worker dead-lettered reminder email", context);
+        } else {
+          console.warn("Notifications worker scheduled reminder email retry", context);
+        }
+      })
+    : undefined;
 }
 
 export function createFollowUpReminderRecoveryRunner(

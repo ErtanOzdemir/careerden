@@ -159,7 +159,12 @@ function createUnitOfWork(profiles: ReturnType<typeof createProfileRepository>):
   unitOfWork: PersistenceUnitOfWork;
   addOutboxEvent: ReturnType<typeof vi.fn>;
 } {
-  const addOutboxEvent = vi.fn(async (input) => ({ ...input, id: "outbox-1", attemptCount: 0 }));
+  const addOutboxEvent = vi.fn(async (input) => ({
+    ...input,
+    id: "outbox-1",
+    attemptCount: 0,
+    createdAt: new Date(),
+  }));
   return {
     addOutboxEvent,
     unitOfWork: {

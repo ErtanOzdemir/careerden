@@ -74,6 +74,7 @@ function createUnitOfWork(profiles: ReturnType<typeof createProfileRepository>):
     ...input,
     id: "outbox-1",
     attemptCount: 0,
+    createdAt: new Date(),
   }));
   const recordChanged = vi.fn();
 

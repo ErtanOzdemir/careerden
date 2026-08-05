@@ -42,6 +42,7 @@ function createOutbox(): PostgresOutboxRepository {
     aggregateId: "application-1",
     payload: { jobApplicationId: "application-1", generationAttemptId: "attempt-1" },
     attemptCount: 1,
+    createdAt: new Date("2026-07-02T08:45:00.000Z"),
   };
 
   return {

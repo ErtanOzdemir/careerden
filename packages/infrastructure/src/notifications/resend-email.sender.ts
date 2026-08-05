@@ -1,3 +1,4 @@
+import { EmailDeliveryError } from "@careerden/domain";
 import type { EmailSender } from "@careerden/domain";
 import { Resend } from "resend";
 
@@ -28,8 +29,23 @@ export function createResendEmailSender(
       );
 
       if (result.error) {
-        throw new Error(`Resend email delivery failed: ${result.error.name}`);
+        throw new EmailDeliveryError({
+          code: result.error.name,
+          message: `Resend email delivery failed: ${result.error.name}`,
+          retryable: isRetryableResendError(result.error),
+        });
       }
     },
   };
+}
+
+function isRetryableResendError(error: { name: string; statusCode: number | null }): boolean {
+  return (
+    error.statusCode === null ||
+    error.statusCode === 408 ||
+    error.statusCode === 425 ||
+    error.statusCode === 429 ||
+    (error.statusCode >= 500 && error.statusCode <= 599) ||
+    error.name === "concurrent_idempotent_requests"
+  );
 }

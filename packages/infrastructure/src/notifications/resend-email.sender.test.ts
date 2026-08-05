@@ -68,6 +68,39 @@ describe("createResendEmailSender", () => {
 
     await expect(delivery).rejects.toThrow("Resend email delivery failed: rate_limit_exceeded");
     await expect(delivery).rejects.not.toThrow("Sensitive body");
+    await expect(delivery).rejects.toMatchObject({
+      code: "rate_limit_exceeded",
+      retryable: true,
+    });
+  });
+
+  it("classifies permanent provider rejections as non-retryable", async () => {
+    const sender = createResendEmailSender(
+      { apiKey: "re_test", from: "no-reply@email.careerden.com" },
+      {
+        emails: {
+          send: vi.fn(async () => ({
+            data: null,
+            error: {
+              name: "invalid_from_address",
+              message: "provider details",
+              statusCode: 422,
+            },
+          })),
+        },
+      } as never,
+    );
+
+    await expect(
+      sender.send({
+        to: "ada@example.com",
+        subject: "Reminder",
+        text: "Remember to follow up.",
+      }),
+    ).rejects.toMatchObject({
+      code: "invalid_from_address",
+      retryable: false,
+    });
   });
 
   it("preserves thrown transport errors for the caller's retry policy", async () => {

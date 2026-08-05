@@ -6,6 +6,7 @@ import {
   normalizeObjectStorageEnv,
   objectStorageEnvShape,
   validateProductionObjectStorageEnv,
+  validateProductionResendEmailEnv,
   validateProductionSecret,
 } from "@careerden/config";
 
@@ -35,7 +36,8 @@ export const apiEnvSchema = z.preprocess(
       CREEM_TEST_MODE: booleanFromEnv.default(true),
       SMTP_HOST: z.string().min(1).default("localhost"),
       SMTP_PORT: z.coerce.number().int().positive().default(1025),
-      SMTP_FROM: z.string().min(1).default("Careerden <no-reply@careerden.local>"),
+      EMAIL_FROM: z.string().min(1).default("Careerden <no-reply@careerden.local>"),
+      RESEND_API_KEY: z.string().default(""),
       AI_PROVIDER: z.enum(["openai", "gemini", "deepseek"]).default("openai"),
       OPENAI_API_KEY: z.string().optional(),
       GEMINI_API_KEY: z.string().optional(),
@@ -47,6 +49,7 @@ export const apiEnvSchema = z.preprocess(
     })
     .superRefine((env, context) => {
       validateProductionObjectStorageEnv(env, context);
+      validateProductionResendEmailEnv(env, context);
 
       const creemFields = [
         ["CREEM_API_KEY", env.CREEM_API_KEY],

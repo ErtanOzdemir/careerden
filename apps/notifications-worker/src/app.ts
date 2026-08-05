@@ -18,6 +18,7 @@ import {
   PostgresStorageOutboxDispatcher,
   S3CompatibleStorage,
   createPostgresDb,
+  createResendEmailSender,
   createSmtpEmailSender,
   followUpReminderQueueName,
   getFollowUpReminderScheduledFor,
@@ -60,15 +61,20 @@ export async function createNotificationsWorkerRuntime(
     reminders,
     reminderQueue,
   );
-  const emailSender = createSmtpEmailSender({
-    from: env.SMTP_FROM,
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-  });
   const emailOutbox = createEmailOutboxDispatcher(
     env.NOTIFICATION_EMAIL_ENABLED,
     new PostgresOutboxRepository(db),
-    emailSender,
+    () =>
+      env.NODE_ENV === "production"
+        ? createResendEmailSender({
+            apiKey: env.RESEND_API_KEY,
+            from: env.EMAIL_FROM,
+          })
+        : createSmtpEmailSender({
+            from: env.EMAIL_FROM,
+            host: env.SMTP_HOST,
+            port: env.SMTP_PORT,
+          }),
   );
   const recoverFollowUpReminders = createFollowUpReminderRecoveryRunner(reminders, reminderQueue);
 
@@ -140,9 +146,9 @@ export async function createNotificationsWorkerRuntime(
 export function createEmailOutboxDispatcher(
   enabled: boolean,
   outbox: PostgresOutboxRepository,
-  emailSender: EmailSender,
+  createEmailSender: () => EmailSender,
 ): PostgresEmailOutboxDispatcher | undefined {
-  return enabled ? new PostgresEmailOutboxDispatcher(outbox, emailSender) : undefined;
+  return enabled ? new PostgresEmailOutboxDispatcher(outbox, createEmailSender()) : undefined;
 }
 
 export function createFollowUpReminderRecoveryRunner(

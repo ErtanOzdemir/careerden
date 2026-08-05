@@ -6,6 +6,7 @@ import {
   normalizeObjectStorageEnv,
   objectStorageEnvShape,
   validateProductionObjectStorageEnv,
+  validateProductionResendEmailEnv,
 } from "@careerden/config";
 
 export const notificationsWorkerEnvSchema = z.preprocess(
@@ -17,7 +18,8 @@ export const notificationsWorkerEnvSchema = z.preprocess(
       REDIS_URL: z.string().min(1).default("redis://localhost:6380"),
       SMTP_HOST: z.string().min(1).default("localhost"),
       SMTP_PORT: z.coerce.number().int().positive().default(1025),
-      SMTP_FROM: z.string().min(1).default("Careerden <no-reply@careerden.local>"),
+      EMAIL_FROM: z.string().min(1).default("Careerden <no-reply@careerden.local>"),
+      RESEND_API_KEY: z.string().default(""),
       NOTIFICATIONS_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
       NOTIFICATIONS_WORKER_HEALTH_PORT: z.coerce.number().int().min(1).max(65_535).default(3103),
       NOTIFICATION_EMAIL_ENABLED: z
@@ -29,7 +31,13 @@ export const notificationsWorkerEnvSchema = z.preprocess(
         .default(false),
       ...objectStorageEnvShape,
     })
-    .superRefine(validateProductionObjectStorageEnv),
+    .superRefine((env, context) => {
+      validateProductionObjectStorageEnv(env, context);
+      validateProductionResendEmailEnv(
+        { ...env, emailRequired: env.NOTIFICATION_EMAIL_ENABLED },
+        context,
+      );
+    }),
 );
 
 export type NotificationsWorkerEnv = z.infer<typeof notificationsWorkerEnvSchema>;

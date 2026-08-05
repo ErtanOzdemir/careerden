@@ -217,6 +217,10 @@ Current backend contexts are `profiles`, `job-applications`, `scraping`, `matchi
 
 - Use `@careerden/*` package aliases for cross-package imports.
 - Group imports: external → internal → relative.
+- Keep each internal package's `development` export pointed at `src/index.ts`, and keep backend
+  `tsx watch` commands on `--conditions=development`. This lets edits in shared workspace packages
+  restart consuming apps without rebuilding `dist`; production builds and starts continue to use
+  the default compiled export.
 
 ## Testing
 

@@ -9,11 +9,13 @@ const validProductionEnv = {
   CREEM_WEBHOOK_SECRET: "creem-production-webhook-secret",
   CREEM_PRODUCT_ID: "prod_production",
   CREEM_TEST_MODE: "false",
+  EMAIL_FROM: "Careerden <no-reply@email.careerden.com>",
   OBJECT_STORAGE_ACCESS_KEY_ID: "production-access-key",
   OBJECT_STORAGE_ENDPOINT: "https://account-id.r2.cloudflarestorage.com",
   OBJECT_STORAGE_FORCE_PATH_STYLE: "false",
   OBJECT_STORAGE_SECRET_ACCESS_KEY: "JmW9mVfbx5XKcYd7vP2kQ8nL4rT6sH3z",
   OPEN_OBSERVE_KEY: "observability-key",
+  RESEND_API_KEY: "re_production",
 } as const;
 
 describe("apiEnvSchema production secrets", () => {
@@ -67,6 +69,24 @@ describe("apiEnvSchema production secrets", () => {
       OBJECT_STORAGE_ENDPOINT: validProductionEnv.OBJECT_STORAGE_ENDPOINT,
       OBJECT_STORAGE_SECRET_ACCESS_KEY: validProductionEnv.OBJECT_STORAGE_SECRET_ACCESS_KEY,
     });
+  });
+
+  it("rejects missing Resend configuration in production", () => {
+    const result = apiEnvSchema.safeParse({
+      ...validProductionEnv,
+      EMAIL_FROM: "Careerden <no-reply@careerden.local>",
+      RESEND_API_KEY: "",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["EMAIL_FROM"] }),
+          expect.objectContaining({ path: ["RESEND_API_KEY"] }),
+        ]),
+      );
+    }
   });
 
   it("rejects a partially configured Creem integration", () => {

@@ -26,6 +26,7 @@ review or download.
 - Document generation: HTML templates, Docxtemplater, Gotenberg/Playwright PDF rendering
 - Storage: S3-compatible object storage via RustFS locally and Cloudflare R2 in production
   for generated files
+- Email: SMTP through MailHog locally and the Resend HTTP API in production
 
 ## Naming Conventions
 
@@ -103,6 +104,13 @@ review or download.
 - The API runtime uses PostgreSQL for state, S3-compatible object storage through RustFS
   locally or Cloudflare R2 in production, and Redis/BullMQ for enqueueing job application
   processing.
+- The API sends authentication and account emails through local SMTP outside production and
+  Resend in production. The notifications worker uses the same provider selection when reminder
+  email is enabled. Keep both behind the domain `EmailSender`; follow-up outbox retries pass their
+  stable message ID to Resend as an idempotency key.
+- Backend `tsx watch` development scripts use Node's `development` export condition, and internal
+  packages expose `src/index.ts` under that condition. Preserve this source-resolution path so
+  shared-package edits restart consuming apps; normal builds and starts must keep using `dist`.
 - The `apps/llm-worker`, `apps/documents-worker`, and `apps/notifications-worker`
   runtimes consume BullMQ work independently from the API process. Future workers should
   use the same descriptive `*-worker` app naming convention.
@@ -149,7 +157,8 @@ review or download.
   credits are reserved.
 - Production startup fails closed when Better Auth or object-storage credentials use
   missing, short, or known development values; production object storage must not target
-  localhost.
+  localhost. The production API also requires `RESEND_API_KEY` and a valid, non-local
+  `EMAIL_FROM`; the notifications worker requires them when `NOTIFICATION_EMAIL_ENABLED=true`.
 
 ## Runtime Validation Commands
 

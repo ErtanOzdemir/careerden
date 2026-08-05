@@ -50,7 +50,8 @@ Import LinkedIn jobs or paste any posting manually. Match your profile. Create t
 - Generate custom DOCX CV and cover-letter files with PDF previews, or use the default
   PDF layouts, then download them through signed S3-compatible storage URLs.
 - Receive in-app follow-up notifications and, when the desktop window is unfocused,
-  native operating-system alerts with optional SMTP email delivery.
+  native operating-system alerts with optional email delivery through local SMTP or
+  production Resend.
 - Sign in with email and password using email OTP verification.
 
 ## Quick Start
@@ -289,28 +290,29 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 
 ### AI and Workers
 
-| Variable                           | Description                        | Default                 |
-| ---------------------------------- | ---------------------------------- | ----------------------- |
-| `AI_PROVIDER`                      | `openai`, `gemini`, or `deepseek`  | `openai`                |
-| `OPENAI_API_KEY`                   | OpenAI API key                     | —                       |
-| `GEMINI_API_KEY`                   | Google Gemini API key              | —                       |
-| `DEEPSEEK_API_KEY`                 | DeepSeek API key                   | —                       |
-| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs       | `1`                     |
-| `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port     | `3101`                  |
-| `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs     | `1`                     |
-| `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port      | `3102`                  |
-| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs   | `1`                     |
-| `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port  | `3103`                  |
-| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through SMTP  | `false`                 |
-| `GOTENBERG_URL`                    | DOCX-to-PDF conversion service URL | `http://localhost:3002` |
+| Variable                           | Description                                      | Default                 |
+| ---------------------------------- | ------------------------------------------------ | ----------------------- |
+| `AI_PROVIDER`                      | `openai`, `gemini`, or `deepseek`                | `openai`                |
+| `OPENAI_API_KEY`                   | OpenAI API key                                   | —                       |
+| `GEMINI_API_KEY`                   | Google Gemini API key                            | —                       |
+| `DEEPSEEK_API_KEY`                 | DeepSeek API key                                 | —                       |
+| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs                     | `1`                     |
+| `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port                   | `3101`                  |
+| `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs                   | `1`                     |
+| `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port                    | `3102`                  |
+| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs                 | `1`                     |
+| `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port                | `3103`                  |
+| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through the active provider | `false`                 |
+| `GOTENBERG_URL`                    | DOCX-to-PDF conversion service URL               | `http://localhost:3002` |
 
 ### Email, Storage, Scraping, and Tracing
 
 | Variable                           | Description                             | Default                                |
 | ---------------------------------- | --------------------------------------- | -------------------------------------- |
-| `SMTP_HOST`                        | SMTP server host                        | `localhost`                            |
-| `SMTP_PORT`                        | SMTP server port                        | `1025`                                 |
-| `SMTP_FROM`                        | Sender used for OTP and reminder emails | `Careerden <no-reply@careerden.local>` |
+| `SMTP_HOST`                        | Development/test SMTP server host       | `localhost`                            |
+| `SMTP_PORT`                        | Development/test SMTP server port       | `1025`                                 |
+| `EMAIL_FROM`                       | Sender used for OTP and reminder emails | `Careerden <no-reply@careerden.local>` |
+| `RESEND_API_KEY`                   | Production Resend API credential        | —                                      |
 | `OBJECT_STORAGE_ENDPOINT`          | S3-compatible storage endpoint          | Development-only local endpoint        |
 | `OBJECT_STORAGE_BUCKET`            | Generated file/template bucket          | `careerden`                            |
 | `OBJECT_STORAGE_ACCESS_KEY_ID`     | S3-compatible access key                | Development-only `rustfsadmin`         |
@@ -319,6 +321,18 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 | `OBJECT_STORAGE_FORCE_PATH_STYLE`  | Use S3 path-style addressing            | `true`                                 |
 | `OPEN_OBSERVE_URL`                 | OpenTelemetry HTTP trace endpoint       | `http://localhost:5080`                |
 | `OPEN_OBSERVE_KEY`                 | OpenObserve Basic Auth credential       | Required                               |
+
+Development and test runtimes deliver through SMTP, so the defaults route authentication and
+enabled reminder emails to MailHog. Production selects the Resend HTTP API automatically. The API
+requires `RESEND_API_KEY` and a valid, non-local `EMAIL_FROM`; the notifications worker requires
+the same values when `NOTIFICATION_EMAIL_ENABLED=true`. `SMTP_FROM` is no longer accepted—rename it
+to `EMAIL_FROM` in existing environments.
+
+Before deploying, add and verify the `EMAIL_FROM` domain or subdomain in Resend, publish the SPF and
+DKIM records it supplies, and create an API key. The sender domain must exactly match the verified
+domain. Set `RESEND_API_KEY` and `EMAIL_FROM` on the API and, when reminder email is enabled, the
+notifications worker. Follow-up outbox retries reuse their persisted message ID as Resend's
+idempotency key.
 
 The API, documents worker, and notifications worker must use the same object-storage
 configuration. Existing `RUSTFS_*` names remain accepted for compatibility, but new
@@ -564,6 +578,11 @@ The desktop scraping worker additionally uses these authenticated endpoints:
 | `pnpm format:check`                                            | Check Prettier formatting                               |
 | `pnpm typecheck`                                               | Type-check every workspace                              |
 | `pnpm lint:fix` / `pnpm format`                                | Apply mechanical lint/format fixes                      |
+
+Backend development commands run `tsx watch` with Node's `development` export condition. Internal
+`@careerden/*` packages therefore resolve directly to their TypeScript sources and trigger an app
+restart when a dependency changes. `NODE_ENV` still controls runtime behavior independently; even
+a local production-mode check keeps source hot reload while it is launched through a `dev` command.
 
 Use `docker compose up -d` instead of `pnpm dev:services` when local OTP email and
 OpenObserve are also needed.

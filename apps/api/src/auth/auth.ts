@@ -73,6 +73,7 @@ export function createAuth(config: AuthConfig): CareerdenAuth {
     },
     emailVerification: {
       autoSignInAfterVerification: true,
+      sendOnSignUp: true,
       sendOnSignIn: true,
     },
     plugins: [

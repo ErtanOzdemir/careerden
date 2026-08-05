@@ -8,6 +8,13 @@ const insecureObjectStorageAccessKeys = new Set(["minioadmin", "rustfsadmin"]);
 const insecureObjectStorageSecretKeys = new Set(["minioadmin", "rustfsadmin"]);
 const localObjectStorageHostnames = new Set(["0.0.0.0", "[::1]", "localhost"]);
 
+export interface ProductionResendEmailEnv {
+  NODE_ENV: "development" | "test" | "production";
+  EMAIL_FROM: string;
+  RESEND_API_KEY?: string;
+  emailRequired?: boolean;
+}
+
 export function validateProductionSecret(
   input: {
     field: string;
@@ -85,4 +92,47 @@ export function validateProductionObjectStorageEnv(
     },
     context,
   );
+}
+
+export function validateProductionResendEmailEnv(
+  input: ProductionResendEmailEnv,
+  context: RefinementCtx,
+): void {
+  if (input.NODE_ENV !== "production" || input.emailRequired === false) {
+    return;
+  }
+
+  if (!input.RESEND_API_KEY?.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "RESEND_API_KEY is required for production email delivery",
+      path: ["RESEND_API_KEY"],
+    });
+  }
+
+  const emailAddress = extractEmailAddress(input.EMAIL_FROM);
+  const parsedEmail = z.string().email().safeParse(emailAddress);
+  if (!parsedEmail.success) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "EMAIL_FROM must contain a valid sender email address",
+      path: ["EMAIL_FROM"],
+    });
+    return;
+  }
+
+  const domain = parsedEmail.data.slice(parsedEmail.data.lastIndexOf("@") + 1).toLowerCase();
+  if (domain === "localhost" || domain.endsWith(".localhost") || domain.endsWith(".local")) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "EMAIL_FROM must use a non-local sender domain in production",
+      path: ["EMAIL_FROM"],
+    });
+  }
+}
+
+function extractEmailAddress(sender: string): string {
+  const normalizedSender = sender.trim();
+  const angleAddress = normalizedSender.match(/<([^<>]+)>$/);
+  return (angleAddress?.[1] ?? normalizedSender).trim();
 }

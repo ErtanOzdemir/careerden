@@ -1,11 +1,39 @@
 import { describe, expect, it, vi } from "vitest";
+import { betterAuth } from "better-auth";
 import type { EmailSender } from "@careerden/domain";
 import {
+  createAuth,
   createEmailChangeHooks,
   createMonthlyCreditProvisioningHooks,
   createPasswordResetHandler,
   createVerificationOtpHandler,
 } from "./auth.js";
+
+vi.mock("better-auth", () => ({
+  betterAuth: vi.fn(() => ({
+    api: { getSession: vi.fn() },
+    handler: vi.fn(),
+  })),
+}));
+
+describe("createAuth", () => {
+  it("requests an email verification OTP automatically after signup", () => {
+    createAuth({
+      baseUrl: "http://localhost:3000",
+      creditProvisioner: { execute: vi.fn(async () => undefined) },
+      databaseUrl: "postgres://localhost/careerden",
+      emailSender: createEmailSender(),
+      secret: "test-auth-secret-with-enough-length",
+      trustedOrigins: ["http://localhost:5173"],
+    });
+
+    expect(vi.mocked(betterAuth)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        emailVerification: expect.objectContaining({ sendOnSignUp: true }),
+      }),
+    );
+  });
+});
 
 describe("createMonthlyCreditProvisioningHooks", () => {
   it("provisions credits after user registration and session creation", async () => {

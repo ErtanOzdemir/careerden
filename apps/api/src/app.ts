@@ -78,6 +78,7 @@ import {
   CreemSubscriptionBillingProvider,
   CreemWebhookEventParser,
   PostgresBillingSubscriptionRepository,
+  createResendEmailSender,
 } from "@careerden/infrastructure";
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
@@ -136,11 +137,17 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       })()
     : undefined;
   const auth = createAuth({
-    emailSender: createSmtpEmailSender({
-      from: env.SMTP_FROM,
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-    }),
+    emailSender:
+      env.NODE_ENV === "production"
+        ? createResendEmailSender({
+            apiKey: env.RESEND_API_KEY,
+            from: env.EMAIL_FROM,
+          })
+        : createSmtpEmailSender({
+            from: env.EMAIL_FROM,
+            host: env.SMTP_HOST,
+            port: env.SMTP_PORT,
+          }),
     creditProvisioner: ensureCurrentMonthlyCredits,
     baseUrl: env.BETTER_AUTH_URL,
     databaseUrl: env.DATABASE_URL,

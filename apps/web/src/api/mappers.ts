@@ -19,7 +19,8 @@ import type {
   TimelineMilestone,
   UpcomingInterview,
 } from "../types";
-import { mergeRichDocumentsAsProse, richDocumentFromText } from "../lib/rich-document.js";
+import { richDocumentFromText } from "@careerden/contracts";
+import type { RichDocument } from "./types.js";
 
 export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
   switch (status) {
@@ -148,51 +149,28 @@ function getAnalysisSkipReason(
     : undefined;
 }
 
+function toDescription(text?: string): { description?: RichDocument } {
+  return text ? { description: richDocumentFromText(text) } : {};
+}
+
 function mapInitialDocumentContent(match: ApiMatchAnalysis) {
   return {
     coverLetterContent: richDocumentFromText(match.coverLetterContent ?? ""),
     customizedSummary: richDocumentFromText(match.customizedSummary),
     formatVersion: 2 as const,
-    experienceEnhancements: (match.experienceEnhancements ?? []).map((enhancement) => {
-      const description = mergeRichDocumentsAsProse(
-        enhancement.enhancedDescription
-          ? richDocumentFromText(enhancement.enhancedDescription)
-          : undefined,
-        ...(enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
-      );
-      return {
-        experienceIndex: enhancement.experienceIndex,
-        ...(description ? { description } : {}),
-        achievements: [],
-      };
-    }),
+    experienceEnhancements: (match.experienceEnhancements ?? []).map((enhancement) => ({
+      experienceIndex: enhancement.experienceIndex,
+      ...toDescription(enhancement.enhancedDescription),
+    })),
     skillSuggestions: match.skillSuggestions ?? [],
-    educationEnhancements: (match.educationEnhancements ?? []).map((enhancement) => {
-      const description = mergeRichDocumentsAsProse(
-        enhancement.enhancedDescription
-          ? richDocumentFromText(enhancement.enhancedDescription)
-          : undefined,
-        ...(enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
-      );
-      return {
-        educationIndex: enhancement.educationIndex,
-        ...(description ? { description } : {}),
-        achievements: [],
-      };
-    }),
-    projectEnhancements: (match.projectEnhancements ?? []).map((enhancement) => {
-      const description = mergeRichDocumentsAsProse(
-        enhancement.enhancedDescription
-          ? richDocumentFromText(enhancement.enhancedDescription)
-          : undefined,
-        ...(enhancement.enhancedAchievements ?? []).map(richDocumentFromText),
-      );
-      return {
-        projectIndex: enhancement.projectIndex,
-        ...(description ? { description } : {}),
-        achievements: [],
-      };
-    }),
+    educationEnhancements: (match.educationEnhancements ?? []).map((enhancement) => ({
+      educationIndex: enhancement.educationIndex,
+      ...toDescription(enhancement.enhancedDescription),
+    })),
+    projectEnhancements: (match.projectEnhancements ?? []).map((enhancement) => ({
+      projectIndex: enhancement.projectIndex,
+      ...toDescription(enhancement.enhancedDescription),
+    })),
     certificationSuggestions: match.certificationSuggestions ?? [],
     selections: {
       experience: {},
@@ -493,9 +471,10 @@ function mapMatchAnalysis(
                 },
               ]
             : []),
-          ...project.achievements.map((achievement, achievementIndex) => ({
+          // The AI folds a project's achievements into its single tailored description, so these
+          // rows carry the profile's own text with no separate enhanced counterpart.
+          ...project.achievements.map((achievement) => ({
             actual: achievement,
-            enhanced: enhancement?.enhancedAchievements?.[achievementIndex],
             kind: "achievement" as const,
           })),
         ],

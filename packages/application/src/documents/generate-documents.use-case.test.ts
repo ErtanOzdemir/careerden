@@ -200,21 +200,18 @@ describe("GenerateDocumentsUseCase", () => {
             description: richDocumentFromText(
               "User-edited TypeScript automation for backend systems.",
             ),
-            achievements: [richDocumentFromText("User-edited backend reliability achievement.")],
           },
         ],
         projectEnhancements: [
           {
             projectIndex: 0,
             description: richDocumentFromText("AI-enhanced project description."),
-            achievements: [],
           },
         ],
         educationEnhancements: [
           {
             educationIndex: 0,
             description: richDocumentFromText("Relevant computer science coursework."),
-            achievements: [richDocumentFromText("Completed systems research.")],
           },
         ],
         skillSuggestions: ["TypeScript", "Node.js"],
@@ -223,13 +220,13 @@ describe("GenerateDocumentsUseCase", () => {
           certifications: "ai",
           customizedSummary: "original",
           experience: {
-            "0": { description: "original", achievements: { "0": "original" } },
+            "0": { description: "original" },
           },
           education: {
-            "0": { description: "ai", achievements: { "0": "ai" } },
+            "0": { description: "ai" },
           },
           projects: {
-            "0": { description: "original", achievements: {} },
+            "0": { description: "original" },
           },
           skills: "ai",
         },
@@ -243,7 +240,8 @@ describe("GenerateDocumentsUseCase", () => {
         start_date: "2022",
         end_date: "Present",
         period: "2022 - Present",
-        description: richDocumentFromText("Built automation."),
+        // Choosing the profile text now preserves its real formatting instead of flattening it.
+        description: originalDescription,
       },
     ]);
     expect(capturedDocxData[0]?.selected_projects).toEqual([
@@ -263,11 +261,11 @@ describe("GenerateDocumentsUseCase", () => {
       description: RichDocument;
     }>;
     expect(richDocumentToPlainText(selectedEducation[0]!.description)).toBe(
-      "Relevant computer science coursework. Completed systems research.",
+      "Relevant computer science coursework.",
     );
     const educationContent = capturedDocxData[0]?.education_content as RichDocument[];
     expect(richDocumentToPlainText(educationContent[0]!)).toBe(
-      "Example University\nBSc, Computer Science · 2018 - 2022\nRelevant computer science coursework. Completed systems research.",
+      "Example University\nBSc, Computer Science · 2018 - 2022\nRelevant computer science coursework.",
     );
     const experienceContent = capturedDocxData[0]?.experience_content as RichDocument[];
     expect(richDocumentToPlainText(experienceContent[0]!)).toBe(

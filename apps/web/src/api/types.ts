@@ -1,3 +1,5 @@
+import type { RichDocument } from "@careerden/contracts";
+
 export type ApiApplicationStatus =
   | "saved"
   | "applied"
@@ -246,7 +248,6 @@ export interface ApiMatchAnalysis {
   coverLetterGuidance?: string[];
   customizedSummary: string;
   experienceEnhancements?: {
-    enhancedAchievements?: string[];
     enhancedDescription?: string;
     experienceIndex: number;
   }[];
@@ -271,79 +272,29 @@ export interface ApiMatchAnalysis {
   educationEnhancements?: {
     educationIndex: number;
     enhancedDescription?: string;
-    enhancedAchievements?: string[];
   }[];
   projectEnhancements?: {
     projectIndex: number;
     enhancedDescription?: string;
-    enhancedAchievements?: string[];
   }[];
   certificationSuggestions?: string[];
 }
 
-export type RichTextMark =
-  | { type: "bold" }
-  | { type: "italic" }
-  | { type: "underline" }
-  | { type: "link"; href: string };
+// Re-exported from the shared contract so the many `from "../api/types.js"` imports keep working
+// while there is only one definition of the rich-text shape in the repo.
+export type { RichBlock, RichDocument, RichTextMark, RichTextNode } from "@careerden/contracts";
 
-export interface RichTextNode {
-  type: "text";
-  text: string;
-  marks?: RichTextMark[];
-}
-
-export type RichBlock =
-  | {
-      type: "paragraph";
-      alignment?: "left" | "center" | "right" | "justify";
-      children: RichTextNode[];
-    }
-  | {
-      type: "heading";
-      level: 1 | 2 | 3;
-      alignment?: "left" | "center" | "right" | "justify";
-      children: RichTextNode[];
-    }
-  | {
-      type: "bulletList" | "orderedList";
-      items: Array<{ blocks: RichBlock[] }>;
-    }
-  | {
-      type: "table";
-      rows: Array<{ cells: Array<{ blocks: RichBlock[] }> }>;
-    };
-
-export interface RichDocument {
-  version: 1;
-  blocks: RichBlock[];
+export interface ApiDocumentContentItemSelection {
+  description?: "ai" | "original";
 }
 
 export interface ApiDocumentContentSelections {
   customizedSummary?: "ai" | "original";
   skills?: "ai" | "original";
   certifications?: "ai" | "original";
-  experience: Record<
-    string,
-    {
-      description?: "ai" | "original";
-      achievements: Record<string, "ai" | "original">;
-    }
-  >;
-  education: Record<
-    string,
-    {
-      description?: "ai" | "original";
-      achievements: Record<string, "ai" | "original">;
-    }
-  >;
-  projects: Record<
-    string,
-    {
-      description?: "ai" | "original";
-      achievements: Record<string, "ai" | "original">;
-    }
-  >;
+  experience: Record<string, ApiDocumentContentItemSelection>;
+  education: Record<string, ApiDocumentContentItemSelection>;
+  projects: Record<string, ApiDocumentContentItemSelection>;
 }
 
 export interface ApiDocumentContent {
@@ -353,18 +304,15 @@ export interface ApiDocumentContent {
   experienceEnhancements: Array<{
     experienceIndex: number;
     description?: RichDocument;
-    achievements: RichDocument[];
   }>;
   skillSuggestions: string[];
   educationEnhancements: Array<{
     educationIndex: number;
     description?: RichDocument;
-    achievements: RichDocument[];
   }>;
   projectEnhancements: Array<{
     projectIndex: number;
     description?: RichDocument;
-    achievements: RichDocument[];
   }>;
   certificationSuggestions: string[];
   selections: ApiDocumentContentSelections;
@@ -402,6 +350,8 @@ export interface ApiProfileExperience {
 
 export interface ApiProfileEducation {
   degree?: string;
+  description?: string;
+  descriptionRichText?: RichDocument;
   endDate?: string;
   field?: string;
   institution: string;

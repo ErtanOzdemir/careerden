@@ -8,7 +8,7 @@ import type {
 } from "../api/types.js";
 import type { GeneratedApplicationDocument, JobApplication } from "../types.js";
 import { cn } from "../lib/utils.js";
-import { mergeRichDocumentsAsProse, richDocumentFromText } from "../lib/rich-document.js";
+import { mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
 import { ApplicationPackCustomizer } from "./ApplicationPackCustomizer.js";
 import { RichTextViewer } from "./RichTextEditor.js";
 import { Button, buttonVariants } from "./ui/button.js";
@@ -673,8 +673,13 @@ function CvContentPreview({
                 (item) => item.educationIndex === index,
               );
               const selection = content.selections.education[String(index)];
+              const originalDescription =
+                education.descriptionRichText ??
+                (education.description ? richDocumentFromText(education.description) : undefined);
               const description =
-                selection?.description === "original" ? undefined : enhancement?.description;
+                selection?.description === "original"
+                  ? originalDescription
+                  : (enhancement?.description ?? originalDescription);
 
               return (
                 <div key={`${education.institution}-${index}`}>

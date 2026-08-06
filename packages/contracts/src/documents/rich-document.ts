@@ -1,4 +1,71 @@
-import type { RichBlock, RichDocument } from "../api/types.js";
+/**
+ * The rich-text document shape and the pure helpers that operate on it.
+ *
+ * These live in `contracts` rather than `domain` so the browser app can share them: `apps/web` must
+ * not depend on `domain`, whose barrel exposes repository and queue interfaces that have no business
+ * being importable from a React component. `domain` re-exports everything here, so its consumers are
+ * unaffected.
+ *
+ * The interfaces are hand-written rather than inferred from `richDocumentSchema`: that schema needs
+ * `z.lazy` for its recursion and is annotated `z.ZodTypeAny`, so `z.infer` degrades `blocks` to
+ * `any[]`.
+ */
+
+export type RichTextMark =
+  | { type: "bold" }
+  | { type: "italic" }
+  | { type: "underline" }
+  | { type: "link"; href: string };
+
+export interface RichTextNode {
+  type: "text";
+  text: string;
+  marks?: RichTextMark[];
+}
+
+export type RichTextAlignment = "left" | "center" | "right" | "justify";
+
+export interface RichParagraph {
+  type: "paragraph";
+  alignment?: RichTextAlignment;
+  children: RichTextNode[];
+}
+
+export interface RichHeading {
+  type: "heading";
+  level: 1 | 2 | 3;
+  alignment?: RichTextAlignment;
+  children: RichTextNode[];
+}
+
+export interface RichListItem {
+  blocks: RichBlock[];
+}
+
+export interface RichList {
+  type: "bulletList" | "orderedList";
+  items: RichListItem[];
+}
+
+export interface RichTableCell {
+  blocks: RichBlock[];
+}
+
+export interface RichTableRow {
+  cells: RichTableCell[];
+}
+
+export interface RichTable {
+  type: "table";
+  rows: RichTableRow[];
+}
+
+export type RichBlock = RichParagraph | RichHeading | RichList | RichTable;
+
+export interface RichDocument {
+  version: 1;
+  blocks: RichBlock[];
+}
 
 export function emptyRichDocument(): RichDocument {
   return { version: 1, blocks: [] };
@@ -18,6 +85,14 @@ export function richDocumentFromText(text: string): RichDocument {
   };
 }
 
+export function richDocumentToPlainText(document: RichDocument): string {
+  return document.blocks.map(blockToPlainText).filter(Boolean).join("\n");
+}
+
+/**
+ * Flattens several documents into one paragraph of deduplicated sentences. Used wherever separate
+ * fragments (a description plus its achievements) have to render as a single prose block.
+ */
 export function mergeRichDocumentsAsProse(
   ...documents: Array<RichDocument | undefined>
 ): RichDocument | undefined {
@@ -50,20 +125,18 @@ export function mergeRichDocumentsAsProse(
   return sentences.length > 0 ? richDocumentFromText(sentences.join(" ")) : undefined;
 }
 
-export function richDocumentToPlainText(document: RichDocument): string {
-  return document.blocks.map(blockToPlainText).filter(Boolean).join("\n");
-}
-
 function blockToPlainText(block: RichBlock): string {
   if (block.type === "paragraph" || block.type === "heading") {
     return block.children.map((child) => child.text).join("");
   }
+
   if ("items" in block) {
     return block.items
       .map((item) => item.blocks.map(blockToPlainText).filter(Boolean).join("\n"))
       .filter(Boolean)
       .join("\n");
   }
+
   return block.rows
     .map((row) =>
       row.cells

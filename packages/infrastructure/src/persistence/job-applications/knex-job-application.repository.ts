@@ -24,6 +24,7 @@ import type {
 import type { CreateJobApplicationInput, JobApplicationStatus } from "@careerden/domain";
 import { archivableJobApplicationStatuses } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
+import { dropLegacyAchievements } from "./drop-legacy-achievements.js";
 import {
   toGeneratedDocument,
   toJobApplication,
@@ -600,9 +601,12 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     const row = await this.db("job_applications").where({ id }).select("document_content").first();
     const value = row?.document_content;
     if (!value) return null;
-    return typeof value === "string"
-      ? (JSON.parse(value) as DocumentContent)
-      : (value as DocumentContent);
+    const content =
+      typeof value === "string"
+        ? (JSON.parse(value) as DocumentContent)
+        : (value as DocumentContent);
+
+    return dropLegacyAchievements(content);
   }
 
   async addEvent(input: CreateJobApplicationEventInput): Promise<JobApplicationEvent> {

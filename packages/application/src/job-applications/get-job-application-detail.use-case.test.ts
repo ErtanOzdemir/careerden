@@ -33,11 +33,11 @@ describe("GetJobApplicationDetailUseCase", () => {
       getCompanyLogoFileId: vi.fn(async () => "logo-1"),
       getDocumentContent: vi.fn(async () => ({
         customizedSummary: richDocumentFromText("Summary"),
+        formatVersion: 2 as const,
         experienceEnhancements: [
           {
             experienceIndex: 0,
             description: richDocumentFromText("Tailored experience"),
-            achievements: [richDocumentFromText("Legacy achievement")],
           },
         ],
         selections: { education: {}, experience: {}, projects: {} },
@@ -52,11 +52,11 @@ describe("GetJobApplicationDetailUseCase", () => {
 
     expect(detail.companyLogoUrl).toBe("signed-logo");
     expect(detail.profileReadiness).toEqual({ state: "ready", warnings: [] });
+    // Returned verbatim now that legacy content is migrated in the database instead of on read.
     expect(detail.documentContent?.formatVersion).toBe(2);
     expect(
       richDocumentToPlainText(detail.documentContent!.experienceEnhancements[0]!.description!),
-    ).toBe("Tailored experience. Legacy achievement.");
-    expect(detail.documentContent?.experienceEnhancements[0]?.achievements).toEqual([]);
+    ).toBe("Tailored experience");
     expect(detail.scrapeBundle?.companyManual).toEqual({
       name: "Acme",
       description: "Acme builds reliable products.",

@@ -1,6 +1,6 @@
 import type { AiGenerateParams, AiProvider } from "@careerden/domain";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText, Output } from "ai";
+import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 
 export class GeminiAiProvider implements AiProvider {
   constructor(
@@ -10,12 +10,7 @@ export class GeminiAiProvider implements AiProvider {
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const google = createGoogleGenerativeAI({ apiKey: this.apiKey });
-    const { output } = await generateText({
-      model: google(this.model),
-      output: Output.object({ schema: params.outputSchema }),
-      system: params.system,
-      prompt: params.prompt,
-    });
-    return params.outputSchema.parse(output);
+
+    return generateWithOutputSchema(google(this.model), params);
   }
 }

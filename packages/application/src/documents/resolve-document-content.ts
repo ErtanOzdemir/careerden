@@ -6,11 +6,7 @@ import type {
   RichDocument,
   UserProfile,
 } from "@careerden/domain";
-import {
-  normalizeDescriptionOnlyDocumentContent,
-  profileProjectDescriptionAsProse,
-  richDocumentFromText,
-} from "@careerden/domain";
+import { profileProjectDescriptionAsProse, richDocumentFromText } from "@careerden/domain";
 
 export interface ResolvedDocumentExperience {
   company: string;
@@ -50,29 +46,25 @@ export function resolveDocumentContent(
   profile: UserProfile,
   content: DocumentContent,
 ): ResolvedDocumentContent {
-  const normalizedContent = normalizeDescriptionOnlyDocumentContent(profile, content);
   const summary =
-    normalizedContent.selections?.customizedSummary === "original"
-      ? (toRichDocument(profile.summary, profile.summaryRichText) ??
-        normalizedContent.customizedSummary)
-      : normalizedContent.customizedSummary;
+    content.selections?.customizedSummary === "original"
+      ? (toRichDocument(profile.summary, profile.summaryRichText) ?? content.customizedSummary)
+      : content.customizedSummary;
   const skills =
-    normalizedContent.selections?.skills === "original" ||
-    !normalizedContent.skillSuggestions?.length
+    content.selections?.skills === "original" || !content.skillSuggestions?.length
       ? profile.skills
-      : normalizedContent.skillSuggestions;
+      : content.skillSuggestions;
   const certifications =
-    normalizedContent.selections?.certifications === "original" ||
-    !normalizedContent.certificationSuggestions?.length
+    content.selections?.certifications === "original" || !content.certificationSuggestions?.length
       ? profile.certifications
-      : normalizedContent.certificationSuggestions;
+      : content.certificationSuggestions;
 
   return {
     certifications,
-    coverLetterContent: normalizedContent.coverLetterContent ?? richDocumentFromText(""),
-    education: resolveEducation(profile.education, normalizedContent),
-    experiences: resolveExperiences(profile.experience, normalizedContent),
-    projects: resolveProjects(profile.projects, normalizedContent),
+    coverLetterContent: content.coverLetterContent ?? richDocumentFromText(""),
+    education: resolveEducation(profile.education, content),
+    experiences: resolveExperiences(profile.experience, content),
+    projects: resolveProjects(profile.projects, content),
     skills,
     summary,
   };
@@ -115,8 +107,11 @@ function resolveEducation(
       (candidate) => candidate.educationIndex === index,
     );
     const selection = content.selections?.education?.[String(index)];
+    const originalDescription = toRichDocument(item.description, item.descriptionRichText);
     const description =
-      selection?.description === "original" ? undefined : enhancement?.description;
+      selection?.description === "original"
+        ? originalDescription
+        : (enhancement?.description ?? originalDescription);
 
     return {
       degree: item.degree,

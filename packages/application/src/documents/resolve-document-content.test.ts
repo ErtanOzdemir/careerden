@@ -4,53 +4,26 @@ import { richDocumentFromText, richDocumentToPlainText } from "@careerden/domain
 import { resolveDocumentContent } from "./resolve-document-content.js";
 
 describe("resolveDocumentContent", () => {
-  it("resolves edited AI content and mixed nested selections into final CV sections", () => {
+  it("resolves edited AI content and mixed selections into final CV sections", () => {
     const profile = createProfile();
     const content: DocumentContent = {
       certificationSuggestions: ["AWS Practitioner"],
       coverLetterContent: richDocumentFromText("Reviewed cover letter."),
       customizedSummary: richDocumentFromText("AI summary."),
+      formatVersion: 2,
       educationEnhancements: [
-        {
-          achievements: [richDocumentFromText("AI education achievement.")],
-          description: richDocumentFromText("AI education details."),
-          educationIndex: 0,
-        },
+        { description: richDocumentFromText("AI education details."), educationIndex: 0 },
       ],
       experienceEnhancements: [
-        {
-          achievements: [
-            richDocumentFromText("AI experience achievement."),
-            richDocumentFromText("Excluded AI achievement."),
-          ],
-          description: richDocumentFromText("AI experience description."),
-          experienceIndex: 0,
-        },
+        { description: richDocumentFromText("AI experience description."), experienceIndex: 0 },
       ],
       projectEnhancements: [
-        {
-          achievements: [
-            richDocumentFromText("AI project achievement one."),
-            richDocumentFromText("AI project achievement two."),
-          ],
-          description: richDocumentFromText("AI project description."),
-          projectIndex: 0,
-        },
+        { description: richDocumentFromText("AI project description."), projectIndex: 0 },
       ],
       selections: {
         education: {},
-        experience: {
-          "0": {
-            achievements: { "1": "original" },
-            description: "ai",
-          },
-        },
-        projects: {
-          "0": {
-            achievements: { "0": "original", "1": "ai" },
-            description: "original",
-          },
-        },
+        experience: { "0": { description: "ai" } },
+        projects: { "0": { description: "original" } },
       },
       skillSuggestions: ["TypeScript", "React"],
     };
@@ -62,13 +35,13 @@ describe("resolveDocumentContent", () => {
     expect(resolved.certifications).toEqual(["AWS Practitioner"]);
     expect(richDocumentToPlainText(resolved.coverLetterContent)).toBe("Reviewed cover letter.");
     expect(richDocumentToPlainText(resolved.experiences[0]!.description!)).toBe(
-      "AI experience description. AI experience achievement.",
+      "AI experience description.",
     );
     expect(richDocumentToPlainText(resolved.education[0]!.description!)).toBe(
-      "AI education details. AI education achievement.",
+      "AI education details.",
     );
     expect(richDocumentToPlainText(resolved.projects[0]!.description!)).toBe(
-      "Original project description. Original project achievement one. AI project achievement two.",
+      "Original project description. Original project achievement one. Original project achievement two.",
     );
   });
 
@@ -77,29 +50,18 @@ describe("resolveDocumentContent", () => {
     const content: DocumentContent = {
       certificationSuggestions: [],
       customizedSummary: richDocumentFromText("AI summary."),
+      formatVersion: 2,
       educationEnhancements: [
-        {
-          achievements: [richDocumentFromText("AI education achievement.")],
-          description: richDocumentFromText("AI education details."),
-          educationIndex: 0,
-        },
+        { description: richDocumentFromText("AI education details."), educationIndex: 0 },
       ],
       experienceEnhancements: [
-        {
-          achievements: [richDocumentFromText("AI experience achievement.")],
-          description: richDocumentFromText("AI experience description."),
-          experienceIndex: 0,
-        },
+        { description: richDocumentFromText("AI experience description."), experienceIndex: 0 },
       ],
       selections: {
         certifications: "ai",
         customizedSummary: "original",
-        education: {
-          "0": { achievements: { "0": "original" }, description: "original" },
-        },
-        experience: {
-          "0": { achievements: { "0": "original" }, description: "original" },
-        },
+        education: { "0": { description: "original" } },
+        experience: { "0": { description: "original" } },
         projects: {},
         skills: "ai",
       },
@@ -114,7 +76,28 @@ describe("resolveDocumentContent", () => {
     expect(richDocumentToPlainText(resolved.experiences[0]!.description!)).toBe(
       "Original experience description.",
     );
-    expect(resolved.education[0]!.description).toBeUndefined();
+    // Education now has a profile-side description, so choosing the original no longer blanks it.
+    expect(richDocumentToPlainText(resolved.education[0]!.description!)).toBe(
+      "Original education description.",
+    );
+  });
+
+  it("falls back to the profile description when the AI left an item without one", () => {
+    const profile = createProfile();
+    const resolved = resolveDocumentContent(profile, {
+      customizedSummary: richDocumentFromText("Summary"),
+      formatVersion: 2,
+      experienceEnhancements: [{ experienceIndex: 0 }],
+      educationEnhancements: [{ educationIndex: 0 }],
+      selections: { experience: {}, education: {}, projects: {} },
+    });
+
+    expect(richDocumentToPlainText(resolved.experiences[0]!.description!)).toBe(
+      "Original experience description.",
+    );
+    expect(richDocumentToPlainText(resolved.education[0]!.description!)).toBe(
+      "Original education description.",
+    );
   });
 
   it("uses one merged profile description for original project content", () => {
@@ -126,7 +109,7 @@ describe("resolveDocumentContent", () => {
       selections: {
         experience: {},
         education: {},
-        projects: { "0": { description: "original", achievements: {} } },
+        projects: { "0": { description: "original" } },
       },
     });
 
@@ -145,6 +128,7 @@ function createProfile(): UserProfile {
     education: [
       {
         degree: "BSc",
+        description: "Original education description.",
         field: "Computer Science",
         institution: "Example University",
       },

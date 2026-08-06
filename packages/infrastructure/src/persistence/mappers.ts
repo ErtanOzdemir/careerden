@@ -141,7 +141,7 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
       (summary !== undefined ? richDocumentFromText(summary) : undefined),
     skills: stringArray(row.skills),
     experience: jsonArray<ProfileExperience>(row.experience).map(withDescriptionRichText),
-    education: jsonArray<ProfileEducation>(row.education),
+    education: jsonArray<ProfileEducation>(row.education).map(withDescriptionRichText),
     certifications: stringArray(row.certifications),
     projects: jsonArray<ProfileProject>(row.projects).map(withDescriptionRichText),
     createdAt: new Date(String(row.created_at)),

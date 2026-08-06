@@ -1,6 +1,6 @@
 import type { AiGenerateParams, AiProvider } from "@careerden/domain";
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, Output } from "ai";
+import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 
 export class OpenAiAiProvider implements AiProvider {
   constructor(
@@ -10,12 +10,7 @@ export class OpenAiAiProvider implements AiProvider {
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const openai = createOpenAI({ apiKey: this.apiKey });
-    const { output } = await generateText({
-      model: openai(this.model),
-      output: Output.object({ schema: params.outputSchema }),
-      system: params.system,
-      prompt: params.prompt,
-    });
-    return params.outputSchema.parse(output);
+
+    return generateWithOutputSchema(openai(this.model), params);
   }
 }

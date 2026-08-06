@@ -3,7 +3,7 @@ import type {
   JobApplicationRepository,
   UserProfileAccessRepository,
 } from "@careerden/domain";
-import { assessProfileReadiness, normalizeDescriptionOnlyDocumentContent } from "@careerden/domain";
+import { assessProfileReadiness } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 import {
@@ -31,18 +31,11 @@ export class GetJobApplicationDetailUseCase {
       throw new ApplicationError("not_found", "Profile not found");
     }
 
-    const detail = await buildJobApplicationDetail({
+    return buildJobApplicationDetail({
       jobApplications: this.jobApplications,
       storage: this.storage,
       jobApplication,
       profileReadiness: assessProfileReadiness(profile),
     });
-
-    return {
-      ...detail,
-      documentContent: detail.documentContent
-        ? normalizeDescriptionOnlyDocumentContent(profile, detail.documentContent)
-        : null,
-    };
   }
 }

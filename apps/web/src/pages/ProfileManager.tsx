@@ -4,7 +4,7 @@ import { Panel } from "../components/careerden/panel.js";
 import { Field } from "../components/careerden/field.js";
 import RichTextEditor, { RichTextViewer } from "../components/RichTextEditor.js";
 import { profilesApi } from "../api/profiles.js";
-import { emptyRichDocument, richDocumentFromText } from "../lib/rich-document.js";
+import { emptyRichDocument, richDocumentFromText } from "@careerden/contracts";
 import type {
   ApiProfile,
   ApiUpdateProfilePayload,
@@ -866,6 +866,13 @@ function EducationEditor({
                   placeholder="Present"
                 />
               </div>
+              <RichTextField
+                label="Description"
+                value={
+                  education.descriptionRichText ?? richDocumentFromText(education.description ?? "")
+                }
+                onChange={(descriptionRichText) => onChange({ ...education, descriptionRichText })}
+              />
             </div>
           ) : (
             <div>
@@ -877,6 +884,17 @@ function EducationEditor({
                 {[education.startDate, education.endDate].filter(Boolean).join(" — ") ||
                   "Dates not set"}
               </span>
+              {(education.descriptionRichText || education.description) && (
+                <div className="mt-1">
+                  <RichTextViewer
+                    ariaLabel={`${education.institution} description`}
+                    value={
+                      education.descriptionRichText ??
+                      richDocumentFromText(education.description ?? "")
+                    }
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

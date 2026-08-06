@@ -19,6 +19,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@careerden/contracts": "workspace:*",
     "zod": "^3.24.1"
   },
   "devDependencies": {

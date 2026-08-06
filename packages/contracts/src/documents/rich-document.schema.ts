@@ -101,13 +101,7 @@ export const richDocumentSchema = z
 const fieldSelectionSchema = z.enum(["ai", "original"]).optional();
 
 const indexSelectionsSchema = z
-  .record(
-    z.string(),
-    z.object({
-      description: fieldSelectionSchema,
-      achievements: z.record(z.string(), fieldSelectionSchema),
-    }),
-  )
+  .record(z.string(), z.object({ description: fieldSelectionSchema }))
   .default({});
 
 const documentContentSelectionsSchema = z
@@ -122,7 +116,7 @@ const documentContentSelectionsSchema = z
   .strict()
   .default({});
 
-export const documentContentSchema = z
+const documentContentObjectSchema = z
   .object({
     coverLetterContent: richDocumentSchema.optional(),
     customizedSummary: richDocumentSchema,
@@ -133,7 +127,6 @@ export const documentContentSchema = z
           .object({
             experienceIndex: z.number().int().min(0),
             description: richDocumentSchema.optional(),
-            achievements: z.array(richDocumentSchema).max(100),
           })
           .strict(),
       )
@@ -145,7 +138,6 @@ export const documentContentSchema = z
           .object({
             educationIndex: z.number().int().min(0),
             description: richDocumentSchema.optional(),
-            achievements: z.array(richDocumentSchema).max(100),
           })
           .strict(),
       )
@@ -157,7 +149,6 @@ export const documentContentSchema = z
           .object({
             projectIndex: z.number().int().min(0),
             description: richDocumentSchema.optional(),
-            achievements: z.array(richDocumentSchema).max(100),
           })
           .strict(),
       )
@@ -167,6 +158,61 @@ export const documentContentSchema = z
     selections: documentContentSelectionsSchema,
   })
   .strict();
+
+/**
+ * Per-item `achievements` were merged into each description in format version 2 and removed from the
+ * schema. The object is `.strict()`, so a browser still running a cached pre-upgrade bundle would
+ * get a 400 for sending them; stripping instead keeps those clients working. Safe only because
+ * migration 20260806000000 has already merged the stored ones — discarding them here loses nothing.
+ */
+export const documentContentSchema = z.preprocess(
+  stripLegacyAchievements,
+  documentContentObjectSchema,
+);
+
+function stripLegacyAchievements(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
+
+  const content = value as Record<string, unknown>;
+  const withoutAchievements = (item: unknown): unknown => {
+    if (typeof item !== "object" || item === null) return item;
+    const { achievements: _achievements, ...rest } = item as Record<string, unknown>;
+    return rest;
+  };
+  const stripEnhancements = (key: string): Record<string, unknown> =>
+    Array.isArray(content[key]) ? { [key]: content[key].map(withoutAchievements) } : {};
+  const selections = content.selections as Record<string, unknown> | undefined;
+  const stripSelections = (key: string): Record<string, unknown> => {
+    const section = selections?.[key];
+    if (typeof section !== "object" || section === null) return {};
+
+    return {
+      [key]: Object.fromEntries(
+        Object.entries(section as Record<string, unknown>).map(([index, selection]) => [
+          index,
+          withoutAchievements(selection),
+        ]),
+      ),
+    };
+  };
+
+  return {
+    ...content,
+    ...stripEnhancements("experienceEnhancements"),
+    ...stripEnhancements("educationEnhancements"),
+    ...stripEnhancements("projectEnhancements"),
+    ...(selections
+      ? {
+          selections: {
+            ...selections,
+            ...stripSelections("experience"),
+            ...stripSelections("education"),
+            ...stripSelections("projects"),
+          },
+        }
+      : {}),
+  };
+}
 
 export const updateDocumentContentSchema = z
   .object({

@@ -89,7 +89,7 @@ export class GenerateDocumentsUseCase {
   ): Promise<T[]> {
     const scrape = await this.jobApplications.getScrapeBundle(input.jobApplicationId);
     const documentContent =
-      input.documentContent ?? documentContentFromMatchAnalysis(input.analysis);
+      input.documentContent ?? documentContentFromMatchAnalysis(input.profile, input.analysis);
     const data = toTemplateData(
       input.profile,
       input.analysis,

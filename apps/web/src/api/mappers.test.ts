@@ -6,7 +6,7 @@ import {
   mapApiStatusToUi,
 } from "./mappers";
 import type { ApiJobApplicationAnalytics, ApiJobApplicationDetail, ApiProfile } from "./types";
-import { richDocumentToPlainText } from "../lib/rich-document.js";
+import { richDocumentToPlainText } from "@careerden/contracts";
 
 describe("API mappers", () => {
   it("maps API status values to UI labels", () => {
@@ -351,17 +351,13 @@ describe("API mappers", () => {
     });
   });
 
-  it("folds legacy AI achievements into fallback tailored descriptions", () => {
+  it("builds a fallback draft from the analysis when no document content is stored yet", () => {
     const application = createApplicationDetail();
     application.documentContent = null;
     application.matchAnalysis = {
       ...application.matchAnalysis!,
       experienceEnhancements: [
-        {
-          experienceIndex: 0,
-          enhancedDescription: "Built product experiences",
-          enhancedAchievements: ["Shipped accessible React interfaces"],
-        },
+        { experienceIndex: 0, enhancedDescription: "Built product experiences" },
       ],
     };
 
@@ -369,9 +365,8 @@ describe("API mappers", () => {
     const content = mapped.documentContent!;
 
     expect(content.formatVersion).toBe(2);
-    expect(content.experienceEnhancements[0]?.achievements).toEqual([]);
     expect(richDocumentToPlainText(content.experienceEnhancements[0]!.description!)).toBe(
-      "Built product experiences. Shipped accessible React interfaces.",
+      "Built product experiences",
     );
   });
 });

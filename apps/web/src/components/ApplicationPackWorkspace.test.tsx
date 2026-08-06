@@ -133,22 +133,13 @@ describe("ApplicationPackWorkspace", () => {
           certifications: "original",
           customizedSummary: "original",
           experience: expect.objectContaining({
-            "0": {
-              achievements: {},
-              description: "original",
-            },
+            "0": { description: "original" },
           }),
           education: expect.objectContaining({
-            "0": {
-              achievements: {},
-              description: "original",
-            },
+            "0": { description: "original" },
           }),
           projects: expect.objectContaining({
-            "0": {
-              achievements: {},
-              description: "original",
-            },
+            "0": { description: "original" },
           }),
           skills: "original",
         }),
@@ -339,7 +330,6 @@ function createApplication(): JobApplication {
       formatVersion: 2,
       educationEnhancements: [
         {
-          achievements: [],
           description: paragraph(
             "Relevant computer science coursework. Completed systems research.",
           ),
@@ -348,14 +338,12 @@ function createApplication(): JobApplication {
       ],
       experienceEnhancements: [
         {
-          achievements: [],
           description: paragraph("Built product experiences. Shipped React products."),
           experienceIndex: 0,
         },
       ],
       projectEnhancements: [
         {
-          achievements: [],
           description: paragraph("Tailored project evidence. Improved the compiler design."),
           projectIndex: 0,
         },

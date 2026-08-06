@@ -16,6 +16,8 @@ export interface ProfileEducation {
   field?: string;
   startDate?: string;
   endDate?: string;
+  description?: string;
+  descriptionRichText?: RichDocument;
 }
 
 export interface ProfileProject {
@@ -96,6 +98,7 @@ function normalizeUserProfileInput(input: UpdateUserProfileInput): UpdateUserPro
     ...input,
     ...(summaryChanged ? normalizeSummary(input.summary, input.summaryRichText) : {}),
     ...(input.experience ? { experience: input.experience.map(normalizeDescriptionRichText) } : {}),
+    ...(input.education ? { education: input.education.map(normalizeDescriptionRichText) } : {}),
     ...(input.projects ? { projects: input.projects.map(normalizeDescriptionRichText) } : {}),
   };
 }

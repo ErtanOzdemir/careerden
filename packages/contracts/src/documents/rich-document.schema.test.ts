@@ -114,25 +114,13 @@ describe("documentContentSchema", () => {
         coverLetterContent: paragraph,
         customizedSummary: paragraph,
         formatVersion: 2,
-        experienceEnhancements: [
-          {
-            experienceIndex: 0,
-            description: paragraph,
-            achievements: [paragraph],
-          },
-        ],
+        experienceEnhancements: [{ experienceIndex: 0, description: paragraph }],
       }),
     ).toEqual({
       coverLetterContent: paragraph,
       customizedSummary: paragraph,
       formatVersion: 2,
-      experienceEnhancements: [
-        {
-          experienceIndex: 0,
-          description: paragraph,
-          achievements: [paragraph],
-        },
-      ],
+      experienceEnhancements: [{ experienceIndex: 0, description: paragraph }],
       skillSuggestions: [],
       educationEnhancements: [],
       projectEnhancements: [],
@@ -143,5 +131,32 @@ describe("documentContentSchema", () => {
         projects: {},
       },
     });
+  });
+
+  it("strips legacy achievements instead of rejecting a stale client's payload", () => {
+    const paragraph = {
+      version: 1 as const,
+      blocks: [{ type: "paragraph" as const, children: [{ type: "text" as const, text: "C" }] }],
+    };
+
+    const parsed = documentContentSchema.parse({
+      customizedSummary: paragraph,
+      experienceEnhancements: [
+        { experienceIndex: 0, description: paragraph, achievements: [paragraph] },
+      ],
+      educationEnhancements: [{ educationIndex: 0, achievements: [] }],
+      projectEnhancements: [{ projectIndex: 0, achievements: [paragraph] }],
+      selections: {
+        experience: { "0": { description: "ai", achievements: { "0": "original" } } },
+        education: {},
+        projects: {},
+      },
+    });
+
+    expect(parsed.experienceEnhancements).toEqual([{ experienceIndex: 0, description: paragraph }]);
+    expect(parsed.educationEnhancements).toEqual([{ educationIndex: 0 }]);
+    expect(parsed.projectEnhancements).toEqual([{ projectIndex: 0 }]);
+    expect(parsed.selections.experience).toEqual({ "0": { description: "ai" } });
+    expect(JSON.stringify(parsed)).not.toContain("achievements");
   });
 });

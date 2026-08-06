@@ -17,13 +17,8 @@ describe("UpdateDocumentContentUseCase", () => {
 
     const result = await useCase.execute(job.id, "user-1", documentContent);
 
-    expect(result).toEqual({
-      ...documentContent,
-      formatVersion: 2,
-      educationEnhancements: [],
-      projectEnhancements: [],
-      selections: { education: {}, experience: {}, projects: {} },
-    });
+    // Stored verbatim: the normalizer that used to rewrite content on every write is gone.
+    expect(result).toEqual(documentContent);
     expect(await repository.getDocumentContent(job.id)).toEqual(result);
     expect(recordChanged).toHaveBeenCalledOnce();
   });

@@ -1,6 +1,6 @@
 import type { AiGenerateParams, AiProvider } from "@careerden/domain";
 import { createDeepSeek } from "@ai-sdk/deepseek";
-import { generateText, Output } from "ai";
+import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 
 export class DeepSeekAiProvider implements AiProvider {
   constructor(
@@ -10,12 +10,7 @@ export class DeepSeekAiProvider implements AiProvider {
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const deepseek = createDeepSeek({ apiKey: this.apiKey });
-    const { output } = await generateText({
-      model: deepseek(this.model),
-      output: Output.object({ schema: params.outputSchema }),
-      system: params.system,
-      prompt: params.prompt,
-    });
-    return params.outputSchema.parse(output);
+
+    return generateWithOutputSchema(deepseek(this.model), params);
   }
 }

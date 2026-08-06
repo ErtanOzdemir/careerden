@@ -1,6 +1,4 @@
 import type { DocumentContent, PersistenceUnitOfWork } from "@careerden/domain";
-import { normalizeDescriptionOnlyDocumentContent } from "@careerden/domain";
-import { ApplicationError } from "../application-error.js";
 import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
 export class UpdateDocumentContentUseCase {
@@ -18,12 +16,9 @@ export class UpdateDocumentContentUseCase {
         jobApplicationId,
         userId,
       );
-      const profile = await profiles.findById(jobApplication.profileId);
-      if (!profile) throw new ApplicationError("not_found", "Profile not found");
-      const normalizedContent = normalizeDescriptionOnlyDocumentContent(profile, documentContent);
-      await jobApplications.saveDocumentContent(jobApplicationId, normalizedContent);
+      await jobApplications.saveDocumentContent(jobApplicationId, documentContent);
       await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
-      return normalizedContent;
+      return documentContent;
     });
   }
 }

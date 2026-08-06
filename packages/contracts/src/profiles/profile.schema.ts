@@ -16,6 +16,8 @@ export const profileEducationSchema = z.object({
   field: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  description: z.string().optional(),
+  descriptionRichText: richDocumentSchema.optional(),
 });
 
 export const profileProjectSchema = z.object({

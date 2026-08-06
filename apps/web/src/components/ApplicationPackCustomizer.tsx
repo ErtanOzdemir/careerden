@@ -24,7 +24,7 @@ import type {
   RichDocument,
 } from "../api/types.js";
 import { hasValidCoverLetterTemplateMapping } from "../lib/document-template.js";
-import { mergeRichDocumentsAsProse, richDocumentFromText } from "../lib/rich-document.js";
+import { mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
 import { cn } from "../lib/utils.js";
 import RichTextEditor, { RichTextViewer } from "./RichTextEditor.js";
 import { buttonVariants } from "./ui/button.js";
@@ -233,6 +233,11 @@ export function ApplicationPackCustomizer({
                     );
                     const selection = content.selections.education[String(index)];
                     const degree = [education?.degree, education?.field].filter(Boolean).join(", ");
+                    const originalDescription =
+                      education?.descriptionRichText ??
+                      (education?.description
+                        ? richDocumentFromText(education.description)
+                        : undefined);
 
                     return (
                       <ContentItemCard
@@ -246,7 +251,8 @@ export function ApplicationPackCustomizer({
                           aiDocument={enhancement?.description}
                           aiLabel="AI-tailored details"
                           editorLabel={`Edit AI education ${index + 1} description`}
-                          originalLabel="Profile facts only"
+                          originalDocument={originalDescription}
+                          originalLabel="Profile description"
                           selection={selectionOrAi(selection?.description)}
                           selectionLabel={`Education ${index + 1} description source`}
                           onAiChange={(description) =>
@@ -910,15 +916,13 @@ function updateItemSelection(
 ): ApiDocumentContent {
   const sectionSelections = content.selections[section] ?? {};
   const key = String(itemIndex);
-  const current = sectionSelections[key] ?? { achievements: {} };
-  const updated = { ...current, achievements: {}, description: value };
 
   return {
     ...content,
     formatVersion: 2,
     selections: {
       ...content.selections,
-      [section]: { ...sectionSelections, [key]: updated },
+      [section]: { ...sectionSelections, [key]: { description: value } },
     },
   };
 }
@@ -932,7 +936,7 @@ function updateEnhancementDescription(
   if (section === "experience") {
     const enhancement = content.experienceEnhancements.find(
       (item) => item.experienceIndex === itemIndex,
-    ) ?? { achievements: [], experienceIndex: itemIndex };
+    ) ?? { experienceIndex: itemIndex };
     return {
       ...content,
       formatVersion: 2,
@@ -940,14 +944,14 @@ function updateEnhancementDescription(
         content.experienceEnhancements,
         "experienceIndex",
         itemIndex,
-        { ...enhancement, achievements: [], description },
+        { ...enhancement, description },
       ),
     };
   }
   if (section === "education") {
     const enhancement = content.educationEnhancements.find(
       (item) => item.educationIndex === itemIndex,
-    ) ?? { achievements: [], educationIndex: itemIndex };
+    ) ?? { educationIndex: itemIndex };
     return {
       ...content,
       formatVersion: 2,
@@ -955,13 +959,13 @@ function updateEnhancementDescription(
         content.educationEnhancements,
         "educationIndex",
         itemIndex,
-        { ...enhancement, achievements: [], description },
+        { ...enhancement, description },
       ),
     };
   }
   const enhancement = content.projectEnhancements.find(
     (item) => item.projectIndex === itemIndex,
-  ) ?? { achievements: [], projectIndex: itemIndex };
+  ) ?? { projectIndex: itemIndex };
   return {
     ...content,
     formatVersion: 2,
@@ -969,7 +973,7 @@ function updateEnhancementDescription(
       content.projectEnhancements,
       "projectIndex",
       itemIndex,
-      { ...enhancement, achievements: [], description },
+      { ...enhancement, description },
     ),
   };
 }

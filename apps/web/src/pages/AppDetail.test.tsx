@@ -26,7 +26,6 @@ vi.mock("../api/jobApplications.js", () => ({
 vi.mock("../api/profiles.js", () => ({
   profilesApi: {
     get: vi.fn(),
-    listDocumentTemplates: vi.fn(),
   },
 }));
 
@@ -64,7 +63,6 @@ describe("AppDetail AI credits", () => {
       }),
     );
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     renderAppDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Start analysis" }));
@@ -98,7 +96,6 @@ describe("AppDetail AI credits", () => {
     ];
     vi.mocked(jobApplicationsApi.get).mockResolvedValue(detail);
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     renderAppDetail();
 
@@ -115,7 +112,6 @@ describe("AppDetail AI credits", () => {
       status: "scraped",
     });
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     renderAppDetail();
 
@@ -136,7 +132,6 @@ describe("AppDetail contacts", () => {
     vi.mocked(jobApplicationsApi.get).mockResolvedValue(detail);
     vi.mocked(jobApplicationsApi.createContact).mockResolvedValue(detail.contacts[0]!);
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     render(
       <MemoryRouter initialEntries={["/applications/job-1"]}>
@@ -176,7 +171,6 @@ describe("AppDetail contacts", () => {
     const detail = createApplicationDetail();
     vi.mocked(jobApplicationsApi.get).mockResolvedValue(detail);
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     render(
       <MemoryRouter initialEntries={["/applications/job-1?tab=timeline"]}>
@@ -207,7 +201,6 @@ describe("AppDetail archiving", () => {
       .mockResolvedValue(createApplicationDetail());
     vi.mocked(jobApplicationsApi.restore).mockResolvedValue(createApplicationDetail());
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     renderAppDetail();
 
@@ -233,7 +226,6 @@ describe("AppDetail archiving", () => {
     vi.mocked(jobApplicationsApi.get).mockResolvedValue(createApplicationDetail());
     vi.mocked(jobApplicationsApi.delete).mockResolvedValue(undefined as never);
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     render(
       <MemoryRouter initialEntries={["/applications/job-1"]}>
@@ -285,7 +277,6 @@ describe("AppDetail notes", () => {
       .mockResolvedValue(updatedDetail);
     vi.mocked(jobApplicationsApi.update).mockResolvedValue(updatedDetail);
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
-    vi.mocked(profilesApi.listDocumentTemplates).mockResolvedValue([]);
 
     renderAppDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Follow-ups & notes" }));

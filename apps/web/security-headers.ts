@@ -11,7 +11,12 @@ export type WebSecurityPolicyOptions = {
 };
 
 export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions): string {
-  const connectSources = ["'self'"];
+  // `https:` broadly (not a specific origin) matches how `frameSources`/`imageSources` already
+  // handle origins not known at build time (scraped company logos, embedded job postings). Generated
+  // document downloads are fetched client-side from a presigned object-storage URL whose origin is
+  // likewise only known at request time (S3/R2/rustfs, potentially behind a CDN), so `connect-src`
+  // needs the same allowance — otherwise the fetch is silently blocked by CSP.
+  const connectSources = ["'self'", "https:"];
   const frameSources = ["'self'", "https:"];
   const imageSources = ["'self'", "data:", "https:"];
   const apiOrigin = getAbsoluteHttpOrigin(options.apiBaseUrl);
@@ -21,7 +26,7 @@ export function createWebContentSecurityPolicy(options: WebSecurityPolicyOptions
   }
 
   if (options.development) {
-    connectSources.push("ws:", "wss:");
+    connectSources.push("ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*");
     frameSources.push("http://localhost:*", "http://127.0.0.1:*");
     imageSources.push("http://localhost:*", "http://127.0.0.1:*");
   }

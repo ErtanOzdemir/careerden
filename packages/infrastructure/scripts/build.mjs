@@ -17,11 +17,6 @@ execFileSync(process.execPath, [typescriptCli, "-p", "tsconfig.json"], {
 });
 
 cpSync(
-  join(packageDirectory, "src/documents/templates"),
-  join(distDirectory, "documents/templates"),
-  { recursive: true },
-);
-cpSync(
   join(packageDirectory, "src/persistence/postgres-migrations"),
   join(distDirectory, "persistence/postgres-migrations"),
   { recursive: true },

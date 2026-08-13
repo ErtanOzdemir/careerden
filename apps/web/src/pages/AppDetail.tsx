@@ -20,12 +20,8 @@ import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
-import type {
-  ApiApplicationPackPreferences,
-  ApiDocumentContent,
-  ApiDocumentTemplate,
-  ApiProfile,
-} from "../api/types.js";
+import type { ApiApplicationPackPreferences, ApiDocumentContent, ApiProfile } from "../api/types.js";
+import { HTML_TEMPLATES } from "@careerden/contracts";
 import {
   ArrowLeft,
   MapPin,
@@ -60,7 +56,6 @@ export default function AppDetail() {
   const [searchParams] = useSearchParams();
   const [app, setApp] = useState<JobApplication | null>(null);
   const [profile, setProfile] = useState<ApiProfile | null>(null);
-  const [templates, setTemplates] = useState<ApiDocumentTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [analysisCreditError, setAnalysisCreditError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,17 +121,13 @@ export default function AppDetail() {
         setIsLoading(true);
         setError(null);
         const detail = await jobApplicationsApi.get(id!);
-        const [profileData, templateData] = await Promise.all([
-          profilesApi.get(detail.profileId),
-          profilesApi.listDocumentTemplates(detail.profileId),
-        ]);
+        const profileData = await profilesApi.get(detail.profileId);
         if (isMounted) {
           const mapped = mapApiJobApplicationToUi(detail, profileData);
           const notesValue = mapped.metadata?.notes;
 
           setApp(mapped);
           setProfile(profileData);
-          setTemplates(templateData);
           setNotes(typeof notesValue === "string" ? notesValue : "");
         }
       } catch (e) {
@@ -403,22 +394,31 @@ export default function AppDetail() {
 
   async function handleDownload(docId: string) {
     if (!id) return;
+    // Fetches the file and saves it via a blob-URL anchor rather than `window.open`/navigating to
+    // the signed URL directly: in the desktop app, Electron's `setWindowOpenHandler` only allows
+    // `https:` targets through to the system browser (see apps/desktop/src/main/index.ts), and the
+    // local dev object storage endpoint is plain `http://localhost:9000` — so a signed URL opened
+    // that way is silently denied, with no error and no new tab. A same-window blob download never
+    // opens a new window at all, so it's unaffected by that policy (and by browser popup blockers).
     try {
       setDownloadingId(docId);
       const doc = app?.generatedDocuments?.find((d) => d.id === docId);
       if (!doc) throw new Error("Not found");
       const { url } = await jobApplicationsApi.getDocumentDownloadUrl(id, { id: doc.id });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Download failed.");
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = doc.name;
+      anchor.click();
+      URL.revokeObjectURL(blobUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Download failed.");
     } finally {
       setDownloadingId(null);
     }
-  }
-
-  async function handleResolveDocumentUrl(docId: string): Promise<string> {
-    if (!id) throw new Error("Missing application ID");
-    return (await jobApplicationsApi.getDocumentDownloadUrl(id, { id: docId })).url;
   }
 
   async function handleArchive() {
@@ -755,10 +755,9 @@ export default function AppDetail() {
           downloadingId={downloadingId}
           isUpdating={isUpdatingPack}
           onDownload={handleDownload}
-          onResolveDocumentUrl={handleResolveDocumentUrl}
           onUpdate={handleUpdateApplicationPack}
           profile={profile ?? undefined}
-          templates={templates}
+          templates={HTML_TEMPLATES}
         />
       )}
       {tab === "timeline" && (

@@ -23,7 +23,7 @@ describe("processApplicationPackGeneration", () => {
   });
 
   it("records a terminal failure after the final retry", async () => {
-    const failure = new Error("Gotenberg unavailable");
+    const failure = new Error("PDF rendering unavailable");
     const fail = { execute: vi.fn() };
 
     await expect(
@@ -35,7 +35,7 @@ describe("processApplicationPackGeneration", () => {
         fail,
       }),
     ).rejects.toBe(failure);
-    expect(fail.execute).toHaveBeenCalledWith(payload, "Gotenberg unavailable");
+    expect(fail.execute).toHaveBeenCalledWith(payload, "PDF rendering unavailable");
   });
 
   it("marks application validation errors unrecoverable immediately", async () => {

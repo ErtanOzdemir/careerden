@@ -1,8 +1,5 @@
 import { normalizeApplicationPackPreferences, richDocumentFromText } from "@careerden/domain";
 import type {
-  DocumentTemplate,
-  DocumentTemplateField,
-  DocumentTemplateVariableAliases,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
@@ -144,6 +141,8 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     education: jsonArray<ProfileEducation>(row.education).map(withDescriptionRichText),
     certifications: stringArray(row.certifications),
     projects: jsonArray<ProfileProject>(row.projects).map(withDescriptionRichText),
+    defaultCvTemplateId: nullableString(row.default_cv_template_id),
+    defaultCoverLetterTemplateId: nullableString(row.default_cover_letter_template_id),
     createdAt: new Date(String(row.created_at)),
     updatedAt: new Date(String(row.updated_at)),
   };
@@ -180,66 +179,6 @@ export function toNotification(row: Record<string, unknown>): Notification {
     body: nullableString(row.body),
     readAt: nullableDate(row.read_at),
     createdAt: new Date(String(row.created_at)),
-  };
-}
-
-export function toDocumentTemplate(row: Record<string, unknown>): DocumentTemplate {
-  return {
-    id: String(row.id),
-    profileId: String(row.profile_id),
-    kind: row.kind as DocumentTemplate["kind"],
-    format: row.format as DocumentTemplate["format"],
-    fileId: String(row.file_id),
-    fileName: String(row.file_name),
-    contentType: String(row.content_type),
-    size: Number(row.size),
-    placeholders: stringArray(row.placeholders),
-    fieldMappings: record(row.field_mappings) as Record<string, DocumentTemplateField>,
-    variableAliases: toDocumentTemplateVariableAliases(row.variable_aliases),
-    isDefault: Boolean(row.is_default),
-    createdAt: new Date(String(row.created_at)),
-    updatedAt: new Date(String(row.updated_at)),
-  };
-}
-
-export function toDocumentTemplateVariableAliases(value: unknown): DocumentTemplateVariableAliases {
-  const parsed = record(value);
-  const fields =
-    typeof parsed.fields === "object" && parsed.fields !== null && !Array.isArray(parsed.fields)
-      ? (parsed.fields as DocumentTemplateVariableAliases["fields"])
-      : {};
-  const selectedEducation =
-    typeof parsed.selectedEducation === "object" &&
-    parsed.selectedEducation !== null &&
-    !Array.isArray(parsed.selectedEducation)
-      ? (parsed.selectedEducation as DocumentTemplateVariableAliases["selectedEducation"])
-      : undefined;
-  const selectedExperiences =
-    typeof parsed.selectedExperiences === "object" &&
-    parsed.selectedExperiences !== null &&
-    !Array.isArray(parsed.selectedExperiences)
-      ? (parsed.selectedExperiences as DocumentTemplateVariableAliases["selectedExperiences"])
-      : undefined;
-  const linkItems = Array.isArray(parsed.linkItems)
-    ? (parsed.linkItems as DocumentTemplateVariableAliases["linkItems"])
-    : undefined;
-  const certificationItems = Array.isArray(parsed.certificationItems)
-    ? (parsed.certificationItems as DocumentTemplateVariableAliases["certificationItems"])
-    : undefined;
-  const selectedProjects =
-    typeof parsed.selectedProjects === "object" &&
-    parsed.selectedProjects !== null &&
-    !Array.isArray(parsed.selectedProjects)
-      ? (parsed.selectedProjects as DocumentTemplateVariableAliases["selectedProjects"])
-      : undefined;
-
-  return {
-    fields,
-    ...(certificationItems ? { certificationItems } : {}),
-    ...(linkItems ? { linkItems } : {}),
-    ...(selectedEducation ? { selectedEducation } : {}),
-    ...(selectedExperiences ? { selectedExperiences } : {}),
-    ...(selectedProjects ? { selectedProjects } : {}),
   };
 }
 

@@ -2,37 +2,19 @@ import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
 import type {
   CreateProfileUseCase,
-  DeleteDocumentTemplateUseCase,
   GetOrCreateCurrentProfileUseCase,
   GetProfileUseCase,
-  ListDocumentTemplatesUseCase,
-  SetDefaultDocumentTemplateUseCase,
-  UpdateDocumentTemplateMappingsUseCase,
-  UpdateDocumentTemplateVariableAliasesUseCase,
   UpdateProfileUseCase,
-  UploadDocumentTemplateUseCase,
 } from "@careerden/application";
-import {
-  createProfileSchema,
-  updateDocumentTemplateMappingsSchema,
-  updateDocumentTemplateVariableAliasesSchema,
-  updateProfileSchema,
-} from "@careerden/contracts";
+import { createProfileSchema, updateProfileSchema } from "@careerden/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
-import { isDocxUpload, uploadDocumentTemplateFile } from "./document-template-upload.js";
 
 export function createProfileRouter(dependencies: {
   createProfile: CreateProfileUseCase;
   getCurrentProfile: GetOrCreateCurrentProfileUseCase;
   getProfile: GetProfileUseCase;
   updateProfile: UpdateProfileUseCase;
-  listDocumentTemplates: ListDocumentTemplatesUseCase;
-  deleteDocumentTemplate: DeleteDocumentTemplateUseCase;
-  uploadDocumentTemplate: UploadDocumentTemplateUseCase;
-  updateDocumentTemplateMappings: UpdateDocumentTemplateMappingsUseCase;
-  updateDocumentTemplateVariableAliases: UpdateDocumentTemplateVariableAliasesUseCase;
-  setDefaultDocumentTemplate: SetDefaultDocumentTemplateUseCase;
 }): ExpressRouter {
   const router = Router();
 
@@ -84,126 +66,6 @@ export function createProfileRouter(dependencies: {
           request.body,
         ),
       );
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.get("/:id/document-templates", async (request, response, next) => {
-    try {
-      response.json(
-        await dependencies.listDocumentTemplates.execute(
-          request.params.id,
-          currentUser(request).id,
-        ),
-      );
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.delete("/:id/document-templates/:templateId", async (request, response, next) => {
-    try {
-      await dependencies.deleteDocumentTemplate.execute(
-        request.params.id,
-        request.params.templateId,
-        currentUser(request).id,
-      );
-      response.status(204).send();
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post(
-    "/:id/document-templates",
-    uploadDocumentTemplateFile,
-    async (request, response, next) => {
-      try {
-        if (!request.file) {
-          response.status(400).json({ code: "validation", error: "DOCX file is required" });
-          return;
-        }
-
-        if (!isDocxUpload(request.file)) {
-          response
-            .status(400)
-            .json({ code: "validation", error: "Only .docx templates are supported" });
-          return;
-        }
-
-        const kind = request.body.kind;
-        if (kind !== "cv" && kind !== "cover_letter") {
-          response.status(400).json({
-            code: "validation",
-            error: "Template kind must be cv or cover_letter",
-          });
-          return;
-        }
-
-        const template = await dependencies.uploadDocumentTemplate.execute({
-          kind,
-          profileId: request.params.id,
-          userId: currentUser(request).id,
-          fileName: request.file.originalname,
-          body: request.file.buffer,
-          size: request.file.size,
-        });
-
-        response.status(201).json(template);
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
-
-  router.patch(
-    "/:id/document-templates/:templateId/mappings",
-    validateBody(updateDocumentTemplateMappingsSchema),
-    async (request, response, next) => {
-      try {
-        const updated = await dependencies.updateDocumentTemplateMappings.execute(
-          request.params.id,
-          request.params.templateId,
-          currentUser(request).id,
-          request.body.fieldMappings,
-        );
-
-        response.json(updated);
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
-
-  router.patch(
-    "/:id/document-templates/:templateId/variable-aliases",
-    validateBody(updateDocumentTemplateVariableAliasesSchema),
-    async (request, response, next) => {
-      try {
-        const updated = await dependencies.updateDocumentTemplateVariableAliases.execute(
-          request.params.id,
-          request.params.templateId,
-          currentUser(request).id,
-          request.body.variableAliases,
-        );
-
-        response.json(updated);
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
-
-  router.patch("/:id/document-templates/:templateId/default", async (request, response, next) => {
-    try {
-      const template = await dependencies.setDefaultDocumentTemplate.execute(
-        request.params.id,
-        request.params.templateId,
-        currentUser(request).id,
-      );
-
-      response.json(template);
     } catch (error) {
       next(error);
     }

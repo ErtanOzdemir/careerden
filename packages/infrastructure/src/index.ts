@@ -32,8 +32,6 @@ export * from "./persistence/profiles/in-memory-user-profile.repository.js";
 export * from "./persistence/profiles/knex-user-profile.repository.js";
 export * from "./persistence/profiles/postgres-user-profile.repository.js";
 export * from "./documents/html-template-renderer.js";
-export * from "./documents/docx-template-renderer.js";
-export * from "./documents/gotenberg-docx-pdf-renderer.js";
 export * from "./documents/playwright-pdf-renderer.js";
 export * from "./queue/job-applications/bullmq-job-application.queue.js";
 export * from "./queue/job-applications/bullmq-application-pack-generation.queue.js";

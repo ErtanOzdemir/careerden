@@ -1,11 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type {
-  DocxTemplateRenderer,
-  FileStorage,
-  RichDocument,
-  StoredFileInput,
-  TemplateRenderer,
-} from "@careerden/domain";
+import type { FileStorage, RichDocument, StoredFileInput, TemplateRenderer } from "@careerden/domain";
 import { richDocumentFromText, richDocumentToPlainText } from "@careerden/domain";
 import {
   InMemoryJobApplicationRepository,
@@ -14,7 +8,7 @@ import {
 import { GenerateDocumentsUseCase } from "./generate-documents.use-case.js";
 
 describe("GenerateDocumentsUseCase", () => {
-  it("creates a PDF preview next to every custom DOCX document", async () => {
+  it("renders CV and cover letter as HTML-derived PDFs using the default templates", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
     const profile = await profiles.create({
@@ -23,31 +17,15 @@ describe("GenerateDocumentsUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    await profiles.createDocumentTemplate({
-      profileId: profile.id,
-      kind: "cv",
-      format: "docx",
-      fileId: "templates/cv.docx",
-      fileName: "cv.docx",
-      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      size: 10,
-      placeholders: ["full_name"],
-      fieldMappings: { full_name: "full_name" },
-    });
     const jobApplication = await jobApplications.create({ profileId: profile.id });
-    const docxToPdf = vi.fn(async () => Buffer.from("docx-preview"));
+    const htmlToPdf = vi.fn(async () => Buffer.from("pdf"));
+    const htmlTemplates = createHtmlTemplates();
     const useCase = new GenerateDocumentsUseCase(
-      createHtmlTemplates(),
-      { htmlToPdf: vi.fn(async () => Buffer.from("html-pdf")) },
+      htmlTemplates,
+      { htmlToPdf },
       createStorage(),
       jobApplications,
       profiles,
-      {
-        extractPlaceholders: vi.fn(),
-        isPlaceholderStandalone: vi.fn(async () => true),
-        render: vi.fn(async () => Buffer.from("docx")),
-      },
-      { docxToPdf },
     );
 
     const generated = await useCase.execute({
@@ -65,14 +43,64 @@ describe("GenerateDocumentsUseCase", () => {
     });
 
     expect(generated.map(({ kind, format }) => ({ kind, format }))).toEqual([
-      { kind: "cv", format: "docx" },
       { kind: "cv", format: "pdf" },
       { kind: "cover_letter", format: "pdf" },
     ]);
-    expect(docxToPdf).toHaveBeenCalledWith(Buffer.from("docx"));
+    expect(htmlTemplates.render).toHaveBeenNthCalledWith(1, "cv.default", expect.any(Object));
+    expect(htmlTemplates.render).toHaveBeenNthCalledWith(
+      2,
+      "cover-letter.default",
+      expect.any(Object),
+    );
+    expect(htmlToPdf).toHaveBeenCalledTimes(2);
   });
 
-  it("passes original rich summary, experience, and project selections to DOCX templates", async () => {
+  it("resolves the per-application template override before the profile default and registry fallback", async () => {
+    const profiles = new InMemoryUserProfileRepository();
+    const jobApplications = new InMemoryJobApplicationRepository();
+    const profile = await profiles.create({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      skills: [],
+      experience: [],
+    });
+    await profiles.update(profile.id, { defaultCvTemplateId: "cv.default" });
+    const jobApplication = await jobApplications.create({
+      profileId: profile.id,
+      applicationPackPreferences: {
+        language: "auto",
+        tone: "professional",
+        // An unknown id must be skipped in favor of the profile default rather than throwing.
+        cvTemplateId: "unknown-template",
+      },
+    });
+    const htmlTemplates = createHtmlTemplates();
+    const useCase = new GenerateDocumentsUseCase(
+      htmlTemplates,
+      { htmlToPdf: vi.fn(async () => Buffer.from("pdf")) },
+      createStorage(),
+      jobApplications,
+      profiles,
+    );
+
+    await useCase.execute({
+      jobApplicationId: jobApplication.id,
+      jobApplication,
+      profile,
+      analysis: {
+        matchScore: 90,
+        missingSkills: [],
+        strongSkills: [],
+        recommendedAchievements: [],
+        customizedSummary: "Summary",
+        interviewTips: [],
+      },
+    });
+
+    expect(htmlTemplates.render).toHaveBeenNthCalledWith(1, "cv.default", expect.any(Object));
+  });
+
+  it("passes original rich summary, experience, and project selections to the HTML template", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
     const originalSummary = richDocumentFromText("Original summary.");
@@ -135,42 +163,26 @@ describe("GenerateDocumentsUseCase", () => {
         },
       ],
     });
-    await profiles.createDocumentTemplate({
-      profileId: profile.id,
-      kind: "cv",
-      format: "docx",
-      fileId: "templates/cv.docx",
-      fileName: "cv.docx",
-      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      size: 10,
-      placeholders: ["experiences"],
-      fieldMappings: { experiences: "selected_experiences" },
-      isDefault: true,
-    });
     const jobApplication = await jobApplications.create({
       profileId: profile.id,
       companyName: "Example Inc",
       roleTitle: "Backend Engineer",
     });
-    const capturedDocxData: Record<string, unknown>[] = [];
+    const capturedData: Record<string, unknown>[] = [];
     const storage = createStorage();
-    const htmlTemplates = createHtmlTemplates();
-    const htmlToPdf = vi.fn(async () => Buffer.from("pdf"));
-    const docxTemplates: DocxTemplateRenderer = {
-      extractPlaceholders: vi.fn(),
-      isPlaceholderStandalone: vi.fn(async () => true),
-      render: vi.fn(async (input) => {
-        capturedDocxData.push(input.data);
-        return Buffer.from("docx");
+    const htmlTemplates: TemplateRenderer = {
+      render: vi.fn(async (_templateId, data) => {
+        capturedData.push(data);
+        return "<html></html>";
       }),
     };
+    const htmlToPdf = vi.fn(async () => Buffer.from("pdf"));
     const useCase = new GenerateDocumentsUseCase(
       htmlTemplates,
       { htmlToPdf },
       storage,
       jobApplications,
       profiles,
-      docxTemplates,
     );
 
     const generated = await useCase.execute({
@@ -233,18 +245,17 @@ describe("GenerateDocumentsUseCase", () => {
       },
     });
 
-    expect(capturedDocxData[0]?.selected_experiences).toEqual([
+    expect(capturedData[0]?.selected_experiences).toEqual([
       {
         title: "Engineer",
         company: "Analytical Engines",
         start_date: "2022",
         end_date: "Present",
         period: "2022 - Present",
-        // Choosing the profile text now preserves its real formatting instead of flattening it.
         description: originalDescription,
       },
     ]);
-    expect(capturedDocxData[0]?.selected_projects).toEqual([
+    expect(capturedData[0]?.selected_projects).toEqual([
       {
         name: "Careerden",
         url: "",
@@ -252,31 +263,31 @@ describe("GenerateDocumentsUseCase", () => {
         description: richDocumentFromText("Built automation. Launched automated tailoring."),
       },
     ]);
-    expect(capturedDocxData[0]?.summary).toEqual(originalSummary);
-    expect(capturedDocxData[0]?.customized_summary).toEqual(originalSummary);
-    expect(capturedDocxData[0]?.skills).toEqual(["TypeScript", "Node.js"]);
-    expect(capturedDocxData[0]?.certifications).toEqual(["AWS Practitioner"]);
-    expect(capturedDocxData[0]?.selected_education).toHaveLength(1);
-    const selectedEducation = capturedDocxData[0]?.selected_education as Array<{
+    expect(capturedData[0]?.summary).toEqual(originalSummary);
+    expect(capturedData[0]?.customized_summary).toEqual(originalSummary);
+    expect(capturedData[0]?.skills).toEqual(["TypeScript", "Node.js"]);
+    expect(capturedData[0]?.certifications).toEqual(["AWS Practitioner"]);
+    expect(capturedData[0]?.selected_education).toHaveLength(1);
+    const selectedEducation = capturedData[0]?.selected_education as Array<{
       description: RichDocument;
     }>;
     expect(richDocumentToPlainText(selectedEducation[0]!.description)).toBe(
       "Relevant computer science coursework.",
     );
-    const educationContent = capturedDocxData[0]?.education_content as RichDocument[];
+    const educationContent = capturedData[0]?.education_content as RichDocument[];
     expect(richDocumentToPlainText(educationContent[0]!)).toBe(
       "Example University\nBSc, Computer Science · 2018 - 2022\nRelevant computer science coursework.",
     );
-    const experienceContent = capturedDocxData[0]?.experience_content as RichDocument[];
+    const experienceContent = capturedData[0]?.experience_content as RichDocument[];
     expect(richDocumentToPlainText(experienceContent[0]!)).toBe(
       "Engineer · Analytical Engines\n2022 - Present\nBuilt automation.",
     );
-    const projectContent = capturedDocxData[0]?.project_content as RichDocument[];
+    const projectContent = capturedData[0]?.project_content as RichDocument[];
     expect(richDocumentToPlainText(projectContent[0]!)).toContain(
       "Careerden\nTypeScript\nBuilt automation. Launched automated tailoring.",
     );
-    expect(capturedDocxData[0]?.experience_list).toEqual(capturedDocxData[0]?.selected_experiences);
-    expect(capturedDocxData[0]?.raw_experience_list).toEqual([
+    expect(capturedData[0]?.experience_list).toEqual(capturedData[0]?.selected_experiences);
+    expect(capturedData[0]?.raw_experience_list).toEqual([
       {
         company: "Analytical Engines",
         title: "Engineer",
@@ -285,28 +296,25 @@ describe("GenerateDocumentsUseCase", () => {
         descriptionRichText: originalDescription,
       },
     ]);
-    expect(capturedDocxData[0]?.raw_summary).toBe("Original summary.");
+    expect(capturedData[0]?.raw_summary).toBe("Original summary.");
     expect(generated.map(({ format, kind }) => ({ format, kind }))).toEqual([
-      { format: "docx", kind: "cv" },
+      { format: "pdf", kind: "cv" },
       { format: "pdf", kind: "cover_letter" },
     ]);
     expect(storage.put).toHaveBeenCalledTimes(2);
-    expect(storage.put).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ fileName: "cv.docx" }),
-    );
+    expect(storage.put).toHaveBeenNthCalledWith(1, expect.objectContaining({ fileName: "cv.pdf" }));
     expect(storage.put).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ fileName: "cover-letter.pdf" }),
     );
-    expect(htmlTemplates.render).toHaveBeenCalledOnce();
-    expect(htmlTemplates.render).toHaveBeenCalledWith(
+    expect(htmlTemplates.render).toHaveBeenNthCalledWith(
+      2,
       "cover-letter.default",
       expect.objectContaining({
         cover_letter_content: richDocumentFromText("Reviewed cover letter."),
       }),
     );
-    expect(htmlToPdf).toHaveBeenCalledOnce();
+    expect(htmlToPdf).toHaveBeenCalledTimes(2);
 
     const staged = await useCase.stage({
       jobApplicationId: jobApplication.id,
@@ -323,12 +331,12 @@ describe("GenerateDocumentsUseCase", () => {
       },
     });
     expect(staged.map((document) => document.fileId)).toEqual([
-      `job-applications/${jobApplication.id}/document-generations/attempt-1/cv.docx`,
+      `job-applications/${jobApplication.id}/document-generations/attempt-1/cv.pdf`,
       `job-applications/${jobApplication.id}/document-generations/attempt-1/cover-letter.pdf`,
     ]);
   });
 
-  it("renders a selected cover letter template as DOCX with the reviewed Content body", async () => {
+  it("previews HTML for both documents without persisting anything", async () => {
     const profiles = new InMemoryUserProfileRepository();
     const jobApplications = new InMemoryJobApplicationRepository();
     const profile = await profiles.create({
@@ -337,48 +345,19 @@ describe("GenerateDocumentsUseCase", () => {
       skills: ["TypeScript"],
       experience: [],
     });
-    await profiles.createDocumentTemplate({
-      profileId: profile.id,
-      kind: "cv",
-      format: "docx",
-      fileId: "templates/cv.docx",
-      fileName: "cv.docx",
-      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      size: 10,
-      placeholders: ["full_name"],
-      fieldMappings: { full_name: "full_name" },
-      isDefault: true,
-    });
-    await profiles.createDocumentTemplate({
-      profileId: profile.id,
-      kind: "cover_letter",
-      format: "docx",
-      fileId: "templates/cover-letter.docx",
-      fileName: "cover-letter.docx",
-      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      size: 10,
-      placeholders: ["letter_body"],
-      fieldMappings: { letter_body: "cover_letter_content" },
-      isDefault: false,
-    });
     const jobApplication = await jobApplications.create({ profileId: profile.id });
     const storage = createStorage();
-    const docxTemplates: DocxTemplateRenderer = {
-      extractPlaceholders: vi.fn(),
-      isPlaceholderStandalone: vi.fn(async () => true),
-      render: vi.fn(async () => Buffer.from("docx")),
-    };
+    const htmlTemplates = createHtmlTemplates();
     const useCase = new GenerateDocumentsUseCase(
-      createHtmlTemplates(),
+      htmlTemplates,
       { htmlToPdf: vi.fn() },
       storage,
       jobApplications,
       profiles,
-      docxTemplates,
     );
     const coverLetterContent = richDocumentFromText("Dear hiring team,\nI am ready to contribute.");
 
-    const generated = await useCase.execute({
+    const preview = await useCase.preview({
       jobApplicationId: jobApplication.id,
       jobApplication,
       profile,
@@ -397,21 +376,10 @@ describe("GenerateDocumentsUseCase", () => {
       },
     });
 
-    expect(generated.map(({ format, kind }) => ({ format, kind }))).toEqual([
-      { format: "docx", kind: "cv" },
-      { format: "docx", kind: "cover_letter" },
-    ]);
-    expect(docxTemplates.render).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        template: expect.objectContaining({ kind: "cover_letter" }),
-        data: expect.objectContaining({ cover_letter_content: coverLetterContent }),
-      }),
-    );
-    expect(storage.put).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ fileName: "cover-letter.docx" }),
-    );
+    expect(preview.cv.templateId).toBe("cv.default");
+    expect(preview.coverLetter.templateId).toBe("cover-letter.default");
+    expect(preview.cv.html).toContain("Cover letter");
+    expect(storage.put).not.toHaveBeenCalled();
   });
 });
 

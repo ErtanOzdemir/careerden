@@ -60,12 +60,12 @@ describe("GenerateRequestedApplicationPackUseCase", () => {
 
     await new FailApplicationPackGenerationUseCase(unitOfWork).execute(
       { jobApplicationId: jobApplication.id, generationAttemptId: "attempt-1" },
-      "Gotenberg unavailable",
+      "PDF rendering unavailable",
     );
 
     expect(await jobApplications.findById(jobApplication.id)).toMatchObject({
       status: "failed",
-      failureReason: "Gotenberg unavailable",
+      failureReason: "PDF rendering unavailable",
     });
     expect(addOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({

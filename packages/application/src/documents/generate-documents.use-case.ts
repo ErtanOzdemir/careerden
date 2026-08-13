@@ -1,10 +1,6 @@
 import type {
   DocumentRenderer,
   DocumentContent,
-  DocumentTemplate,
-  DocumentTemplateKind,
-  DocxPdfRenderer,
-  DocxTemplateRenderer,
   FileStorage,
   GeneratedDocument,
   JobApplicationRepository,
@@ -17,7 +13,8 @@ import type {
   UserProfileRepository,
 } from "@careerden/domain";
 import { documentContentFromMatchAnalysis } from "@careerden/domain";
-import { hasValidCoverLetterContentMapping } from "../profiles/document-template-mapping.js";
+import type { DocumentTemplateKind } from "@careerden/contracts";
+import { listHtmlTemplates, getHtmlTemplateById } from "@careerden/contracts";
 import {
   resolveDocumentContent,
   type ResolvedDocumentEducation,
@@ -41,6 +38,11 @@ interface GeneratedDocumentBody {
   body: Buffer;
 }
 
+export interface PreviewGeneratedDocuments {
+  cv: { templateId: string; html: string };
+  coverLetter: { templateId: string; html: string };
+}
+
 export class GenerateDocumentsUseCase {
   constructor(
     private readonly templates: TemplateRenderer,
@@ -48,8 +50,6 @@ export class GenerateDocumentsUseCase {
     private readonly storage: FileStorage,
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileRepository,
-    private readonly docxTemplates?: DocxTemplateRenderer,
-    private readonly docxPdf?: DocxPdfRenderer,
   ) {}
 
   async execute(input: {
@@ -77,6 +77,50 @@ export class GenerateDocumentsUseCase {
     );
   }
 
+  /**
+   * Non-persisting render used for the on-screen preview: same template resolution and data as
+   * `execute`/`stage`, but returns raw HTML instead of writing to storage or the database.
+   */
+  async preview(input: {
+    jobApplicationId: string;
+    jobApplication: JobApplication;
+    profile: UserProfile;
+    analysis: MatchAnalysisResult;
+    documentContent?: DocumentContent;
+  }): Promise<PreviewGeneratedDocuments> {
+    const scrape = await this.jobApplications.getScrapeBundle(input.jobApplicationId);
+    const documentContent =
+      input.documentContent ?? documentContentFromMatchAnalysis(input.profile, input.analysis);
+    const data = toTemplateData(
+      input.profile,
+      input.analysis,
+      documentContent,
+      input.jobApplication,
+      scrape,
+    );
+
+    const cvTemplateId = resolveTemplateId(
+      "cv",
+      input.jobApplication.applicationPackPreferences.cvTemplateId,
+      input.profile.defaultCvTemplateId,
+    );
+    const coverLetterTemplateId = resolveTemplateId(
+      "cover_letter",
+      input.jobApplication.applicationPackPreferences.coverLetterTemplateId,
+      input.profile.defaultCoverLetterTemplateId,
+    );
+
+    const [cvHtml, coverLetterHtml] = await Promise.all([
+      this.templates.render(cvTemplateId, data),
+      this.templates.render(coverLetterTemplateId, data),
+    ]);
+
+    return {
+      cv: { templateId: cvTemplateId, html: cvHtml.toString() },
+      coverLetter: { templateId: coverLetterTemplateId, html: coverLetterHtml.toString() },
+    };
+  }
+
   private async generate<T>(
     input: {
       jobApplicationId: string;
@@ -98,136 +142,37 @@ export class GenerateDocumentsUseCase {
       scrape,
     );
     const generated: T[] = [];
-    const cvTemplate = await this.findTemplate(
-      input.profile.id,
+
+    const cvTemplateId = resolveTemplateId(
       "cv",
       input.jobApplication.applicationPackPreferences.cvTemplateId,
+      input.profile.defaultCvTemplateId,
     );
-    const defaultCoverLetterTemplate = await this.profiles.findDefaultDocumentTemplate(
-      input.profile.id,
+    generated.push(
+      await this.renderHtmlPdf(
+        { templateId: cvTemplateId, kind: "cv", fileName: "cv.pdf", data },
+        store,
+      ),
+    );
+
+    const coverLetterTemplateId = resolveTemplateId(
       "cover_letter",
+      input.jobApplication.applicationPackPreferences.coverLetterTemplateId,
+      input.profile.defaultCoverLetterTemplateId,
     );
-    const coverLetterTemplate = input.jobApplication.applicationPackPreferences
-      .coverLetterTemplateId
-      ? await this.findTemplate(
-          input.profile.id,
-          "cover_letter",
-          input.jobApplication.applicationPackPreferences.coverLetterTemplateId,
-        )
-      : (defaultCoverLetterTemplate ??
-        soleReadyCoverLetterTemplate(await this.profiles.listDocumentTemplates(input.profile.id)));
-
-    if (cvTemplate) {
-      if (!this.docxTemplates) {
-        throw new Error("DOCX template rendering is not configured");
-      }
-
-      const templateFile = await this.storage.get(cvTemplate.fileId);
-      const docx = await this.docxTemplates.render({
-        template: cvTemplate,
-        templateBody: templateFile.body,
-        data,
-      });
-      generated.push(
-        await store({
-          kind: "cv",
-          format: "docx",
-          fileName: "cv.docx",
-          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          body: docx,
-        }),
-      );
-      if (this.docxPdf) {
-        generated.push(
-          await store({
-            kind: "cv",
-            format: "pdf",
-            fileName: "cv.pdf",
-            contentType: "application/pdf",
-            body: await this.docxPdf.docxToPdf(docx),
-          }),
-        );
-      }
-    } else {
-      generated.push(
-        await this.renderHtmlPdf(
-          {
-            templateId: "cv.default",
-            kind: "cv",
-            fileName: "cv.pdf",
-            data,
-          },
-          store,
-        ),
-      );
-    }
-
-    if (coverLetterTemplate) {
-      if (!this.docxTemplates) {
-        throw new Error("DOCX template rendering is not configured");
-      }
-      if (!hasValidCoverLetterContentMapping(coverLetterTemplate)) {
-        throw new Error("Default cover letter template does not have a valid content mapping");
-      }
-
-      const templateFile = await this.storage.get(coverLetterTemplate.fileId);
-      const docx = await this.docxTemplates.render({
-        template: coverLetterTemplate,
-        templateBody: templateFile.body,
-        data,
-      });
-      generated.push(
-        await store({
+    generated.push(
+      await this.renderHtmlPdf(
+        {
+          templateId: coverLetterTemplateId,
           kind: "cover_letter",
-          format: "docx",
-          fileName: "cover-letter.docx",
-          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          body: docx,
-        }),
-      );
-      if (this.docxPdf) {
-        generated.push(
-          await store({
-            kind: "cover_letter",
-            format: "pdf",
-            fileName: "cover-letter.pdf",
-            contentType: "application/pdf",
-            body: await this.docxPdf.docxToPdf(docx),
-          }),
-        );
-      }
-    } else {
-      generated.push(
-        await this.renderHtmlPdf(
-          {
-            templateId: "cover-letter.default",
-            kind: "cover_letter",
-            fileName: "cover-letter.pdf",
-            data,
-          },
-          store,
-        ),
-      );
-    }
+          fileName: "cover-letter.pdf",
+          data,
+        },
+        store,
+      ),
+    );
 
     return generated;
-  }
-
-  private async findTemplate(
-    profileId: string,
-    kind: DocumentTemplateKind,
-    selectedTemplateId?: string,
-  ): Promise<DocumentTemplate | null> {
-    if (!selectedTemplateId) {
-      return this.profiles.findDefaultDocumentTemplate(profileId, kind);
-    }
-
-    const template = await this.profiles.findDocumentTemplateById(selectedTemplateId);
-    if (!template || template.profileId !== profileId || template.kind !== kind) {
-      throw new Error(`Selected ${kind === "cv" ? "CV" : "cover letter"} template is unavailable`);
-    }
-
-    return template;
   }
 
   private async renderHtmlPdf<T>(
@@ -304,14 +249,28 @@ export class GenerateDocumentsUseCase {
   }
 }
 
-function soleReadyCoverLetterTemplate(
-  templates: Awaited<ReturnType<UserProfileRepository["listDocumentTemplates"]>>,
-) {
-  const ready = templates.filter(
-    (template) => template.kind === "cover_letter" && hasValidCoverLetterContentMapping(template),
-  );
+/**
+ * Per-application override wins, then the profile's saved default, then the registry's own entry
+ * for that kind — so generation always has a usable template even when nothing has been chosen.
+ */
+function resolveTemplateId(
+  kind: DocumentTemplateKind,
+  applicationOverrideId: string | undefined,
+  profileDefaultId: string | undefined,
+): string {
+  for (const candidate of [applicationOverrideId, profileDefaultId]) {
+    const template = candidate ? getHtmlTemplateById(candidate) : undefined;
+    if (template && template.kind === kind) {
+      return template.id;
+    }
+  }
 
-  return ready.length === 1 ? ready[0] : null;
+  const fallback = listHtmlTemplates(kind)[0];
+  if (!fallback) {
+    throw new Error(`No HTML template is available for kind: ${kind}`);
+  }
+
+  return fallback.id;
 }
 
 export function generatedDocumentFileId(

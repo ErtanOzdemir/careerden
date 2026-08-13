@@ -36,6 +36,8 @@ export class PostgresUserProfileRepository extends KnexUserProfileRepository {
         education: JSON.stringify(input.education ?? []),
         certifications: JSON.stringify(input.certifications ?? []),
         projects: JSON.stringify(input.projects ?? []),
+        default_cv_template_id: input.defaultCvTemplateId ?? null,
+        default_cover_letter_template_id: input.defaultCoverLetterTemplateId ?? null,
       })
       .onConflict("user_id")
       .ignore()

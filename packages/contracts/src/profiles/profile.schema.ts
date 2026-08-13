@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { richDocumentSchema } from "../documents/rich-document.schema.js";
+import { getHtmlTemplateById } from "../documents/html-template-registry.js";
 
 export const profileExperienceSchema = z.object({
   company: z.string().min(1),
@@ -29,7 +30,7 @@ export const profileProjectSchema = z.object({
   achievements: z.array(z.string().min(1)).default([]),
 });
 
-export const createProfileSchema = z.object({
+const profileObjectSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   autoRunMatchAnalysis: z.boolean().default(true),
@@ -46,9 +47,38 @@ export const createProfileSchema = z.object({
   education: z.array(profileEducationSchema).default([]),
   certifications: z.array(z.string().min(1)).default([]),
   projects: z.array(profileProjectSchema).default([]),
+  defaultCvTemplateId: z.string().min(1).optional(),
+  defaultCoverLetterTemplateId: z.string().min(1).optional(),
 });
 
-export const updateProfileSchema = createProfileSchema.partial();
+function validateTemplateSelection(
+  value: { defaultCvTemplateId?: string; defaultCoverLetterTemplateId?: string },
+  context: z.RefinementCtx,
+): void {
+  if (value.defaultCvTemplateId) {
+    const template = getHtmlTemplateById(value.defaultCvTemplateId);
+    if (!template || template.kind !== "cv") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["defaultCvTemplateId"],
+        message: "Unknown CV template",
+      });
+    }
+  }
+  if (value.defaultCoverLetterTemplateId) {
+    const template = getHtmlTemplateById(value.defaultCoverLetterTemplateId);
+    if (!template || template.kind !== "cover_letter") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["defaultCoverLetterTemplateId"],
+        message: "Unknown cover letter template",
+      });
+    }
+  }
+}
+
+export const createProfileSchema = profileObjectSchema.superRefine(validateTemplateSelection);
+export const updateProfileSchema = profileObjectSchema.partial().superRefine(validateTemplateSelection);
 
 export type CreateProfileDto = z.infer<typeof createProfileSchema>;
 export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;

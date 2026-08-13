@@ -1,6 +1,8 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { HTML_TEMPLATES } from "@careerden/contracts";
+import type { HtmlTemplateDefinition } from "@careerden/contracts";
 import type {
   ApiApplicationPackPreferences,
   ApiDocumentContent,
@@ -9,6 +11,22 @@ import type {
 } from "../api/types.js";
 import type { JobApplication } from "../types.js";
 import { ApplicationPackWorkspace } from "./ApplicationPackWorkspace.js";
+
+interface FakePagedPreviewHandle {
+  result: Promise<{ totalPages: number }>;
+  cancel: () => void;
+}
+
+const renderPagedPreview =
+  vi.fn<(html: string, container: HTMLElement) => FakePagedPreviewHandle>();
+
+vi.mock("../lib/paged-preview.js", () => ({
+  renderPagedPreview: (html: string, container: HTMLElement) => renderPagedPreview(html, container),
+}));
+
+function pagedPreviewHandle(totalPages: number): FakePagedPreviewHandle {
+  return { result: Promise.resolve({ totalPages }), cancel: vi.fn() };
+}
 
 vi.mock("./RichTextEditor.js", () => ({
   default: ({
@@ -37,33 +55,63 @@ vi.mock("./RichTextEditor.js", () => ({
 }));
 
 describe("ApplicationPackWorkspace", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    renderPagedPreview.mockReset();
+  });
 
-  it("presents the CV and cover letter as one ready application pack", async () => {
-    const onResolveDocumentUrl = vi.fn(async (documentId: string) => `https://files/${documentId}`);
+  it("presents the CV and cover letter as one ready application pack, paginated via Paged.js", async () => {
+    renderPagedPreview.mockImplementation((html, container) => {
+      container.innerHTML = '<iframe title="paged preview"></iframe>';
+      return pagedPreviewHandle(1);
+    });
 
-    renderWorkspace({ onResolveDocumentUrl });
+    renderWorkspace();
 
     expect(screen.getByRole("heading", { name: "Application pack" })).toBeInTheDocument();
     expect(screen.getByText("Role match")).toBeInTheDocument();
     expect(screen.getByText("86%")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Tailored CV" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Cover letter" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tailored CV" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cover letter" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download both PDFs" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Live preview" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Server preview" })).not.toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.getByTitle("Tailored CV preview")).toHaveAttribute(
-        "src",
-        "https://files/cv-pdf",
-      );
-      expect(screen.getByTitle("Cover letter preview")).toHaveAttribute(
-        "src",
-        "https://files/cover-pdf",
-      );
-    });
+    await waitFor(() => expect(renderPagedPreview).toHaveBeenCalled());
+    expect(renderPagedPreview.mock.calls[0]?.[0]).toContain("Ada Lovelace");
+    await waitFor(() => expect(screen.getByText("1 page")).toBeInTheDocument());
+
+    renderPagedPreview.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Cover letter" }));
+
+    await waitFor(() => expect(renderPagedPreview).toHaveBeenCalled());
+    expect(renderPagedPreview.mock.calls[0]?.[0]).toContain(
+      "I would be glad to help Acme ship its product.",
+    );
+  });
+
+  it("zooms the preview page with buttons and with ctrl+wheel", () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    renderWorkspace();
+
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    expect(screen.getByText("110%")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+    expect(screen.getByText("90%")).toBeInTheDocument();
+
+    const scrollArea = screen.getByTestId("preview-scroll-area");
+    fireEvent.wheel(scrollArea, { ctrlKey: true, deltaY: -100 });
+    expect(screen.getByText("105%")).toBeInTheDocument();
+
+    // A plain wheel (no ctrl/cmd) scrolls the page instead of zooming.
+    fireEvent.wheel(scrollArea, { deltaY: 100 });
+    expect(screen.getByText("105%")).toBeInTheDocument();
   });
 
   it("shows every customizable section and updates the complete draft through one action", async () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
     const onUpdate = vi.fn(async () => undefined);
 
     renderWorkspace({ onUpdate });
@@ -148,66 +196,8 @@ describe("ApplicationPackWorkspace", () => {
     );
   });
 
-  it("switches to live content for draft changes and keeps the stale PDF accessible", async () => {
-    renderWorkspace();
-
-    await waitFor(() => expect(screen.getByTitle("Tailored CV preview")).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole("button", { name: /Customize this pack/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Customize Summary" }));
-    fireEvent.click(screen.getByRole("button", { name: "Summary source: Use profile" }));
-
-    expect(screen.queryByTitle("Tailored CV preview")).not.toBeInTheDocument();
-    const livePreview = screen.getByLabelText("Full CV content preview");
-    expect(within(livePreview).getByText("Product engineer.")).toBeInTheDocument();
-    expect(screen.getAllByText("Out of date")).toHaveLength(2);
-    expect(screen.getAllByText("The PDF does not include your unapplied changes.")).toHaveLength(2);
-
-    fireEvent.click(screen.getAllByRole("button", { name: "Rendered PDF" })[0]);
-
-    await waitFor(() => expect(screen.getByTitle("Tailored CV preview")).toBeInTheDocument());
-  });
-
-  it("shows the complete CV content when a legacy pack has DOCX but no PDF preview", () => {
-    const app = createApplication();
-    const onUpdate = vi.fn(async () => undefined);
-    app.processingStatus = "failed";
-    app.generatedDocuments = app.generatedDocuments?.filter(
-      (document) => document.format === "docx",
-    );
-
-    renderWorkspace({ app, onUpdate });
-
-    const preview = screen.getByLabelText("Full CV content preview");
-    expect(within(preview).getByText("Ada Lovelace")).toBeInTheDocument();
-    expect(within(preview).getByText("Profile")).toBeInTheDocument();
-    expect(within(preview).getByText("Tailored product engineer summary.")).toBeInTheDocument();
-    expect(within(preview).getByText("Experience")).toBeInTheDocument();
-    expect(within(preview).getByText("Product Engineer · Acme")).toBeInTheDocument();
-    expect(
-      within(preview).getByText("Built product experiences. Shipped React products."),
-    ).toBeInTheDocument();
-    expect(within(preview).getByText("Skills")).toBeInTheDocument();
-    expect(within(preview).getByText("React")).toBeInTheDocument();
-    expect(within(preview).getByText("Projects")).toBeInTheDocument();
-    expect(within(preview).getByText("Analytical Engine")).toBeInTheDocument();
-    expect(
-      within(preview).getByText("Tailored project evidence. Improved the compiler design."),
-    ).toBeInTheDocument();
-    expect(within(preview).getByText("Education")).toBeInTheDocument();
-    expect(
-      within(preview).getByText(
-        "Relevant computer science coursework. Completed systems research.",
-      ),
-    ).toBeInTheDocument();
-    expect(within(preview).getByText("Certifications")).toBeInTheDocument();
-    expect(within(preview).getByText("AWS Practitioner")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Retry PDF previews" }));
-    expect(onUpdate).toHaveBeenCalledWith(app.documentContent, app.applicationPackPreferences);
-  });
-
   it("blocks generation when the profile is not ready", () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
     renderWorkspace({
       app: {
         ...createApplication(),
@@ -224,16 +214,16 @@ describe("ApplicationPackWorkspace", () => {
 function renderWorkspace({
   app = createApplication(),
   profile = createProfile(),
+  templates = HTML_TEMPLATES,
   onUpdate = vi.fn(async () => undefined),
-  onResolveDocumentUrl = vi.fn(async (documentId: string) => `https://files/${documentId}`),
 }: {
   app?: JobApplication;
   profile?: ApiProfile;
+  templates?: HtmlTemplateDefinition[];
   onUpdate?: (
     content: ApiDocumentContent,
     preferences: ApiApplicationPackPreferences,
   ) => Promise<void>;
-  onResolveDocumentUrl?: (documentId: string) => Promise<string>;
 } = {}) {
   return render(
     <MemoryRouter>
@@ -242,10 +232,9 @@ function renderWorkspace({
         downloadingId={null}
         isUpdating={false}
         onDownload={vi.fn(async () => undefined)}
-        onResolveDocumentUrl={onResolveDocumentUrl}
         onUpdate={onUpdate}
         profile={profile}
-        templates={[]}
+        templates={templates}
       />
     </MemoryRouter>,
   );
@@ -360,15 +349,7 @@ function createApplication(): JobApplication {
     },
     domain: "linkedin.com",
     generatedDocuments: [
-      { createdAt: "Today", format: "docx", id: "cv-docx", kind: "cv", name: "cv.docx" },
       { createdAt: "Today", format: "pdf", id: "cv-pdf", kind: "cv", name: "cv.pdf" },
-      {
-        createdAt: "Today",
-        format: "docx",
-        id: "cover-docx",
-        kind: "cover_letter",
-        name: "cover-letter.docx",
-      },
       {
         createdAt: "Today",
         format: "pdf",

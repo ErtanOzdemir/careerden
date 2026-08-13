@@ -22,10 +22,6 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
     title: "Career profile",
     subtitle: "The foundation for every tailored document.",
   },
-  "/templates": {
-    title: "Document templates",
-    subtitle: "Manage your CV and cover letter templates.",
-  },
   "/settings": {
     title: "Settings",
     subtitle: "Preferences, account, and app updates.",

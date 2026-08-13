@@ -42,7 +42,6 @@ export const apiEnvSchema = z.preprocess(
       OPENAI_API_KEY: z.string().optional(),
       GEMINI_API_KEY: z.string().optional(),
       DEEPSEEK_API_KEY: z.string().optional(),
-      GOTENBERG_URL: z.string().url().default("http://localhost:3002"),
       ...objectStorageEnvShape,
       OPEN_OBSERVE_URL: z.string().url().default("http://localhost:5080"),
       OPEN_OBSERVE_KEY: z.string().min(1),

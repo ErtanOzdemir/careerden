@@ -7,7 +7,6 @@ import {
   CreateManualJobApplicationUseCase,
   ArchiveJobApplicationUseCase,
   RestoreJobApplicationUseCase,
-  DeleteDocumentTemplateUseCase,
   DeleteJobApplicationUseCase,
   GenerateDocumentsUseCase,
   GenerateJobApplicationDocumentsUseCase,
@@ -17,11 +16,7 @@ import {
   UpdateProfileUseCase,
   GetOrCreateCurrentProfileUseCase,
   GetProfileUseCase,
-  ListDocumentTemplatesUseCase,
-  SetDefaultDocumentTemplateUseCase,
-  UpdateDocumentTemplateMappingsUseCase,
-  UpdateDocumentTemplateVariableAliasesUseCase,
-  UploadDocumentTemplateUseCase,
+  PreviewApplicationPackUseCase,
   CountUnreadNotificationsUseCase,
   ListNotificationsUseCase,
   MarkAllNotificationsReadUseCase,
@@ -59,8 +54,6 @@ import {
   ProcessBillingProviderEventUseCase,
 } from "@careerden/application";
 import {
-  DocxtemplaterTemplateRenderer,
-  GotenbergDocxPdfRenderer,
   HtmlTemplateRenderer,
   HttpRemoteImageFetcher,
   PlaywrightPdfRenderer,
@@ -163,15 +156,12 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     secretAccessKey: env.OBJECT_STORAGE_SECRET_ACCESS_KEY,
   });
   const remoteImageFetcher = new HttpRemoteImageFetcher();
-  const docxTemplates = new DocxtemplaterTemplateRenderer();
   const generateDocumentsUseCase = new GenerateDocumentsUseCase(
     new HtmlTemplateRenderer(),
     new PlaywrightPdfRenderer(),
     storage,
     jobApplications,
     profiles,
-    docxTemplates,
-    new GotenbergDocxPdfRenderer({ baseUrl: env.GOTENBERG_URL }),
   );
   const getCurrentProfile = new GetOrCreateCurrentProfileUseCase(profiles);
   const getProfile = new GetProfileUseCase(profiles);
@@ -228,23 +218,6 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       getCurrentProfile,
       getProfile,
       updateProfile: new UpdateProfileUseCase(profiles),
-      listDocumentTemplates: new ListDocumentTemplatesUseCase(profiles),
-      deleteDocumentTemplate: new DeleteDocumentTemplateUseCase(unitOfWork),
-      uploadDocumentTemplate: new UploadDocumentTemplateUseCase(
-        profiles,
-        storage,
-        docxTemplates,
-        unitOfWork,
-      ),
-      updateDocumentTemplateMappings: new UpdateDocumentTemplateMappingsUseCase(
-        profiles,
-        storage,
-        docxTemplates,
-      ),
-      updateDocumentTemplateVariableAliases: new UpdateDocumentTemplateVariableAliasesUseCase(
-        profiles,
-      ),
-      setDefaultDocumentTemplate: new SetDefaultDocumentTemplateUseCase(profiles),
     }),
   );
   app.use(
@@ -309,6 +282,11 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         jobApplications,
         profiles,
         storage,
+      ),
+      previewApplicationPack: new PreviewApplicationPackUseCase(
+        jobApplications,
+        profiles,
+        generateDocumentsUseCase,
       ),
     }),
   );

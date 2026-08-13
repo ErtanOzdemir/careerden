@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   ListChecks,
   UserRound,
-  FileText,
   Settings,
   CircleHelp,
   LogOut,
@@ -19,7 +18,6 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/applications", label: "Applications", icon: ListChecks },
   { to: "/profile", label: "Profile", icon: UserRound },
-  { to: "/templates", label: "Templates", icon: FileText },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

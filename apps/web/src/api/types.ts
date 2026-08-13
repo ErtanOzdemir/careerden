@@ -55,104 +55,6 @@ export interface ApiProfileReadiness {
   warnings: Array<"evidence" | "positioning" | "skills">;
 }
 
-export type ApiDocumentTemplateField =
-  | "certifications"
-  | "company_name"
-  | "cover_letter_content"
-  | "customized_summary"
-  | "education_list"
-  | "email"
-  | "experience_list"
-  | "full_name"
-  | "headline"
-  | "job_description"
-  | "job_location"
-  | "links"
-  | "location"
-  | "missing_skills"
-  | "profession"
-  | "projects"
-  | "recommended_achievements"
-  | "role_title"
-  | "selected_education"
-  | "selected_experiences"
-  | "selected_projects"
-  | "skills"
-  | "strong_skills"
-  | "summary";
-
-export type ApiSelectedExperienceTemplateField =
-  | "company"
-  | "description"
-  | "end_date"
-  | "period"
-  | "start_date"
-  | "title";
-
-export type ApiSelectedEducationTemplateField =
-  | "degree"
-  | "description"
-  | "end_date"
-  | "field"
-  | "institution"
-  | "period"
-  | "start_date";
-
-export type ApiSelectedProjectTemplateField = "description" | "name" | "url";
-
-export interface ApiDocumentTemplateVariableAliases {
-  fields: Partial<
-    Record<
-      Exclude<
-        ApiDocumentTemplateField,
-        "selected_education" | "selected_experiences" | "selected_projects"
-      >,
-      string
-    >
-  >;
-  certificationItems?: Array<{
-    variableName?: string;
-  }>;
-  linkItems?: Array<{
-    variableName?: string;
-  }>;
-  selectedEducation?: {
-    fields: Partial<Record<ApiSelectedEducationTemplateField, string>>;
-    items?: Array<{
-      fields: Partial<Record<ApiSelectedEducationTemplateField, string>>;
-    }>;
-  };
-  selectedExperiences?: {
-    fields: Partial<Record<ApiSelectedExperienceTemplateField, string>>;
-    items?: Array<{
-      fields: Partial<Record<ApiSelectedExperienceTemplateField, string>>;
-    }>;
-  };
-  selectedProjects?: {
-    fields: Partial<Record<ApiSelectedProjectTemplateField, string>>;
-    items?: Array<{
-      fields: Partial<Record<ApiSelectedProjectTemplateField, string>>;
-    }>;
-  };
-}
-
-export interface ApiDocumentTemplate {
-  contentType: string;
-  createdAt: string;
-  fieldMappings: Record<string, ApiDocumentTemplateField>;
-  fileId: string;
-  fileName: string;
-  format: "docx";
-  id: string;
-  isDefault: boolean;
-  kind: "cover_letter" | "cv";
-  placeholders: string[];
-  profileId: string;
-  size: number;
-  updatedAt: string;
-  variableAliases: ApiDocumentTemplateVariableAliases;
-}
-
 export interface ApiJobApplication {
   analysisAttemptId?: string;
   archivedAt?: string;
@@ -373,6 +275,8 @@ export interface ApiProfile {
   followUpRemindersEnabled: boolean;
   certifications: string[];
   createdAt: string;
+  defaultCoverLetterTemplateId?: string;
+  defaultCvTemplateId?: string;
   education: ApiProfileEducation[];
   email: string;
   experience: ApiProfileExperience[];
@@ -396,6 +300,8 @@ export type ApiUpdateProfilePayload = Partial<
     | "autoRunMatchAnalysis"
     | "followUpRemindersEnabled"
     | "certifications"
+    | "defaultCoverLetterTemplateId"
+    | "defaultCvTemplateId"
     | "education"
     | "email"
     | "experience"

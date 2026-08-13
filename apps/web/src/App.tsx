@@ -6,7 +6,6 @@ import AppDetail from "./pages/AppDetail";
 import ProfileManager from "./pages/ProfileManager";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import TemplateManager from "./pages/TemplateManager";
 import Settings from "./pages/Settings";
 import Support from "./pages/Support";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -28,7 +27,6 @@ export default function App() {
           <Route path="/applications/archived" element={<ApplicationsLog archiveMode />} />
           <Route path="/applications/:id" element={<AppDetail />} />
           <Route path="/profile" element={<ProfileManager />} />
-          <Route path="/templates" element={<TemplateManager />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/support" element={<Support />} />
         </Route>

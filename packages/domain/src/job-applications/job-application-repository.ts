@@ -25,7 +25,6 @@ import type {
 } from "./job-application-follow-up.js";
 import type { JobApplicationStatus } from "./workflow-status.js";
 import type { ApplicationPackPreferences } from "./application-pack.js";
-import type { DocumentTemplateKind } from "../documents/document-template.js";
 
 export interface AttachGeneratedDocumentInput {
   jobApplicationId: string;
@@ -130,11 +129,6 @@ export interface JobApplicationRepository {
     id: string,
     preferences: ApplicationPackPreferences,
   ): Promise<JobApplication>;
-  clearApplicationPackTemplateSelection(
-    profileId: string,
-    kind: DocumentTemplateKind,
-    templateId: string,
-  ): Promise<string[]>;
   saveScrapeBundle(id: string, scrape: ScrapeBundle): Promise<void>;
   getScrapeBundle(id: string): Promise<ScrapeBundle | null>;
   getCompanyLogoFileId(id: string): Promise<string | null>;

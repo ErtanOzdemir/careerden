@@ -59,6 +59,16 @@ export interface RequestApplicationPackGenerationInput {
   preferences?: ApiApplicationPackPreferences;
 }
 
+export interface ApiDocumentPreview {
+  templateId: string;
+  html: string;
+}
+
+export interface ApiApplicationPackPreview {
+  cv: ApiDocumentPreview;
+  coverLetter: ApiDocumentPreview;
+}
+
 export interface CreateJobApplicationFromScrapeInput {
   metadata?: Record<string, unknown>;
   scrapeBundle: ApiScrapeBundle;
@@ -287,5 +297,15 @@ export const jobApplicationsApi = {
     return requestJson<{ url: string }>(
       `/job-applications/${jobApplicationId}/documents/${document.id}/download`,
     );
+  },
+
+  previewDocuments(
+    id: string,
+    input: RequestApplicationPackGenerationInput,
+  ): Promise<ApiApplicationPackPreview> {
+    return requestJson<ApiApplicationPackPreview>(`/job-applications/${id}/document-preview`, {
+      method: "POST",
+      body: input,
+    });
   },
 };

@@ -44,11 +44,10 @@ Import LinkedIn jobs or paste any posting manually. Match your profile. Create t
   links, and analysis/reminder preferences.
 - Analyze each role against the profile with OpenAI, Gemini, or DeepSeek and review
   matched, partial, and missing requirements.
-- Edit AI-assisted CV and cover-letter content before generating files.
-- Upload DOCX CV templates, map detected variables to profile/job fields, configure
-  aliases, and select a default template.
-- Generate custom DOCX CV and cover-letter files with PDF previews, or use the default
-  PDF layouts, then download them through signed S3-compatible storage URLs.
+- Edit AI-assisted CV and cover-letter content before generating files, with a live
+  on-screen HTML preview rendered from a predefined template as you edit.
+- Generate CV and cover-letter PDFs from the same predefined HTML templates, then
+  download them through signed S3-compatible storage URLs.
 - Receive in-app follow-up notifications and, when the desktop window is unfocused,
   native operating-system alerts with optional email delivery through local SMTP or
   production Resend.
@@ -113,14 +112,9 @@ emails should not be dispatched.
 | PostgreSQL     | `localhost:5432`               | Application and authentication state |
 | Redis          | `localhost:6380`               | BullMQ and real-time change delivery |
 | MailHog        | <http://localhost:8025>        | Development email inbox              |
-| Gotenberg      | <http://localhost:3002>        | Containerized DOCX-to-PDF conversion |
 | RustFS API     | <http://localhost:9000>        | S3-compatible object storage         |
 | RustFS console | <http://localhost:9001>        | Object-storage administration        |
 | OpenObserve    | <http://localhost:5080>        | OpenTelemetry trace collection       |
-
-Gotenberg is bound to the host loopback interface for local development. If an API or
-documents-worker runtime is moved into the same Compose network, set `GOTENBERG_URL` to
-`http://gotenberg:3000` for that container.
 
 The Vite proxy also exposes the health check at <http://localhost:5173/api/health>.
 
@@ -136,7 +130,7 @@ Authenticated API -> PostgreSQL + transactional outbox
            |
            +-> reserve credit -> BullMQ -> LLM worker -> validated match analysis
            |
-           +-> BullMQ -> documents worker -> DOCX/PDF rendering -> S3-compatible storage
+           +-> BullMQ -> documents worker -> HTML template/PDF rendering -> S3-compatible storage
            |
            +-> follow-up schedule -> notifications worker -> in-app/optional email reminder
                                                         |
@@ -238,8 +232,8 @@ ownership checks and business workflows live in application use cases.
 | Queues and realtime | Redis 7 and BullMQ 5                             |
 | AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek    |
 | Scraping            | Public guest HTTP responses and HTML parsing     |
-| PDF                 | Playwright 1.60 and Gotenberg                    |
-| Documents           | HTML templates, Docxtemplater, Gotenberg         |
+| PDF                 | Playwright 1.60                                  |
+| Documents           | Predefined HTML templates                        |
 | Storage             | AWS S3 SDK with RustFS locally and Cloudflare R2 |
 | Observability       | OpenTelemetry and OpenObserve                    |
 | Testing             | Vitest 2 and Testing Library                     |
@@ -303,7 +297,6 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 | `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs                 | `1`                     |
 | `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port                | `3103`                  |
 | `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through the active provider | `false`                 |
-| `GOTENBERG_URL`                    | DOCX-to-PDF conversion service URL               | `http://localhost:3002` |
 
 ### Email, Storage, Scraping, and Tracing
 
@@ -480,22 +473,18 @@ Standalone Bullstudio can retry/remove jobs and pause/resume queues, so treat ac
 privileged operations access rather than read-only monitoring. Because the credentials are
 stored in `compose.yaml`, anyone with repository access can read them.
 
-### Profiles and Templates
+### Profiles
 
-| Method         | Path                                                            | Description                        |
-| -------------- | --------------------------------------------------------------- | ---------------------------------- |
-| `GET`, `PATCH` | `/profiles/me`                                                  | Read or update the current profile |
-| `POST`         | `/profiles`                                                     | Create a profile                   |
-| `GET`, `PATCH` | `/profiles/:id`                                                 | Read or update an owned profile    |
-| `GET`, `POST`  | `/profiles/:id/document-templates`                              | List or upload DOCX templates      |
-| `PATCH`        | `/profiles/:id/document-templates/:templateId/mappings`         | Update placeholder field mappings  |
-| `PATCH`        | `/profiles/:id/document-templates/:templateId/variable-aliases` | Update template aliases            |
-| `PATCH`        | `/profiles/:id/document-templates/:templateId/default`          | Select the default template        |
+| Method         | Path            | Description                         |
+| -------------- | --------------- | ------------------------------------ |
+| `GET`, `PATCH` | `/profiles/me`  | Read or update the current profile   |
+| `POST`         | `/profiles`     | Create a profile                     |
+| `GET`, `PATCH` | `/profiles/:id` | Read or update an owned profile      |
 
-DOCX uploads use `multipart/form-data`, require a `file` field and a `kind` of `cv` or
-`cover_letter`, and are limited to 5 MB. The filename must end in `.docx`, and the upload
-must use the official DOCX content type. Before parsing, the API rejects encrypted, ZIP64,
-duplicate-path, path-traversal, structurally incomplete, or excessively expanded archives.
+CV and cover-letter documents are always rendered from the predefined HTML templates in
+`@careerden/contracts` (`html-template-registry.ts`); there is no upload step. A profile can
+set `defaultCvTemplateId`/`defaultCoverLetterTemplateId` through `PATCH /profiles/:id`, and a
+job application can override either per application via `applicationPackPreferences`.
 
 ### Job Applications
 
@@ -520,6 +509,7 @@ duplicate-path, path-traversal, structurally incomplete, or excessively expanded
 | `PUT`                    | `/job-applications/:id/document-content`               | Save editable document content                     |
 | `POST`                   | `/job-applications/:id/documents/generate`             | Generate CV and cover-letter files                 |
 | `GET`                    | `/job-applications/:id/documents/:documentId/download` | Create a signed download URL                       |
+| `POST`                   | `/job-applications/:id/document-preview`               | Render on-screen HTML preview from draft content    |
 
 Listing requires `profileId`. Supported filters include processing/application status,
 archive state, company, role, role type, priority, tag, date range, and free-text search.
@@ -567,7 +557,7 @@ The desktop scraping worker additionally uses these authenticated endpoints:
 | -------------------------------------------------------------- | ------------------------------------------------------- |
 | `pnpm dev`                                                     | Start every workspace development target through Turbo  |
 | `pnpm dev:desktop`                                             | Start API, web, all workers, and Electron with dev URLs |
-| `pnpm dev:services`                                            | Start PostgreSQL, Redis, RustFS, and Gotenberg          |
+| `pnpm dev:services`                                            | Start PostgreSQL, Redis, and RustFS                     |
 | `pnpm dev:api`                                                 | Start only the API                                      |
 | `pnpm dev:llm-worker`                                          | Start only the LLM worker                               |
 | `pnpm dev:documents-worker`                                    | Start only the documents worker                         |

@@ -47,6 +47,8 @@ export interface UserProfile {
   education: ProfileEducation[];
   certifications: string[];
   projects: ProfileProject[];
+  defaultCvTemplateId?: string;
+  defaultCoverLetterTemplateId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +65,8 @@ export type CreateUserProfileInput = Omit<
   | "certifications"
   | "projects"
   | "links"
+  | "defaultCvTemplateId"
+  | "defaultCoverLetterTemplateId"
 > &
   Partial<
     Pick<
@@ -74,6 +78,8 @@ export type CreateUserProfileInput = Omit<
       | "certifications"
       | "projects"
       | "links"
+      | "defaultCvTemplateId"
+      | "defaultCoverLetterTemplateId"
     >
   >;
 

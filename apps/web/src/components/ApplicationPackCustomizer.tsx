@@ -19,11 +19,10 @@ import {
 import type {
   ApiApplicationPackPreferences,
   ApiDocumentContent,
-  ApiDocumentTemplate,
   ApiProfile,
   RichDocument,
 } from "../api/types.js";
-import { hasValidCoverLetterTemplateMapping } from "../lib/document-template.js";
+import type { HtmlTemplateDefinition } from "@careerden/contracts";
 import { mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
 import { cn } from "../lib/utils.js";
 import RichTextEditor, { RichTextViewer } from "./RichTextEditor.js";
@@ -33,7 +32,7 @@ interface ApplicationPackCustomizerProps {
   content: ApiDocumentContent;
   preferences: ApiApplicationPackPreferences;
   profile?: ApiProfile;
-  templates: ApiDocumentTemplate[];
+  templates: HtmlTemplateDefinition[];
   onContentChange: (content: ApiDocumentContent) => void;
   onPreferencesChange: (preferences: ApiApplicationPackPreferences) => void;
 }
@@ -768,7 +767,7 @@ function PreferenceFields({
 }: {
   onChange: (preferences: ApiApplicationPackPreferences) => void;
   preferences: ApiApplicationPackPreferences;
-  templates: ApiDocumentTemplate[];
+  templates: HtmlTemplateDefinition[];
 }) {
   const cvTemplates = templates.filter((template) => template.kind === "cv");
   const coverTemplates = templates.filter((template) => template.kind === "cover_letter");
@@ -869,7 +868,7 @@ function TemplateSelect({
   kind: string;
   onChange: (templateId: string | undefined) => void;
   selectedId?: string;
-  templates: ApiDocumentTemplate[];
+  templates: HtmlTemplateDefinition[];
 }) {
   return (
     <label className="text-xs font-medium text-muted-foreground">
@@ -882,14 +881,8 @@ function TemplateSelect({
       >
         <option value="">Default layout</option>
         {templates.map((template) => (
-          <option
-            disabled={
-              template.kind === "cover_letter" && !hasValidCoverLetterTemplateMapping(template)
-            }
-            key={template.id}
-            value={template.id}
-          >
-            {template.fileName}
+          <option key={template.id} value={template.id}>
+            {template.name}
           </option>
         ))}
       </select>

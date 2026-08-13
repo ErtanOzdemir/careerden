@@ -1,13 +1,8 @@
-import type {
-  ApplicationPackPreferences,
-  DocumentContent,
-  DocumentTemplateKind,
-  PersistenceUnitOfWork,
-  UserProfileRepository,
-} from "@careerden/domain";
+import type { ApplicationPackPreferences, DocumentContent, PersistenceUnitOfWork } from "@careerden/domain";
 import { normalizeApplicationPackPreferences } from "@careerden/domain";
+import type { DocumentTemplateKind } from "@careerden/contracts";
+import { getHtmlTemplateById } from "@careerden/contracts";
 import { ApplicationError } from "../application-error.js";
-import { hasValidCoverLetterContentMapping } from "../profiles/document-template-mapping.js";
 import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";
 import { getActiveAccessibleJobApplication } from "./job-application-access.js";
 
@@ -49,7 +44,7 @@ export class RequestApplicationPackGenerationUseCase {
         const preferences = normalizeApplicationPackPreferences(
           input.preferences ?? jobApplication.applicationPackPreferences,
         );
-        await validateApplicationPackPreferences(profiles, profile.id, preferences);
+        validateApplicationPackPreferences(preferences);
 
         if (input.documentContent) {
           await jobApplications.saveDocumentContent(jobApplication.id, input.documentContent);
@@ -80,34 +75,17 @@ export class RequestApplicationPackGenerationUseCase {
   }
 }
 
-export async function validateApplicationPackPreferences(
-  profiles: Pick<UserProfileRepository, "findDocumentTemplateById">,
-  profileId: string,
-  preferences: ApplicationPackPreferences,
-): Promise<void> {
-  await Promise.all([
-    validateTemplate(profiles, profileId, preferences.cvTemplateId, "cv"),
-    validateTemplate(profiles, profileId, preferences.coverLetterTemplateId, "cover_letter"),
-  ]);
+export function validateApplicationPackPreferences(preferences: ApplicationPackPreferences): void {
+  validateTemplate(preferences.cvTemplateId, "cv");
+  validateTemplate(preferences.coverLetterTemplateId, "cover_letter");
 }
 
-async function validateTemplate(
-  profiles: Pick<UserProfileRepository, "findDocumentTemplateById">,
-  profileId: string,
-  templateId: string | undefined,
-  kind: DocumentTemplateKind,
-): Promise<void> {
+function validateTemplate(templateId: string | undefined, kind: DocumentTemplateKind): void {
   if (!templateId) return;
 
-  const template = await profiles.findDocumentTemplateById(templateId);
-  if (!template || template.profileId !== profileId || template.kind !== kind) {
+  const template = getHtmlTemplateById(templateId);
+  if (!template || template.kind !== kind) {
     throw new ApplicationError("validation", `Selected ${templateLabel(kind)} is not available`);
-  }
-  if (kind === "cover_letter" && !hasValidCoverLetterContentMapping(template)) {
-    throw new ApplicationError(
-      "validation",
-      "Selected cover letter template needs a valid content mapping",
-    );
   }
 }
 

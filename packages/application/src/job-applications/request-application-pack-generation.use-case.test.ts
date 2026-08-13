@@ -64,17 +64,6 @@ describe("RequestApplicationPackGenerationUseCase", () => {
       experience: [],
     });
     Object.assign(profiles, { findUserIdByProfileId: vi.fn(async () => "user-1") });
-    const coverTemplate = await profiles.createDocumentTemplate({
-      profileId: profile.id,
-      kind: "cover_letter",
-      format: "docx",
-      fileId: "templates/cover.docx",
-      fileName: "cover.docx",
-      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      size: 10,
-      placeholders: ["body"],
-      fieldMappings: { body: "cover_letter_content" },
-    });
     const jobApplications = new InMemoryJobApplicationRepository();
     const jobApplication = await jobApplications.create({ profileId: profile.id });
     await jobApplications.saveMatchAnalysis(jobApplication.id, analysis);
@@ -88,7 +77,8 @@ describe("RequestApplicationPackGenerationUseCase", () => {
         preferences: {
           language: "auto",
           tone: "professional",
-          cvTemplateId: coverTemplate.id,
+          // A valid registry id, but for the wrong document kind.
+          cvTemplateId: "cover-letter.default",
         },
       }),
     ).rejects.toMatchObject({ code: "validation" });

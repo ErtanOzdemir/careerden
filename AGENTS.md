@@ -23,7 +23,8 @@ review or download.
   migrations
 - Scraping: public LinkedIn guest HTTP responses and HTML parsing
 - AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
-- Document generation: HTML templates, Docxtemplater, Gotenberg/Playwright PDF rendering
+- Document generation: predefined HTML templates rendered to on-screen preview and PDF via
+  Playwright
 - Storage: S3-compatible object storage via RustFS locally and Cloudflare R2 in production
   for generated files
 - Email: SMTP through MailHog locally and the Resend HTTP API in production

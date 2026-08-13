@@ -1,4 +1,4 @@
-import type { RichBlock, RichDocument, RichTextAlignment, RichTextNode } from "@careerden/domain";
+import type { RichBlock, RichDocument, RichTextAlignment, RichTextNode } from "./rich-document.js";
 
 export function isRichDocument(value: unknown): value is RichDocument {
   return (

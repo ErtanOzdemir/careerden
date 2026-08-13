@@ -8,8 +8,6 @@ import {
 import type { ApplicationPackGenerationQueuePayload } from "@careerden/domain";
 import {
   BullMqApplicationPackGenerationQueue,
-  DocxtemplaterTemplateRenderer,
-  GotenbergDocxPdfRenderer,
   HtmlTemplateRenderer,
   PlaywrightPdfRenderer,
   PostgresApplicationPackGenerationOutboxDispatcher,
@@ -67,8 +65,6 @@ export async function createDocumentsWorkerRuntime(
       storage,
       jobApplications,
       profiles,
-      new DocxtemplaterTemplateRenderer(),
-      new GotenbergDocxPdfRenderer({ baseUrl: env.GOTENBERG_URL }),
     ),
     unitOfWork,
   );

@@ -35,6 +35,7 @@ import type {
   UpdateJobApplicationFollowUpUseCase,
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
+  PreviewApplicationPackUseCase,
 } from "@careerden/application";
 import type { JobApplicationChangeSubscriber } from "@careerden/domain";
 import {
@@ -97,6 +98,7 @@ export function createJobApplicationRouter(dependencies: {
   updateJobApplicationFollowUp: UpdateJobApplicationFollowUpUseCase;
   deleteJobApplicationFollowUp: DeleteJobApplicationFollowUpUseCase;
   getGeneratedDocumentDownloadUrl: GetGeneratedDocumentDownloadUrlUseCase;
+  previewApplicationPack: PreviewApplicationPackUseCase;
 }): ExpressRouter {
   const router = Router();
 
@@ -725,6 +727,24 @@ export function createJobApplicationRouter(dependencies: {
       next(error);
     }
   });
+
+  router.post(
+    "/:id/document-preview",
+    validateBody(requestApplicationPackGenerationSchema),
+    async (request, response, next) => {
+      try {
+        const preview = await dependencies.previewApplicationPack.execute(
+          request.params.id,
+          currentUser(request).id,
+          request.body,
+        );
+
+        response.json(preview);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   return router;
 }

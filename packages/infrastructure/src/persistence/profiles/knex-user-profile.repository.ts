@@ -1,16 +1,7 @@
 import type { Knex } from "knex";
-import type {
-  CreateDocumentTemplateInput,
-  CreateUserProfileInput,
-  DocumentTemplate,
-  DocumentTemplateField,
-  DocumentTemplateVariableAliases,
-  UpdateUserProfileInput,
-  UserProfile,
-  UserProfileRepository,
-} from "@careerden/domain";
+import type { CreateUserProfileInput, UpdateUserProfileInput, UserProfile, UserProfileRepository } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
-import { toDocumentTemplate, toUserProfile } from "../mappers.js";
+import { toUserProfile } from "../mappers.js";
 
 export class KnexUserProfileRepository implements UserProfileRepository {
   constructor(private readonly db: Knex) {}
@@ -36,6 +27,8 @@ export class KnexUserProfileRepository implements UserProfileRepository {
         education: JSON.stringify(input.education ?? []),
         certifications: JSON.stringify(input.certifications ?? []),
         projects: JSON.stringify(input.projects ?? []),
+        default_cv_template_id: input.defaultCvTemplateId ?? null,
+        default_cover_letter_template_id: input.defaultCoverLetterTemplateId ?? null,
       })
       .returning("*");
 
@@ -78,112 +71,15 @@ export class KnexUserProfileRepository implements UserProfileRepository {
       patch.certifications = JSON.stringify(input.certifications);
     }
     if (input.projects !== undefined) patch.projects = JSON.stringify(input.projects);
+    if (input.defaultCvTemplateId !== undefined) {
+      patch.default_cv_template_id = input.defaultCvTemplateId ?? null;
+    }
+    if (input.defaultCoverLetterTemplateId !== undefined) {
+      patch.default_cover_letter_template_id = input.defaultCoverLetterTemplateId ?? null;
+    }
 
     const [row] = await this.db("user_profiles").where({ id }).update(patch).returning("*");
 
     return row ? toUserProfile(row) : null;
-  }
-
-  async createDocumentTemplate(input: CreateDocumentTemplateInput): Promise<DocumentTemplate> {
-    const id = randomUUID();
-    return this.db.transaction(async (transaction) => {
-      if (input.isDefault) {
-        await transaction("document_templates")
-          .where({ profile_id: input.profileId, kind: input.kind })
-          .update({ is_default: false, updated_at: transaction.fn.now() });
-      }
-      const [row] = await transaction("document_templates")
-        .insert({
-          id,
-          profile_id: input.profileId,
-          kind: input.kind,
-          format: input.format,
-          file_id: input.fileId,
-          file_name: input.fileName,
-          content_type: input.contentType,
-          size: input.size,
-          placeholders: JSON.stringify(input.placeholders),
-          field_mappings: JSON.stringify(input.fieldMappings ?? {}),
-          variable_aliases: JSON.stringify(input.variableAliases ?? { fields: {} }),
-          is_default: input.isDefault ?? false,
-        })
-        .returning("*");
-      return toDocumentTemplate(row);
-    });
-  }
-
-  async findDocumentTemplateById(id: string): Promise<DocumentTemplate | null> {
-    const row = await this.db("document_templates").where({ id }).first();
-    return row ? toDocumentTemplate(row) : null;
-  }
-
-  async findDefaultDocumentTemplate(
-    profileId: string,
-    kind: DocumentTemplate["kind"],
-  ): Promise<DocumentTemplate | null> {
-    const row = await this.db("document_templates")
-      .where({ profile_id: profileId, kind, is_default: true })
-      .first();
-    return row ? toDocumentTemplate(row) : null;
-  }
-
-  async listDocumentTemplates(profileId: string): Promise<DocumentTemplate[]> {
-    const rows = await this.db("document_templates")
-      .where({ profile_id: profileId })
-      .orderBy("created_at", "desc");
-
-    return rows.map(toDocumentTemplate);
-  }
-
-  async deleteDocumentTemplate(id: string): Promise<boolean> {
-    return (await this.db("document_templates").where({ id }).delete()) > 0;
-  }
-
-  async setDefaultDocumentTemplate(
-    profileId: string,
-    id: string,
-  ): Promise<DocumentTemplate | null> {
-    return this.db.transaction(async (transaction) => {
-      const existing = await transaction("document_templates").where({ id }).forUpdate().first();
-      if (!existing || existing.profile_id !== profileId) return null;
-      await transaction("document_templates")
-        .where({ profile_id: profileId, kind: existing.kind })
-        .update({ is_default: false, updated_at: transaction.fn.now() });
-      const [row] = await transaction("document_templates")
-        .where({ id })
-        .update({ is_default: true, updated_at: transaction.fn.now() })
-        .returning("*");
-      return row ? toDocumentTemplate(row) : null;
-    });
-  }
-
-  async updateDocumentTemplateMappings(
-    id: string,
-    fieldMappings: Record<string, DocumentTemplateField>,
-  ): Promise<DocumentTemplate | null> {
-    const [row] = await this.db("document_templates")
-      .where({ id })
-      .update({
-        field_mappings: JSON.stringify(fieldMappings),
-        updated_at: this.db.fn.now(),
-      })
-      .returning("*");
-
-    return row ? toDocumentTemplate(row) : null;
-  }
-
-  async updateDocumentTemplateVariableAliases(
-    id: string,
-    variableAliases: DocumentTemplateVariableAliases,
-  ): Promise<DocumentTemplate | null> {
-    const [row] = await this.db("document_templates")
-      .where({ id })
-      .update({
-        variable_aliases: JSON.stringify(variableAliases),
-        updated_at: this.db.fn.now(),
-      })
-      .returning("*");
-
-    return row ? toDocumentTemplate(row) : null;
   }
 }

@@ -187,7 +187,7 @@ jobs:
               if (metadata.includes("-universal.")) {
                 throw new Error("Updater metadata unexpectedly references a universal macOS artifact");
               }
-              NODE
+          NODE
 
               if compgen -G "apps/desktop/release/*-universal.*" > /dev/null; then
                 echo "::error::Universal macOS artifacts must not be generated"

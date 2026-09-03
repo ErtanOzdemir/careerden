@@ -23,9 +23,8 @@ import type {
   RichDocument,
 } from "../api/types.js";
 import type { HtmlTemplateDefinition } from "@careerden/contracts";
-import { mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
 import { cn } from "../lib/utils.js";
-import RichTextEditor, { RichTextViewer } from "./RichTextEditor.js";
+import RichTextEditor from "./RichTextEditor.js";
 import { buttonVariants } from "./ui/button.js";
 
 interface ApplicationPackCustomizerProps {
@@ -37,8 +36,7 @@ interface ApplicationPackCustomizerProps {
   onPreferencesChange: (preferences: ApiApplicationPackPreferences) => void;
 }
 
-type SelectionSource = "ai" | "original";
-type EnhancementSection = "education" | "experience" | "projects";
+export type EnhancementSection = "education" | "experience" | "projects";
 
 const emptyDocument: RichDocument = { version: 1, blocks: [] };
 
@@ -75,9 +73,6 @@ export function ApplicationPackCustomizer({
       ),
     [content.projectEnhancements, profile?.projects.length],
   );
-  const originalSummary =
-    profile?.summaryRichText ??
-    (profile?.summary ? richDocumentFromText(profile.summary) : undefined);
 
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-card">
@@ -94,7 +89,7 @@ export function ApplicationPackCustomizer({
           <span>
             <span className="block text-sm font-semibold text-foreground">Customize this pack</span>
             <span className="block text-xs text-muted-foreground">
-              Compare profile content, edit AI suggestions, and choose what appears
+              Edit your CV content directly, or apply a tip from the left panel
             </span>
           </span>
         </span>
@@ -114,25 +109,11 @@ export function ApplicationPackCustomizer({
           <ProfileIdentity profile={profile} />
 
           <div className="space-y-3">
-            <CustomizationSection
-              countLabel={sourceLabel(content.selections.customizedSummary)}
-              icon={<FileText className="size-4" />}
-              title="Summary"
-            >
-              <ComparisonRichTextField
-                aiDocument={content.customizedSummary}
-                aiLabel="AI-tailored summary"
-                editorLabel="Edit AI CV summary"
-                originalDocument={originalSummary}
-                originalLabel="Profile summary"
-                selection={selectionOrAi(content.selections.customizedSummary)}
-                selectionLabel="Summary source"
-                onAiChange={(customizedSummary) =>
-                  onContentChange({ ...content, customizedSummary })
-                }
-                onSelectionChange={(selection) =>
-                  onContentChange(updateTopLevelSelection(content, "customizedSummary", selection))
-                }
+            <CustomizationSection icon={<FileText className="size-4" />} title="Summary">
+              <RichTextEditor
+                ariaLabel="Edit CV summary"
+                onChange={(customizedSummary) => onContentChange({ ...content, customizedSummary })}
+                value={content.customizedSummary}
               />
             </CustomizationSection>
 
@@ -148,12 +129,6 @@ export function ApplicationPackCustomizer({
                     const enhancement = content.experienceEnhancements.find(
                       (item) => item.experienceIndex === index,
                     );
-                    const selection = content.selections.experience[String(index)];
-                    const originalDescription =
-                      experience?.descriptionRichText ??
-                      (experience?.description
-                        ? richDocumentFromText(experience.description)
-                        : undefined);
 
                     return (
                       <ContentItemCard
@@ -165,56 +140,33 @@ export function ApplicationPackCustomizer({
                             : `Experience ${index + 1}`
                         }
                       >
-                        <ComparisonRichTextField
-                          aiDocument={enhancement?.description}
-                          aiLabel="AI-tailored description"
-                          editorLabel={`Edit AI experience ${index + 1} description`}
-                          originalDocument={originalDescription}
-                          originalLabel="Profile description"
-                          selection={selectionOrAi(selection?.description)}
-                          selectionLabel={`Experience ${index + 1} description source`}
-                          onAiChange={(description) =>
+                        <RichTextEditor
+                          ariaLabel={`Edit experience ${index + 1} description`}
+                          onChange={(description) =>
                             onContentChange(
-                              updateEnhancementDescription(
-                                content,
-                                "experience",
-                                index,
-                                description,
-                              ),
+                              updateEnhancementDescription(content, "experience", index, description),
                             )
                           }
-                          onSelectionChange={(source) =>
-                            onContentChange(
-                              updateItemSelection(content, "experience", index, source),
-                            )
-                          }
+                          value={enhancement?.description ?? emptyDocument}
                         />
                       </ContentItemCard>
                     );
                   })}
                 </div>
               ) : (
-                <EmptyState message="No experience is available in the profile or AI draft." />
+                <EmptyState message="No experience is available in the profile." />
               )}
             </CustomizationSection>
 
             <CustomizationSection
-              countLabel={formatItemCount(content.skillSuggestions.length, "suggestion")}
+              countLabel={formatItemCount(content.skillSuggestions.length, "skill")}
               icon={<Brain className="size-4" />}
               title="Skills"
             >
-              <ListComparison
-                aiLabel="AI-tailored skills"
-                aiValues={content.skillSuggestions}
+              <TagEditor
                 itemName="skill"
-                originalLabel="Profile skills"
-                originalValues={profile?.skills ?? []}
-                selection={selectionOrAi(content.selections.skills)}
-                selectionLabel="Skills source"
-                onAiChange={(skillSuggestions) => onContentChange({ ...content, skillSuggestions })}
-                onSelectionChange={(selection) =>
-                  onContentChange(updateTopLevelSelection(content, "skills", selection))
-                }
+                onChange={(skillSuggestions) => onContentChange({ ...content, skillSuggestions })}
+                values={content.skillSuggestions}
               />
             </CustomizationSection>
 
@@ -230,13 +182,7 @@ export function ApplicationPackCustomizer({
                     const enhancement = content.educationEnhancements.find(
                       (item) => item.educationIndex === index,
                     );
-                    const selection = content.selections.education[String(index)];
                     const degree = [education?.degree, education?.field].filter(Boolean).join(", ");
-                    const originalDescription =
-                      education?.descriptionRichText ??
-                      (education?.description
-                        ? richDocumentFromText(education.description)
-                        : undefined);
 
                     return (
                       <ContentItemCard
@@ -246,36 +192,21 @@ export function ApplicationPackCustomizer({
                           .join(" · ")}
                         title={education?.institution ?? `Education ${index + 1}`}
                       >
-                        <ComparisonRichTextField
-                          aiDocument={enhancement?.description}
-                          aiLabel="AI-tailored details"
-                          editorLabel={`Edit AI education ${index + 1} description`}
-                          originalDocument={originalDescription}
-                          originalLabel="Profile description"
-                          selection={selectionOrAi(selection?.description)}
-                          selectionLabel={`Education ${index + 1} description source`}
-                          onAiChange={(description) =>
+                        <RichTextEditor
+                          ariaLabel={`Edit education ${index + 1} description`}
+                          onChange={(description) =>
                             onContentChange(
-                              updateEnhancementDescription(
-                                content,
-                                "education",
-                                index,
-                                description,
-                              ),
+                              updateEnhancementDescription(content, "education", index, description),
                             )
                           }
-                          onSelectionChange={(source) =>
-                            onContentChange(
-                              updateItemSelection(content, "education", index, source),
-                            )
-                          }
+                          value={enhancement?.description ?? emptyDocument}
                         />
                       </ContentItemCard>
                     );
                   })}
                 </div>
               ) : (
-                <EmptyState message="No education is available in the profile or AI draft." />
+                <EmptyState message="No education is available in the profile." />
               )}
             </CustomizationSection>
 
@@ -291,14 +222,6 @@ export function ApplicationPackCustomizer({
                     const enhancement = content.projectEnhancements.find(
                       (item) => item.projectIndex === index,
                     );
-                    const selection = content.selections.projects[String(index)];
-                    const originalDescription = mergeRichDocumentsAsProse(
-                      project?.descriptionRichText ??
-                        (project?.description
-                          ? richDocumentFromText(project.description)
-                          : undefined),
-                      ...(project?.achievements ?? []).map(richDocumentFromText),
-                    );
 
                     return (
                       <ContentItemCard
@@ -308,51 +231,35 @@ export function ApplicationPackCustomizer({
                           .join(" · ")}
                         title={project?.name ?? `Project ${index + 1}`}
                       >
-                        <ComparisonRichTextField
-                          aiDocument={enhancement?.description}
-                          aiLabel="AI-tailored description"
-                          editorLabel={`Edit AI project ${index + 1} description`}
-                          originalDocument={originalDescription}
-                          originalLabel="Profile description"
-                          selection={selectionOrAi(selection?.description)}
-                          selectionLabel={`Project ${index + 1} description source`}
-                          onAiChange={(description) =>
+                        <RichTextEditor
+                          ariaLabel={`Edit project ${index + 1} description`}
+                          onChange={(description) =>
                             onContentChange(
                               updateEnhancementDescription(content, "projects", index, description),
                             )
                           }
-                          onSelectionChange={(source) =>
-                            onContentChange(updateItemSelection(content, "projects", index, source))
-                          }
+                          value={enhancement?.description ?? emptyDocument}
                         />
                       </ContentItemCard>
                     );
                   })}
                 </div>
               ) : (
-                <EmptyState message="No projects are available in the profile or AI draft." />
+                <EmptyState message="No projects are available in the profile." />
               )}
             </CustomizationSection>
 
             <CustomizationSection
-              countLabel={formatItemCount(content.certificationSuggestions.length, "suggestion")}
+              countLabel={formatItemCount(content.certificationSuggestions.length, "certification")}
               icon={<BadgeCheck className="size-4" />}
               title="Certifications"
             >
-              <ListComparison
-                aiLabel="AI-tailored certifications"
-                aiValues={content.certificationSuggestions}
+              <TagEditor
                 itemName="certification"
-                originalLabel="Profile certifications"
-                originalValues={profile?.certifications ?? []}
-                selection={selectionOrAi(content.selections.certifications)}
-                selectionLabel="Certifications source"
-                onAiChange={(certificationSuggestions) =>
+                onChange={(certificationSuggestions) =>
                   onContentChange({ ...content, certificationSuggestions })
                 }
-                onSelectionChange={(selection) =>
-                  onContentChange(updateTopLevelSelection(content, "certifications", selection))
-                }
+                values={content.certificationSuggestions}
               />
             </CustomizationSection>
 
@@ -361,18 +268,11 @@ export function ApplicationPackCustomizer({
               icon={<Mail className="size-4" />}
               title="Cover Letter"
             >
-              <div>
-                <p className="mb-2 text-xs text-muted-foreground">
-                  This document has no profile-original version. Edit the generated draft directly.
-                </p>
-                <RichTextEditor
-                  ariaLabel="Edit cover letter"
-                  value={content.coverLetterContent ?? emptyDocument}
-                  onChange={(coverLetterContent) =>
-                    onContentChange({ ...content, coverLetterContent })
-                  }
-                />
-              </div>
+              <RichTextEditor
+                ariaLabel="Edit cover letter"
+                value={content.coverLetterContent ?? emptyDocument}
+                onChange={(coverLetterContent) => onContentChange({ ...content, coverLetterContent })}
+              />
             </CustomizationSection>
           </div>
         </div>
@@ -388,7 +288,7 @@ function CustomizationSection({
   title,
 }: {
   children: ReactNode;
-  countLabel: string;
+  countLabel?: string;
   icon: ReactNode;
   title: string;
 }) {
@@ -408,9 +308,11 @@ function CustomizationSection({
           {title}
         </span>
         <span className="flex items-center gap-2">
-          <span className="rounded-full bg-muted px-2 py-1 text-[0.7rem] font-medium text-muted-foreground">
-            {countLabel}
-          </span>
+          {countLabel && (
+            <span className="rounded-full bg-muted px-2 py-1 text-[0.7rem] font-medium text-muted-foreground">
+              {countLabel}
+            </span>
+          )}
           <ChevronDown
             className={cn(
               "size-4 text-muted-foreground transition-transform",
@@ -446,112 +348,6 @@ function ProfileIdentity({ profile }: { profile?: ApiProfile }) {
       <Link className={buttonVariants({ size: "sm", variant: "outline" })} to="/profile">
         Edit profile
       </Link>
-    </div>
-  );
-}
-
-function ComparisonRichTextField({
-  aiDocument,
-  aiLabel,
-  editorLabel,
-  onAiChange,
-  onSelectionChange,
-  originalDocument,
-  originalLabel,
-  selection,
-  selectionLabel,
-}: {
-  aiDocument?: RichDocument;
-  aiLabel: string;
-  editorLabel: string;
-  onAiChange: (document: RichDocument) => void;
-  onSelectionChange: (selection: SelectionSource) => void;
-  originalDocument?: RichDocument;
-  originalLabel: string;
-  selection: SelectionSource;
-  selectionLabel: string;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-medium text-muted-foreground">Content source</p>
-        <SourceToggle label={selectionLabel} onChange={onSelectionChange} value={selection} />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className={comparisonPanelClass(selection === "original")}>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {originalLabel}
-          </p>
-          {originalDocument ? (
-            <RichTextViewer
-              ariaLabel={`${selectionLabel} original content`}
-              value={originalDocument}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No separate profile text is available. Selecting Profile omits this tailored detail.
-            </p>
-          )}
-        </div>
-        <div className={comparisonPanelClass(selection === "ai")}>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-primary">
-            {aiLabel}
-          </p>
-          <RichTextEditor
-            ariaLabel={editorLabel}
-            onChange={onAiChange}
-            value={aiDocument ?? emptyDocument}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ListComparison({
-  aiLabel,
-  aiValues,
-  itemName,
-  onAiChange,
-  onSelectionChange,
-  originalLabel,
-  originalValues,
-  selection,
-  selectionLabel,
-}: {
-  aiLabel: string;
-  aiValues: string[];
-  itemName: string;
-  onAiChange: (values: string[]) => void;
-  onSelectionChange: (selection: SelectionSource) => void;
-  originalLabel: string;
-  originalValues: string[];
-  selection: SelectionSource;
-  selectionLabel: string;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs font-medium text-muted-foreground">Content source</p>
-        <SourceToggle label={selectionLabel} onChange={onSelectionChange} value={selection} />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className={comparisonPanelClass(selection === "original")}>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {originalLabel}
-          </p>
-          <ReadOnlyTags
-            emptyMessage={`No profile ${itemName}s available.`}
-            values={originalValues}
-          />
-        </div>
-        <div className={comparisonPanelClass(selection === "ai")}>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary">
-            {aiLabel}
-          </p>
-          <TagEditor itemName={itemName} onChange={onAiChange} values={aiValues} />
-        </div>
-      </div>
     </div>
   );
 }
@@ -623,11 +419,11 @@ function TagEditor({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No AI suggestions yet. Add one below.</p>
+        <p className="text-sm text-muted-foreground">No {itemName}s yet. Add one below.</p>
       )}
       <div className="flex gap-2">
         <input
-          aria-label={`Add AI ${itemName}`}
+          aria-label={`New ${itemName}`}
           className="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
@@ -674,61 +470,6 @@ function TagAction({
     >
       {children}
     </button>
-  );
-}
-
-function ReadOnlyTags({ emptyMessage, values }: { emptyMessage: string; values: string[] }) {
-  return values.length > 0 ? (
-    <div className="flex flex-wrap gap-2">
-      {values.map((value) => (
-        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium" key={value}>
-          {value}
-        </span>
-      ))}
-    </div>
-  ) : (
-    <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-  );
-}
-
-function SourceToggle({
-  aiLabel = "Use AI",
-  label,
-  onChange,
-  originalLabel = "Use profile",
-  value,
-}: {
-  aiLabel?: string;
-  label: string;
-  onChange: (value: SelectionSource) => void;
-  originalLabel?: string;
-  value: SelectionSource;
-}) {
-  const options = [
-    { label: aiLabel, value: "ai" as const },
-    { label: originalLabel, value: "original" as const },
-  ];
-
-  return (
-    <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5">
-      {options.map((option) => (
-        <button
-          aria-label={`${label}: ${option.label}`}
-          aria-pressed={value === option.value}
-          className={cn(
-            "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-            value === option.value
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-          key={option.value}
-          onClick={() => onChange(option.value)}
-          type="button"
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -890,37 +631,7 @@ function TemplateSelect({
   );
 }
 
-function updateTopLevelSelection(
-  content: ApiDocumentContent,
-  field: "certifications" | "customizedSummary" | "skills",
-  value: SelectionSource,
-): ApiDocumentContent {
-  return {
-    ...content,
-    selections: { ...content.selections, [field]: value },
-  };
-}
-
-function updateItemSelection(
-  content: ApiDocumentContent,
-  section: EnhancementSection,
-  itemIndex: number,
-  value: SelectionSource,
-): ApiDocumentContent {
-  const sectionSelections = content.selections[section] ?? {};
-  const key = String(itemIndex);
-
-  return {
-    ...content,
-    formatVersion: 2,
-    selections: {
-      ...content.selections,
-      [section]: { ...sectionSelections, [key]: { description: value } },
-    },
-  };
-}
-
-function updateEnhancementDescription(
+export function updateEnhancementDescription(
   content: ApiDocumentContent,
   section: EnhancementSection,
   itemIndex: number,
@@ -988,14 +699,6 @@ function collectIndexes(profileCount: number, enhancementIndexes: number[]): num
   ).sort((left, right) => left - right);
 }
 
-function selectionOrAi(selection?: SelectionSource): SelectionSource {
-  return selection === "original" ? "original" : "ai";
-}
-
-function sourceLabel(selection?: SelectionSource): string {
-  return selection === "original" ? "Profile" : "AI-tailored";
-}
-
 function formatItemCount(count: number, noun = "item"): string {
   return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
@@ -1003,11 +706,4 @@ function formatItemCount(count: number, noun = "item"): string {
 function formatPeriod(startDate?: string, endDate?: string): string {
   if (!startDate && !endDate) return "";
   return `${startDate || "Start not set"} – ${endDate || "Present"}`;
-}
-
-function comparisonPanelClass(selected: boolean): string {
-  return cn(
-    "rounded-lg border p-4 transition-colors",
-    selected ? "border-primary/40 bg-primary/5" : "border-border bg-card",
-  );
 }

@@ -20,26 +20,5 @@ export function dropLegacyAchievements(content: DocumentContent): DocumentConten
     experienceEnhancements: content.experienceEnhancements?.map(withoutAchievements) ?? [],
     educationEnhancements: content.educationEnhancements?.map(withoutAchievements),
     projectEnhancements: content.projectEnhancements?.map(withoutAchievements),
-    ...(content.selections
-      ? {
-          selections: {
-            ...content.selections,
-            experience: mapSelections(content.selections.experience),
-            education: mapSelections(content.selections.education),
-            projects: mapSelections(content.selections.projects),
-          },
-        }
-      : {}),
   };
-}
-
-function mapSelections(
-  selections: Record<string, { description?: "ai" | "original" }> = {},
-): Record<string, { description?: "ai" | "original" }> {
-  return Object.fromEntries(
-    Object.entries(selections).map(([index, selection]) => [
-      index,
-      selection.description ? { description: selection.description } : {},
-    ]),
-  );
 }

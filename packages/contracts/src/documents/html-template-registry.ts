@@ -54,17 +54,32 @@ export function renderHtmlTemplate(templateId: string, data: Record<string, unkn
   );
 
   return withConditionalSections.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_match, key: string) => {
-    return stringifyTemplateValue(data[key]);
+    return stringifyTemplateValue(data[key], key);
   });
 }
 
-function stringifyTemplateValue(value: unknown): string {
+// Lets the array branch below tag each rendered `<li>` with a `data-field-ref` the preview iframe
+// can scroll to and highlight when a tip is clicked (see apps/web/src/lib/paged-preview.ts) — the
+// prefix is derived from which mustache field is being rendered, not from the item's own shape.
+const arrayFieldRefPrefix: Record<string, string> = {
+  experience_content: "experience",
+  education_content: "education",
+  project_content: "project",
+};
+
+function stringifyTemplateValue(value: unknown, key?: string): string {
   if (value === undefined || value === null) {
     return "";
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => `<li>${stringifyStructuredValue(item)}</li>`).join("");
+    const prefix = key ? arrayFieldRefPrefix[key] : undefined;
+    return value
+      .map(
+        (item, index) =>
+          `<li${prefix ? ` data-field-ref="${prefix}-${index}"` : ""}>${stringifyStructuredValue(item)}</li>`,
+      )
+      .join("");
   }
 
   if (isRichDocument(value)) {

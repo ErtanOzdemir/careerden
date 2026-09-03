@@ -125,11 +125,6 @@ describe("documentContentSchema", () => {
       educationEnhancements: [],
       projectEnhancements: [],
       certificationSuggestions: [],
-      selections: {
-        experience: {},
-        education: {},
-        projects: {},
-      },
     });
   });
 
@@ -146,17 +141,11 @@ describe("documentContentSchema", () => {
       ],
       educationEnhancements: [{ educationIndex: 0, achievements: [] }],
       projectEnhancements: [{ projectIndex: 0, achievements: [paragraph] }],
-      selections: {
-        experience: { "0": { description: "ai", achievements: { "0": "original" } } },
-        education: {},
-        projects: {},
-      },
     });
 
     expect(parsed.experienceEnhancements).toEqual([{ experienceIndex: 0, description: paragraph }]);
     expect(parsed.educationEnhancements).toEqual([{ educationIndex: 0 }]);
     expect(parsed.projectEnhancements).toEqual([{ projectIndex: 0 }]);
-    expect(parsed.selections.experience).toEqual({ "0": { description: "ai" } });
     expect(JSON.stringify(parsed)).not.toContain("achievements");
   });
 });

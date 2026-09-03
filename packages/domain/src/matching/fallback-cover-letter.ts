@@ -14,12 +14,10 @@ export function buildFallbackCoverLetter(input: {
   profile: UserProfile;
   job: ScrapedJob;
   strongSkills: string[];
-  customizedSummary: string;
+  summary: string;
 }): string {
-  const { customizedSummary, job, profile, strongSkills } = input;
-  const positioning = compressToProse(
-    customizedSummary || profile.summary || profile.headline || "",
-  );
+  const { summary, job, profile, strongSkills } = input;
+  const positioning = compressToProse(summary || profile.summary || profile.headline || "");
   const highlighted = strongSkills.filter(Boolean).slice(0, 3);
   const recentRole = profile.experience[0];
 

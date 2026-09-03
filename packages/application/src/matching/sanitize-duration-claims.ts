@@ -4,11 +4,10 @@ import { collectSupportedDurationClaims, sanitizeDurationClaims } from "@careerd
 /**
  * Removes length-of-experience claims the profile does not support.
  *
- * Unlike the guard this replaced, nothing is emptied and nothing is dropped: `sanitizeDurationClaims`
- * strips only the offending sentence, falling back to excising the phrase in place rather than
- * returning an empty field. Enhancements whose description does empty out stay in the array with no
- * description so the completeness layer can repair or fill them — filtering them here is what used
- * to make items silently disappear from the tailored CV.
+ * `sanitizeDurationClaims` strips only the offending sentence, falling back to excising the phrase
+ * in place rather than returning an empty string. Individual tips that sanitize down to nothing are
+ * simply dropped from their array — unlike the old full-rewrite design, a tip has no completeness
+ * requirement to preserve a placeholder for.
  */
 export function sanitizeMatchAnalysisDurationClaims(
   result: MatchAnalysisResult,
@@ -18,22 +17,15 @@ export function sanitizeMatchAnalysisDurationClaims(
   const supported = collectSupportedDurationClaims(profile, now);
   const sanitize = (value: string): string => sanitizeDurationClaims(value, supported);
   const sanitizeAll = (values: string[]): string[] => values.map(sanitize).filter(Boolean);
-  const sanitizeEnhancement = <T extends { enhancedDescription?: string }>(enhancement: T): T => {
-    const enhancedDescription = enhancement.enhancedDescription
-      ? sanitize(enhancement.enhancedDescription)
-      : "";
-
-    return {
-      ...enhancement,
-      ...(enhancedDescription ? { enhancedDescription } : { enhancedDescription: undefined }),
-    };
-  };
+  const sanitizeTips = <T extends { tips: string[] }>(entry: T): T => ({
+    ...entry,
+    tips: sanitizeAll(entry.tips),
+  });
 
   return {
     ...result,
     coverLetterContent: result.coverLetterContent ? sanitize(result.coverLetterContent) : "",
-    customizedSummary: sanitize(result.customizedSummary),
-    recommendedAchievements: sanitizeAll(result.recommendedAchievements),
+    summaryTips: sanitizeAll(result.summaryTips),
     interviewTips: sanitizeAll(result.interviewTips),
     coverLetterGuidance: result.coverLetterGuidance
       ? sanitizeAll(result.coverLetterGuidance)
@@ -45,10 +37,12 @@ export function sanitizeMatchAnalysisDurationClaims(
       ...evaluation,
       evidence: sanitizeAll(evaluation.evidence),
     })),
-    experienceEnhancements: result.experienceEnhancements?.map(sanitizeEnhancement),
-    educationEnhancements: result.educationEnhancements?.map(sanitizeEnhancement),
-    projectEnhancements: result.projectEnhancements?.map(sanitizeEnhancement),
-    // Skill and certification labels are too short to carry a duration claim, and filtering them
-    // would quietly shorten the lists the user sees.
+    experienceTips: result.experienceTips?.map(sanitizeTips),
+    educationTips: result.educationTips?.map(sanitizeTips),
+    projectTips: result.projectTips?.map(sanitizeTips),
+    skillsTips: result.skillsTips ? sanitizeAll(result.skillsTips) : undefined,
+    certificationsTips: result.certificationsTips
+      ? sanitizeAll(result.certificationsTips)
+      : undefined,
   };
 }

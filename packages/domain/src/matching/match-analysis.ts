@@ -13,15 +13,14 @@ export interface MatchAnalysisResult {
   missingSkills: string[];
   missingSkillResources?: MissingSkillResource[];
   strongSkills: string[];
-  recommendedAchievements: string[];
-  customizedSummary: string;
+  summaryTips: string[];
   interviewTips: string[];
   coverLetterGuidance?: string[];
-  experienceEnhancements?: ExperienceEnhancement[];
-  skillSuggestions?: string[];
-  educationEnhancements?: EducationEnhancement[];
-  projectEnhancements?: ProjectEnhancement[];
-  certificationSuggestions?: string[];
+  experienceTips?: ExperienceTips[];
+  skillsTips?: string[];
+  educationTips?: EducationTips[];
+  projectTips?: ProjectTips[];
+  certificationsTips?: string[];
 }
 
 export interface MissingSkillResource {
@@ -38,20 +37,17 @@ export interface RequirementEvaluation {
   evidence: string[];
 }
 
-export interface ExperienceEnhancement {
+export interface ExperienceTips {
   experienceIndex: number;
-  enhancedDescription?: string;
-  enhancedAchievements?: string[];
+  tips: string[];
 }
 
-export interface EducationEnhancement {
+export interface EducationTips {
   educationIndex: number;
-  enhancedDescription?: string;
-  enhancedAchievements?: string[];
+  tips: string[];
 }
 
-export interface ProjectEnhancement {
+export interface ProjectTips {
   projectIndex: number;
-  enhancedDescription?: string;
-  enhancedAchievements?: string[];
+  tips: string[];
 }

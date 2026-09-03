@@ -20,6 +20,7 @@ describe("AnalyzeScrapedJobUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
+      summary: "Strong TypeScript backend engineer.",
       skills: ["TypeScript"],
       experience: [{ company: "Engines", title: "Engineer", description: "Built tools" }],
     });
@@ -57,6 +58,8 @@ describe("AnalyzeScrapedJobUseCase", () => {
 
     expect(analyzed?.status).toBe("generating_documents");
     expect(analysis?.matchScore).toBe(91);
+    // Seeded from the profile's own summary, not AI output — the CV always starts as the
+    // candidate's own words now.
     expect(content?.customizedSummary.blocks[0]?.children[0]?.text).toBe(
       "Strong TypeScript backend engineer.",
     );
@@ -282,8 +285,7 @@ function createAiProvider(): AiProvider {
         matchScore: 91,
         missingSkills: [],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: ["Built tools"],
-        customizedSummary: "Strong TypeScript backend engineer.",
+        summaryTips: ["Lead with your TypeScript tooling work."],
         interviewTips: ["Prepare backend examples"],
         coverLetterGuidance: ["Emphasize TypeScript"],
       }) as T;

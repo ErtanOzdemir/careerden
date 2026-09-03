@@ -148,9 +148,9 @@ export interface ApiScrapedCompany {
 export interface ApiMatchAnalysis {
   coverLetterContent?: string;
   coverLetterGuidance?: string[];
-  customizedSummary: string;
-  experienceEnhancements?: {
-    enhancedDescription?: string;
+  summaryTips: string[];
+  experienceTips?: {
+    tips: string[];
     experienceIndex: number;
   }[];
   interviewTips: string[];
@@ -163,41 +163,43 @@ export interface ApiMatchAnalysis {
     type: "article" | "documentation" | "other" | "tutorial" | "video";
     url: string;
   }[];
-  recommendedAchievements: string[];
   requirementEvaluations?: {
     evidence: string[];
     requirement: string;
     status: "matched" | "missing" | "partial";
   }[];
   strongSkills: string[];
-  skillSuggestions?: string[];
-  educationEnhancements?: {
+  skillsTips?: string[];
+  educationTips?: {
     educationIndex: number;
-    enhancedDescription?: string;
+    tips: string[];
   }[];
-  projectEnhancements?: {
+  projectTips?: {
     projectIndex: number;
-    enhancedDescription?: string;
+    tips: string[];
   }[];
-  certificationSuggestions?: string[];
+  certificationsTips?: string[];
 }
+
+/** Mirrors `DocumentFieldRef` in `@careerden/contracts` — identifies one tailorable CV field. */
+export type ApiDocumentFieldRef =
+  | { type: "summary" }
+  | { type: "experience"; index: number }
+  | { type: "education"; index: number }
+  | { type: "project"; index: number }
+  | { type: "skills" }
+  | { type: "certifications" };
+
+/** The subset of `ApiDocumentFieldRef` valid for `POST /:id/document-content/apply-tip`. */
+export type ApiApplyFieldTipFieldRef =
+  | { type: "summary" }
+  | { type: "experience"; index: number }
+  | { type: "education"; index: number }
+  | { type: "project"; index: number };
 
 // Re-exported from the shared contract so the many `from "../api/types.js"` imports keep working
 // while there is only one definition of the rich-text shape in the repo.
 export type { RichBlock, RichDocument, RichTextMark, RichTextNode } from "@careerden/contracts";
-
-export interface ApiDocumentContentItemSelection {
-  description?: "ai" | "original";
-}
-
-export interface ApiDocumentContentSelections {
-  customizedSummary?: "ai" | "original";
-  skills?: "ai" | "original";
-  certifications?: "ai" | "original";
-  experience: Record<string, ApiDocumentContentItemSelection>;
-  education: Record<string, ApiDocumentContentItemSelection>;
-  projects: Record<string, ApiDocumentContentItemSelection>;
-}
 
 export interface ApiDocumentContent {
   coverLetterContent?: RichDocument;
@@ -217,7 +219,6 @@ export interface ApiDocumentContent {
     description?: RichDocument;
   }>;
   certificationSuggestions: string[];
-  selections: ApiDocumentContentSelections;
 }
 
 export interface ApiJobApplicationDetail extends ApiJobApplication {

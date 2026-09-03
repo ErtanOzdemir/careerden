@@ -2,7 +2,6 @@ import type {
   ApiApplicationPackPreferences,
   ApiDocumentContent,
   ApiProfileReadiness,
-  RichDocument,
 } from "./api/types";
 
 export type ApplicationStatus =
@@ -55,11 +54,6 @@ export interface FollowUp {
   createdAt: string;
 }
 
-export interface KeywordMatch {
-  keyword: string;
-  match: boolean;
-}
-
 export type RequirementMatchStatus = "matched" | "partial" | "missing";
 
 export interface RequirementMatch {
@@ -68,16 +62,9 @@ export interface RequirementMatch {
   evidence: string[];
 }
 
-export interface BulletOptimization {
-  original: string;
-  enhanced: string;
-}
-
-export interface ExperienceOptimizationItem {
-  actual: string;
-  actualRichText?: RichDocument;
-  enhanced?: string;
-  kind: "achievement" | "description";
+export interface IndexedFieldTips {
+  index: number;
+  tips: string[];
 }
 
 export interface GeneratedApplicationDocument {
@@ -133,36 +120,14 @@ export interface JobApplication {
   aiMatch?: {
     score: number;
     summary: string;
-    keywords: KeywordMatch[];
     requirements?: RequirementMatch[];
     recommendation: string;
-    currentSummary: string;
-    currentSummaryRichText?: RichDocument;
-    enhancedSummary: string;
-    bulletOptimizations: BulletOptimization[];
-    experienceOptimizations?: {
-      title: string;
-      company: string;
-      items: ExperienceOptimizationItem[];
-    }[];
-    yourSkills: string[];
-    suggestedSkills: string[];
-    missingSkillResources?: {
-      reason: string;
-      skill: string;
-      title: string;
-      type: "article" | "documentation" | "other" | "tutorial" | "video";
-      url: string;
-    }[];
-    educationOptimizations?: {
-      institution: string;
-      degree: string;
-      items: ExperienceOptimizationItem[];
-    }[];
-    projectOptimizations?: {
-      name: string;
-      items: ExperienceOptimizationItem[];
-    }[];
+    summaryTips: string[];
+    experienceTips: IndexedFieldTips[];
+    educationTips: IndexedFieldTips[];
+    projectTips: IndexedFieldTips[];
+    skillsTips: string[];
+    certificationsTips: string[];
   };
 }
 

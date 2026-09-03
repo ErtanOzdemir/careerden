@@ -2,6 +2,7 @@ import { requestForm, requestJson } from "./client";
 import type {
   ApiApplicationPriority,
   ApiApplicationStatus,
+  ApiApplyFieldTipFieldRef,
   ApiJobApplicationContact,
   ApiJobApplication,
   ApiJobApplicationAnalytics,
@@ -11,6 +12,7 @@ import type {
   ApiDocumentContent,
   ApiApplicationPackPreferences,
   ApiScrapeBundle,
+  RichDocument,
 } from "./types";
 
 export interface ListJobApplicationsParams {
@@ -304,6 +306,16 @@ export const jobApplicationsApi = {
     input: RequestApplicationPackGenerationInput,
   ): Promise<ApiApplicationPackPreview> {
     return requestJson<ApiApplicationPackPreview>(`/job-applications/${id}/document-preview`, {
+      method: "POST",
+      body: input,
+    });
+  },
+
+  async applyFieldTip(
+    id: string,
+    input: { field: ApiApplyFieldTipFieldRef; currentValue: RichDocument; tip: string },
+  ): Promise<{ value: RichDocument }> {
+    return requestJson<{ value: RichDocument }>(`/job-applications/${id}/document-content/apply-tip`, {
       method: "POST",
       body: input,
     });

@@ -46,27 +46,16 @@ export function resolveDocumentContent(
   profile: UserProfile,
   content: DocumentContent,
 ): ResolvedDocumentContent {
-  const summary =
-    content.selections?.customizedSummary === "original"
-      ? (toRichDocument(profile.summary, profile.summaryRichText) ?? content.customizedSummary)
-      : content.customizedSummary;
-  const skills =
-    content.selections?.skills === "original" || !content.skillSuggestions?.length
-      ? profile.skills
-      : content.skillSuggestions;
-  const certifications =
-    content.selections?.certifications === "original" || !content.certificationSuggestions?.length
-      ? profile.certifications
-      : content.certificationSuggestions;
-
   return {
-    certifications,
+    certifications: content.certificationSuggestions?.length
+      ? content.certificationSuggestions
+      : profile.certifications,
     coverLetterContent: content.coverLetterContent ?? richDocumentFromText(""),
     education: resolveEducation(profile.education, content),
     experiences: resolveExperiences(profile.experience, content),
     projects: resolveProjects(profile.projects, content),
-    skills,
-    summary,
+    skills: content.skillSuggestions?.length ? content.skillSuggestions : profile.skills,
+    summary: content.customizedSummary,
   };
 }
 
@@ -78,15 +67,8 @@ function resolveExperiences(
     const enhancement = content.experienceEnhancements.find(
       (item) => item.experienceIndex === index,
     );
-    const selection = content.selections?.experience?.[String(index)];
-    const originalDescription = toRichDocument(
-      experience.description,
-      experience.descriptionRichText,
-    );
     const description =
-      selection?.description === "original"
-        ? originalDescription
-        : (enhancement?.description ?? originalDescription);
+      enhancement?.description ?? toRichDocument(experience.description, experience.descriptionRichText);
 
     return {
       company: experience.company,
@@ -106,12 +88,8 @@ function resolveEducation(
     const enhancement = content.educationEnhancements?.find(
       (candidate) => candidate.educationIndex === index,
     );
-    const selection = content.selections?.education?.[String(index)];
-    const originalDescription = toRichDocument(item.description, item.descriptionRichText);
     const description =
-      selection?.description === "original"
-        ? originalDescription
-        : (enhancement?.description ?? originalDescription);
+      enhancement?.description ?? toRichDocument(item.description, item.descriptionRichText);
 
     return {
       degree: item.degree,
@@ -130,12 +108,7 @@ function resolveProjects(
 ): ResolvedDocumentProject[] {
   return projects.map((project, index) => {
     const enhancement = content.projectEnhancements?.find((item) => item.projectIndex === index);
-    const selection = content.selections?.projects?.[String(index)];
-    const originalDescription = profileProjectDescriptionAsProse(project);
-    const description =
-      selection?.description === "original"
-        ? originalDescription
-        : (enhancement?.description ?? originalDescription);
+    const description = enhancement?.description ?? profileProjectDescriptionAsProse(project);
 
     return {
       name: project.name,

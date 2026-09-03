@@ -59,21 +59,19 @@ describe("normalizeAiMatchResult", () => {
     expect(result.missingSkillResources?.[0]?.url).toBe("https://kubernetes.io/docs/");
   });
 
-  it("dedupes enhancement indexes and drops ones outside the profile", () => {
+  it("dedupes tip indexes and drops ones outside the profile", () => {
     const result = normalizeAiMatchResult(
       createCandidate({
-        experienceEnhancements: [
-          { experienceIndex: 0, enhancedDescription: "First" },
-          { experienceIndex: 0, enhancedDescription: "Second wins" },
-          { experienceIndex: 9, enhancedDescription: "Out of range" },
+        experienceTips: [
+          { experienceIndex: 0, tips: ["First"] },
+          { experienceIndex: 0, tips: ["Second wins"] },
+          { experienceIndex: 9, tips: ["Out of range"] },
         ],
       }),
       createProfile(),
     );
 
-    expect(result.experienceEnhancements).toEqual([
-      { experienceIndex: 0, enhancedDescription: "Second wins" },
-    ]);
+    expect(result.experienceTips).toEqual([{ experienceIndex: 0, tips: ["Second wins"] }]);
   });
 
   it("produces output the strict schema accepts", () => {
@@ -88,7 +86,6 @@ describe("aiMatchResultCandidateSchema", () => {
     const raw = {
       ...createCandidate({}),
       coverLetterContent: "",
-      customizedSummary: "",
       matchScore: 87.5,
       missingSkillResources: [
         { skill: "Go", title: "Docs", url: "nope", type: "documentation", reason: "Learn" },
@@ -106,10 +103,9 @@ function createCandidate(overrides: Partial<AiMatchResultCandidateDto>): AiMatch
     matchScore: 50,
     missingSkills: [],
     strongSkills: ["TypeScript"],
-    recommendedAchievements: ["Built TypeScript automation"],
-    customizedSummary: "Backend engineer.",
+    summaryTips: ["Lead with the TypeScript automation project."],
     interviewTips: ["Prepare examples."],
-    experienceEnhancements: [{ experienceIndex: 0, enhancedDescription: "Built services." }],
+    experienceTips: [{ experienceIndex: 0, tips: ["Mention the production work."] }],
     ...overrides,
   };
 }

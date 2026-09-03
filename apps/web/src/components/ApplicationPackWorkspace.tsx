@@ -8,6 +8,7 @@ import { cn } from "../lib/utils.js";
 import { buildPreviewTemplateData } from "../lib/document-preview.js";
 import { renderPagedPreview } from "../lib/paged-preview.js";
 import { ApplicationPackCustomizer } from "./ApplicationPackCustomizer.js";
+import { TipsPanel } from "./TipsPanel.js";
 import { Button, buttonVariants } from "./ui/button.js";
 import {
   AlertTriangle,
@@ -57,6 +58,7 @@ export function ApplicationPackWorkspace({
   const [activeKind, setActiveKind] = useState<"cover_letter" | "cv">("cv");
   const [zoom, setZoom] = useState(1);
   const [isDownloadingBoth, setIsDownloadingBoth] = useState(false);
+  const [pendingHighlight, setPendingHighlight] = useState<string | null>(null);
 
   const documents = useMemo(() => groupDocuments(app.generatedDocuments ?? []), [app]);
 
@@ -99,6 +101,14 @@ export function ApplicationPackWorkspace({
 
   function handleContentChange(content: ApiDocumentContent) {
     setDraftContent(content);
+  }
+
+  function handleTipApplied(fieldDomId: string) {
+    // Tips only ever target CV fields (cover letter is untouched by this feature) — switch tabs so
+    // the highlight is actually visible, and let the preview's own render effect fire the highlight
+    // once the content-change-triggered re-render settles (see DocumentPreviewCard below).
+    setActiveKind("cv");
+    setPendingHighlight(fieldDomId);
   }
 
   function handlePreferencesChange(nextPreferences: ApiApplicationPackPreferences) {
@@ -167,60 +177,76 @@ export function ApplicationPackWorkspace({
 
       {app.aiMatch && <MatchSnapshot app={app} />}
 
-      <DocumentPreviewCard
-        activeKind={activeKind}
-        documents={documents[activeKind]}
-        downloadingId={downloadingId}
-        html={activeKind === "cv" ? liveHtml?.cv : liveHtml?.coverLetter}
-        onActiveKindChange={setActiveKind}
-        onDownload={onDownload}
-        onZoomChange={setZoom}
-        zoom={zoom}
-      />
-
-      {!readOnly && app.aiMatch && draftContent && (
-        <ApplicationPackCustomizer
+      <div className="grid gap-5 lg:grid-cols-[20rem_1fr] lg:items-start">
+        <TipsPanel
+          aiMatch={app.aiMatch}
           content={draftContent}
+          jobApplicationId={app.id}
           onContentChange={handleContentChange}
-          onPreferencesChange={handlePreferencesChange}
-          preferences={preferences}
+          onTipApplied={handleTipApplied}
           profile={profile}
-          templates={templates}
+          readOnly={readOnly}
         />
-      )}
 
-      <section className="flex flex-col gap-3 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-foreground">{packActionDescription(app)}</p>
-          <p className="text-xs text-muted-foreground">
-            {readOnly
-              ? "Restore this application to customize or regenerate its pack."
-              : "Updates run in the background; you can leave this page safely."}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {pdfDocuments.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => void handleDownloadBoth()}
-              disabled={isDownloadingBoth}
-            >
-              <Download className="size-3.5" />
-              {isDownloadingBoth ? "Preparing..." : "Download both PDFs"}
-            </Button>
+        <div className="min-w-0 space-y-5">
+          <DocumentPreviewCard
+            activeKind={activeKind}
+            documents={documents[activeKind]}
+            downloadingId={downloadingId}
+            html={activeKind === "cv" ? liveHtml?.cv : liveHtml?.coverLetter}
+            onActiveKindChange={setActiveKind}
+            onDownload={onDownload}
+            onHighlightConsumed={() => setPendingHighlight(null)}
+            onZoomChange={setZoom}
+            pendingHighlight={pendingHighlight}
+            zoom={zoom}
+          />
+
+          {!readOnly && app.aiMatch && draftContent && (
+            <ApplicationPackCustomizer
+              content={draftContent}
+              onContentChange={handleContentChange}
+              onPreferencesChange={handlePreferencesChange}
+              preferences={preferences}
+              profile={profile}
+              templates={templates}
+            />
           )}
-          {!readOnly && (
-            <Button onClick={() => void handleUpdate()} disabled={!canUpdate || isUpdating}>
-              {isUpdating ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="size-3.5" />
+
+          <section className="flex flex-col gap-3 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">{packActionDescription(app)}</p>
+              <p className="text-xs text-muted-foreground">
+                {readOnly
+                  ? "Restore this application to customize or regenerate its pack."
+                  : "Updates run in the background; you can leave this page safely."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {pdfDocuments.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => void handleDownloadBoth()}
+                  disabled={isDownloadingBoth}
+                >
+                  <Download className="size-3.5" />
+                  {isDownloadingBoth ? "Preparing..." : "Download both PDFs"}
+                </Button>
               )}
-              {app.generatedDocuments?.length ? "Update pack" : "Create pack"}
-            </Button>
-          )}
+              {!readOnly && (
+                <Button onClick={() => void handleUpdate()} disabled={!canUpdate || isUpdating}>
+                  {isUpdating ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-3.5" />
+                  )}
+                  {app.generatedDocuments?.length ? "Update pack" : "Create pack"}
+                </Button>
+              )}
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
@@ -248,7 +274,7 @@ function MatchSnapshot({ app }: { app: JobApplication }) {
 
   return (
     <section className="rounded-xl border border-border bg-card p-5">
-      <div className="grid gap-5 lg:grid-cols-[12rem,1fr]">
+      <div className="grid gap-5 lg:grid-cols-[12rem_1fr]">
         <div className="rounded-xl bg-muted/50 p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Role match
@@ -316,6 +342,8 @@ function DocumentPreviewCard({
   documents,
   html,
   downloadingId,
+  onHighlightConsumed,
+  pendingHighlight,
   zoom,
   onActiveKindChange,
   onDownload,
@@ -325,16 +353,55 @@ function DocumentPreviewCard({
   documents: DocumentFormats;
   html?: string;
   downloadingId: string | null;
+  onHighlightConsumed: () => void;
+  pendingHighlight: string | null;
   zoom: number;
   onActiveKindChange: (kind: "cover_letter" | "cv") => void;
   onDownload: (documentId: string) => Promise<void>;
   onZoomChange: (zoom: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const renderIdRef = useRef(0);
   const [pageCount, setPageCount] = useState(0);
   const [isRendering, setIsRendering] = useState(false);
   const hasDocument = Boolean(documents.pdf);
+
+  function clampZoom(value: number): number {
+    return Math.min(maxZoom, Math.max(minZoom, value));
+  }
+
+  // Auto-shrink the page to fit the scroll area's current width (e.g. once the tips panel takes
+  // up space beside it) unless the user has manually zoomed, in which case their choice sticks.
+  const hasUserZoomedRef = useRef(false);
+  const onZoomChangeRef = useRef(onZoomChange);
+  onZoomChangeRef.current = onZoomChange;
+  useEffect(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+
+    function applyFitZoom() {
+      if (hasUserZoomedRef.current || !scrollArea) return;
+      const scrollAreaHorizontalPaddingPx = 64;
+      const availableWidth = scrollArea.clientWidth - scrollAreaHorizontalPaddingPx;
+      if (availableWidth <= 0) return;
+      const fitZoom = clampZoom(Math.min(1, availableWidth / pageWidthPx));
+      onZoomChangeRef.current(Math.round(fitZoom * 100) / 100);
+    }
+
+    applyFitZoom();
+    const observer = new ResizeObserver(applyFitZoom);
+    observer.observe(scrollArea);
+    return () => observer.disconnect();
+  }, []);
+
+  // Read via a ref inside the render effect below rather than depending on it directly — a new
+  // highlight request shouldn't tear down and restart an in-flight (or already-settled) render, it
+  // should just fire once the *current* one is ready.
+  const pendingHighlightRef = useRef(pendingHighlight);
+  useEffect(() => {
+    pendingHighlightRef.current = pendingHighlight;
+  }, [pendingHighlight]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -352,6 +419,10 @@ function DocumentPreviewCard({
         if (renderIdRef.current === renderId) {
           setPageCount(totalPages);
           setIsRendering(false);
+          if (pendingHighlightRef.current) {
+            handle?.highlightField(pendingHighlightRef.current);
+            onHighlightConsumed();
+          }
         }
       });
     }, pagedPreviewDebounceMs);
@@ -360,19 +431,18 @@ function DocumentPreviewCard({
       clearTimeout(timer);
       handle?.cancel();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onHighlightConsumed is stable per render cycle; including it would re-run this effect on every highlight consumption
   }, [html]);
 
-  function clampZoom(value: number): number {
-    return Math.min(maxZoom, Math.max(minZoom, value));
-  }
-
   function stepZoom(direction: 1 | -1) {
+    hasUserZoomedRef.current = true;
     onZoomChange(clampZoom(Math.round((zoom + direction * zoomStepSize) * 100) / 100));
   }
 
   function handleWheelZoom(event: React.WheelEvent<HTMLDivElement>) {
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
+    hasUserZoomedRef.current = true;
     onZoomChange(clampZoom(zoom - event.deltaY * 0.0015));
   }
 
@@ -443,6 +513,7 @@ function DocumentPreviewCard({
         className="scrollbar-soft h-[42rem] overflow-auto bg-muted/50 p-8"
         data-testid="preview-scroll-area"
         onWheel={handleWheelZoom}
+        ref={scrollAreaRef}
       >
         <div
           className={cn("mx-auto", !html && "hidden")}

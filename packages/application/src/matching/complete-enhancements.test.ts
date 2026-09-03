@@ -1,104 +1,38 @@
 import { describe, expect, it } from "vitest";
 import type { MatchAnalysisResult, UserProfile } from "@careerden/domain";
-import {
-  assertEnhancementCompleteness,
-  fillIncompleteEnhancements,
-  findIncompleteIndexes,
-  hasIncompleteIndexes,
-  mergeRepairedEnhancements,
-} from "./complete-enhancements.js";
+import { fillMissingTipEntries } from "./complete-enhancements.js";
 
-describe("findIncompleteIndexes", () => {
-  it("reports missing entries and blank descriptions alike", () => {
-    const incomplete = findIncompleteIndexes(
+describe("fillMissingTipEntries", () => {
+  it("emits one entry per profile item, defaulting an omitted index to an empty tips array", () => {
+    const result = fillMissingTipEntries(
       createProfile(),
       createResult({
-        experienceEnhancements: [
-          { experienceIndex: 0, enhancedDescription: "Built services." },
-          { experienceIndex: 1, enhancedDescription: "   " },
+        experienceTips: [{ experienceIndex: 0, tips: ["Mention the migration project."] }],
+      }),
+    );
+
+    expect(result.experienceTips).toEqual([
+      { experienceIndex: 0, tips: ["Mention the migration project."] },
+      { experienceIndex: 1, tips: [] },
+    ]);
+    expect(result.projectTips).toEqual([{ projectIndex: 0, tips: [] }]);
+  });
+
+  it("preserves a genuinely empty tips array rather than treating it as missing", () => {
+    const result = fillMissingTipEntries(
+      createProfile(),
+      createResult({
+        experienceTips: [
+          { experienceIndex: 0, tips: [] },
+          { experienceIndex: 1, tips: ["Add a metric."] },
         ],
       }),
     );
 
-    expect(incomplete.experience).toEqual([1]);
-    expect(incomplete.projects).toEqual([0]);
-    expect(hasIncompleteIndexes(incomplete)).toBe(true);
-  });
-
-  it("reports nothing when every profile item has a description", () => {
-    const incomplete = findIncompleteIndexes(createProfile(), createCompleteResult());
-
-    expect(hasIncompleteIndexes(incomplete)).toBe(false);
-  });
-});
-
-describe("mergeRepairedEnhancements", () => {
-  it("fills gaps without overwriting good descriptions", () => {
-    const merged = mergeRepairedEnhancements(
-      createResult({
-        experienceEnhancements: [{ experienceIndex: 0, enhancedDescription: "Original good." }],
-      }),
-      {
-        experienceEnhancements: [
-          { experienceIndex: 0, enhancedDescription: "Repair should not win." },
-          { experienceIndex: 1, enhancedDescription: "Repair fills the gap." },
-        ],
-      },
-    );
-
-    expect(merged.experienceEnhancements).toEqual([
-      { experienceIndex: 0, enhancedDescription: "Original good." },
-      { experienceIndex: 1, enhancedDescription: "Repair fills the gap." },
+    expect(result.experienceTips).toEqual([
+      { experienceIndex: 0, tips: [] },
+      { experienceIndex: 1, tips: ["Add a metric."] },
     ]);
-  });
-
-  it("ignores blank repair descriptions", () => {
-    const merged = mergeRepairedEnhancements(createResult({ experienceEnhancements: [] }), {
-      experienceEnhancements: [{ experienceIndex: 0, enhancedDescription: "  " }],
-    });
-
-    expect(merged.experienceEnhancements).toEqual([]);
-  });
-});
-
-describe("fillIncompleteEnhancements", () => {
-  it("emits one entry per profile item and reports which were filled", () => {
-    const { filled, result } = fillIncompleteEnhancements(
-      createProfile(),
-      createResult({
-        experienceEnhancements: [{ experienceIndex: 0, enhancedDescription: "Built services." }],
-      }),
-    );
-
-    expect(result.experienceEnhancements).toEqual([
-      { experienceIndex: 0, enhancedDescription: "Built services." },
-      { experienceIndex: 1, enhancedDescription: "Organized local community events." },
-    ]);
-    expect(result.projectEnhancements).toEqual([
-      { projectIndex: 0, enhancedDescription: "A mechanical calculator." },
-    ]);
-    expect(filled.experience).toEqual([1]);
-    expect(filled.projects).toEqual([0]);
-  });
-
-  it("reports nothing filled when the AI covered everything", () => {
-    const { filled } = fillIncompleteEnhancements(createProfile(), createCompleteResult());
-
-    expect(hasIncompleteIndexes(filled)).toBe(false);
-  });
-});
-
-describe("assertEnhancementCompleteness", () => {
-  it("passes for a filled result", () => {
-    const { result } = fillIncompleteEnhancements(createProfile(), createResult({}));
-
-    expect(() => assertEnhancementCompleteness(createProfile(), result)).not.toThrow();
-  });
-
-  it("throws when an index is still missing", () => {
-    expect(() =>
-      assertEnhancementCompleteness(createProfile(), createResult({ experienceEnhancements: [] })),
-    ).toThrow(/missing tailored descriptions/);
   });
 });
 
@@ -107,21 +41,10 @@ function createResult(overrides: Partial<MatchAnalysisResult>): MatchAnalysisRes
     matchScore: 50,
     missingSkills: [],
     strongSkills: [],
-    recommendedAchievements: [],
-    customizedSummary: "Backend engineer.",
+    summaryTips: [],
     interviewTips: [],
     ...overrides,
   };
-}
-
-function createCompleteResult(): MatchAnalysisResult {
-  return createResult({
-    experienceEnhancements: [
-      { experienceIndex: 0, enhancedDescription: "Built services." },
-      { experienceIndex: 1, enhancedDescription: "Coordinated events." },
-    ],
-    projectEnhancements: [{ projectIndex: 0, enhancedDescription: "Built a calculator." }],
-  });
 }
 
 function createProfile(): UserProfile {

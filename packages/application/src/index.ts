@@ -54,6 +54,7 @@ export * from "./job-applications/update-job-application-follow-up.use-case.js";
 export * from "./job-applications/delete-job-application-follow-up.use-case.js";
 export * from "./job-applications/get-generated-document-download-url.use-case.js";
 export * from "./job-applications/preview-application-pack.use-case.js";
+export * from "./job-applications/apply-document-field-tip.use-case.js";
 export * from "./matching/complete-enhancements.js";
 export * from "./matching/extract-job-requirements.use-case.js";
 export * from "./matching/normalize-ai-match-result.js";

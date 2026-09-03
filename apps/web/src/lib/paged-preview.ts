@@ -18,6 +18,8 @@ export interface PagedPreviewResult {
 export interface PagedPreviewHandle {
   result: Promise<PagedPreviewResult>;
   cancel: () => void;
+  /** Scrolls the preview to, and briefly flashes, the element tagged `data-field-ref="domId"`. */
+  highlightField: (domId: string) => void;
 }
 
 /**
@@ -36,26 +38,51 @@ export function renderPagedPreview(html: string, container: HTMLElement): PagedP
   iframe.setAttribute("scrolling", "no");
   iframe.style.cssText = "border:0;display:block;height:0;width:100%;";
 
-  let settled = false;
+  let rendered = false;
+  let listenerActive = true;
   let resolveResult: (value: PagedPreviewResult) => void;
   const result = new Promise<PagedPreviewResult>((resolve) => {
     resolveResult = resolve;
   });
 
+  // Stays attached for the handle's whole lifetime (until `cancel()`), not just until the first
+  // render completes — `highlightField` calls can arrive at any later point, e.g. minutes after
+  // render when the user clicks a tip, and still need their `pagedjs-preview-scroll-to` reply.
   function handleMessage(event: MessageEvent) {
-    if (event.source !== iframe.contentWindow) return;
-    if (event.data?.type !== "pagedjs-preview-rendered" || event.data.requestId !== requestId) {
+    if (event.source !== iframe.contentWindow || event.data?.requestId !== requestId) return;
+
+    if (event.data.type === "pagedjs-preview-rendered" && !rendered) {
+      rendered = true;
+      const height = iframe.contentDocument?.documentElement.scrollHeight;
+      if (height) iframe.style.height = `${height}px`;
+      resolveResult({ totalPages: event.data.total });
       return;
     }
-    cleanup();
-    const height = iframe.contentDocument?.documentElement.scrollHeight;
-    if (height) iframe.style.height = `${height}px`;
-    resolveResult({ totalPages: event.data.total });
+
+    if (event.data.type === "pagedjs-preview-scroll-to") {
+      scrollToRatio(event.data.topRatio, event.data.heightRatio);
+    }
+  }
+
+  // The iframe itself never scrolls (sized to its full content height), so the only genuinely
+  // scrollable ancestor is the host's own scroll container — the direct parent of `container` in
+  // `ApplicationPackWorkspace`'s `preview-scroll-area` div. `topRatio`/`heightRatio` come from the
+  // bridge script as fractions of the iframe's total (unzoomed) content height; applying them to
+  // this container's own (already zoomed) `scrollHeight` lands correctly regardless of zoom level,
+  // with no coordinate math needing the zoom factor at all.
+  function scrollToRatio(topRatio: number, heightRatio: number) {
+    const scrollArea = container.parentElement;
+    if (!scrollArea) return;
+    const targetTop = topRatio * scrollArea.scrollHeight;
+    const targetHeight = heightRatio * scrollArea.scrollHeight;
+    const centered = targetTop - scrollArea.clientHeight / 2 + targetHeight / 2;
+    const clamped = Math.max(0, Math.min(centered, scrollArea.scrollHeight - scrollArea.clientHeight));
+    scrollArea.scrollTo({ top: clamped, behavior: "smooth" });
   }
 
   function cleanup() {
-    if (settled) return;
-    settled = true;
+    if (!listenerActive) return;
+    listenerActive = false;
     window.removeEventListener("message", handleMessage);
   }
 
@@ -65,7 +92,16 @@ export function renderPagedPreview(html: string, container: HTMLElement): PagedP
   iframe.srcdoc = injectPagedPolyfill(html, requestId, resolveAppBackgroundColor());
   container.appendChild(iframe);
 
-  return { result, cancel: cleanup };
+  function highlightField(domId: string) {
+    // The bridge script finds the element, applies the flash, and replies with
+    // `pagedjs-preview-scroll-to` (handled above) so the host can scroll to it.
+    iframe.contentWindow?.postMessage(
+      { type: "pagedjs-preview-highlight-field", fieldRef: domId },
+      "*",
+    );
+  }
+
+  return { result, cancel: cleanup, highlightField };
 }
 
 // Paged.js ships no default screen-preview chrome (confirmed empirically: rendered `.pagedjs_page`
@@ -83,6 +119,13 @@ function pagedPreviewChromeStyle(gapColor: string): string {
         margin: 0 auto 24px;
       }
       .pagedjs_page:last-child { margin-bottom: 0; }
+      [data-field-ref] { transition: background-color 0.3s ease, outline-color 0.3s ease; }
+      .pagedjs-field-highlight {
+        background-color: rgba(37, 99, 235, 0.12);
+        outline: 2px solid #2563eb;
+        outline-offset: 3px;
+        border-radius: 2px;
+      }
     </style>
 `;
 }

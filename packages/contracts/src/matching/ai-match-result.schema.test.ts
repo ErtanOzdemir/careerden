@@ -2,14 +2,13 @@ import { describe, expect, it } from "vitest";
 import { aiMatchResultSchema } from "./ai-match-result.schema.js";
 
 describe("aiMatchResultSchema", () => {
-  it("accepts description-only enhancement payloads", () => {
+  it("accepts tip-only enhancement payloads", () => {
     const result = aiMatchResultSchema.parse({
       coverLetterContent: "Dear hiring team, I am excited to apply.",
       matchScore: 82,
       missingSkills: ["Kubernetes"],
       strongSkills: ["TypeScript"],
-      recommendedAchievements: ["Reduced processing time by 30%"],
-      customizedSummary: "A short profile-aware summary.",
+      summaryTips: ["Lead with the TypeScript automation project."],
       interviewTips: ["Prepare a system design example."],
       requirementEvaluations: [
         {
@@ -32,33 +31,32 @@ describe("aiMatchResultSchema", () => {
           reason: "Introduces the core Kubernetes concepts required by the role.",
         },
       ],
-      experienceEnhancements: [
+      experienceTips: [
         {
           experienceIndex: 0,
-          enhancedDescription: "Built reliable TypeScript automation for production workflows.",
+          tips: ["Mention the production incident you resolved."],
         },
       ],
     });
 
-    expect(result.experienceEnhancements?.[0]).toEqual({
+    expect(result.experienceTips?.[0]).toEqual({
       experienceIndex: 0,
-      enhancedDescription: "Built reliable TypeScript automation for production workflows.",
+      tips: ["Mention the production incident you resolved."],
     });
   });
 
-  it("requires a description for every included enhancement", () => {
-    expect(() =>
-      aiMatchResultSchema.parse({
-        coverLetterContent: "Dear hiring team, I am excited to apply.",
-        matchScore: 82,
-        missingSkills: [],
-        strongSkills: ["TypeScript"],
-        recommendedAchievements: [],
-        customizedSummary: "A short profile-aware summary.",
-        interviewTips: [],
-        experienceEnhancements: [{ experienceIndex: 0 }],
-      }),
-    ).toThrow();
+  it("accepts an empty tips array for an item that needs no changes", () => {
+    const result = aiMatchResultSchema.parse({
+      coverLetterContent: "Dear hiring team, I am excited to apply.",
+      matchScore: 82,
+      missingSkills: [],
+      strongSkills: ["TypeScript"],
+      summaryTips: [],
+      interviewTips: [],
+      experienceTips: [{ experienceIndex: 0, tips: [] }],
+    });
+
+    expect(result.experienceTips?.[0]).toEqual({ experienceIndex: 0, tips: [] });
   });
 
   it("rejects scores outside the 0-100 range", () => {
@@ -68,8 +66,7 @@ describe("aiMatchResultSchema", () => {
         matchScore: 101,
         missingSkills: [],
         strongSkills: [],
-        recommendedAchievements: [],
-        customizedSummary: "Invalid score.",
+        summaryTips: [],
         interviewTips: [],
       }),
     ).toThrow();
@@ -82,8 +79,7 @@ describe("aiMatchResultSchema", () => {
         matchScore: 82,
         missingSkills: [],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: [],
-        customizedSummary: "A short profile-aware summary.",
+        summaryTips: [],
         interviewTips: [],
         requirementEvaluations: [
           {
@@ -103,8 +99,7 @@ describe("aiMatchResultSchema", () => {
         matchScore: 82,
         missingSkills: ["Kubernetes"],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: [],
-        customizedSummary: "A short profile-aware summary.",
+        summaryTips: [],
         interviewTips: [],
         missingSkillResources: [
           {

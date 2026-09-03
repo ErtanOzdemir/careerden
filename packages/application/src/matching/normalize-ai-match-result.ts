@@ -40,64 +40,51 @@ export function normalizeAiMatchResult(
           isHttpUrl(resource.url),
       ),
     strongSkills: cleanStrings(candidate.strongSkills),
-    recommendedAchievements: cleanStrings(candidate.recommendedAchievements),
-    customizedSummary: candidate.customizedSummary.trim(),
+    summaryTips: cleanStrings(candidate.summaryTips),
     interviewTips: cleanStrings(candidate.interviewTips),
     coverLetterGuidance: candidate.coverLetterGuidance
       ? cleanStrings(candidate.coverLetterGuidance)
       : undefined,
-    experienceEnhancements: normalizeEnhancements(
-      candidate.experienceEnhancements,
+    experienceTips: normalizeTips(
+      candidate.experienceTips,
       "experienceIndex",
       profile.experience.length,
     ),
-    skillSuggestions: candidate.skillSuggestions
-      ? cleanStrings(candidate.skillSuggestions)
-      : undefined,
-    educationEnhancements: normalizeEnhancements(
-      candidate.educationEnhancements,
+    skillsTips: candidate.skillsTips ? cleanStrings(candidate.skillsTips) : undefined,
+    educationTips: normalizeTips(
+      candidate.educationTips,
       "educationIndex",
       profile.education.length,
     ),
-    projectEnhancements: normalizeEnhancements(
-      candidate.projectEnhancements,
-      "projectIndex",
-      profile.projects.length,
-    ),
-    certificationSuggestions: candidate.certificationSuggestions
-      ? cleanStrings(candidate.certificationSuggestions)
+    projectTips: normalizeTips(candidate.projectTips, "projectIndex", profile.projects.length),
+    certificationsTips: candidate.certificationsTips
+      ? cleanStrings(candidate.certificationsTips)
       : undefined,
   };
 }
 
 /**
- * Drops enhancements pointing outside the profile and collapses duplicate indexes (last wins), so
+ * Drops tip entries pointing outside the profile and collapses duplicate indexes (last wins), so
  * downstream index lookups always resolve to a real profile item.
  */
-function normalizeEnhancements<K extends "educationIndex" | "experienceIndex" | "projectIndex">(
-  enhancements: Array<Record<K, number> & { enhancedDescription: string }> | undefined,
+function normalizeTips<K extends "educationIndex" | "experienceIndex" | "projectIndex">(
+  entries: Array<Record<K, number> & { tips: string[] }> | undefined,
   indexField: K,
   profileCount: number,
-): Array<Record<K, number> & { enhancedDescription?: string }> | undefined {
-  if (!enhancements) return undefined;
+): Array<Record<K, number> & { tips: string[] }> | undefined {
+  if (!entries) return undefined;
 
-  const byIndex = new Map<number, string>();
+  const byIndex = new Map<number, string[]>();
 
-  for (const enhancement of enhancements) {
-    const index = enhancement[indexField];
+  for (const entry of entries) {
+    const index = entry[indexField];
     if (!Number.isInteger(index) || index < 0 || index >= profileCount) continue;
-    byIndex.set(index, enhancement.enhancedDescription.trim());
+    byIndex.set(index, cleanStrings(entry.tips));
   }
 
   return [...byIndex.entries()]
     .sort(([left], [right]) => left - right)
-    .map(
-      ([index, enhancedDescription]) =>
-        ({
-          [indexField]: index,
-          ...(enhancedDescription ? { enhancedDescription } : {}),
-        }) as Record<K, number> & { enhancedDescription?: string },
-    );
+    .map(([index, tips]) => ({ [indexField]: index, tips }) as Record<K, number> & { tips: string[] });
 }
 
 function cleanStrings(values: string[]): string[] {

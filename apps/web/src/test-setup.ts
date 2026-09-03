@@ -27,3 +27,14 @@ Object.defineProperty(window, "localStorage", {
   configurable: true,
   value: testLocalStorage,
 });
+
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+Object.defineProperty(window, "ResizeObserver", {
+  configurable: true,
+  value: TestResizeObserver,
+});

@@ -181,7 +181,7 @@ export const cvDefaultHtml = `<!doctype html>
     {{#summary}}
     <section>
       <h2>Profile</h2>
-      {{summary}}
+      <div data-field-ref="summary">{{summary}}</div>
     </section>
     {{/summary}} {{#experience_content}}
     <section>
@@ -193,7 +193,7 @@ export const cvDefaultHtml = `<!doctype html>
     {{/experience_content}} {{#skills}}
     <section>
       <h2>Skills</h2>
-      <ul class="skills-list">
+      <ul class="skills-list" data-field-ref="skills">
         {{skills}}
       </ul>
     </section>
@@ -214,7 +214,7 @@ export const cvDefaultHtml = `<!doctype html>
     {{/project_content}} {{#certifications}}
     <section>
       <h2>Certifications</h2>
-      <ul class="cert-list">
+      <ul class="cert-list" data-field-ref="certifications">
         {{certifications}}
       </ul>
     </section>

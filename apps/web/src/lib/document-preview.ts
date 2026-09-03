@@ -19,33 +19,20 @@ export function buildPreviewTemplateData(
     };
   }
 
-  const summary =
-    content.selections.customizedSummary === "original"
-      ? (profile.summaryRichText ??
-        (profile.summary ? richDocumentFromText(profile.summary) : content.customizedSummary))
-      : content.customizedSummary;
-  const skills =
-    content.selections.skills === "original" || content.skillSuggestions.length === 0
-      ? profile.skills
-      : content.skillSuggestions;
+  const skills = content.skillSuggestions.length > 0 ? content.skillSuggestions : profile.skills;
   const certifications =
-    content.selections.certifications === "original" ||
-    content.certificationSuggestions.length === 0
-      ? profile.certifications
-      : content.certificationSuggestions;
+    content.certificationSuggestions.length > 0
+      ? content.certificationSuggestions
+      : profile.certifications;
 
   const experienceContent = profile.experience.map((experience, index) => {
     const enhancement = content.experienceEnhancements.find(
       (item) => item.experienceIndex === index,
     );
-    const selection = content.selections.experience[String(index)];
-    const originalDescription =
-      experience.descriptionRichText ??
-      (experience.description ? richDocumentFromText(experience.description) : undefined);
     const description =
-      selection?.description === "original"
-        ? originalDescription
-        : (enhancement?.description ?? originalDescription);
+      enhancement?.description ??
+      (experience.descriptionRichText ??
+        (experience.description ? richDocumentFromText(experience.description) : undefined));
 
     return toItemContent(
       `${experience.title} · ${experience.company}`,
@@ -58,14 +45,10 @@ export function buildPreviewTemplateData(
     const enhancement = content.educationEnhancements.find(
       (item) => item.educationIndex === index,
     );
-    const selection = content.selections.education[String(index)];
-    const originalDescription =
-      education.descriptionRichText ??
-      (education.description ? richDocumentFromText(education.description) : undefined);
     const description =
-      selection?.description === "original"
-        ? originalDescription
-        : (enhancement?.description ?? originalDescription);
+      enhancement?.description ??
+      (education.descriptionRichText ??
+        (education.description ? richDocumentFromText(education.description) : undefined));
 
     return toItemContent(
       education.institution,
@@ -78,16 +61,13 @@ export function buildPreviewTemplateData(
 
   const projectContent = profile.projects.map((project, index) => {
     const enhancement = content.projectEnhancements.find((item) => item.projectIndex === index);
-    const selection = content.selections.projects[String(index)];
-    const originalDescription = mergeRichDocumentsAsProse(
-      project.descriptionRichText ??
-        (project.description ? richDocumentFromText(project.description) : undefined),
-      ...project.achievements.map(richDocumentFromText),
-    );
     const description =
-      selection?.description === "original"
-        ? originalDescription
-        : (enhancement?.description ?? originalDescription);
+      enhancement?.description ??
+      mergeRichDocumentsAsProse(
+        project.descriptionRichText ??
+          (project.description ? richDocumentFromText(project.description) : undefined),
+        ...project.achievements.map(richDocumentFromText),
+      );
 
     return toItemContent(
       project.name,
@@ -102,7 +82,7 @@ export function buildPreviewTemplateData(
     email: profile.email,
     location: profile.location ?? "",
     links: profile.links,
-    summary,
+    summary: content.customizedSummary,
     experience_content: experienceContent,
     skills,
     education_content: educationContent,

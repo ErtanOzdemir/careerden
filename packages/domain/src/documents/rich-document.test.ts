@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  documentContentFromMatchAnalysis,
+  documentContentFromProfile,
   profileProjectDescriptionAsProse,
   richDocumentFromText,
   richDocumentToPlainText,
@@ -23,28 +23,27 @@ describe("rich document conversion", () => {
     });
   });
 
-  it("creates editable document content from match analysis", () => {
-    const content = documentContentFromMatchAnalysis(profileWithThreeExperiences(), {
-      customizedSummary: "Tailored summary",
-      experienceEnhancements: [{ experienceIndex: 2, enhancedDescription: "Improved description" }],
+  it("seeds editable document content from the profile's own text, not AI output", () => {
+    const content = documentContentFromProfile(profileWithThreeExperiences(), {
+      coverLetterContent: "Dear hiring team",
     });
 
-    expect(richDocumentToPlainText(content.customizedSummary)).toBe("Tailored summary");
+    expect(richDocumentToPlainText(content.customizedSummary)).toBe("A backend engineer.");
     expect(content.formatVersion).toBe(2);
     expect(richDocumentToPlainText(content.experienceEnhancements[2]!.description!)).toBe(
-      "Improved description",
+      "Backend engineering work.",
     );
+    expect(richDocumentToPlainText(content.coverLetterContent!)).toBe("Dear hiring team");
+    expect(content.skillSuggestions).toEqual(["TypeScript"]);
+    expect(content.certificationSuggestions).toEqual(["AWS"]);
   });
 
-  it("emits one entry per profile item so a missing enhancement is visible rather than silent", () => {
-    const content = documentContentFromMatchAnalysis(profileWithThreeExperiences(), {
-      customizedSummary: "Tailored summary",
-      experienceEnhancements: [{ experienceIndex: 1, enhancedDescription: "Only the middle one" }],
-    });
+  it("emits one entry per profile item so a missing description is visible rather than silent", () => {
+    const content = documentContentFromProfile(profileWithThreeExperiences(), {});
 
     expect(content.experienceEnhancements.map((item) => item.experienceIndex)).toEqual([0, 1, 2]);
     expect(content.experienceEnhancements[0]?.description).toBeUndefined();
-    expect(content.experienceEnhancements[2]?.description).toBeUndefined();
+    expect(content.experienceEnhancements[1]?.description).toBeUndefined();
   });
 
   it("merges profile project achievements into its original prose description", () => {
@@ -61,10 +60,14 @@ describe("rich document conversion", () => {
 
 function profileWithThreeExperiences() {
   return {
+    summary: "A backend engineer.",
+    summaryRichText: undefined,
+    skills: ["TypeScript"],
+    certifications: ["AWS"],
     experience: [
       { company: "Acme", title: "Engineer" },
       { company: "Babbage", title: "Coordinator" },
-      { company: "Analytical Engines", title: "Backend Engineer" },
+      { company: "Analytical Engines", title: "Backend Engineer", description: "Backend engineering work." },
     ],
     education: [],
     projects: [],

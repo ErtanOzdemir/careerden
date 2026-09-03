@@ -36,8 +36,7 @@ describe("GenerateDocumentsUseCase", () => {
         matchScore: 90,
         missingSkills: [],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: [],
-        customizedSummary: "Summary",
+        summaryTips: [],
         interviewTips: [],
       },
     });
@@ -91,8 +90,7 @@ describe("GenerateDocumentsUseCase", () => {
         matchScore: 90,
         missingSkills: [],
         strongSkills: [],
-        recommendedAchievements: [],
-        customizedSummary: "Summary",
+        summaryTips: [],
         interviewTips: [],
       },
     });
@@ -193,13 +191,12 @@ describe("GenerateDocumentsUseCase", () => {
         matchScore: 90,
         missingSkills: [],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: ["Enhanced achievement."],
-        customizedSummary: "Enhanced summary.",
+        summaryTips: ["Lead with the enhanced achievement."],
         interviewTips: ["Prepare examples."],
-        experienceEnhancements: [
+        experienceTips: [
           {
             experienceIndex: 0,
-            enhancedDescription: "Built TypeScript automation for backend systems.",
+            tips: ["Mention the backend systems focus."],
           },
         ],
       },
@@ -228,23 +225,11 @@ describe("GenerateDocumentsUseCase", () => {
         ],
         skillSuggestions: ["TypeScript", "Node.js"],
         certificationSuggestions: ["AWS Practitioner"],
-        selections: {
-          certifications: "ai",
-          customizedSummary: "original",
-          experience: {
-            "0": { description: "original" },
-          },
-          education: {
-            "0": { description: "ai" },
-          },
-          projects: {
-            "0": { description: "original" },
-          },
-          skills: "ai",
-        },
       },
     });
 
+    // Every field's current value (whether hand-edited, tip-revised, or untouched) is used directly
+    // now — there is no AI-vs-original selection to route through.
     expect(capturedData[0]?.selected_experiences).toEqual([
       {
         title: "Engineer",
@@ -252,7 +237,9 @@ describe("GenerateDocumentsUseCase", () => {
         start_date: "2022",
         end_date: "Present",
         period: "2022 - Present",
-        description: originalDescription,
+        description: richDocumentFromText(
+          "User-edited TypeScript automation for backend systems.",
+        ),
       },
     ]);
     expect(capturedData[0]?.selected_projects).toEqual([
@@ -260,11 +247,11 @@ describe("GenerateDocumentsUseCase", () => {
         name: "Careerden",
         url: "",
         skills: ["TypeScript"],
-        description: richDocumentFromText("Built automation. Launched automated tailoring."),
+        description: richDocumentFromText("AI-enhanced project description."),
       },
     ]);
-    expect(capturedData[0]?.summary).toEqual(originalSummary);
-    expect(capturedData[0]?.customized_summary).toEqual(originalSummary);
+    expect(capturedData[0]?.summary).toEqual(richDocumentFromText("User-edited summary."));
+    expect(capturedData[0]?.customized_summary).toEqual(richDocumentFromText("User-edited summary."));
     expect(capturedData[0]?.skills).toEqual(["TypeScript", "Node.js"]);
     expect(capturedData[0]?.certifications).toEqual(["AWS Practitioner"]);
     expect(capturedData[0]?.selected_education).toHaveLength(1);
@@ -280,11 +267,11 @@ describe("GenerateDocumentsUseCase", () => {
     );
     const experienceContent = capturedData[0]?.experience_content as RichDocument[];
     expect(richDocumentToPlainText(experienceContent[0]!)).toBe(
-      "Engineer · Analytical Engines\n2022 - Present\nBuilt automation.",
+      "Engineer · Analytical Engines\n2022 - Present\nUser-edited TypeScript automation for backend systems.",
     );
     const projectContent = capturedData[0]?.project_content as RichDocument[];
     expect(richDocumentToPlainText(projectContent[0]!)).toContain(
-      "Careerden\nTypeScript\nBuilt automation. Launched automated tailoring.",
+      "Careerden\nTypeScript\nAI-enhanced project description.",
     );
     expect(capturedData[0]?.experience_list).toEqual(capturedData[0]?.selected_experiences);
     expect(capturedData[0]?.raw_experience_list).toEqual([
@@ -325,8 +312,7 @@ describe("GenerateDocumentsUseCase", () => {
         matchScore: 90,
         missingSkills: [],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: [],
-        customizedSummary: "Summary",
+        summaryTips: [],
         interviewTips: [],
       },
     });
@@ -365,8 +351,7 @@ describe("GenerateDocumentsUseCase", () => {
         matchScore: 90,
         missingSkills: [],
         strongSkills: ["TypeScript"],
-        recommendedAchievements: [],
-        customizedSummary: "Summary",
+        summaryTips: [],
         interviewTips: [],
       },
       documentContent: {

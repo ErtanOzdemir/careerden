@@ -134,10 +134,10 @@ export function mapApiJobApplicationToUi(
       name: document.fileName,
       createdAt: formatDate(document.createdAt),
     })),
-    aiMatch: detail?.matchAnalysis ? mapMatchAnalysis(detail.matchAnalysis, profile) : undefined,
+    aiMatch: detail?.matchAnalysis ? mapMatchAnalysis(detail.matchAnalysis) : undefined,
     documentContent:
       detail?.documentContent ??
-      (detail?.matchAnalysis ? mapInitialDocumentContent(detail.matchAnalysis) : undefined),
+      (detail?.matchAnalysis ? mapInitialDocumentContent(detail.matchAnalysis, profile) : undefined),
   };
 }
 
@@ -149,34 +149,34 @@ function getAnalysisSkipReason(
     : undefined;
 }
 
-function toDescription(text?: string): { description?: RichDocument } {
-  return text ? { description: richDocumentFromText(text) } : {};
-}
+/**
+ * Seeds the editable document from the profile's own text — not from AI output. This mirrors
+ * `documentContentFromProfile` in `@careerden/domain` (the server does the same thing right after
+ * analysis completes); it only exists here as a client-side fallback for the brief window before
+ * the server-persisted `documentContent` has loaded.
+ */
+function mapInitialDocumentContent(match: ApiMatchAnalysis, profile?: ApiProfile) {
+  const toRichDocument = (text?: string, richText?: RichDocument): RichDocument | undefined =>
+    richText ?? (text ? richDocumentFromText(text) : undefined);
 
-function mapInitialDocumentContent(match: ApiMatchAnalysis) {
   return {
     coverLetterContent: richDocumentFromText(match.coverLetterContent ?? ""),
-    customizedSummary: richDocumentFromText(match.customizedSummary),
+    customizedSummary: toRichDocument(profile?.summary, profile?.summaryRichText) ?? richDocumentFromText(""),
     formatVersion: 2 as const,
-    experienceEnhancements: (match.experienceEnhancements ?? []).map((enhancement) => ({
-      experienceIndex: enhancement.experienceIndex,
-      ...toDescription(enhancement.enhancedDescription),
+    experienceEnhancements: (profile?.experience ?? []).map((experience, index) => ({
+      experienceIndex: index,
+      description: toRichDocument(experience.description, experience.descriptionRichText),
     })),
-    skillSuggestions: match.skillSuggestions ?? [],
-    educationEnhancements: (match.educationEnhancements ?? []).map((enhancement) => ({
-      educationIndex: enhancement.educationIndex,
-      ...toDescription(enhancement.enhancedDescription),
+    skillSuggestions: profile?.skills ?? [],
+    educationEnhancements: (profile?.education ?? []).map((education, index) => ({
+      educationIndex: index,
+      description: toRichDocument(education.description, education.descriptionRichText),
     })),
-    projectEnhancements: (match.projectEnhancements ?? []).map((enhancement) => ({
-      projectIndex: enhancement.projectIndex,
-      ...toDescription(enhancement.enhancedDescription),
+    projectEnhancements: (profile?.projects ?? []).map((project, index) => ({
+      projectIndex: index,
+      description: toRichDocument(project.description, project.descriptionRichText),
     })),
-    certificationSuggestions: match.certificationSuggestions ?? [],
-    selections: {
-      experience: {},
-      education: {},
-      projects: {},
-    },
+    certificationSuggestions: profile?.certifications ?? [],
   };
 }
 
@@ -380,106 +380,27 @@ function mapFollowUp(followUp: ApiJobApplicationFollowUp): FollowUp {
   };
 }
 
-function mapMatchAnalysis(
-  match: ApiMatchAnalysis,
-  profile?: ApiProfile,
-): NonNullable<JobApplication["aiMatch"]> {
-  const recommendationQueue = [...match.recommendedAchievements];
-  const profileHighlights = profile?.experience
-    .map((experience) => experience.description)
-    .filter(Boolean);
-  const originalHighlights = profileHighlights ?? [];
-  const currentSummary = profile?.summary ?? profile?.headline ?? "Current profile summary";
-  const yourSkills =
-    profile?.skills && profile.skills.length > 0 ? profile.skills : match.strongSkills;
-
+function mapMatchAnalysis(match: ApiMatchAnalysis): NonNullable<JobApplication["aiMatch"]> {
   return {
     score: match.matchScore,
     summary: match.interviewTips[0] ?? "AI analysis is available for this application.",
-    keywords: [
-      ...match.strongSkills.map((skill) => ({ keyword: skill, match: true })),
-      ...match.missingSkills.map((skill) => ({ keyword: skill, match: false })),
-    ],
     requirements: mapRequirementMatches(match),
     recommendation: match.matchScore >= 70 ? "Apply to CV" : "Review before applying",
-    currentSummary,
-    currentSummaryRichText: profile?.summaryRichText ?? richDocumentFromText(currentSummary),
-    enhancedSummary: match.customizedSummary,
-    missingSkillResources: (match.missingSkillResources ?? []).filter((resource) =>
-      isHttpUrl(resource.url),
-    ),
-    bulletOptimizations: match.recommendedAchievements.map((achievement, index) => ({
-      original: originalHighlights[index] ?? "No matching profile highlight",
-      enhanced: achievement,
+    summaryTips: match.summaryTips,
+    experienceTips: (match.experienceTips ?? []).map((entry) => ({
+      index: entry.experienceIndex,
+      tips: entry.tips,
     })),
-    experienceOptimizations: profile?.experience.map((experience, index) => {
-      const enhancement = match.experienceEnhancements?.find(
-        (item) => item.experienceIndex === index,
-      );
-
-      return {
-        title: experience.title,
-        company: experience.company,
-        items: [
-          ...(experience.description
-            ? [
-                {
-                  actual: experience.description,
-                  actualRichText:
-                    experience.descriptionRichText ?? richDocumentFromText(experience.description),
-                  enhanced: enhancement?.enhancedDescription ?? recommendationQueue.shift(),
-                  kind: "description" as const,
-                },
-              ]
-            : []),
-        ],
-      };
-    }),
-    yourSkills,
-    suggestedSkills: match.missingSkills,
-    educationOptimizations: profile?.education.map((education, index) => {
-      const enhancement = match.educationEnhancements?.find(
-        (item) => item.educationIndex === index,
-      );
-      return {
-        institution: education.institution,
-        degree: [education.degree, education.field].filter(Boolean).join(", ") || "Education",
-        items: enhancement?.enhancedDescription
-          ? [
-              {
-                actual: [education.degree, education.field].filter(Boolean).join(", "),
-                enhanced: enhancement.enhancedDescription,
-                kind: "description" as const,
-              },
-            ]
-          : [],
-      };
-    }),
-    projectOptimizations: profile?.projects.map((project, index) => {
-      const enhancement = match.projectEnhancements?.find((item) => item.projectIndex === index);
-      return {
-        name: project.name,
-        items: [
-          ...(project.description
-            ? [
-                {
-                  actual: project.description,
-                  actualRichText:
-                    project.descriptionRichText ?? richDocumentFromText(project.description),
-                  enhanced: enhancement?.enhancedDescription,
-                  kind: "description" as const,
-                },
-              ]
-            : []),
-          // The AI folds a project's achievements into its single tailored description, so these
-          // rows carry the profile's own text with no separate enhanced counterpart.
-          ...project.achievements.map((achievement) => ({
-            actual: achievement,
-            kind: "achievement" as const,
-          })),
-        ],
-      };
-    }),
+    educationTips: (match.educationTips ?? []).map((entry) => ({
+      index: entry.educationIndex,
+      tips: entry.tips,
+    })),
+    projectTips: (match.projectTips ?? []).map((entry) => ({
+      index: entry.projectIndex,
+      tips: entry.tips,
+    })),
+    skillsTips: match.skillsTips ?? [],
+    certificationsTips: match.certificationsTips ?? [],
   };
 }
 

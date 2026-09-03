@@ -36,6 +36,7 @@ import type {
   DeleteJobApplicationFollowUpUseCase,
   GetGeneratedDocumentDownloadUrlUseCase,
   PreviewApplicationPackUseCase,
+  ApplyDocumentFieldTipUseCase,
 } from "@careerden/application";
 import type { JobApplicationChangeSubscriber } from "@careerden/domain";
 import {
@@ -57,6 +58,7 @@ import {
   updateStatusSchema,
   updateDocumentContentSchema,
   requestApplicationPackGenerationSchema,
+  applyFieldTipRequestSchema,
 } from "@careerden/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
@@ -99,6 +101,7 @@ export function createJobApplicationRouter(dependencies: {
   deleteJobApplicationFollowUp: DeleteJobApplicationFollowUpUseCase;
   getGeneratedDocumentDownloadUrl: GetGeneratedDocumentDownloadUrlUseCase;
   previewApplicationPack: PreviewApplicationPackUseCase;
+  applyDocumentFieldTip?: ApplyDocumentFieldTipUseCase;
 }): ExpressRouter {
   const router = Router();
 
@@ -667,6 +670,26 @@ export function createJobApplicationRouter(dependencies: {
       }
     },
   );
+
+  if (dependencies.applyDocumentFieldTip) {
+    router.post(
+      "/:id/document-content/apply-tip",
+      validateBody(applyFieldTipRequestSchema),
+      async (request, response, next) => {
+        try {
+          const value = await dependencies.applyDocumentFieldTip!.execute(
+            request.params.id,
+            currentUser(request).id,
+            request.body,
+          );
+
+          response.json({ value });
+        } catch (error) {
+          next(error);
+        }
+      },
+    );
+  }
 
   router.post("/:id/documents/generate", async (request, response, next) => {
     try {

@@ -1,5 +1,5 @@
 import type { RichDocument } from "@careerden/contracts";
-import { mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
+import { emptyRichDocument, mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
 import type { ProfileProject, UserProfile } from "../profiles/user-profile.js";
 
 /**
@@ -45,19 +45,6 @@ export interface DocumentContentProjectEnhancement {
   description?: RichDocument;
 }
 
-export interface DocumentContentItemSelection {
-  description?: "ai" | "original";
-}
-
-export interface DocumentContentSelections {
-  customizedSummary?: "ai" | "original";
-  skills?: "ai" | "original";
-  certifications?: "ai" | "original";
-  experience: Record<string, DocumentContentItemSelection>;
-  education: Record<string, DocumentContentItemSelection>;
-  projects: Record<string, DocumentContentItemSelection>;
-}
-
 export interface DocumentContent {
   coverLetterContent?: RichDocument;
   customizedSummary: RichDocument;
@@ -67,60 +54,42 @@ export interface DocumentContent {
   educationEnhancements?: DocumentContentEducationEnhancement[];
   projectEnhancements?: DocumentContentProjectEnhancement[];
   certificationSuggestions?: string[];
-  selections?: DocumentContentSelections;
 }
 
 /**
- * Builds the editable document the user customises from a finished match analysis.
+ * Builds the editable document the user customises, seeded from their own profile text — not from
+ * AI output. The CV always starts as the candidate's own words; AI involvement is opt-in per field,
+ * one improvement tip at a time (see ApplyDocumentFieldTipUseCase in `@careerden/application`), not
+ * a wholesale rewrite applied up front.
  *
- * One entry is emitted per profile item rather than per AI enhancement: the analysis guarantees a
- * tailored description for every index, and materialising them all keeps the customiser from
- * silently falling back to the untouched profile text when an entry is missing.
+ * One entry is emitted per profile item so the customiser never has to fall back to an untouched
+ * value mid-render — every index is already populated.
  */
-export function documentContentFromMatchAnalysis(
-  profile: Pick<UserProfile, "education" | "experience" | "projects">,
-  analysis: {
-    coverLetterContent?: string;
-    customizedSummary: string;
-    experienceEnhancements?: Array<{ experienceIndex: number; enhancedDescription?: string }>;
-    skillSuggestions?: string[];
-    educationEnhancements?: Array<{ educationIndex: number; enhancedDescription?: string }>;
-    projectEnhancements?: Array<{ projectIndex: number; enhancedDescription?: string }>;
-    certificationSuggestions?: string[];
-  },
+export function documentContentFromProfile(
+  profile: Pick<
+    UserProfile,
+    "certifications" | "education" | "experience" | "projects" | "skills" | "summary" | "summaryRichText"
+  >,
+  analysis: { coverLetterContent?: string },
 ): DocumentContent {
   return {
     coverLetterContent: richDocumentFromText(analysis.coverLetterContent ?? ""),
-    customizedSummary: richDocumentFromText(analysis.customizedSummary),
+    customizedSummary: toRichDocument(profile.summary, profile.summaryRichText) ?? emptyRichDocument(),
     formatVersion: DOCUMENT_CONTENT_FORMAT_VERSION,
-    experienceEnhancements: profile.experience.map((_, index) => ({
+    experienceEnhancements: profile.experience.map((experience, index) => ({
       experienceIndex: index,
-      ...toDescription(
-        analysis.experienceEnhancements?.find((item) => item.experienceIndex === index)
-          ?.enhancedDescription,
-      ),
+      description: toRichDocument(experience.description, experience.descriptionRichText),
     })),
-    skillSuggestions: analysis.skillSuggestions ?? [],
-    educationEnhancements: profile.education.map((_, index) => ({
+    skillSuggestions: [...profile.skills],
+    educationEnhancements: profile.education.map((education, index) => ({
       educationIndex: index,
-      ...toDescription(
-        analysis.educationEnhancements?.find((item) => item.educationIndex === index)
-          ?.enhancedDescription,
-      ),
+      description: toRichDocument(education.description, education.descriptionRichText),
     })),
-    projectEnhancements: profile.projects.map((_, index) => ({
+    projectEnhancements: profile.projects.map((project, index) => ({
       projectIndex: index,
-      ...toDescription(
-        analysis.projectEnhancements?.find((item) => item.projectIndex === index)
-          ?.enhancedDescription,
-      ),
+      description: profileProjectDescriptionAsProse(project),
     })),
-    certificationSuggestions: analysis.certificationSuggestions ?? [],
-    selections: {
-      experience: {},
-      education: {},
-      projects: {},
-    },
+    certificationSuggestions: [...profile.certifications],
   };
 }
 
@@ -131,10 +100,6 @@ export function profileProjectDescriptionAsProse(
     toRichDocument(project.description, project.descriptionRichText),
     ...project.achievements.map(richDocumentFromText),
   );
-}
-
-function toDescription(text: string | undefined): { description?: RichDocument } {
-  return text ? { description: richDocumentFromText(text) } : {};
 }
 
 function toRichDocument(

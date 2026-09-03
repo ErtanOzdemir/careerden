@@ -72,8 +72,6 @@ describe("API mappers", () => {
     expect(mapped.followUps?.[0]?.title).toBe("Send thank-you email");
     expect(mapped.followUps?.[0]?.description).toBe("Ask about the product roadmap.");
     expect(mapped.aiMatch?.score).toBe(82);
-    expect(mapped.aiMatch?.keywords).toContainEqual({ keyword: "React", match: true });
-    expect(mapped.aiMatch?.keywords).toContainEqual({ keyword: "Node.js", match: false });
     expect(mapped.aiMatch?.requirements).toEqual([
       {
         requirement: "Build React product UI",
@@ -91,14 +89,9 @@ describe("API mappers", () => {
         evidence: [],
       },
     ]);
-    expect(mapped.aiMatch?.missingSkillResources).toEqual([
-      {
-        skill: "Node.js",
-        title: "Node.js Learn",
-        type: "documentation",
-        url: "https://nodejs.org/en/learn",
-        reason: "Covers Node.js fundamentals for backend JavaScript work.",
-      },
+    expect(mapped.aiMatch?.summaryTips).toEqual(["Lead with the React work."]);
+    expect(mapped.aiMatch?.experienceTips).toEqual([
+      { index: 0, tips: ["Mention the accessibility work."] },
     ]);
   });
 
@@ -313,61 +306,20 @@ describe("API mappers", () => {
     expect(mapped.skills[0]?.skills).toEqual(["Figma"]);
   });
 
-  it("maps profile experience descriptions into AI comparisons", () => {
-    const application = createApplicationDetail();
-    const profile = createProfile();
-    application.matchAnalysis = {
-      ...application.matchAnalysis,
-      recommendedAchievements: ["Enhanced role description."],
-    };
-
-    const mapped = mapApiJobApplicationToUi(application, profile);
-
-    expect(mapped.aiMatch?.experienceOptimizations).toHaveLength(2);
-    expect(mapped.aiMatch?.experienceOptimizations?.[0]).toEqual({
-      title: "Frontend Engineer",
-      company: "Acme",
-      items: [
-        {
-          actual: "Built product experiences for SaaS teams.",
-          actualRichText: {
-            version: 1,
-            blocks: [
-              {
-                type: "paragraph",
-                children: [{ type: "text", text: "Built product experiences for SaaS teams." }],
-              },
-            ],
-          },
-          enhanced: "Enhanced role description.",
-          kind: "description",
-        },
-      ],
-    });
-    expect(mapped.aiMatch?.experienceOptimizations?.[1]).toEqual({
-      title: "UI Engineer",
-      company: "Beta",
-      items: [],
-    });
-  });
-
-  it("builds a fallback draft from the analysis when no document content is stored yet", () => {
+  it("builds a fallback draft from the profile's own text when no document content is stored yet", () => {
     const application = createApplicationDetail();
     application.documentContent = null;
-    application.matchAnalysis = {
-      ...application.matchAnalysis!,
-      experienceEnhancements: [
-        { experienceIndex: 0, enhancedDescription: "Built product experiences" },
-      ],
-    };
+    const profile = createProfile();
 
-    const mapped = mapApiJobApplicationToUi(application);
+    const mapped = mapApiJobApplicationToUi(application, profile);
     const content = mapped.documentContent!;
 
     expect(content.formatVersion).toBe(2);
+    expect(richDocumentToPlainText(content.customizedSummary)).toBe("Builds product UI.");
     expect(richDocumentToPlainText(content.experienceEnhancements[0]!.description!)).toBe(
-      "Built product experiences",
+      "Built product experiences for SaaS teams.",
     );
+    expect(content.skillSuggestions).toEqual(["React"]);
   });
 });
 
@@ -414,7 +366,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
     },
     id: "job-1",
     matchAnalysis: {
-      customizedSummary: "Frontend engineer focused on React.",
+      summaryTips: ["Lead with the React work."],
       interviewTips: ["Prepare React examples."],
       matchScore: 82,
       missingSkills: ["Node.js"],
@@ -444,7 +396,7 @@ function createApplicationDetail(): ApiJobApplicationDetail {
           evidence: [],
         },
       ],
-      recommendedAchievements: ["Built accessible UI with React."],
+      experienceTips: [{ experienceIndex: 0, tips: ["Mention the accessibility work."] }],
       strongSkills: ["React"],
     },
     profileId: "profile-1",

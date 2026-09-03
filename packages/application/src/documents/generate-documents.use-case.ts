@@ -12,7 +12,7 @@ import type {
   UserProfile,
   UserProfileRepository,
 } from "@careerden/domain";
-import { documentContentFromMatchAnalysis } from "@careerden/domain";
+import { documentContentFromProfile } from "@careerden/domain";
 import type { DocumentTemplateKind } from "@careerden/contracts";
 import { listHtmlTemplates, getHtmlTemplateById } from "@careerden/contracts";
 import {
@@ -90,7 +90,7 @@ export class GenerateDocumentsUseCase {
   }): Promise<PreviewGeneratedDocuments> {
     const scrape = await this.jobApplications.getScrapeBundle(input.jobApplicationId);
     const documentContent =
-      input.documentContent ?? documentContentFromMatchAnalysis(input.profile, input.analysis);
+      input.documentContent ?? documentContentFromProfile(input.profile, input.analysis);
     const data = toTemplateData(
       input.profile,
       input.analysis,
@@ -133,7 +133,7 @@ export class GenerateDocumentsUseCase {
   ): Promise<T[]> {
     const scrape = await this.jobApplications.getScrapeBundle(input.jobApplicationId);
     const documentContent =
-      input.documentContent ?? documentContentFromMatchAnalysis(input.profile, input.analysis);
+      input.documentContent ?? documentContentFromProfile(input.profile, input.analysis);
     const data = toTemplateData(
       input.profile,
       input.analysis,
@@ -335,7 +335,6 @@ function toTemplateData(
     match_score: analysis.matchScore,
     missing_skills: analysis.missingSkills,
     strong_skills: analysis.strongSkills,
-    recommended_achievements: analysis.recommendedAchievements,
     customized_summary: resolved.summary,
     interview_tips: analysis.interviewTips,
     cover_letter_guidance: analysis.coverLetterGuidance ?? [],

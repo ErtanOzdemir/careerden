@@ -17,6 +17,7 @@ import {
   GetOrCreateCurrentProfileUseCase,
   GetProfileUseCase,
   PreviewApplicationPackUseCase,
+  ApplyDocumentFieldTipUseCase,
   CountUnreadNotificationsUseCase,
   ListNotificationsUseCase,
   MarkAllNotificationsReadUseCase,
@@ -54,6 +55,7 @@ import {
   ProcessBillingProviderEventUseCase,
 } from "@careerden/application";
 import {
+  AiProviderFactory,
   HtmlTemplateRenderer,
   HttpRemoteImageFetcher,
   PlaywrightPdfRenderer,
@@ -73,6 +75,7 @@ import {
   PostgresBillingSubscriptionRepository,
   createResendEmailSender,
 } from "@careerden/infrastructure";
+import type { AiProvider } from "@careerden/domain";
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";
 import { requireSession } from "./auth/session.middleware.js";
@@ -156,6 +159,21 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     secretAccessKey: env.OBJECT_STORAGE_SECRET_ACCESS_KEY,
   });
   const remoteImageFetcher = new HttpRemoteImageFetcher();
+  // Optional: this API process has no other hard dependency on an AI provider (analysis itself runs
+  // in apps/llm-worker), so a missing key here disables just the apply-tip route rather than
+  // failing the whole server to boot — same "absent means disabled" pattern as `generateWithAi`
+  // below.
+  let aiProvider: AiProvider | undefined;
+  try {
+    aiProvider = new AiProviderFactory({
+      aiProvider: env.AI_PROVIDER,
+      openaiApiKey: env.OPENAI_API_KEY,
+      geminiApiKey: env.GEMINI_API_KEY,
+      deepseekApiKey: env.DEEPSEEK_API_KEY,
+    }).create();
+  } catch {
+    aiProvider = undefined;
+  }
   const generateDocumentsUseCase = new GenerateDocumentsUseCase(
     new HtmlTemplateRenderer(),
     new PlaywrightPdfRenderer(),
@@ -288,6 +306,15 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
         profiles,
         generateDocumentsUseCase,
       ),
+      ...(aiProvider
+        ? {
+            applyDocumentFieldTip: new ApplyDocumentFieldTipUseCase(
+              jobApplications,
+              profiles,
+              aiProvider,
+            ),
+          }
+        : {}),
     }),
   );
   app.use(

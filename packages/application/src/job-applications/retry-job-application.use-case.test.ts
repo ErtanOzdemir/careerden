@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  documentContentFromMatchAnalysis,
+  documentContentFromProfile,
   type ScrapeBundle,
   type UserProfileAccountRepository,
 } from "@careerden/domain";
@@ -88,8 +88,8 @@ describe("RetryJobApplicationUseCase", () => {
     });
     const scrape = createScrapeBundle();
     const analysis = createMatchAnalysis();
-    const documentContent = documentContentFromMatchAnalysis(
-      { education: [], experience: [], projects: [] },
+    const documentContent = documentContentFromProfile(
+      { education: [], experience: [], projects: [], skills: [], certifications: [], summary: undefined, summaryRichText: undefined },
       analysis,
     );
     await repository.saveScrapeBundle(job.id, scrape);
@@ -200,8 +200,7 @@ function createMatchAnalysis() {
     matchScore: 90,
     missingSkills: [],
     strongSkills: ["TypeScript"],
-    recommendedAchievements: [],
-    customizedSummary: "Summary",
+    summaryTips: [],
     interviewTips: [],
   };
 }

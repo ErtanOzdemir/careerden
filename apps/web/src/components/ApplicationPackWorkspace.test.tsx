@@ -15,6 +15,7 @@ import { ApplicationPackWorkspace } from "./ApplicationPackWorkspace.js";
 interface FakePagedPreviewHandle {
   result: Promise<{ totalPages: number }>;
   cancel: () => void;
+  highlightField: (domId: string) => void;
 }
 
 const renderPagedPreview =
@@ -25,8 +26,14 @@ vi.mock("../lib/paged-preview.js", () => ({
 }));
 
 function pagedPreviewHandle(totalPages: number): FakePagedPreviewHandle {
-  return { result: Promise.resolve({ totalPages }), cancel: vi.fn() };
+  return { result: Promise.resolve({ totalPages }), cancel: vi.fn(), highlightField: vi.fn() };
 }
+
+const applyFieldTip = vi.fn();
+
+vi.mock("../api/jobApplications.js", () => ({
+  jobApplicationsApi: { applyFieldTip: (...args: unknown[]) => applyFieldTip(...args) },
+}));
 
 vi.mock("./RichTextEditor.js", () => ({
   default: ({
@@ -58,6 +65,7 @@ describe("ApplicationPackWorkspace", () => {
   afterEach(() => {
     cleanup();
     renderPagedPreview.mockReset();
+    applyFieldTip.mockReset();
   });
 
   it("presents the CV and cover letter as one ready application pack, paginated via Paged.js", async () => {
@@ -135,36 +143,29 @@ describe("ApplicationPackWorkspace", () => {
     fireEvent.change(screen.getByLabelText("Tone"), { target: { value: "concise" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Customize Summary" }));
-    fireEvent.click(screen.getByRole("button", { name: "Summary source: Use profile" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Format Edit AI CV summary as bullet list" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Format Edit CV summary as bullet list" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Customize Experience" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Experience 1 description source: Use profile" }),
-    );
+    expect(
+      screen.getByText("Built product experiences. Shipped React products."),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Customize Education" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Education 1 description source: Use profile" }),
-    );
+    expect(
+      screen.getByText("Relevant computer science coursework. Completed systems research."),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Customize Projects" }));
-    expect(screen.getByText("Built a computing model. Designed the compiler.")).toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Project 1 description source: Use profile" }),
-    );
-    expect(screen.queryByText("Achievement suggestions")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /achievement/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Tailored project evidence. Improved the compiler design."),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Customize Skills" }));
-    fireEvent.click(screen.getByRole("button", { name: "Skills source: Use profile" }));
-    fireEvent.change(screen.getByLabelText("Add AI skill"), { target: { value: "Node.js" } });
+    fireEvent.change(screen.getByLabelText("New skill"), { target: { value: "Node.js" } });
     fireEvent.click(screen.getByRole("button", { name: "Add skill" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Customize Certifications" }));
-    fireEvent.click(screen.getByRole("button", { name: "Certifications source: Use profile" }));
+    expect(screen.getByText("AWS Practitioner")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Customize Cover Letter" }));
     expect(screen.getByLabelText("Edit cover letter")).toBeInTheDocument();
@@ -177,22 +178,34 @@ describe("ApplicationPackWorkspace", () => {
           blocks: expect.arrayContaining([expect.objectContaining({ type: "bulletList" })]),
         }),
         skillSuggestions: ["React", "Node.js"],
-        selections: expect.objectContaining({
-          certifications: "original",
-          customizedSummary: "original",
-          experience: expect.objectContaining({
-            "0": { description: "original" },
-          }),
-          education: expect.objectContaining({
-            "0": { description: "original" },
-          }),
-          projects: expect.objectContaining({
-            "0": { description: "original" },
-          }),
-          skills: "original",
-        }),
       }),
       { language: "tr", tone: "concise" },
+    );
+    const [savedContent] = onUpdate.mock.calls[0]!;
+    expect(savedContent).not.toHaveProperty("selections");
+  });
+
+  it("applies a tip from the tips panel to the matching field and highlights it in the preview", async () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    applyFieldTip.mockResolvedValue({ value: paragraph("Shipped React products company-wide.") });
+
+    renderWorkspace();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mention shipping React products." }),
+    );
+
+    await waitFor(() => expect(applyFieldTip).toHaveBeenCalledOnce());
+    expect(applyFieldTip).toHaveBeenCalledWith("job-1", {
+      field: { type: "experience", index: 0 },
+      currentValue: paragraph("Built product experiences. Shipped React products."),
+      tip: "Mention shipping React products.",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Customize this pack/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Customize Experience" }));
+    await waitFor(() =>
+      expect(screen.getByText("Shipped React products company-wide.")).toBeInTheDocument(),
     );
   });
 
@@ -291,10 +304,10 @@ function createApplication(): JobApplication {
 
   return {
     aiMatch: {
-      bulletOptimizations: [],
-      currentSummary: "Product engineer.",
-      enhancedSummary: "Tailored product engineer summary.",
-      keywords: [{ keyword: "React", match: true }],
+      certificationsTips: [],
+      educationTips: [{ index: 0, tips: ["Mention the systems research."] }],
+      experienceTips: [{ index: 0, tips: ["Mention shipping React products."] }],
+      projectTips: [],
       recommendation: "Strong match with relevant product experience.",
       requirements: [
         {
@@ -304,9 +317,9 @@ function createApplication(): JobApplication {
         },
       ],
       score: 86,
-      suggestedSkills: [],
+      skillsTips: ["Add Node.js — it's used across the team."],
       summary: "Your strongest evidence aligns with the role's product focus.",
-      yourSkills: ["React"],
+      summaryTips: ["Lead with the React product work."],
     },
     applicationPackPreferences: { language: "auto", tone: "professional" },
     company: "Acme",
@@ -337,14 +350,6 @@ function createApplication(): JobApplication {
           projectIndex: 0,
         },
       ],
-      selections: {
-        certifications: "ai",
-        customizedSummary: "ai",
-        education: {},
-        experience: {},
-        projects: {},
-        skills: "ai",
-      },
       skillSuggestions: ["React"],
     },
     domain: "linkedin.com",

@@ -98,24 +98,6 @@ export const richDocumentSchema = z
     }
   });
 
-const fieldSelectionSchema = z.enum(["ai", "original"]).optional();
-
-const indexSelectionsSchema = z
-  .record(z.string(), z.object({ description: fieldSelectionSchema }))
-  .default({});
-
-const documentContentSelectionsSchema = z
-  .object({
-    customizedSummary: fieldSelectionSchema,
-    skills: fieldSelectionSchema,
-    certifications: fieldSelectionSchema,
-    experience: indexSelectionsSchema,
-    education: indexSelectionsSchema,
-    projects: indexSelectionsSchema,
-  })
-  .strict()
-  .default({});
-
 const documentContentObjectSchema = z
   .object({
     coverLetterContent: richDocumentSchema.optional(),
@@ -155,7 +137,6 @@ const documentContentObjectSchema = z
       .max(100)
       .default([]),
     certificationSuggestions: z.array(z.string().min(1)).max(100).default([]),
-    selections: documentContentSelectionsSchema,
   })
   .strict();
 
@@ -181,36 +162,12 @@ function stripLegacyAchievements(value: unknown): unknown {
   };
   const stripEnhancements = (key: string): Record<string, unknown> =>
     Array.isArray(content[key]) ? { [key]: content[key].map(withoutAchievements) } : {};
-  const selections = content.selections as Record<string, unknown> | undefined;
-  const stripSelections = (key: string): Record<string, unknown> => {
-    const section = selections?.[key];
-    if (typeof section !== "object" || section === null) return {};
-
-    return {
-      [key]: Object.fromEntries(
-        Object.entries(section as Record<string, unknown>).map(([index, selection]) => [
-          index,
-          withoutAchievements(selection),
-        ]),
-      ),
-    };
-  };
 
   return {
     ...content,
     ...stripEnhancements("experienceEnhancements"),
     ...stripEnhancements("educationEnhancements"),
     ...stripEnhancements("projectEnhancements"),
-    ...(selections
-      ? {
-          selections: {
-            ...selections,
-            ...stripSelections("experience"),
-            ...stripSelections("education"),
-            ...stripSelections("projects"),
-          },
-        }
-      : {}),
   };
 }
 

@@ -153,8 +153,8 @@ function resolveAppBackgroundColor(): string {
 function injectPagedPolyfill(html: string, requestId: string, gapColor: string): string {
   const script = `
     ${pagedPreviewChromeStyle(gapColor)}
-    <script src="${pagedPreviewBridgeUrl}" data-request-id="${escapeHtmlAttribute(requestId)}"><\/script>
-    <script src="${pagedPolyfillUrl}"><\/script>
+    <script src="${pagedPreviewBridgeUrl}" data-request-id="${escapeHtmlAttribute(requestId)}"></script>
+    <script src="${pagedPolyfillUrl}"></script>
   `;
   return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${script}</body>`) : html + script;
 }

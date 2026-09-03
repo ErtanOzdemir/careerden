@@ -94,7 +94,7 @@ export class AnalyzeScrapedJobUseCase {
     });
 
     await this.unitOfWork.execute(
-      async ({ credits, jobApplications, jobApplicationChanges, outbox, profiles }) => {
+      async ({ credits, jobApplications, jobApplicationChanges, outbox }) => {
         const completed = await jobApplications.completeAnalysis(
           jobApplication.id,
           attemptId,

@@ -431,7 +431,6 @@ function DocumentPreviewCard({
       clearTimeout(timer);
       handle?.cancel();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onHighlightConsumed is stable per render cycle; including it would re-run this effect on every highlight consumption
   }, [html]);
 
   function stepZoom(direction: 1 | -1) {

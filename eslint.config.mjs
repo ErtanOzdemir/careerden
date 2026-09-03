@@ -15,6 +15,7 @@ export default tseslint.config(
       ".opencode/**",
       "apps/desktop/release/**",
       "apps/desktop/renderer/**",
+      "apps/web/public/vendor/**",
       "coverage/**",
       "playwright-report/**",
       "storage/**",

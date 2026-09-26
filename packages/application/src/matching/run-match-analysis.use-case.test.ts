@@ -23,12 +23,12 @@ describe("RunMatchAnalysisUseCase", () => {
         ],
         missingSkills: ["Kubernetes operations"],
         strongSkills: ["TypeScript"],
-        summaryTips: ["Lead with your production TypeScript work."],
+        summaryTips: [aiTip("Lead with your production TypeScript work.")],
         coverLetterContent:
           "I am applying for the Backend Engineer role with production TypeScript experience.",
         interviewTips: ["Prepare TypeScript service examples."],
         experienceTips: [
-          { experienceIndex: 0, tips: ["Mention collaborating with product partners."] },
+          { experienceIndex: 0, tips: [aiTip("Mention collaborating with product partners.")] },
           { experienceIndex: 1, tips: [] },
         ],
       },
@@ -72,7 +72,7 @@ describe("RunMatchAnalysisUseCase", () => {
       "Do not add CV-only or profile-only facts as requirementEvaluations items.",
     );
     expect(prompt.tipWritingRules).toContain(
-      "Each tip is one short sentence describing a specific, concrete change — not a rewrite of the field.",
+      "Each tip text is one short sentence describing a specific, concrete change — not a rewrite of the field.",
     );
     expect(prompt.durationClaimRules).toContain(
       "Never state total years of experience unless the exact duration claim appears in userProfile.",
@@ -115,11 +115,47 @@ describe("RunMatchAnalysisUseCase", () => {
     );
   });
 
+  it("weights must-have requirements twice as heavily as nice-to-haves", async () => {
+    const { aiProvider } = createAiProvider([
+      {
+        ...completeResponse(),
+        requirementEvaluations: [
+          {
+            requirement: "Build production TypeScript services",
+            status: "matched",
+            evidence: ["Built TypeScript automation"],
+            priority: "must",
+          },
+          {
+            requirement: "Collaborate with product and design",
+            status: "partial",
+            evidence: ["Worked with product partners"],
+          },
+          {
+            requirement: "Kubernetes operations",
+            status: "missing",
+            evidence: [],
+            priority: "nice",
+          },
+        ],
+      },
+    ]);
+
+    const analysis = await new RunMatchAnalysisUseCase(aiProvider).execute({
+      jobApplicationId: "job-1",
+      profile: createProfile(),
+      scrape: createScrape(),
+    });
+
+    // (2 matched + 1 of 2 partial, unprioritized counts as must) / (2 + 2 + 1)
+    expect(analysis.matchScore).toBe(60);
+  });
+
   it("fills a profile index the model omitted with an empty tips array rather than dropping it", async () => {
     const { aiProvider } = createAiProvider([
       {
         ...completeResponse(),
-        experienceTips: [{ experienceIndex: 0, tips: ["Mention the migration project."] }],
+        experienceTips: [{ experienceIndex: 0, tips: [aiTip("Mention the migration project.")] }],
       },
     ]);
 
@@ -130,7 +166,7 @@ describe("RunMatchAnalysisUseCase", () => {
     });
 
     expect(analysis.experienceTips).toEqual([
-      { experienceIndex: 0, tips: ["Mention the migration project."] },
+      { experienceIndex: 0, tips: [{ text: "Mention the migration project." }] },
       { experienceIndex: 1, tips: [] },
     ]);
   });
@@ -141,7 +177,7 @@ describe("RunMatchAnalysisUseCase", () => {
         ...completeResponse(),
         coverLetterContent:
           "I bring 9 years of TypeScript experience. I built production services at Analytical Engines.",
-        summaryTips: ["Delivered backend services over 9 years."],
+        summaryTips: [aiTip("Delivered backend services over 9 years.")],
         interviewTips: ["Explain your production TypeScript work."],
       },
     ]);
@@ -154,7 +190,7 @@ describe("RunMatchAnalysisUseCase", () => {
 
     expect(analysis.coverLetterContent).toBe("I built production services at Analytical Engines.");
     // The tip is a single sentence, so stripping would empty it; it is redacted instead.
-    expect(analysis.summaryTips).toEqual(["Delivered backend services."]);
+    expect(analysis.summaryTips).toEqual([{ text: "Delivered backend services." }]);
     expect(analysis.interviewTips).toEqual(["Explain your production TypeScript work."]);
   });
 
@@ -200,7 +236,7 @@ describe("RunMatchAnalysisUseCase", () => {
       {
         ...completeResponse(),
         coverLetterContent: "I offer 4 years of TypeScript experience building backend services.",
-        summaryTips: ["Delivered backend services with 4 years of TypeScript work."],
+        summaryTips: [aiTip("Delivered backend services with 4 years of TypeScript work.")],
       },
     ]);
 
@@ -214,7 +250,7 @@ describe("RunMatchAnalysisUseCase", () => {
 
     expect(analysis.coverLetterContent).toContain("4 years of TypeScript experience");
     expect(analysis.summaryTips).toEqual([
-      "Delivered backend services with 4 years of TypeScript work.",
+      { text: "Delivered backend services with 4 years of TypeScript work." },
     ]);
   });
 
@@ -304,11 +340,11 @@ function completeResponse(): Record<string, unknown> {
     ],
     missingSkills: [],
     strongSkills: ["TypeScript"],
-    summaryTips: ["Lead with the TypeScript automation project."],
+    summaryTips: [aiTip("Lead with the TypeScript automation project.")],
     coverLetterContent: "I am applying for the Backend Engineer role at Example Inc.",
     interviewTips: ["Prepare TypeScript service examples."],
     experienceTips: [
-      { experienceIndex: 0, tips: ["Mention the production automation work."] },
+      { experienceIndex: 0, tips: [aiTip("Mention the production automation work.")] },
       { experienceIndex: 1, tips: [] },
     ],
   };
@@ -377,4 +413,8 @@ function createProfile(
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   };
+}
+
+function aiTip(text: string, requirement = "", evidence = "") {
+  return { text, requirement, evidence };
 }

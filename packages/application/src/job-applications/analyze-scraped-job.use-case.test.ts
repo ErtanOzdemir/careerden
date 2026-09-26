@@ -285,7 +285,9 @@ function createAiProvider(): AiProvider {
         matchScore: 91,
         missingSkills: [],
         strongSkills: ["TypeScript"],
-        summaryTips: ["Lead with your TypeScript tooling work."],
+        summaryTips: [
+          { text: "Lead with your TypeScript tooling work.", requirement: "", evidence: "" },
+        ],
         interviewTips: ["Prepare backend examples"],
         coverLetterGuidance: ["Emphasize TypeScript"],
       }) as T;

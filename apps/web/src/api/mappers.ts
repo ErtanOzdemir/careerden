@@ -1,5 +1,7 @@
 import type {
   ApiApplicationStatus,
+  ApiCvListTip,
+  ApiCvTip,
   ApiJobApplication,
   ApiJobApplicationAnalytics,
   ApiJobApplicationDetail,
@@ -10,6 +12,8 @@ import type {
 } from "./types";
 import type {
   ApplicationStatus,
+  CvListTip,
+  CvTip,
   DashboardStats,
   FollowUp,
   JobApplication,
@@ -137,7 +141,9 @@ export function mapApiJobApplicationToUi(
     aiMatch: detail?.matchAnalysis ? mapMatchAnalysis(detail.matchAnalysis) : undefined,
     documentContent:
       detail?.documentContent ??
-      (detail?.matchAnalysis ? mapInitialDocumentContent(detail.matchAnalysis, profile) : undefined),
+      (detail?.matchAnalysis
+        ? mapInitialDocumentContent(detail.matchAnalysis, profile)
+        : undefined),
   };
 }
 
@@ -161,7 +167,8 @@ function mapInitialDocumentContent(match: ApiMatchAnalysis, profile?: ApiProfile
 
   return {
     coverLetterContent: richDocumentFromText(match.coverLetterContent ?? ""),
-    customizedSummary: toRichDocument(profile?.summary, profile?.summaryRichText) ?? richDocumentFromText(""),
+    customizedSummary:
+      toRichDocument(profile?.summary, profile?.summaryRichText) ?? richDocumentFromText(""),
     formatVersion: 2 as const,
     experienceEnhancements: (profile?.experience ?? []).map((experience, index) => ({
       experienceIndex: index,
@@ -386,22 +393,56 @@ function mapMatchAnalysis(match: ApiMatchAnalysis): NonNullable<JobApplication["
     summary: match.interviewTips[0] ?? "AI analysis is available for this application.",
     requirements: mapRequirementMatches(match),
     recommendation: match.matchScore >= 70 ? "Apply to CV" : "Review before applying",
-    summaryTips: match.summaryTips,
+    summaryTips: match.summaryTips.map(mapCvTip),
     experienceTips: (match.experienceTips ?? []).map((entry) => ({
       index: entry.experienceIndex,
-      tips: entry.tips,
+      tips: entry.tips.map(mapCvTip),
     })),
     educationTips: (match.educationTips ?? []).map((entry) => ({
       index: entry.educationIndex,
-      tips: entry.tips,
+      tips: entry.tips.map(mapCvTip),
     })),
     projectTips: (match.projectTips ?? []).map((entry) => ({
       index: entry.projectIndex,
-      tips: entry.tips,
+      tips: entry.tips.map(mapCvTip),
     })),
-    skillsTips: match.skillsTips ?? [],
-    certificationsTips: match.certificationsTips ?? [],
+    skillsTips: mapCvListTips(match.skillsTips),
+    certificationsTips: mapCvListTips(match.certificationsTips),
+    gapQuestions: match.gapQuestions ?? [],
+    keywords: uniqueCaseInsensitive([...match.strongSkills, ...match.missingSkills]),
   };
+}
+
+function uniqueCaseInsensitive(values: string[]): string[] {
+  const seen = new Set<string>();
+  return values
+    .map((value) => value.trim())
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (!value || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function mapCvTip(tip: ApiCvTip): CvTip {
+  return typeof tip === "string" ? { text: tip } : tip;
+}
+
+function mapCvListTips(tips: ApiCvListTip[] | undefined): CvListTip[] {
+  return (tips ?? [])
+    .map((tip) => (typeof tip === "string" ? { item: itemFromLegacyTip(tip), text: tip } : tip))
+    .filter((tip) => tip.item.length > 0);
+}
+
+/**
+ * Legacy list tips were free text like "Add Node.js — it's used across the team." Take the text
+ * after a leading "Add" up to the first clause break, without splitting inside names such as
+ * "Node.js", "CI/CD", or "Real-time".
+ */
+export function itemFromLegacyTip(tip: string): string {
+  const afterAdd = tip.trim().replace(/^add\s+/i, "");
+  return (afterAdd.split(/\s[—–-]\s|[,;:]|\.(?:\s|$)/)[0] ?? "").trim();
 }
 
 function mapRequirementMatches(
@@ -412,6 +453,7 @@ function mapRequirementMatches(
       requirement: evaluation.requirement,
       status: evaluation.status,
       evidence: evaluation.evidence,
+      ...(evaluation.priority ? { priority: evaluation.priority } : {}),
     }));
   }
 

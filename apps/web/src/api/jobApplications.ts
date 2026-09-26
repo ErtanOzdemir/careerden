@@ -313,11 +313,31 @@ export const jobApplicationsApi = {
 
   async applyFieldTip(
     id: string,
-    input: { field: ApiApplyFieldTipFieldRef; currentValue: RichDocument; tip: string },
+    input: {
+      field: ApiApplyFieldTipFieldRef;
+      currentValue: RichDocument;
+      tip: string;
+      requirement?: string;
+      evidence?: string;
+      additionalTips?: { tip: string; requirement?: string; evidence?: string }[];
+      candidateAnswer?: string;
+    },
   ): Promise<{ value: RichDocument }> {
-    return requestJson<{ value: RichDocument }>(`/job-applications/${id}/document-content/apply-tip`, {
-      method: "POST",
-      body: input,
-    });
+    return requestJson<{ value: RichDocument }>(
+      `/job-applications/${id}/document-content/apply-tip`,
+      {
+        method: "POST",
+        body: input,
+      },
+    );
+  },
+  async rewriteCoverLetter(
+    id: string,
+    documentContent: ApiDocumentContent,
+  ): Promise<{ value: RichDocument }> {
+    return requestJson<{ value: RichDocument }>(
+      `/job-applications/${id}/document-content/rewrite-cover-letter`,
+      { method: "POST", body: { documentContent } },
+    );
   },
 };

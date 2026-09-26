@@ -1,4 +1,4 @@
-import type { MatchAnalysisResult, UserProfile } from "@careerden/domain";
+import type { CvTip, MatchAnalysisResult, UserProfile } from "@careerden/domain";
 
 /**
  * Guarantees every profile item has a tips entry, so the tips panel and the apply-tip flow never
@@ -30,10 +30,10 @@ export function fillMissingTipEntries(
   };
 }
 
-function tipsAt<T extends { tips: string[] }>(
+function tipsAt<T extends { tips: CvTip[] }>(
   entries: T[] | undefined,
   indexOf: (entry: T) => number,
   index: number,
-): string[] {
+): CvTip[] {
   return entries?.find((item) => indexOf(item) === index)?.tips ?? [];
 }

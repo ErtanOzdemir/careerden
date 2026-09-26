@@ -18,6 +18,7 @@ import {
   GetProfileUseCase,
   PreviewApplicationPackUseCase,
   ApplyDocumentFieldTipUseCase,
+  RewriteCoverLetterUseCase,
   CountUnreadNotificationsUseCase,
   ListNotificationsUseCase,
   MarkAllNotificationsReadUseCase,
@@ -309,6 +310,11 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       ...(aiProvider
         ? {
             applyDocumentFieldTip: new ApplyDocumentFieldTipUseCase(
+              jobApplications,
+              profiles,
+              aiProvider,
+            ),
+            rewriteCoverLetter: new RewriteCoverLetterUseCase(
               jobApplications,
               profiles,
               aiProvider,

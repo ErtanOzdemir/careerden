@@ -145,12 +145,26 @@ export interface ApiScrapedCompany {
   websiteUrl?: string;
 }
 
+/** Analyses stored before tips were structured carry plain strings; newer ones carry objects. */
+export type ApiCvTip = string | { text: string; requirement?: string; evidence?: string };
+export type ApiCvListTip = string | { item: string; text: string; requirement?: string };
+
+export type ApiGapQuestionField =
+  | { type: "summary" }
+  | { type: "education" | "experience" | "project"; index: number };
+
+export interface ApiGapQuestion {
+  field: ApiGapQuestionField;
+  question: string;
+  requirement?: string;
+}
+
 export interface ApiMatchAnalysis {
   coverLetterContent?: string;
   coverLetterGuidance?: string[];
-  summaryTips: string[];
+  summaryTips: ApiCvTip[];
   experienceTips?: {
-    tips: string[];
+    tips: ApiCvTip[];
     experienceIndex: number;
   }[];
   interviewTips: string[];
@@ -165,20 +179,22 @@ export interface ApiMatchAnalysis {
   }[];
   requirementEvaluations?: {
     evidence: string[];
+    priority?: "must" | "nice";
     requirement: string;
     status: "matched" | "missing" | "partial";
   }[];
+  gapQuestions?: ApiGapQuestion[];
   strongSkills: string[];
-  skillsTips?: string[];
+  skillsTips?: ApiCvListTip[];
   educationTips?: {
     educationIndex: number;
-    tips: string[];
+    tips: ApiCvTip[];
   }[];
   projectTips?: {
     projectIndex: number;
-    tips: string[];
+    tips: ApiCvTip[];
   }[];
-  certificationsTips?: string[];
+  certificationsTips?: ApiCvListTip[];
 }
 
 /** Mirrors `DocumentFieldRef` in `@careerden/contracts` — identifies one tailorable CV field. */

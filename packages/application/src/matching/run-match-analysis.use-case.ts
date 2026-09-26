@@ -28,7 +28,7 @@ export class RunMatchAnalysisUseCase {
     });
 
     const result = sanitizeMatchAnalysisDurationClaims(
-      normalizeAiMatchResult(candidate, profile),
+      normalizeAiMatchResult(candidate, profile, input.scrape.job.requirements),
       profile,
     );
     const filled = fillMissingTipEntries(profile, result);
@@ -65,18 +65,24 @@ function withRequiredNarrative(
   };
 }
 
+/** Must-have requirements count twice as much as nice-to-haves; unprioritized ones count as must. */
+const PRIORITY_WEIGHT = { must: 2, nice: 1 } as const;
+
 function calculateMatchScore(result: MatchAnalysisResult): number {
   if (!result.requirementEvaluations?.length) {
     return result.matchScore;
   }
 
-  const total = result.requirementEvaluations.reduce((sum, evaluation) => {
-    if (evaluation.status === "matched") return sum + 1;
-    if (evaluation.status === "partial") return sum + 0.5;
-    return sum;
-  }, 0);
+  let earned = 0;
+  let possible = 0;
+  for (const evaluation of result.requirementEvaluations) {
+    const weight = PRIORITY_WEIGHT[evaluation.priority ?? "must"];
+    possible += weight;
+    if (evaluation.status === "matched") earned += weight;
+    if (evaluation.status === "partial") earned += weight / 2;
+  }
 
-  return Math.round((total / result.requirementEvaluations.length) * 100);
+  return Math.round((earned / possible) * 100);
 }
 
 // Shared with the single-field apply-tip prompt (see apply-document-field-tip.use-case.ts) — both
@@ -139,7 +145,9 @@ function matchAnalysisPrompt(input: {
     requirementGuidance:
       "Use scrapedJob.requirements as the primary basis for missingSkills, strongSkills, and every tip list.",
     deterministicScoringGuidance: {
-      rule: "Classify each scrapedJob.requirements item exactly once. Only classify requirements that appear in scrapedJob.requirements; never add requirements from userProfile or CV-only content. The application computes matchScore from requirementEvaluations: matched = 1.0, partial = 0.5, missing = 0.0. Return matchScore for compatibility only; it will be recomputed.",
+      rule: "Classify each scrapedJob.requirements item exactly once. Only classify requirements that appear in scrapedJob.requirements; never add requirements from userProfile or CV-only content. The application computes matchScore from requirementEvaluations: matched = 1.0, partial = 0.5, missing = 0.0, with must-have requirements weighted twice as heavily as nice-to-haves. Return matchScore for compatibility only; it will be recomputed.",
+      priorityRule:
+        "Set priority to 'nice' only when scrapedJob.description marks the requirement as preferred, a plus, a bonus, nice to have, or desirable; otherwise use 'must'.",
       matchedExample: {
         requirement: "Build production TypeScript services",
         profileEvidence: "Built TypeScript automation for production workflows",
@@ -177,8 +185,20 @@ function matchAnalysisPrompt(input: {
       "For every tip, link it to one or more job requirements through its wording.",
       "If no profile evidence exists for a possible tip, do not suggest it.",
     ],
+    tipShape: {
+      proseTip:
+        "summaryTips and every experience/education/project tips entry is an object { text, requirement, evidence }.",
+      text: "One short sentence describing a specific, concrete change — not a rewrite of the field.",
+      requirement:
+        "The single scrapedJob.requirements item this tip addresses, copied exactly character for character. Use an empty string if the tip does not address one specific requirement.",
+      evidence:
+        "A short phrase (roughly 4-20 words) copied verbatim from userProfile that the tip relies on, so the change can be made truthfully. Copy it exactly; do not paraphrase, translate, or combine phrases. Use an empty string if the tip only reorders or tightens existing wording. Evidence that does not appear verbatim in userProfile is discarded.",
+      listTip:
+        "skillsTips and certificationsTips entries are objects { item, text, requirement }: item is only the bare skill or certification name exactly as it should appear on the CV (e.g. 'Node.js', 'AWS Certified Developer'), text is the one-sentence reason shown to the candidate, requirement follows the rule above.",
+    },
     tipWritingRules: [
-      "Each tip is one short sentence describing a specific, concrete change — not a rewrite of the field.",
+      "Each tip text is one short sentence describing a specific, concrete change — not a rewrite of the field.",
+      "Write tip text in the output language, but copy requirement and evidence verbatim in their source language.",
       "Prefer tips that point at a specific fact already in the profile the candidate should surface, reorder, or lead with.",
       "Do not suggest adding skills, tools, or experience the candidate does not have.",
       "For missing requirements, never suggest fabricating a match; only suggest truthful reframing of what already exists, or suggest nothing for that item.",
@@ -196,47 +216,61 @@ function matchAnalysisPrompt(input: {
     },
     tipExamples: {
       goodTip: {
-        forItem: "Backend Engineer at Acme (profile description: 'Built TypeScript automation for production workflows.')",
+        forItem:
+          "Backend Engineer at Acme (profile description: 'Built TypeScript automation for production workflows. Worked with product partners on rollout planning.')",
         jobRequirement: "Build production TypeScript services and collaborate cross-functionally.",
-        tip: "Mention that you collaborated with product partners on this work — it directly matches the collaboration requirement.",
+        tip: {
+          text: "Mention that you collaborated with product partners on this work — it directly matches the collaboration requirement.",
+          requirement: "Build production TypeScript services and collaborate cross-functionally.",
+          evidence: "Worked with product partners on rollout planning",
+        },
+      },
+      goodListTip: {
+        item: "Node.js",
+        text: "Add Node.js to your skills — your projects use it and the role requires it.",
+        requirement: "Experience with Node.js backends",
       },
       badTip: {
         forItem: "Built TypeScript automation.",
         invalid: "Mention leading a team of 8 engineers and cutting cloud spend by 40%.",
-        reason: "This asks the candidate to add unsupported leadership scope and a fabricated metric.",
+        reason:
+          "This asks the candidate to add unsupported leadership scope and a fabricated metric.",
       },
       emptyIsFine: {
         forItem: "Served coffee and managed the till at a busy cafe.",
         jobRequirement: "Build production TypeScript services.",
         tips: [],
-        reason: "The item is unrelated to the requirement and there is nothing truthful to suggest — return an empty array rather than stretching a false connection.",
+        reason:
+          "The item is unrelated to the requirement and there is nothing truthful to suggest — return an empty array rather than stretching a false connection.",
       },
     },
     requiredOutput: {
       matchScore:
         "Integer 0-100. This is accepted for compatibility, but the application recomputes the final score from requirementEvaluations when present.",
       requirementEvaluations:
-        "Optional array with one item per scrapedJob.requirements entry: requirement, status matched|partial|missing, and profile-grounded evidence strings. Do not add CV-only or profile-only facts as requirementEvaluations items.",
+        "Optional array with one item per scrapedJob.requirements entry: requirement, status matched|partial|missing, priority must|nice, and profile-grounded evidence strings. Do not add CV-only or profile-only facts as requirementEvaluations items.",
       missingSkills: "Skills or criteria from the job that are not evident in the profile",
       missingSkillResources:
         "Optional. 1-3 reputable learning resources for important missingSkills only. Include skill, title, url, type documentation|tutorial|article|video|other, and reason.",
       strongSkills: "Profile skills that strongly match the job",
       summaryTips:
-        "0-4 short, specific tips for improving the CV summary/headline for this job. Return an empty array if the candidate's existing summary is already strong.",
+        "0-4 tip objects (see tipShape) for improving the CV summary/headline for this job. Return an empty array if the candidate's existing summary is already strong.",
       coverLetterContent:
         "A complete professional cover letter body grounded in the profile and job posting, ready for user review and without markdown. This field must never be empty.",
       interviewTips: "Practical tips for this interview",
       coverLetterGuidance: "Optional guidance for the cover letter",
       experienceTips:
-        "Required array with exactly one item per zero-based userProfile.experience index. `tips` is an array of 0-4 short, specific, actionable suggestions for improving that item's CV description for this job — not a rewrite. Return an empty array for items that are already strong or irrelevant.",
+        "Required array with exactly one item per zero-based userProfile.experience index. `tips` is an array of 0-4 tip objects (see tipShape) with specific, actionable suggestions for improving that item's CV description for this job — not a rewrite. Return an empty array for items that are already strong or irrelevant.",
       skillsTips:
-        "0-6 tips, each naming one specific skill from scrapedJob.requirements that is genuinely absent from userProfile.skills and worth the candidate adding to their profile if true. Never suggest a skill the profile does not support.",
+        "0-6 list tip objects (see tipShape), each naming one specific skill from scrapedJob.requirements that is genuinely absent from userProfile.skills but supported elsewhere in the profile (experience, projects, education). Never suggest a skill the profile does not support.",
       educationTips:
         "Required array with exactly one item per zero-based userProfile.education index, same rules as experienceTips.",
       projectTips:
         "Required array with exactly one item per zero-based userProfile.projects index, same rules as experienceTips.",
+      gapQuestions:
+        "0-5 questions for the candidate, targeting partial or missing must-have requirements (or strong items that lack a measurable outcome) where the candidate may have relevant experience that is simply not written in the profile yet. Each is { question, requirement, fieldType, fieldIndex }: question is one specific, answerable question in the output language that does not presume the answer (e.g. 'Did you run any of these services on Kubernetes? If so, what did you operate?' or 'Roughly how many users did the checkout redesign reach?'); requirement is the scrapedJob.requirements item it targets copied exactly, or an empty string; fieldType is summary|experience|education|project and fieldIndex the zero-based profile index where the answer would belong (0 for summary). Never ask about something the profile already answers. Return an empty array when there is nothing worth asking.",
       certificationsTips:
-        "0-4 tips, each naming one specific, genuinely relevant certification the candidate does not yet have listed, only if there is a real signal they hold or are pursuing it — otherwise return an empty array.",
+        "0-4 list tip objects (see tipShape), each naming one specific, genuinely relevant certification the candidate does not yet have listed, only if there is a real signal they hold or are pursuing it — otherwise return an empty array.",
     },
   });
 }

@@ -8,7 +8,7 @@ describe("aiMatchResultSchema", () => {
       matchScore: 82,
       missingSkills: ["Kubernetes"],
       strongSkills: ["TypeScript"],
-      summaryTips: ["Lead with the TypeScript automation project."],
+      summaryTips: [{ text: "Lead with the TypeScript automation project." }],
       interviewTips: ["Prepare a system design example."],
       requirementEvaluations: [
         {
@@ -34,15 +34,29 @@ describe("aiMatchResultSchema", () => {
       experienceTips: [
         {
           experienceIndex: 0,
-          tips: ["Mention the production incident you resolved."],
+          tips: [
+            {
+              text: "Mention the production incident you resolved.",
+              requirement: "Production TypeScript experience",
+              evidence: "Resolved a production incident",
+            },
+          ],
         },
       ],
+      skillsTips: [{ item: "Node.js", text: "Add Node.js to your skills." }],
     });
 
     expect(result.experienceTips?.[0]).toEqual({
       experienceIndex: 0,
-      tips: ["Mention the production incident you resolved."],
+      tips: [
+        {
+          text: "Mention the production incident you resolved.",
+          requirement: "Production TypeScript experience",
+          evidence: "Resolved a production incident",
+        },
+      ],
     });
+    expect(result.skillsTips).toEqual([{ item: "Node.js", text: "Add Node.js to your skills." }]);
   });
 
   it("accepts an empty tips array for an item that needs no changes", () => {
@@ -57,6 +71,20 @@ describe("aiMatchResultSchema", () => {
     });
 
     expect(result.experienceTips?.[0]).toEqual({ experienceIndex: 0, tips: [] });
+  });
+
+  it("rejects a list tip without an item name", () => {
+    expect(() =>
+      aiMatchResultSchema.parse({
+        coverLetterContent: "Dear hiring team, I am excited to apply.",
+        matchScore: 82,
+        missingSkills: [],
+        strongSkills: [],
+        summaryTips: [],
+        interviewTips: [],
+        skillsTips: [{ item: "", text: "Add something." }],
+      }),
+    ).toThrow();
   });
 
   it("rejects scores outside the 0-100 range", () => {

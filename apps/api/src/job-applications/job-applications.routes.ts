@@ -37,6 +37,7 @@ import type {
   GetGeneratedDocumentDownloadUrlUseCase,
   PreviewApplicationPackUseCase,
   ApplyDocumentFieldTipUseCase,
+  RewriteCoverLetterUseCase,
 } from "@careerden/application";
 import type { JobApplicationChangeSubscriber } from "@careerden/domain";
 import {
@@ -59,6 +60,7 @@ import {
   updateDocumentContentSchema,
   requestApplicationPackGenerationSchema,
   applyFieldTipRequestSchema,
+  rewriteCoverLetterRequestSchema,
 } from "@careerden/contracts";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
@@ -102,6 +104,7 @@ export function createJobApplicationRouter(dependencies: {
   getGeneratedDocumentDownloadUrl: GetGeneratedDocumentDownloadUrlUseCase;
   previewApplicationPack: PreviewApplicationPackUseCase;
   applyDocumentFieldTip?: ApplyDocumentFieldTipUseCase;
+  rewriteCoverLetter?: RewriteCoverLetterUseCase;
 }): ExpressRouter {
   const router = Router();
 
@@ -678,6 +681,26 @@ export function createJobApplicationRouter(dependencies: {
       async (request, response, next) => {
         try {
           const value = await dependencies.applyDocumentFieldTip!.execute(
+            request.params.id,
+            currentUser(request).id,
+            request.body,
+          );
+
+          response.json({ value });
+        } catch (error) {
+          next(error);
+        }
+      },
+    );
+  }
+
+  if (dependencies.rewriteCoverLetter) {
+    router.post(
+      "/:id/document-content/rewrite-cover-letter",
+      validateBody(rewriteCoverLetterRequestSchema),
+      async (request, response, next) => {
+        try {
+          const value = await dependencies.rewriteCoverLetter!.execute(
             request.params.id,
             currentUser(request).id,
             request.body,

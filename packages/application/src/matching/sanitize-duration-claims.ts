@@ -1,4 +1,4 @@
-import type { MatchAnalysisResult, UserProfile } from "@careerden/domain";
+import type { CvListTip, CvTip, MatchAnalysisResult, UserProfile } from "@careerden/domain";
 import { collectSupportedDurationClaims, sanitizeDurationClaims } from "@careerden/domain";
 
 /**
@@ -17,15 +17,20 @@ export function sanitizeMatchAnalysisDurationClaims(
   const supported = collectSupportedDurationClaims(profile, now);
   const sanitize = (value: string): string => sanitizeDurationClaims(value, supported);
   const sanitizeAll = (values: string[]): string[] => values.map(sanitize).filter(Boolean);
-  const sanitizeTips = <T extends { tips: string[] }>(entry: T): T => ({
+  const sanitizeCvTips = <T extends CvTip | CvListTip>(tips: T[]): T[] =>
+    tips.flatMap((tip) => {
+      const text = sanitize(tip.text);
+      return text ? [{ ...tip, text }] : [];
+    });
+  const sanitizeTips = <T extends { tips: CvTip[] }>(entry: T): T => ({
     ...entry,
-    tips: sanitizeAll(entry.tips),
+    tips: sanitizeCvTips(entry.tips),
   });
 
   return {
     ...result,
     coverLetterContent: result.coverLetterContent ? sanitize(result.coverLetterContent) : "",
-    summaryTips: sanitizeAll(result.summaryTips),
+    summaryTips: sanitizeCvTips(result.summaryTips),
     interviewTips: sanitizeAll(result.interviewTips),
     coverLetterGuidance: result.coverLetterGuidance
       ? sanitizeAll(result.coverLetterGuidance)
@@ -40,9 +45,9 @@ export function sanitizeMatchAnalysisDurationClaims(
     experienceTips: result.experienceTips?.map(sanitizeTips),
     educationTips: result.educationTips?.map(sanitizeTips),
     projectTips: result.projectTips?.map(sanitizeTips),
-    skillsTips: result.skillsTips ? sanitizeAll(result.skillsTips) : undefined,
+    skillsTips: result.skillsTips ? sanitizeCvTips(result.skillsTips) : undefined,
     certificationsTips: result.certificationsTips
-      ? sanitizeAll(result.certificationsTips)
+      ? sanitizeCvTips(result.certificationsTips)
       : undefined,
   };
 }

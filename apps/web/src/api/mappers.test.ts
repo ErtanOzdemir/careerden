@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  itemFromLegacyTip,
   mapApiDashboardStats,
   mapApiJobApplicationToUi,
   mapApiProfileToUi,
@@ -89,10 +90,75 @@ describe("API mappers", () => {
         evidence: [],
       },
     ]);
-    expect(mapped.aiMatch?.summaryTips).toEqual(["Lead with the React work."]);
+    expect(mapped.aiMatch?.summaryTips).toEqual([{ text: "Lead with the React work." }]);
     expect(mapped.aiMatch?.experienceTips).toEqual([
-      { index: 0, tips: ["Mention the accessibility work."] },
+      { index: 0, tips: [{ text: "Mention the accessibility work." }] },
     ]);
+  });
+
+  it("maps structured tips as-is and converts legacy string list tips into item names", () => {
+    const application = createApplicationDetail();
+    application.matchAnalysis = {
+      ...application.matchAnalysis!,
+      summaryTips: [{ text: "Lead with React.", requirement: "React", evidence: "Built React" }],
+      skillsTips: [
+        "Add Node.js — it's used across the team.",
+        { item: "CI/CD", text: "Add CI/CD." },
+      ],
+      certificationsTips: ["Add AWS Certified Developer."],
+    };
+
+    const mapped = mapApiJobApplicationToUi(application);
+
+    expect(mapped.aiMatch?.summaryTips).toEqual([
+      { text: "Lead with React.", requirement: "React", evidence: "Built React" },
+    ]);
+    expect(mapped.aiMatch?.skillsTips).toEqual([
+      { item: "Node.js", text: "Add Node.js — it's used across the team." },
+      { item: "CI/CD", text: "Add CI/CD." },
+    ]);
+    expect(mapped.aiMatch?.certificationsTips).toEqual([
+      { item: "AWS Certified Developer", text: "Add AWS Certified Developer." },
+    ]);
+  });
+
+  it("maps gap questions, requirement priorities, and deduplicated job keywords", () => {
+    const application = createApplicationDetail();
+    application.matchAnalysis = {
+      ...application.matchAnalysis!,
+      strongSkills: ["React", "TypeScript"],
+      missingSkills: ["react", "GraphQL"],
+      requirementEvaluations: [
+        { requirement: "GraphQL", status: "missing", evidence: [], priority: "nice" },
+      ],
+      gapQuestions: [{ question: "Did you use GraphQL?", field: { type: "experience", index: 0 } }],
+    };
+
+    const mapped = mapApiJobApplicationToUi(application);
+
+    expect(mapped.aiMatch?.keywords).toEqual(["React", "TypeScript", "GraphQL"]);
+    expect(mapped.aiMatch?.requirements).toEqual([
+      { requirement: "GraphQL", status: "missing", evidence: [], priority: "nice" },
+    ]);
+    expect(mapped.aiMatch?.gapQuestions).toEqual([
+      { question: "Did you use GraphQL?", field: { type: "experience", index: 0 } },
+    ]);
+  });
+
+  it("defaults gap questions to an empty list for older analyses", () => {
+    const application = createApplicationDetail();
+    delete application.matchAnalysis!.gapQuestions;
+
+    expect(mapApiJobApplicationToUi(application).aiMatch?.gapQuestions).toEqual([]);
+  });
+
+  it("extracts item names from legacy tips without splitting inside names", () => {
+    expect(itemFromLegacyTip("Add Node.js — it's used across the team.")).toBe("Node.js");
+    expect(itemFromLegacyTip("Add Real-time systems, since the team streams data.")).toBe(
+      "Real-time systems",
+    );
+    expect(itemFromLegacyTip("add CI/CD - pipelines are part of the role")).toBe("CI/CD");
+    expect(itemFromLegacyTip("Kubernetes")).toBe("Kubernetes");
   });
 
   it("maps an unset priority to an unset interest level", () => {

@@ -1,4 +1,4 @@
-import { aiFieldTipRevisionSchema } from "@careerden/contracts";
+import { aiFieldTipRevisionSchema, type AiFieldTipRevisionBlockDto } from "@careerden/contracts";
 import type { ApplyFieldTipFieldRef } from "@careerden/contracts";
 import type {
   AiProvider,
@@ -6,22 +6,40 @@ import type {
   RichDocument,
   UserProfileAccountRepository,
 } from "@careerden/domain";
-import { richDocumentFromText, richDocumentToPlainText } from "@careerden/domain";
 import { ApplicationError } from "../application-error.js";
 import { durationClaimRules, factualityRules } from "../matching/run-match-analysis.use-case.js";
+import { createTipGrounding } from "../matching/tip-grounding.js";
+import {
+  revisionBlocksToRichDocument,
+  richDocumentToRevisionBlocks,
+} from "./field-tip-revision-blocks.js";
 import { getAccessibleJobApplication } from "./job-application-access.js";
 
-export interface ApplyDocumentFieldTipInput {
+interface FieldTipSuggestion {
+  tip: string;
+  requirement?: string;
+  evidence?: string;
+}
+
+export interface ApplyDocumentFieldTipInput extends FieldTipSuggestion {
   field: ApplyFieldTipFieldRef;
   currentValue: RichDocument;
+  additionalTips?: FieldTipSuggestion[];
+  candidateAnswer?: string;
+}
+
+interface PromptSuggestion {
   tip: string;
+  targetRequirement?: string;
+  profileEvidence?: string;
 }
 
 /**
  * Revises exactly one CV field, grounded in the job's context, applying exactly one improvement
- * tip the user chose to act on. Not persisted here — the frontend merges the returned value into
- * its draft `DocumentContent` and saves it through the existing `PUT /:id/document-content` route
- * when the user is ready, same as any other manual edit.
+ * tip the user chose to act on. The field's paragraph/list structure is sent to and returned by the
+ * AI so bullet points survive the revision. Not persisted here — the frontend shows the returned
+ * value as a proposal, merges it into its draft `DocumentContent` only once the user accepts it, and
+ * saves it through the existing `PUT /:id/document-content` route, same as any other manual edit.
  *
  * Deliberately mirrors PreviewApplicationPackUseCase's shape: no `unitOfWork`, no credit
  * reservation/consumption. Applying a tip is included in the AI credit already spent on the
@@ -39,7 +57,12 @@ export class ApplyDocumentFieldTipUseCase {
     userId: string,
     input: ApplyDocumentFieldTipInput,
   ): Promise<RichDocument> {
-    await getAccessibleJobApplication(this.jobApplications, this.profiles, jobApplicationId, userId);
+    const jobApplication = await getAccessibleJobApplication(
+      this.jobApplications,
+      this.profiles,
+      jobApplicationId,
+      userId,
+    );
     const scrape = await this.jobApplications.getScrapeBundle(jobApplicationId);
     if (!scrape) {
       throw new ApplicationError(
@@ -48,31 +71,55 @@ export class ApplyDocumentFieldTipUseCase {
       );
     }
 
-    const currentText = richDocumentToPlainText(input.currentValue);
+    // The tip's links come from the client, so re-verify them against the current profile and job
+    // (the profile may also have changed since the analysis ran) before treating them as facts.
+    const profile = await this.profiles.findById(jobApplication.profileId);
+    const grounding = profile ? createTipGrounding(profile, scrape.job.requirements) : undefined;
+    const suggestions = [input, ...(input.additionalTips ?? [])].map(
+      (suggestion): PromptSuggestion => {
+        const requirement = suggestion.requirement
+          ? grounding?.requirement(suggestion.requirement)
+          : undefined;
+        const evidence = suggestion.evidence ? grounding?.evidence(suggestion.evidence) : undefined;
+        return {
+          tip: suggestion.tip,
+          ...(requirement ? { targetRequirement: requirement } : {}),
+          ...(evidence ? { profileEvidence: evidence } : {}),
+        };
+      },
+    );
+
     const revision = await this.aiProvider.generate({
       system: applyFieldTipSystemPrompt(),
       prompt: applyFieldTipPrompt({
         field: input.field,
         jobTitle: scrape.job.title,
         jobRequirements: scrape.job.requirements,
-        currentText,
-        tip: input.tip,
+        currentContent: richDocumentToRevisionBlocks(input.currentValue),
+        suggestions,
+        candidateAnswer: input.candidateAnswer,
+        tone: jobApplication.applicationPackPreferences.tone,
       }),
       outputSchema: aiFieldTipRevisionSchema,
     });
 
-    const revisedText = revision.revisedText.trim();
-    return richDocumentFromText(revisedText || currentText);
+    const revised = revisionBlocksToRichDocument(revision.blocks);
+    return revised.blocks.length > 0 ? revised : input.currentValue;
   }
 }
 
 function applyFieldTipSystemPrompt(): string {
   return [
-    "You are revising exactly one CV field based on one specific improvement suggestion the candidate chose to apply.",
+    "You are revising exactly one CV field based on the improvement suggestions the candidate chose to apply. Apply every suggestion in the suggestions list in a single coherent revision.",
     ...factualityRules,
     ...durationClaimRules,
-    "Apply the suggestion truthfully, grounded only in the current field text and the job context provided. If the suggestion cannot be satisfied without inventing a fact, produce the best faithful improvement you can instead of fabricating.",
-    "Return only the revised field text as plain prose — no markdown, no bullet points, no commentary, no quotation marks around the result.",
+    "Apply the suggestion truthfully, grounded only in the current field content and the job context provided. If the suggestion cannot be satisfied without inventing a fact, produce the best faithful improvement you can instead of fabricating.",
+    "When a suggestion has profileEvidence, it is a verified fact from the candidate's own profile: use it to satisfy that suggestion, but do not add anything beyond it. When a suggestion has targetRequirement, make the revised field address it only as far as the current content and profileEvidence truthfully support.",
+    "When candidateAnswer is provided, the suggestion is a question the candidate just answered about their own experience. Treat the answer as true and add what it states in concise CV style, but do not add anything it does not state: no extra metrics, scope, seniority, or outcomes. If the answer says they lack the experience, return the current content unchanged.",
+    "Change only what the suggestion requires. Keep every other sentence, fact, metric, and technology from the current content; never drop existing metrics.",
+    "Preserve the field's structure: keep bullet lists as bullet lists with one achievement per item, keep numbered lists numbered, and keep paragraphs as paragraphs. Do not merge list items into prose. You may add or reorder list items when the suggestion calls for it.",
+    "Write in the same language as the current content.",
+    "Return the full revised field as blocks: kind 'paragraphs' (one paragraph per line), 'bullets', or 'numbered' (one list item per line). Do not put list markers, markdown, commentary, or quotation marks inside lines.",
     "Return only valid JSON matching the provided output schema.",
   ].join(" ");
 }
@@ -81,17 +128,22 @@ function applyFieldTipPrompt(input: {
   field: ApplyFieldTipFieldRef;
   jobTitle: string;
   jobRequirements: string[];
-  currentText: string;
-  tip: string;
+  currentContent: AiFieldTipRevisionBlockDto[];
+  suggestions: PromptSuggestion[];
+  candidateAnswer?: string;
+  tone: string;
 }): string {
   return JSON.stringify({
     jobTitle: input.jobTitle,
     jobRequirements: input.jobRequirements,
     field: fieldContext(input.field),
-    currentText: input.currentText,
-    tip: input.tip,
+    currentContent: input.currentContent,
+    suggestions: input.suggestions,
+    ...(input.candidateAnswer ? { candidateAnswer: input.candidateAnswer } : {}),
+    tone: input.tone,
     requiredOutput: {
-      revisedText: "The full revised field text, incorporating the tip. Must never be empty.",
+      blocks:
+        "The full revised field content incorporating every suggestion, in the same block structure as currentContent. Must never be empty.",
     },
   });
 }

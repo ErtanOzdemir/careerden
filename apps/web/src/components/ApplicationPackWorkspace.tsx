@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { ApiApplicationPackPreferences, ApiDocumentContent, ApiProfile } from "../api/types.js";
+import type {
+  ApiApplicationPackPreferences,
+  ApiDocumentContent,
+  ApiProfile,
+  ApiUpdateProfilePayload,
+  RichDocument,
+} from "../api/types.js";
 import type { HtmlTemplateDefinition } from "@careerden/contracts";
-import { renderHtmlTemplate } from "@careerden/contracts";
+import { renderHtmlTemplate, richDocumentToPlainText } from "@careerden/contracts";
+import { profilesApi } from "../api/profiles.js";
 import type { GeneratedApplicationDocument, JobApplication } from "../types.js";
 import { cn } from "../lib/utils.js";
 import { buildPreviewTemplateData } from "../lib/document-preview.js";
 import { renderPagedPreview } from "../lib/paged-preview.js";
 import { ApplicationPackCustomizer } from "./ApplicationPackCustomizer.js";
-import { TipsPanel } from "./TipsPanel.js";
+import { TipsPanel, type ProfileSavableField, type RevealTarget } from "./TipsPanel.js";
 import { Button, buttonVariants } from "./ui/button.js";
 import {
   AlertTriangle,
@@ -34,6 +41,7 @@ interface ApplicationPackWorkspaceProps {
     documentContent: ApiDocumentContent,
     preferences: ApiApplicationPackPreferences,
   ) => Promise<void>;
+  onProfileUpdated?: (profile: ApiProfile) => void;
 }
 
 const defaultPreferences: ApiApplicationPackPreferences = {
@@ -50,6 +58,7 @@ export function ApplicationPackWorkspace({
   downloadingId,
   onDownload,
   onUpdate,
+  onProfileUpdated,
 }: ApplicationPackWorkspaceProps) {
   const [draftContent, setDraftContent] = useState(app.documentContent);
   const [preferences, setPreferences] = useState(
@@ -103,12 +112,17 @@ export function ApplicationPackWorkspace({
     setDraftContent(content);
   }
 
-  function handleTipApplied(fieldDomId: string) {
-    // Tips only ever target CV fields (cover letter is untouched by this feature) — switch tabs so
-    // the highlight is actually visible, and let the preview's own render effect fire the highlight
-    // once the content-change-triggered re-render settles (see DocumentPreviewCard below).
-    setActiveKind("cv");
-    setPendingHighlight(fieldDomId);
+  function handleReveal(target: RevealTarget) {
+    // Switch tabs so the change is actually visible, and let the preview's own render effect fire
+    // the highlight once the content-change-triggered re-render settles (see DocumentPreviewCard).
+    setActiveKind(target.kind);
+    if (target.kind === "cv") setPendingHighlight(target.fieldDomId);
+  }
+
+  async function handleSaveToProfile(field: ProfileSavableField, value: RichDocument) {
+    if (!profile) throw new Error("Profile is not loaded");
+    const updated = await profilesApi.update(profile.id, profilePatchFor(profile, field, value));
+    onProfileUpdated?.(updated);
   }
 
   function handlePreferencesChange(nextPreferences: ApiApplicationPackPreferences) {
@@ -183,7 +197,8 @@ export function ApplicationPackWorkspace({
           content={draftContent}
           jobApplicationId={app.id}
           onContentChange={handleContentChange}
-          onTipApplied={handleTipApplied}
+          onReveal={handleReveal}
+          onSaveToProfile={profile ? handleSaveToProfile : undefined}
           profile={profile}
           readOnly={readOnly}
         />
@@ -304,6 +319,9 @@ function MatchSnapshot({ app }: { app: JobApplication }) {
                 )}
               >
                 {requirement.requirement}
+                {requirement.priority === "nice" && (
+                  <span className="ml-1 font-normal opacity-70">· nice to have</span>
+                )}
               </span>
             ))}
           </div>
@@ -330,6 +348,7 @@ function MatchSnapshot({ app }: { app: JobApplication }) {
   );
 }
 
+const maxRecommendedCvPages = 2;
 const minZoom = 0.4;
 const maxZoom = 2.5;
 const zoomStepSize = 0.1;
@@ -483,6 +502,12 @@ function DocumentPreviewCard({
             : pageCount > 0
               ? `${pageCount} page${pageCount === 1 ? "" : "s"}`
               : ""}
+          {!isRendering && activeKind === "cv" && pageCount > maxRecommendedCvPages && (
+            <span className="flex items-center gap-1 text-warning-emphasis">
+              <AlertTriangle className="size-3" />
+              Most recruiters expect one or two pages
+            </span>
+          )}
         </p>
         <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background p-0.5">
           <button
@@ -656,4 +681,31 @@ function packActionDescription(app: JobApplication): string {
   if (app.processingStatus === "review_ready") return "Your tailored content is ready";
   if (app.processingStatus === "failed") return "Review the error, then try updating the pack";
   return "Careerden is preparing your application pack";
+}
+
+/** Writes an accepted gap-question answer into the matching profile field, keeping plain text in sync. */
+function profilePatchFor(
+  profile: ApiProfile,
+  field: ProfileSavableField,
+  value: RichDocument,
+): ApiUpdateProfilePayload {
+  const description = richDocumentToPlainText(value);
+
+  if (field.type === "summary") {
+    return { summary: description, summaryRichText: value };
+  }
+  if (field.type === "experience") {
+    if (!profile.experience[field.index]) throw new Error("Experience item no longer exists");
+    return {
+      experience: profile.experience.map((item, index) =>
+        index === field.index ? { ...item, description, descriptionRichText: value } : item,
+      ),
+    };
+  }
+  if (!profile.education[field.index]) throw new Error("Education item no longer exists");
+  return {
+    education: profile.education.map((item, index) =>
+      index === field.index ? { ...item, description, descriptionRichText: value } : item,
+    ),
+  };
 }

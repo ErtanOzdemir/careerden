@@ -20,7 +20,11 @@ import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
-import type { ApiApplicationPackPreferences, ApiDocumentContent, ApiProfile } from "../api/types.js";
+import type {
+  ApiApplicationPackPreferences,
+  ApiDocumentContent,
+  ApiProfile,
+} from "../api/types.js";
 import { HTML_TEMPLATES } from "@careerden/contracts";
 import {
   ArrowLeft,
@@ -756,6 +760,7 @@ export default function AppDetail() {
           isUpdating={isUpdatingPack}
           onDownload={handleDownload}
           onUpdate={handleUpdateApplicationPack}
+          onProfileUpdated={setProfile}
           profile={profile ?? undefined}
           templates={HTML_TEMPLATES}
         />

@@ -1,6 +1,7 @@
 import type {
   ApiApplicationPackPreferences,
   ApiDocumentContent,
+  ApiGapQuestionField,
   ApiProfileReadiness,
 } from "./api/types";
 
@@ -60,11 +61,34 @@ export interface RequirementMatch {
   requirement: string;
   status: RequirementMatchStatus;
   evidence: string[];
+  /** Absent for analyses made before priorities existed; treat as "must". */
+  priority?: "must" | "nice";
+}
+
+/** A question about experience the job asks for that the profile does not show yet. */
+export interface GapQuestion {
+  question: string;
+  requirement?: string;
+  field: ApiGapQuestionField;
+}
+
+/** A prose CV tip, optionally linked to the job requirement it addresses and the profile fact it uses. */
+export interface CvTip {
+  text: string;
+  requirement?: string;
+  evidence?: string;
+}
+
+/** Suggests one skill or certification to add, named exactly as it should appear on the CV. */
+export interface CvListTip {
+  item: string;
+  text: string;
+  requirement?: string;
 }
 
 export interface IndexedFieldTips {
   index: number;
-  tips: string[];
+  tips: CvTip[];
 }
 
 export interface GeneratedApplicationDocument {
@@ -122,12 +146,15 @@ export interface JobApplication {
     summary: string;
     requirements?: RequirementMatch[];
     recommendation: string;
-    summaryTips: string[];
+    summaryTips: CvTip[];
     experienceTips: IndexedFieldTips[];
     educationTips: IndexedFieldTips[];
     projectTips: IndexedFieldTips[];
-    skillsTips: string[];
-    certificationsTips: string[];
+    skillsTips: CvListTip[];
+    certificationsTips: CvListTip[];
+    gapQuestions: GapQuestion[];
+    /** Job skills (matched and missing) used for live keyword coverage of the draft CV. */
+    keywords: string[];
   };
 }
 

@@ -137,6 +137,8 @@ const documentContentObjectSchema = z
       .max(100)
       .default([]),
     certificationSuggestions: z.array(z.string().min(1)).max(100).default([]),
+    /** Tips the candidate already accepted, so they cannot be applied twice. */
+    appliedTips: z.array(z.string().min(1).max(2_500)).max(200).optional(),
   })
   .strict();
 

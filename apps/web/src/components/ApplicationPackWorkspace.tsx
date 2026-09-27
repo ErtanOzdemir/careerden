@@ -42,6 +42,8 @@ interface ApplicationPackWorkspaceProps {
     preferences: ApiApplicationPackPreferences,
   ) => Promise<void>;
   onProfileUpdated?: (profile: ApiProfile) => void;
+  /** Saves the draft without regenerating documents; used to persist accepted tips immediately. */
+  onSaveContent?: (documentContent: ApiDocumentContent) => Promise<void>;
 }
 
 const defaultPreferences: ApiApplicationPackPreferences = {
@@ -59,6 +61,7 @@ export function ApplicationPackWorkspace({
   onDownload,
   onUpdate,
   onProfileUpdated,
+  onSaveContent,
 }: ApplicationPackWorkspaceProps) {
   const [draftContent, setDraftContent] = useState(app.documentContent);
   const [preferences, setPreferences] = useState(
@@ -71,10 +74,21 @@ export function ApplicationPackWorkspace({
 
   const documents = useMemo(() => groupDocuments(app.generatedDocuments ?? []), [app]);
 
+  // Resync from the server only when its values actually change. Every refresh returns new objects,
+  // and resetting on identity would throw away unsaved edits (and preference changes) each time an
+  // accepted tip is auto-saved and the change event refreshes the application.
+  const serverContentKey = stableKey(app.documentContent ?? null);
+  const serverPreferencesKey = stableKey(app.applicationPackPreferences ?? null);
+  const lastPersistedKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (serverContentKey === lastPersistedKeyRef.current) return;
     setDraftContent(app.documentContent);
+  }, [app.id, serverContentKey]);
+
+  useEffect(() => {
     setPreferences(app.applicationPackPreferences ?? defaultPreferences);
-  }, [app.applicationPackPreferences, app.documentContent, app.id]);
+  }, [app.id, serverPreferencesKey]);
 
   const cvTemplateId = resolveTemplateId(templates, "cv", preferences.cvTemplateId, profile);
   const coverLetterTemplateId = resolveTemplateId(
@@ -117,6 +131,12 @@ export function ApplicationPackWorkspace({
     // the highlight once the content-change-triggered re-render settles (see DocumentPreviewCard).
     setActiveKind(target.kind);
     if (target.kind === "cv") setPendingHighlight(target.fieldDomId);
+  }
+
+  async function handlePersist(content: ApiDocumentContent) {
+    if (!onSaveContent) return;
+    lastPersistedKeyRef.current = stableKey(content);
+    await onSaveContent(content);
   }
 
   async function handleSaveToProfile(field: ProfileSavableField, value: RichDocument) {
@@ -191,19 +211,21 @@ export function ApplicationPackWorkspace({
 
       {app.aiMatch && <MatchSnapshot app={app} />}
 
-      <div className="grid gap-5 lg:grid-cols-[20rem_1fr] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <TipsPanel
           aiMatch={app.aiMatch}
+          className="lg:order-2"
           content={draftContent}
           jobApplicationId={app.id}
           onContentChange={handleContentChange}
+          onPersist={readOnly ? undefined : handlePersist}
           onReveal={handleReveal}
           onSaveToProfile={profile ? handleSaveToProfile : undefined}
           profile={profile}
           readOnly={readOnly}
         />
 
-        <div className="min-w-0 space-y-5">
+        <div className="min-w-0 space-y-5 lg:order-1">
           <DocumentPreviewCard
             activeKind={activeKind}
             documents={documents[activeKind]}
@@ -708,4 +730,17 @@ function profilePatchFor(
       index === field.index ? { ...item, description, descriptionRichText: value } : item,
     ),
   };
+}
+
+/** JSON with object keys sorted, so values that differ only in key order (e.g. via jsonb) compare equal. */
+function stableKey(value: unknown): string {
+  return JSON.stringify(value, (_key, current: unknown) =>
+    current && typeof current === "object" && !Array.isArray(current)
+      ? Object.fromEntries(
+          Object.entries(current as Record<string, unknown>).sort(([left], [right]) =>
+            left < right ? -1 : left > right ? 1 : 0,
+          ),
+        )
+      : current,
+  );
 }

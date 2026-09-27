@@ -235,6 +235,8 @@ export interface ApiDocumentContent {
     description?: RichDocument;
   }>;
   certificationSuggestions: string[];
+  /** Tips and gap questions already accepted for this application. */
+  appliedTips?: string[];
 }
 
 export interface ApiJobApplicationDetail extends ApiJobApplication {

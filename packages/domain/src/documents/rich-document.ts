@@ -1,5 +1,9 @@
 import type { RichDocument } from "@careerden/contracts";
-import { emptyRichDocument, mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
+import {
+  emptyRichDocument,
+  mergeRichDocumentsAsProse,
+  richDocumentFromText,
+} from "@careerden/contracts";
 import type { ProfileProject, UserProfile } from "../profiles/user-profile.js";
 
 /**
@@ -54,6 +58,12 @@ export interface DocumentContent {
   educationEnhancements?: DocumentContentEducationEnhancement[];
   projectEnhancements?: DocumentContentProjectEnhancement[];
   certificationSuggestions?: string[];
+  /**
+   * Identifiers of tips and gap questions the candidate already accepted for this application, so
+   * the tips panel can keep them applied across visits. Reset with the rest of the content whenever
+   * the analysis is re-run, since the tips themselves change.
+   */
+  appliedTips?: string[];
 }
 
 /**
@@ -68,13 +78,20 @@ export interface DocumentContent {
 export function documentContentFromProfile(
   profile: Pick<
     UserProfile,
-    "certifications" | "education" | "experience" | "projects" | "skills" | "summary" | "summaryRichText"
+    | "certifications"
+    | "education"
+    | "experience"
+    | "projects"
+    | "skills"
+    | "summary"
+    | "summaryRichText"
   >,
   analysis: { coverLetterContent?: string },
 ): DocumentContent {
   return {
     coverLetterContent: richDocumentFromText(analysis.coverLetterContent ?? ""),
-    customizedSummary: toRichDocument(profile.summary, profile.summaryRichText) ?? emptyRichDocument(),
+    customizedSummary:
+      toRichDocument(profile.summary, profile.summaryRichText) ?? emptyRichDocument(),
     formatVersion: DOCUMENT_CONTENT_FORMAT_VERSION,
     experienceEnhancements: profile.experience.map((experience, index) => ({
       experienceIndex: index,

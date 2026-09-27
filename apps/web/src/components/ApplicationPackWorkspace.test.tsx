@@ -473,6 +473,126 @@ describe("ApplicationPackWorkspace", () => {
     expect(await screen.findByText("Most recruiters expect one or two pages")).toBeInTheDocument();
   });
 
+  it("saves an accepted tip immediately and records it as applied", async () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    const revised = paragraph("Shipped React products company-wide.");
+    applyFieldTip.mockResolvedValue({ value: revised });
+    const onSaveContent = vi.fn(async () => undefined);
+
+    renderWorkspace({ onSaveContent });
+
+    fireEvent.click(screen.getByRole("button", { name: /Mention shipping React products\./ }));
+    await screen.findByRole("region", { name: /Suggested change for/ });
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+
+    expect(onSaveContent).toHaveBeenCalledOnce();
+    const [saved] = onSaveContent.mock.calls[0] as unknown as [ApiDocumentContent];
+    expect(saved.experienceEnhancements[0]?.description).toEqual(revised);
+    expect(saved.appliedTips).toEqual(["tip:experience-0:Mention shipping React products."]);
+  });
+
+  it("keeps previously accepted tips applied when the application is opened again", () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    const app = withAiMatch(
+      {
+        experienceTips: [
+          {
+            index: 0,
+            tips: [
+              { text: "Mention shipping React products." },
+              { text: "Lead with the product work." },
+              { text: "Name the design system." },
+            ],
+          },
+        ],
+        gapQuestions: [
+          {
+            question: "Did you work with GraphQL at Acme?",
+            field: { type: "experience", index: 0 },
+          },
+        ],
+      },
+      {
+        appliedTips: [
+          "tip:experience-0:Mention shipping React products.",
+          "question:Did you work with GraphQL at Acme?",
+        ],
+      },
+    );
+
+    renderWorkspace({ app });
+
+    expect(screen.getByRole("button", { name: /Mention shipping React products/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Lead with the product work/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Apply all (2)" })).toBeInTheDocument();
+    expect(screen.getByText("Added to your CV")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /Did you work with GraphQL/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("saves the undo so the tip can be applied again", async () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    applyFieldTip.mockResolvedValue({ value: paragraph("Shipped React products company-wide.") });
+    const onSaveContent = vi.fn(async () => undefined);
+
+    renderWorkspace({ onSaveContent });
+
+    fireEvent.click(screen.getByRole("button", { name: /Mention shipping React products\./ }));
+    await screen.findByRole("region", { name: /Suggested change for/ });
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(onSaveContent).toHaveBeenCalledTimes(2);
+    const [saved] = onSaveContent.mock.calls[1] as unknown as [ApiDocumentContent];
+    expect(saved.appliedTips).toEqual([]);
+    expect(saved.experienceEnhancements[0]?.description).toEqual(
+      paragraph("Built product experiences. Shipped React products."),
+    );
+    expect(screen.getByRole("button", { name: /Mention shipping React products/ })).toBeEnabled();
+  });
+
+  it("tells the user when an automatic save fails", async () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    applyFieldTip.mockResolvedValue({ value: paragraph("Shipped React products company-wide.") });
+
+    renderWorkspace({ onSaveContent: vi.fn(async () => Promise.reject(new Error("offline"))) });
+
+    fireEvent.click(screen.getByRole("button", { name: /Mention shipping React products\./ }));
+    await screen.findByRole("region", { name: /Suggested change for/ });
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+
+    expect(
+      await screen.findByText(
+        "Couldn't save this change yet. It will be saved when you update the pack.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps unsaved edits when a refresh returns the same content", () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    const app = withAiMatch({}, { skillSuggestions: ["Mathematics", "React"] });
+    const workspace = (current: JobApplication) => (
+      <MemoryRouter>
+        <ApplicationPackWorkspace
+          app={current}
+          downloadingId={null}
+          isUpdating={false}
+          onDownload={vi.fn(async () => undefined)}
+          onUpdate={vi.fn(async () => undefined)}
+          profile={createProfile()}
+          templates={HTML_TEMPLATES}
+        />
+      </MemoryRouter>
+    );
+    const view = render(workspace(app));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reorder skills" }));
+    view.rerender(workspace(JSON.parse(JSON.stringify(app)) as JobApplication));
+
+    expect(screen.queryByRole("button", { name: "Reorder skills" })).not.toBeInTheDocument();
+  });
+
   it("blocks generation when the profile is not ready", () => {
     renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
     renderWorkspace({
@@ -512,6 +632,7 @@ function renderWorkspace({
   profile = createProfile(),
   templates = HTML_TEMPLATES,
   onUpdate = vi.fn(async () => undefined),
+  onSaveContent,
 }: {
   app?: JobApplication;
   profile?: ApiProfile;
@@ -520,6 +641,7 @@ function renderWorkspace({
     content: ApiDocumentContent,
     preferences: ApiApplicationPackPreferences,
   ) => Promise<void>;
+  onSaveContent?: (content: ApiDocumentContent) => Promise<void>;
 } = {}) {
   return render(
     <MemoryRouter>
@@ -528,6 +650,7 @@ function renderWorkspace({
         downloadingId={null}
         isUpdating={false}
         onDownload={vi.fn(async () => undefined)}
+        onSaveContent={onSaveContent}
         onUpdate={onUpdate}
         profile={profile}
         templates={templates}

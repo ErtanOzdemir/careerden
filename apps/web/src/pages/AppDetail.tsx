@@ -352,6 +352,11 @@ export default function AppDetail() {
     }
   }
 
+  async function handleSaveDocumentContent(documentContent: ApiDocumentContent) {
+    if (!id) return;
+    await jobApplicationsApi.updateDocumentContent(id, documentContent);
+  }
+
   async function handleUpdateApplicationPack(
     documentContent: ApiDocumentContent,
     preferences: ApiApplicationPackPreferences,
@@ -761,6 +766,7 @@ export default function AppDetail() {
           onDownload={handleDownload}
           onUpdate={handleUpdateApplicationPack}
           onProfileUpdated={setProfile}
+          onSaveContent={handleSaveDocumentContent}
           profile={profile ?? undefined}
           templates={HTML_TEMPLATES}
         />

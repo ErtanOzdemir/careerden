@@ -65,8 +65,8 @@ interface EditTarget {
 interface Proposal {
   /** Which control the review renders under. */
   anchor: string;
-  /** Tips marked as applied once the proposal is accepted. */
-  tipKeys: string[];
+  /** Persisted ids of the tips (or gap question) this proposal applies. */
+  appliedIds: string[];
   target: EditTarget;
   before: RichDocument;
   after: RichDocument;
@@ -76,7 +76,7 @@ interface Proposal {
 
 /** One accepted change, undoable while the draft still holds exactly what it wrote. */
 interface AppliedChange {
-  tipKeys: string[];
+  appliedIds: string[];
   label: string;
   reveal: RevealTarget;
   isCurrent: (content: ApiDocumentContent) => boolean;
@@ -85,11 +85,17 @@ interface AppliedChange {
 
 interface TipsPanelProps {
   aiMatch?: JobApplication["aiMatch"];
+  className?: string;
   content?: ApiDocumentContent;
   jobApplicationId: string;
   profile?: ApiProfile;
   readOnly?: boolean;
   onContentChange: (content: ApiDocumentContent) => void;
+  /**
+   * Saves the draft right after a change is accepted or undone, so accepted tips stay applied (and
+   * cannot be applied again) when the candidate comes back to this application.
+   */
+  onPersist?: (content: ApiDocumentContent) => Promise<void>;
   /** Called after a change is applied (or a check is clicked) so the caller can show that field. */
   onReveal: (target: RevealTarget) => void;
   /** Writes an accepted gap-question answer into the saved profile, when the user opts in. */
@@ -98,11 +104,13 @@ interface TipsPanelProps {
 
 export function TipsPanel({
   aiMatch,
+  className,
   content,
   jobApplicationId,
   profile,
   readOnly = false,
   onContentChange,
+  onPersist,
   onReveal,
   onSaveToProfile,
 }: TipsPanelProps) {
@@ -117,7 +125,7 @@ export function TipsPanel({
 
   const groups = aiMatch ? buildTipGroups(aiMatch, profile) : [];
   const hasTips = groups.some((group) => group.tips.length > 0);
-  const appliedKeys = new Set(history.flatMap((change) => change.tipKeys));
+  const appliedIds = new Set(content?.appliedTips ?? []);
   const lastChange = history.at(-1);
   const busy = readOnly || pendingAnchor !== null;
 
@@ -145,7 +153,7 @@ export function TipsPanel({
     anchor: string,
     target: EditTarget,
     request: (before: RichDocument) => Promise<{ value: RichDocument }>,
-    extras: Pick<Proposal, "tipKeys" | "profileField">,
+    extras: Pick<Proposal, "appliedIds" | "profileField">,
   ) {
     if (!content || readOnly) return;
 
@@ -165,7 +173,7 @@ export function TipsPanel({
     }
   }
 
-  function requestTips(anchor: string, group: ProseTipGroup, tips: CvTip[], tipKeys: string[]) {
+  function requestTips(anchor: string, group: ProseTipGroup, tips: CvTip[]) {
     const fieldRef = toProseFieldRef(group.field);
     const [first, ...rest] = tips;
     if (!fieldRef || !first) return;
@@ -180,7 +188,7 @@ export function TipsPanel({
           ...tipRequest(first),
           ...(rest.length > 0 ? { additionalTips: rest.map(tipRequest) } : {}),
         }),
-      { tipKeys },
+      { appliedIds: tips.map((tip) => tipId(group.key, tip.text)) },
     );
   }
 
@@ -198,7 +206,7 @@ export function TipsPanel({
           candidateAnswer: answer.trim(),
         }),
       {
-        tipKeys: [anchor],
+        appliedIds: [questionId(question)],
         ...(isProfileSavable(field) && onSaveToProfile ? { profileField: field } : {}),
       },
     );
@@ -211,8 +219,21 @@ export function TipsPanel({
       "cover-letter",
       coverLetterTarget,
       () => jobApplicationsApi.rewriteCoverLetter(jobApplicationId, draft),
-      { tipKeys: [] },
+      { appliedIds: [] },
     );
+  }
+
+  /** Applies an accepted change to the draft and saves it straight away. */
+  function commit(next: ApiDocumentContent) {
+    onContentChange(next);
+    if (!onPersist) return;
+    setError((current) => (current?.anchor === "save" ? null : current));
+    onPersist(next).catch(() => {
+      setError({
+        anchor: "save",
+        message: "Couldn't save this change yet. It will be saved when you update the pack.",
+      });
+    });
   }
 
   function recordChange(change: AppliedChange) {
@@ -222,7 +243,7 @@ export function TipsPanel({
 
   async function acceptProposal() {
     if (!content || !proposal) return;
-    const { anchor, target, before, after, tipKeys, profileField } = proposal;
+    const { anchor, target, before, after, appliedIds: ids, profileField } = proposal;
 
     if (!sameDocument(target.read(content), before)) {
       setProposal(null);
@@ -233,10 +254,10 @@ export function TipsPanel({
       return;
     }
 
-    onContentChange(target.write(content, after));
+    commit(markApplied(target.write(content, after), ids));
     setProposal(null);
     recordChange({
-      tipKeys,
+      appliedIds: ids,
       label: target.label,
       reveal: target.reveal,
       isCurrent: (current) => sameDocument(target.read(current), after),
@@ -256,16 +277,16 @@ export function TipsPanel({
     }
   }
 
-  function applyListTip(group: ListTipGroup, item: string, tipKey: string) {
+  function applyListTip(group: ListTipGroup, item: string, id: string) {
     if (!content || readOnly) return;
     const suggestion = item.trim().replace(/\s+/g, " ");
     const { listKey } = group;
     setConfirming(null);
     if (!suggestion || includesCaseInsensitive(content[listKey], suggestion)) return;
 
-    onContentChange({ ...content, [listKey]: [...content[listKey], suggestion] });
+    commit(markApplied({ ...content, [listKey]: [...content[listKey], suggestion] }, [id]));
     recordChange({
-      tipKeys: [tipKey],
+      appliedIds: [id],
       label: group.label,
       reveal: { kind: "cv", fieldDomId: fieldRefToDomId(group.field) },
       isCurrent: (current) => includesCaseInsensitive(current[listKey], suggestion),
@@ -281,9 +302,9 @@ export function TipsPanel({
   function applySkillOrder(ordered: string[]) {
     if (!content || readOnly) return;
     const previous = content.skillSuggestions;
-    onContentChange({ ...content, skillSuggestions: ordered });
+    commit({ ...content, skillSuggestions: ordered });
     recordChange({
-      tipKeys: [],
+      appliedIds: [],
       label: "Skills order",
       reveal: { kind: "cv", fieldDomId: fieldRefToDomId({ type: "skills" }) },
       isCurrent: (current) => sameList(current.skillSuggestions, ordered),
@@ -304,7 +325,7 @@ export function TipsPanel({
       return;
     }
 
-    onContentChange(lastChange.revert(content));
+    commit(unmarkApplied(lastChange.revert(content), lastChange.appliedIds));
     onReveal(lastChange.reveal);
   }
 
@@ -328,7 +349,12 @@ export function TipsPanel({
   }
 
   return (
-    <aside className="flex h-fit flex-col gap-5 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-5">
+    <aside
+      className={cn(
+        "flex h-fit flex-col gap-5 rounded-xl border border-border bg-card p-5 lg:sticky lg:top-5",
+        className,
+      )}
+    >
       <div className="flex items-center gap-2.5">
         <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Lightbulb className="size-4" />
@@ -352,6 +378,7 @@ export function TipsPanel({
         </div>
       )}
       {renderError("undo")}
+      {renderError("save")}
 
       {coverage && coverage.matched.length + coverage.missing.length > 0 && (
         <KeywordCoverageCard matched={coverage.matched} missing={coverage.missing} />
@@ -376,9 +403,7 @@ export function TipsPanel({
               const tipKeyAt = (tipIndex: number) => `${group.key}-${tipIndex}`;
               const openTips =
                 group.kind === "prose"
-                  ? group.tips
-                      .map((tip, tipIndex) => ({ tip, key: tipKeyAt(tipIndex) }))
-                      .filter(({ key }) => !appliedKeys.has(key))
+                  ? group.tips.filter((tip) => !appliedIds.has(tipId(group.key, tip.text)))
                   : [];
               const allAnchor = `${group.key}-all`;
 
@@ -391,14 +416,7 @@ export function TipsPanel({
                     {group.kind === "prose" && openTips.length >= 2 && (
                       <Button
                         disabled={busy || proposal?.anchor === allAnchor}
-                        onClick={() =>
-                          requestTips(
-                            allAnchor,
-                            group,
-                            openTips.map(({ tip }) => tip),
-                            openTips.map(({ key }) => key),
-                          )
-                        }
+                        onClick={() => requestTips(allAnchor, group, openTips)}
                         size="xs"
                         variant="ghost"
                       >
@@ -417,11 +435,12 @@ export function TipsPanel({
                         content !== undefined &&
                         "item" in tip &&
                         includesCaseInsensitive(content[group.listKey], tip.item);
-                      const isApplied = appliedKeys.has(tipKey) || alreadyAdded;
+                      const id = tipId(group.key, tip.text);
+                      const isApplied = appliedIds.has(id) || alreadyAdded;
 
                       function handleClick() {
                         if (group.kind === "prose") {
-                          requestTips(tipKey, group, [tip as CvTip], [tipKey]);
+                          requestTips(tipKey, group, [tip as CvTip]);
                         } else {
                           setProposal(null);
                           setConfirming({ tipKey, item: (tip as CvListTip).item });
@@ -445,7 +464,7 @@ export function TipsPanel({
                               item={confirming.item}
                               label={group.label}
                               onCancel={() => setConfirming(null)}
-                              onConfirm={(item) => applyListTip(group, item, tipKey)}
+                              onConfirm={(item) => applyListTip(group, item, id)}
                               onItemChange={(item) => setConfirming({ tipKey, item })}
                             />
                           )}
@@ -487,7 +506,7 @@ export function TipsPanel({
           {aiMatch.gapQuestions.map((question, questionIndex) => {
             const anchor = `question-${questionIndex}`;
             const answer = answers[anchor] ?? "";
-            const answered = appliedKeys.has(anchor);
+            const answered = appliedIds.has(questionId(question));
 
             return (
               <div className="space-y-1.5" key={anchor}>
@@ -1006,6 +1025,32 @@ function writeProseValue(
 
 function sameDocument(left: RichDocument, right: RichDocument): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/**
+ * Stable id for a tip within this analysis. Built from the field and the tip's wording rather than
+ * its position, so it still identifies the same tip after a reload; a re-run analysis resets the
+ * saved ids together with the rest of the document content.
+ */
+function tipId(groupKey: string, text: string): string {
+  return `tip:${groupKey}:${text}`;
+}
+
+function questionId(question: GapQuestion): string {
+  return `question:${question.question}`;
+}
+
+function markApplied(content: ApiDocumentContent, ids: string[]): ApiDocumentContent {
+  if (ids.length === 0) return content;
+  const applied = new Set(content.appliedTips ?? []);
+  ids.forEach((id) => applied.add(id));
+  return { ...content, appliedTips: [...applied] };
+}
+
+function unmarkApplied(content: ApiDocumentContent, ids: string[]): ApiDocumentContent {
+  if (ids.length === 0 || !content.appliedTips) return content;
+  const removed = new Set(ids);
+  return { ...content, appliedTips: content.appliedTips.filter((id) => !removed.has(id)) };
 }
 
 function sameList(left: string[], right: string[]): boolean {

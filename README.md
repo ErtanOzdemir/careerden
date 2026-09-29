@@ -290,7 +290,7 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 | `OPENAI_API_KEY`                   | OpenAI API key                                   | —                       |
 | `GEMINI_API_KEY`                   | Google Gemini API key                            | —                       |
 | `DEEPSEEK_API_KEY`                 | DeepSeek API key                                 | —                       |
-| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs                     | `1`                     |
+| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs                     | `5`                     |
 | `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port                   | `3101`                  |
 | `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs                   | `1`                     |
 | `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port                    | `3102`                  |

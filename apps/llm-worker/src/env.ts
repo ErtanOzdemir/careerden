@@ -11,7 +11,7 @@ export const llmWorkerEnvSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
-  LLM_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  LLM_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
   LLM_WORKER_HEALTH_PORT: z.coerce.number().int().min(1).max(65_535).default(3101),
 });
 

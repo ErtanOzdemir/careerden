@@ -11,6 +11,11 @@ export class GeminiAiProvider implements AiProvider {
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const google = createGoogleGenerativeAI({ apiKey: this.apiKey });
 
-    return generateWithOutputSchema(google(this.model), params);
+    // Gemini 2.5 Flash thinks by default, which dominates latency on interactive revisions.
+    return generateWithOutputSchema(
+      google(this.model),
+      params,
+      params.thinking === false ? { google: { thinkingConfig: { thinkingBudget: 0 } } } : undefined,
+    );
   }
 }

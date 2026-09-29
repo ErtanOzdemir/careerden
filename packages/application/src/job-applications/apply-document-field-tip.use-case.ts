@@ -101,6 +101,8 @@ export class ApplyDocumentFieldTipUseCase {
         tone: jobApplication.applicationPackPreferences.tone,
       }),
       outputSchema: aiFieldTipRevisionSchema,
+      // The user is waiting on this single-field revision; the analysis already did the reasoning.
+      thinking: false,
     });
 
     const revised = revisionBlocksToRichDocument(revision.blocks);

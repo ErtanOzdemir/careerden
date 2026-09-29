@@ -58,6 +58,7 @@ describe("ApplyDocumentFieldTipUseCase", () => {
     expect(prompt.currentContent).toEqual([
       { kind: "bullets", lines: ["Built TypeScript APIs", "Cut build time by 30%"] },
     ]);
+    expect(vi.mocked(aiProvider.generate).mock.calls[0]![0].thinking).toBe(false);
   });
 
   it("forwards only requirement and evidence links that match the job and profile", async () => {

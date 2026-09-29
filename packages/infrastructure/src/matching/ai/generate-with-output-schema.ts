@@ -1,6 +1,8 @@
 import type { AiGenerateParams } from "@careerden/domain";
 import { generateText, NoObjectGeneratedError, Output, type LanguageModel } from "ai";
 
+export type AiProviderOptions = Parameters<typeof generateText>[0]["providerOptions"];
+
 /**
  * Shared generation path for every AI provider.
  *
@@ -11,6 +13,7 @@ import { generateText, NoObjectGeneratedError, Output, type LanguageModel } from
 export async function generateWithOutputSchema<T>(
   model: LanguageModel,
   params: AiGenerateParams<T>,
+  providerOptions?: AiProviderOptions,
 ): Promise<T> {
   try {
     const { output } = await generateText({
@@ -20,6 +23,7 @@ export async function generateWithOutputSchema<T>(
       prompt: params.prompt,
       temperature: 0.2,
       maxRetries: 2,
+      ...(providerOptions ? { providerOptions } : {}),
     });
 
     return params.outputSchema.parse(output);

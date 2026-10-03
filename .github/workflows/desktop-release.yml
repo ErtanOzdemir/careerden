@@ -119,14 +119,49 @@ jobs:
           }
           NODE
 
+      # electron-builder 26.15.3 unlocks its own temporary keychain with CSC_KEY_PASSWORD
+      # instead of the keychain password, which current macOS runners reject. Import the
+      # certificate into a dedicated keychain here so electron-builder discovers the identity.
+      - name: Import macOS signing certificate
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+        run: |
+          keychain_path="${RUNNER_TEMP}/careerden-signing.keychain-db"
+          certificate_path="${RUNNER_TEMP}/careerden-signing.p12"
+          keychain_password="$(openssl rand -base64 32)"
+          echo "::add-mask::${keychain_password}"
+
+          printf '%s' "${CSC_LINK}" | base64 --decode > "${certificate_path}"
+          security create-keychain -p "${keychain_password}" "${keychain_path}"
+          security set-keychain-settings -lut 21600 "${keychain_path}"
+          security unlock-keychain -p "${keychain_password}" "${keychain_path}"
+          security import "${certificate_path}" -k "${keychain_path}" -P "${CSC_KEY_PASSWORD}" \
+            -T /usr/bin/codesign -T /usr/bin/productbuild
+          rm -f "${certificate_path}"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "${keychain_password}" \
+            "${keychain_path}" > /dev/null
+          existing_keychains=()
+          while IFS= read -r keychain; do
+            existing_keychains+=("$(echo "${keychain}" | xargs)")
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "${keychain_path}" "${existing_keychains[@]}"
+
+          if ! security find-identity -v -p codesigning "${keychain_path}" | grep -q "Developer ID Application"; then
+            echo "::error::Imported certificate does not contain a Developer ID Application identity"
+            exit 1
+          fi
+          echo "CAREERDEN_SIGNING_KEYCHAIN=${keychain_path}" >> "${GITHUB_ENV}"
+
       - name: Package and notarize macOS
         if: runner.os == 'macOS'
         env:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "true"
         run: >-
           pnpm --filter @careerden/desktop exec electron-builder
           --config electron-builder.yml
@@ -210,6 +245,11 @@ jobs:
           path: ${{ matrix.artifact_path }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Remove macOS signing keychain
+        if: always() && runner.os == 'macOS' && env.CAREERDEN_SIGNING_KEYCHAIN != ''
+        shell: bash
+        run: security delete-keychain "${CAREERDEN_SIGNING_KEYCHAIN}" || true
 
   release:
     name: Create draft release

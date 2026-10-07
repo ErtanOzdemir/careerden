@@ -1,4 +1,4 @@
-import type { DocumentFieldRef } from "@careerden/contracts";
+import type { DocumentFieldRef } from "../contracts/documents/field-ref.js";
 import type { ApiDocumentContent, ApiProfile } from "../api/types.js";
 import { draftCvFields } from "./cv-text.js";
 

@@ -1,0 +1,22 @@
+import type {
+  JobApplicationContact,
+  JobApplicationRepository,
+  UserProfileAccessRepository,
+} from "@careerden/domain";
+import { getAccessibleJobApplication } from "@careerden/application";
+
+export class ListJobApplicationContactsUseCase {
+  constructor(
+    private readonly jobApplications: JobApplicationRepository,
+    private readonly profiles: UserProfileAccessRepository,
+  ) {}
+  async execute(jobApplicationId: string, userId: string): Promise<JobApplicationContact[]> {
+    await getAccessibleJobApplication(
+      this.jobApplications,
+      this.profiles,
+      jobApplicationId,
+      userId,
+    );
+    return this.jobApplications.listContacts(jobApplicationId);
+  }
+}

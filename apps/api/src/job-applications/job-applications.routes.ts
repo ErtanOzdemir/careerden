@@ -1,44 +1,42 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
-import type {
-  CreateManualJobApplicationUseCase,
-  ArchiveJobApplicationUseCase,
-  RestoreJobApplicationUseCase,
-  DeleteJobApplicationUseCase,
-  GenerateDocumentsWithAiUseCase,
-  GenerateJobApplicationDocumentsUseCase,
-  RetryJobApplicationUseCase,
-  SubmitJobApplicationUseCase,
-  UpdateDocumentContentUseCase,
-  EnsureJobApplicationAccessUseCase,
-  GetJobApplicationAnalyticsUseCase,
-  GetJobApplicationDetailUseCase,
-  ListJobApplicationsUseCase,
-  RequestJobApplicationAnalysisUseCase,
-  RequestApplicationPackGenerationUseCase,
-  UpdateJobApplicationStatusUseCase,
-  UpdateJobApplicationTrackingUseCase,
-  ClaimNextScrapeJobUseCase,
-  CreateJobApplicationFromScrapeUseCase,
-  FailScrapeJobUseCase,
-  RenewScrapeClaimUseCase,
-  SubmitJobApplicationScrapeDataUseCase,
-  GetProfileUseCase,
-  CreateJobApplicationEventUseCase,
-  ListJobApplicationEventsUseCase,
-  CreateJobApplicationContactUseCase,
-  ListJobApplicationContactsUseCase,
-  UpdateJobApplicationContactUseCase,
-  DeleteJobApplicationContactUseCase,
-  CreateJobApplicationFollowUpUseCase,
-  ListJobApplicationFollowUpsUseCase,
-  UpdateJobApplicationFollowUpUseCase,
-  DeleteJobApplicationFollowUpUseCase,
-  GetGeneratedDocumentDownloadUrlUseCase,
-  PreviewApplicationPackUseCase,
-  ApplyDocumentFieldTipUseCase,
-  RewriteCoverLetterUseCase,
-} from "@careerden/application";
+import type { CreateManualJobApplicationUseCase } from "../application/job-applications/create-manual-job-application.use-case.js";
+import type { ArchiveJobApplicationUseCase } from "../application/job-applications/archive-job-application.use-case.js";
+import type { RestoreJobApplicationUseCase } from "../application/job-applications/restore-job-application.use-case.js";
+import type { DeleteJobApplicationUseCase } from "../application/job-applications/delete-job-application.use-case.js";
+import type { GenerateDocumentsWithAiUseCase } from "../application/job-applications/generate-documents-with-ai.use-case.js";
+import type { GenerateJobApplicationDocumentsUseCase } from "../application/job-applications/generate-job-application-documents.use-case.js";
+import type { RetryJobApplicationUseCase } from "../application/job-applications/retry-job-application.use-case.js";
+import type { SubmitJobApplicationUseCase } from "../application/job-applications/submit-job-application.use-case.js";
+import type { UpdateDocumentContentUseCase } from "../application/job-applications/update-document-content.use-case.js";
+import type { EnsureJobApplicationAccessUseCase } from "../application/job-applications/ensure-job-application-access.use-case.js";
+import type { GetJobApplicationAnalyticsUseCase } from "../application/job-applications/get-job-application-analytics.use-case.js";
+import type { GetJobApplicationDetailUseCase } from "../application/job-applications/get-job-application-detail.use-case.js";
+import type { ListJobApplicationsUseCase } from "../application/job-applications/list-job-applications.use-case.js";
+import type { RequestJobApplicationAnalysisUseCase } from "../application/job-applications/request-job-application-analysis.use-case.js";
+import type { RequestApplicationPackGenerationUseCase } from "@careerden/application";
+import type { UpdateJobApplicationStatusUseCase } from "../application/job-applications/update-job-application-status.use-case.js";
+import type { UpdateJobApplicationTrackingUseCase } from "../application/job-applications/update-job-application-tracking.use-case.js";
+import type { ClaimNextScrapeJobUseCase } from "../application/job-applications/claim-next-scrape-job.use-case.js";
+import type { CreateJobApplicationFromScrapeUseCase } from "../application/job-applications/create-job-application-from-scrape.use-case.js";
+import type { FailScrapeJobUseCase } from "../application/job-applications/fail-scrape-job.use-case.js";
+import type { RenewScrapeClaimUseCase } from "../application/job-applications/renew-scrape-claim.use-case.js";
+import type { SubmitJobApplicationScrapeDataUseCase } from "../application/job-applications/submit-job-application-scrape-data.use-case.js";
+import type { GetProfileUseCase } from "../application/profiles/get-profile.use-case.js";
+import type { CreateJobApplicationEventUseCase } from "../application/job-applications/create-job-application-event.use-case.js";
+import type { ListJobApplicationEventsUseCase } from "../application/job-applications/list-job-application-events.use-case.js";
+import type { CreateJobApplicationContactUseCase } from "../application/job-applications/create-job-application-contact.use-case.js";
+import type { ListJobApplicationContactsUseCase } from "../application/job-applications/list-job-application-contacts.use-case.js";
+import type { UpdateJobApplicationContactUseCase } from "../application/job-applications/update-job-application-contact.use-case.js";
+import type { DeleteJobApplicationContactUseCase } from "../application/job-applications/delete-job-application-contact.use-case.js";
+import type { CreateJobApplicationFollowUpUseCase } from "../application/job-applications/create-job-application-follow-up.use-case.js";
+import type { ListJobApplicationFollowUpsUseCase } from "../application/job-applications/list-job-application-follow-ups.use-case.js";
+import type { UpdateJobApplicationFollowUpUseCase } from "../application/job-applications/update-job-application-follow-up.use-case.js";
+import type { DeleteJobApplicationFollowUpUseCase } from "../application/job-applications/delete-job-application-follow-up.use-case.js";
+import type { GetGeneratedDocumentDownloadUrlUseCase } from "../application/job-applications/get-generated-document-download-url.use-case.js";
+import type { PreviewApplicationPackUseCase } from "../application/job-applications/preview-application-pack.use-case.js";
+import type { ApplyDocumentFieldTipUseCase } from "../application/job-applications/apply-document-field-tip.use-case.js";
+import type { RewriteCoverLetterUseCase } from "../application/job-applications/rewrite-cover-letter.use-case.js";
 import type { JobApplicationChangeSubscriber } from "@careerden/domain";
 import {
   createJobApplicationFromScrapeSchema,
@@ -57,11 +55,11 @@ import {
   updateJobApplicationFollowUpSchema,
   updateJobApplicationSchema,
   updateStatusSchema,
-  updateDocumentContentSchema,
-  requestApplicationPackGenerationSchema,
-  applyFieldTipRequestSchema,
-  rewriteCoverLetterRequestSchema,
-} from "@careerden/contracts";
+} from "../contracts/job-applications/job-application.schema.js";
+import { updateDocumentContentSchema } from "../contracts/documents/rich-document.schema.js";
+import { requestApplicationPackGenerationSchema } from "../contracts/documents/application-pack.schema.js";
+import { applyFieldTipRequestSchema } from "../contracts/documents/apply-field-tip.schema.js";
+import { rewriteCoverLetterRequestSchema } from "../contracts/documents/rewrite-cover-letter.schema.js";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 import { parseCompanyLogoUpload, uploadCompanyLogo } from "./company-logo-upload.js";

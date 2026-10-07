@@ -1,0 +1,36 @@
+import { describe, expect, it, vi } from "vitest";
+import { ClaimNextScrapeJobUseCase } from "./claim-next-scrape-job.use-case.js";
+import {
+  createJobApplicationRepository,
+  createTestJobApplication,
+  createUnitOfWork,
+} from "@careerden/application/testing";
+
+describe("ClaimNextScrapeJobUseCase", () => {
+  it("claims work for the current profile and records the start event", async () => {
+    const job = createTestJobApplication({ status: "scraping" });
+    const repository = createJobApplicationRepository({
+      claimNextScrapeJob: vi.fn(async () => job),
+    });
+    const currentProfile = { execute: vi.fn(async () => ({ id: "profile-1" }) as never) };
+    const { unitOfWork, recordChanged } = createUnitOfWork(repository);
+
+    await expect(
+      new ClaimNextScrapeJobUseCase(currentProfile, unitOfWork).execute(
+        { id: "user-1", name: "Ada", email: "ada@example.com" },
+        "desktop-a",
+      ),
+    ).resolves.toBe(job);
+    expect(repository.claimNextScrapeJob).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+    });
+    expect(repository.addEvent).toHaveBeenCalledWith({
+      jobApplicationId: job.id,
+      type: "processing",
+      title: "Scraping started",
+    });
+    expect(recordChanged).toHaveBeenCalledOnce();
+  });
+});

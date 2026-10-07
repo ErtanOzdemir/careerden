@@ -1,16 +1,16 @@
 import { Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import {
-  FailApplicationPackGenerationUseCase,
-  GenerateDocumentsUseCase,
-  GenerateRequestedApplicationPackUseCase,
-} from "@careerden/application";
-import type { ApplicationPackGenerationQueuePayload } from "@careerden/domain";
+import { FailApplicationPackGenerationUseCase } from "./application/job-applications/fail-application-pack-generation.use-case.js";
+import { GenerateDocumentsUseCase } from "@careerden/application";
+import { GenerateRequestedApplicationPackUseCase } from "./application/job-applications/generate-requested-application-pack.use-case.js";
+import type { ApplicationPackGenerationQueuePayload } from "./domain/job-applications/application-pack-generation.queue.js";
 import {
   BullMqApplicationPackGenerationQueue,
+  applicationPackGenerationQueueName,
+} from "./infrastructure/queue/job-applications/bullmq-application-pack-generation.queue.js";
+import {
   HtmlTemplateRenderer,
   PlaywrightPdfRenderer,
-  PostgresApplicationPackGenerationOutboxDispatcher,
   PostgresJobApplicationRepository,
   PostgresOutboxRepository,
   PostgresPersistenceUnitOfWork,
@@ -18,9 +18,9 @@ import {
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
   S3CompatibleStorage,
-  applicationPackGenerationQueueName,
   createPostgresDb,
 } from "@careerden/infrastructure";
+import { PostgresApplicationPackGenerationOutboxDispatcher } from "./infrastructure/persistence/postgres-application-pack-generation-outbox.dispatcher.js";
 import type { Knex } from "knex";
 import type { DocumentsWorkerEnv } from "./env.js";
 import { processApplicationPackGeneration } from "./process-application-pack-generation.js";

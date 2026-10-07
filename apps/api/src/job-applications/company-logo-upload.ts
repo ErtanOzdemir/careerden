@@ -1,7 +1,7 @@
 import type { RequestHandler } from "express";
 import multer from "multer";
 import { ApplicationError } from "@careerden/application";
-import type { ManualCompanyLogo } from "@careerden/application";
+import type { ManualCompanyLogo } from "../application/job-applications/create-manual-job-application.use-case.js";
 
 const maximumCompanyLogoSize = 5 * 1024 * 1024;
 const upload = multer({

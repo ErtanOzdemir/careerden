@@ -5,7 +5,8 @@ import type {
   FollowUpReminderQueue,
   FollowUpReminderRepository,
 } from "@careerden/domain";
-import { PostgresEmailOutboxDispatcher, PostgresOutboxRepository } from "@careerden/infrastructure";
+import { PostgresEmailOutboxDispatcher } from "./infrastructure/persistence/postgres-email-outbox.dispatcher.js";
+import { PostgresOutboxRepository } from "@careerden/infrastructure";
 import { createEmailOutboxDispatcher, createFollowUpReminderRecoveryRunner } from "./app.js";
 
 describe("createEmailOutboxDispatcher", () => {

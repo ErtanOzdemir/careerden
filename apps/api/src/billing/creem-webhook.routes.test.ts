@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CreemWebhookEventParser } from "@careerden/infrastructure";
+import { CreemWebhookEventParser } from "../infrastructure/billing/creem-webhook-event.parser.js";
 import { createCreemWebhookRouter } from "./creem-webhook.routes.js";
 
 describe("createCreemWebhookRouter", () => {

@@ -33,7 +33,7 @@ review or download.
 
 - Workspace packages use the `@careerden/*` scope.
 - Backend and package source files use kebab-case names, for example
-  `process-job-application.ts` and `self-processing-job-application.queue.ts`.
+  `process-job-application.ts` and `bullmq-job-application.queue.ts`.
 - Backend folders are named by bounded context, for example `job-applications`,
   `documents`, `matching`, `profiles`, `scraping`, `persistence`, `queue`, and `storage`.
 - React components and pages use PascalCase filenames, for example `StatusBadge.tsx` and
@@ -56,6 +56,11 @@ review or download.
   - `packages/infrastructure` contains database repositories, scrapers, AI clients,
     document renderers, queue implementations, and storage adapters.
   - `packages/config` contains environment loading and validation.
+- `packages/*` holds only code shared by more than one app. Code used by a single app lives
+  in that app under the same layers, for example
+  `apps/api/src/{domain,application,infrastructure,contracts}/<bounded-context>/`. App-owned
+  layers keep the same dependency direction and may depend on the shared packages, never the
+  reverse. Shared application test doubles are exposed through `@careerden/application/testing`.
 - Keep HTTP handlers thin. Put business rules in application/domain code, not routes.
 - Organize backend source by bounded context inside each package. Do not reintroduce broad
   generic folders such as `entities`, `interfaces`, `schemas`, `routes`, or `use-cases`.

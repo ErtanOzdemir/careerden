@@ -1,7 +1,10 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
-import type { SubmitSupportRequestUseCase } from "@careerden/application";
-import { submitSupportRequestSchema, type SubmitSupportRequestDto } from "@careerden/contracts";
+import type { SubmitSupportRequestUseCase } from "../application/support/submit-support-request.use-case.js";
+import {
+  submitSupportRequestSchema,
+  type SubmitSupportRequestDto,
+} from "../contracts/support/support-request.schema.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 import { validateBody } from "../middleware/validate-body.js";
 

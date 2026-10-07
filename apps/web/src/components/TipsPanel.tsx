@@ -11,14 +11,11 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import type { DocumentFieldRef } from "@careerden/contracts";
-import { emptyRichDocument, fieldRefToDomId } from "@careerden/contracts";
-import type {
-  ApiApplyFieldTipFieldRef,
-  ApiDocumentContent,
-  ApiProfile,
-  RichDocument,
-} from "../api/types.js";
+import type { DocumentFieldRef } from "../contracts/documents/field-ref.js";
+import { emptyRichDocument } from "@careerden/contracts";
+import { fieldRefToDomId } from "../contracts/documents/field-ref.js";
+import type { ApiApplyFieldTipFieldRef, ApiDocumentContent, ApiProfile } from "../api/types.js";
+import type { RichDocument } from "@careerden/contracts";
 import type { CvListTip, CvTip, GapQuestion, JobApplication } from "../types.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { updateEnhancementDescription } from "./ApplicationPackCustomizer.js";

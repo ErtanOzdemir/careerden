@@ -1,16 +1,14 @@
 import { Router } from "express";
 import type { Router as ExpressRouter } from "express";
-import type { GetCreditBalanceUseCase } from "@careerden/application";
-import type {
-  CreateBillingPortalUseCase,
-  CreateSubscriptionCheckoutUseCase,
-  GetBillingSubscriptionUseCase,
-} from "@careerden/application";
+import type { GetCreditBalanceUseCase } from "../application/billing/get-credit-balance.use-case.js";
+import type { CreateBillingPortalUseCase } from "../application/billing/create-billing-portal.use-case.js";
+import type { CreateSubscriptionCheckoutUseCase } from "../application/billing/create-subscription-checkout.use-case.js";
+import type { GetBillingSubscriptionUseCase } from "../application/billing/get-billing-subscription.use-case.js";
 import {
   billingRedirectSchema,
   billingSubscriptionResponseSchema,
-  creditBalanceSchema,
-} from "@careerden/contracts";
+} from "../contracts/billing/billing-subscription.schema.js";
+import { creditBalanceSchema } from "../contracts/billing/credit-balance.schema.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
 export function createBillingRouter(dependencies: {

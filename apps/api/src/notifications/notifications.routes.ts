@@ -1,12 +1,10 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
-import type {
-  CountUnreadNotificationsUseCase,
-  GetOrCreateCurrentProfileUseCase,
-  ListNotificationsUseCase,
-  MarkAllNotificationsReadUseCase,
-  MarkNotificationReadUseCase,
-} from "@careerden/application";
+import type { CountUnreadNotificationsUseCase } from "../application/notifications/count-unread-notifications.use-case.js";
+import type { GetOrCreateCurrentProfileUseCase } from "../application/profiles/get-or-create-current-profile.use-case.js";
+import type { ListNotificationsUseCase } from "../application/notifications/list-notifications.use-case.js";
+import type { MarkAllNotificationsReadUseCase } from "../application/notifications/mark-all-notifications-read.use-case.js";
+import type { MarkNotificationReadUseCase } from "../application/notifications/mark-notification-read.use-case.js";
 import type { NotificationChangeSubscriber } from "@careerden/domain";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 

@@ -1,8 +1,8 @@
 import express, { Router } from "express";
 import type { Router as ExpressRouter } from "express";
-import type { ProcessBillingProviderEventUseCase } from "@careerden/application";
-import type { CreemWebhookEventParser } from "@careerden/infrastructure";
-import { CreemWebhookSignatureError } from "@careerden/infrastructure";
+import type { ProcessBillingProviderEventUseCase } from "../application/billing/process-billing-provider-event.use-case.js";
+import type { CreemWebhookEventParser } from "../infrastructure/billing/creem-webhook-event.parser.js";
+import { CreemWebhookSignatureError } from "../infrastructure/billing/creem-webhook-event.parser.js";
 
 export function createCreemWebhookRouter(dependencies: {
   parser: Pick<CreemWebhookEventParser, "parseAndVerify">;

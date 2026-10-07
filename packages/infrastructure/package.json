@@ -29,7 +29,6 @@
     "@careerden/domain": "workspace:*",
     "ai": "^6.0.0",
     "bullmq": "^5.64.1",
-    "creem": "1.6.0",
     "ioredis": "^5.8.2",
     "knex": "^3.1.0",
     "nodemailer": "^9.0.3",
@@ -41,6 +40,7 @@
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.15.6",
+    "dotenv": "^16.4.7",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

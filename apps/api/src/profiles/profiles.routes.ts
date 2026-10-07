@@ -1,12 +1,10 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
-import type {
-  CreateProfileUseCase,
-  GetOrCreateCurrentProfileUseCase,
-  GetProfileUseCase,
-  UpdateProfileUseCase,
-} from "@careerden/application";
-import { createProfileSchema, updateProfileSchema } from "@careerden/contracts";
+import type { CreateProfileUseCase } from "../application/profiles/create-profile.use-case.js";
+import type { GetOrCreateCurrentProfileUseCase } from "../application/profiles/get-or-create-current-profile.use-case.js";
+import type { GetProfileUseCase } from "../application/profiles/get-profile.use-case.js";
+import type { UpdateProfileUseCase } from "../application/profiles/update-profile.use-case.js";
+import { createProfileSchema, updateProfileSchema } from "../contracts/profiles/profile.schema.js";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 

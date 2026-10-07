@@ -1,5 +1,5 @@
-import { apiErrorResponseSchema } from "@careerden/contracts";
-import type { ApiErrorCode } from "@careerden/contracts";
+import { apiErrorResponseSchema } from "../../contracts/http/api-error.schema.js";
+import type { ApiErrorCode } from "../../contracts/http/api-error.schema.js";
 
 export class DesktopApiError extends Error {
   constructor(

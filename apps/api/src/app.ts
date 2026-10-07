@@ -2,63 +2,62 @@ import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
 import express from "express";
 import type { Express } from "express";
+import { CreateProfileUseCase } from "./application/profiles/create-profile.use-case.js";
+import { CreateManualJobApplicationUseCase } from "./application/job-applications/create-manual-job-application.use-case.js";
+import { ArchiveJobApplicationUseCase } from "./application/job-applications/archive-job-application.use-case.js";
+import { RestoreJobApplicationUseCase } from "./application/job-applications/restore-job-application.use-case.js";
+import { DeleteJobApplicationUseCase } from "./application/job-applications/delete-job-application.use-case.js";
 import {
-  CreateProfileUseCase,
-  CreateManualJobApplicationUseCase,
-  ArchiveJobApplicationUseCase,
-  RestoreJobApplicationUseCase,
-  DeleteJobApplicationUseCase,
   GenerateDocumentsUseCase,
-  GenerateJobApplicationDocumentsUseCase,
-  RetryJobApplicationUseCase,
-  SubmitJobApplicationUseCase,
-  UpdateDocumentContentUseCase,
-  UpdateProfileUseCase,
-  GetOrCreateCurrentProfileUseCase,
-  GetProfileUseCase,
-  PreviewApplicationPackUseCase,
-  ApplyDocumentFieldTipUseCase,
-  RewriteCoverLetterUseCase,
-  CountUnreadNotificationsUseCase,
-  ListNotificationsUseCase,
-  MarkAllNotificationsReadUseCase,
-  MarkNotificationReadUseCase,
-  EnsureJobApplicationAccessUseCase,
-  GetJobApplicationAnalyticsUseCase,
-  GetJobApplicationDetailUseCase,
-  ListJobApplicationsUseCase,
-  RequestJobApplicationAnalysisUseCase,
   RequestApplicationPackGenerationUseCase,
-  UpdateJobApplicationStatusUseCase,
-  UpdateJobApplicationTrackingUseCase,
-  ClaimNextScrapeJobUseCase,
-  CreateJobApplicationFromScrapeUseCase,
-  FailScrapeJobUseCase,
-  RenewScrapeClaimUseCase,
-  SubmitJobApplicationScrapeDataUseCase,
-  CreateJobApplicationEventUseCase,
-  ListJobApplicationEventsUseCase,
-  CreateJobApplicationContactUseCase,
-  ListJobApplicationContactsUseCase,
-  UpdateJobApplicationContactUseCase,
-  DeleteJobApplicationContactUseCase,
-  CreateJobApplicationFollowUpUseCase,
-  ListJobApplicationFollowUpsUseCase,
-  UpdateJobApplicationFollowUpUseCase,
-  DeleteJobApplicationFollowUpUseCase,
-  GetGeneratedDocumentDownloadUrlUseCase,
-  SubmitSupportRequestUseCase,
-  EnsureCurrentMonthlyCreditsUseCase,
-  GetCreditBalanceUseCase,
-  CreateBillingPortalUseCase,
-  CreateSubscriptionCheckoutUseCase,
-  GetBillingSubscriptionUseCase,
-  ProcessBillingProviderEventUseCase,
 } from "@careerden/application";
+import { GenerateJobApplicationDocumentsUseCase } from "./application/job-applications/generate-job-application-documents.use-case.js";
+import { RetryJobApplicationUseCase } from "./application/job-applications/retry-job-application.use-case.js";
+import { SubmitJobApplicationUseCase } from "./application/job-applications/submit-job-application.use-case.js";
+import { UpdateDocumentContentUseCase } from "./application/job-applications/update-document-content.use-case.js";
+import { UpdateProfileUseCase } from "./application/profiles/update-profile.use-case.js";
+import { GetOrCreateCurrentProfileUseCase } from "./application/profiles/get-or-create-current-profile.use-case.js";
+import { GetProfileUseCase } from "./application/profiles/get-profile.use-case.js";
+import { PreviewApplicationPackUseCase } from "./application/job-applications/preview-application-pack.use-case.js";
+import { ApplyDocumentFieldTipUseCase } from "./application/job-applications/apply-document-field-tip.use-case.js";
+import { RewriteCoverLetterUseCase } from "./application/job-applications/rewrite-cover-letter.use-case.js";
+import { CountUnreadNotificationsUseCase } from "./application/notifications/count-unread-notifications.use-case.js";
+import { ListNotificationsUseCase } from "./application/notifications/list-notifications.use-case.js";
+import { MarkAllNotificationsReadUseCase } from "./application/notifications/mark-all-notifications-read.use-case.js";
+import { MarkNotificationReadUseCase } from "./application/notifications/mark-notification-read.use-case.js";
+import { EnsureJobApplicationAccessUseCase } from "./application/job-applications/ensure-job-application-access.use-case.js";
+import { GetJobApplicationAnalyticsUseCase } from "./application/job-applications/get-job-application-analytics.use-case.js";
+import { GetJobApplicationDetailUseCase } from "./application/job-applications/get-job-application-detail.use-case.js";
+import { ListJobApplicationsUseCase } from "./application/job-applications/list-job-applications.use-case.js";
+import { RequestJobApplicationAnalysisUseCase } from "./application/job-applications/request-job-application-analysis.use-case.js";
+import { UpdateJobApplicationStatusUseCase } from "./application/job-applications/update-job-application-status.use-case.js";
+import { UpdateJobApplicationTrackingUseCase } from "./application/job-applications/update-job-application-tracking.use-case.js";
+import { ClaimNextScrapeJobUseCase } from "./application/job-applications/claim-next-scrape-job.use-case.js";
+import { CreateJobApplicationFromScrapeUseCase } from "./application/job-applications/create-job-application-from-scrape.use-case.js";
+import { FailScrapeJobUseCase } from "./application/job-applications/fail-scrape-job.use-case.js";
+import { RenewScrapeClaimUseCase } from "./application/job-applications/renew-scrape-claim.use-case.js";
+import { SubmitJobApplicationScrapeDataUseCase } from "./application/job-applications/submit-job-application-scrape-data.use-case.js";
+import { CreateJobApplicationEventUseCase } from "./application/job-applications/create-job-application-event.use-case.js";
+import { ListJobApplicationEventsUseCase } from "./application/job-applications/list-job-application-events.use-case.js";
+import { CreateJobApplicationContactUseCase } from "./application/job-applications/create-job-application-contact.use-case.js";
+import { ListJobApplicationContactsUseCase } from "./application/job-applications/list-job-application-contacts.use-case.js";
+import { UpdateJobApplicationContactUseCase } from "./application/job-applications/update-job-application-contact.use-case.js";
+import { DeleteJobApplicationContactUseCase } from "./application/job-applications/delete-job-application-contact.use-case.js";
+import { CreateJobApplicationFollowUpUseCase } from "./application/job-applications/create-job-application-follow-up.use-case.js";
+import { ListJobApplicationFollowUpsUseCase } from "./application/job-applications/list-job-application-follow-ups.use-case.js";
+import { UpdateJobApplicationFollowUpUseCase } from "./application/job-applications/update-job-application-follow-up.use-case.js";
+import { DeleteJobApplicationFollowUpUseCase } from "./application/job-applications/delete-job-application-follow-up.use-case.js";
+import { GetGeneratedDocumentDownloadUrlUseCase } from "./application/job-applications/get-generated-document-download-url.use-case.js";
+import { SubmitSupportRequestUseCase } from "./application/support/submit-support-request.use-case.js";
+import { EnsureCurrentMonthlyCreditsUseCase } from "./application/billing/ensure-current-monthly-credits.use-case.js";
+import { GetCreditBalanceUseCase } from "./application/billing/get-credit-balance.use-case.js";
+import { CreateBillingPortalUseCase } from "./application/billing/create-billing-portal.use-case.js";
+import { CreateSubscriptionCheckoutUseCase } from "./application/billing/create-subscription-checkout.use-case.js";
+import { GetBillingSubscriptionUseCase } from "./application/billing/get-billing-subscription.use-case.js";
+import { ProcessBillingProviderEventUseCase } from "./application/billing/process-billing-provider-event.use-case.js";
 import {
   AiProviderFactory,
   HtmlTemplateRenderer,
-  HttpRemoteImageFetcher,
   PlaywrightPdfRenderer,
   PostgresJobApplicationRepository,
   PostgresNotificationRepository,
@@ -70,12 +69,13 @@ import {
   createSmtpEmailSender,
   createPostgresDb,
   runPostgresMigrations,
-  MockSupportRequestNotifier,
-  CreemSubscriptionBillingProvider,
-  CreemWebhookEventParser,
   PostgresBillingSubscriptionRepository,
   createResendEmailSender,
 } from "@careerden/infrastructure";
+import { HttpRemoteImageFetcher } from "./infrastructure/scraping/http-remote-image.fetcher.js";
+import { MockSupportRequestNotifier } from "./infrastructure/support/mock-support-request.notifier.js";
+import { CreemSubscriptionBillingProvider } from "./infrastructure/billing/creem-subscription-billing.provider.js";
+import { CreemWebhookEventParser } from "./infrastructure/billing/creem-webhook-event.parser.js";
 import type { AiProvider } from "@careerden/domain";
 import type { Knex } from "knex";
 import { createAuth } from "./auth/auth.js";

@@ -1,4 +1,5 @@
-import type { DocumentFieldRef, RichDocument } from "@careerden/contracts";
+import type { DocumentFieldRef } from "../contracts/documents/field-ref.js";
+import type { RichDocument } from "@careerden/contracts";
 import { richDocumentToPlainText } from "@careerden/contracts";
 import type { ApiDocumentContent, ApiProfile } from "../api/types.js";
 

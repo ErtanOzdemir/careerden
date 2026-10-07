@@ -1,6 +1,7 @@
 import process from "node:process";
-import { ScrapeLinkedInJobUseCase } from "@careerden/application";
-import { LinkedInCompanyScraper, LinkedInJobScraper } from "@careerden/infrastructure";
+import { ScrapeLinkedInJobUseCase } from "../../application/scraping/scrape-linkedin-job.use-case.js";
+import { LinkedInCompanyScraper } from "../../infrastructure/scraping/adapters/linkedin-company.scraper.js";
+import { LinkedInJobScraper } from "../../infrastructure/scraping/adapters/linkedin-job.scraper.js";
 import {
   parseScrapingUtilityRequest,
   type ScrapingUtilityResponse,

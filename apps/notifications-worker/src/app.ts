@@ -6,23 +6,25 @@ import type {
   FollowUpReminderQueuePayload,
   FollowUpReminderRepository,
 } from "@careerden/domain";
-import { DeliverFollowUpReminderUseCase } from "@careerden/application";
+import { DeliverFollowUpReminderUseCase } from "./application/notifications/deliver-follow-up-reminder.use-case.js";
 import {
   BullMqFollowUpReminderQueue,
+  followUpReminderQueueName,
+} from "./infrastructure/queue/notifications/bullmq-follow-up-reminder.queue.js";
+import {
   PostgresFollowUpReminderRepository,
-  PostgresEmailOutboxDispatcher,
   PostgresOutboxRepository,
   PostgresPersistenceUnitOfWork,
   RedisNotificationChangeBus,
-  PostgresReminderOutboxDispatcher,
   PostgresStorageOutboxDispatcher,
   S3CompatibleStorage,
   createPostgresDb,
   createResendEmailSender,
   createSmtpEmailSender,
-  followUpReminderQueueName,
   getFollowUpReminderScheduledFor,
 } from "@careerden/infrastructure";
+import { PostgresEmailOutboxDispatcher } from "./infrastructure/persistence/postgres-email-outbox.dispatcher.js";
+import { PostgresReminderOutboxDispatcher } from "./infrastructure/persistence/postgres-reminder-outbox.dispatcher.js";
 import type { Knex } from "knex";
 import type { NotificationsWorkerEnv } from "./env.js";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";

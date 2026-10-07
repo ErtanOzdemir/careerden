@@ -1,25 +1,25 @@
 import { UnrecoverableError, Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import {
-  AnalyzeScrapedJobUseCase,
-  ExpireStaleCreditReservationsUseCase,
-  ExtractJobRequirementsUseCase,
-  FinalizeJobApplicationAnalysisFailureUseCase,
-  RunMatchAnalysisUseCase,
-} from "@careerden/application";
+import { AnalyzeScrapedJobUseCase } from "./application/job-applications/analyze-scraped-job.use-case.js";
+import { ExpireStaleCreditReservationsUseCase } from "./application/job-applications/expire-stale-credit-reservations.use-case.js";
+import { ExtractJobRequirementsUseCase } from "./application/matching/extract-job-requirements.use-case.js";
+import { FinalizeJobApplicationAnalysisFailureUseCase } from "./application/job-applications/finalize-job-application-analysis-failure.use-case.js";
+import { RunMatchAnalysisUseCase } from "@careerden/application";
 import type { JobApplicationQueuePayload } from "@careerden/domain";
 import {
   AiProviderFactory,
-  BullMqJobApplicationQueue,
-  PostgresAnalysisOutboxDispatcher,
   PostgresJobApplicationRepository,
   PostgresOutboxRepository,
   PostgresPersistenceUnitOfWork,
   PostgresUserProfileRepository,
   RedisJobApplicationChangeBus,
   createPostgresDb,
-  jobApplicationQueueName,
 } from "@careerden/infrastructure";
+import {
+  BullMqJobApplicationQueue,
+  jobApplicationQueueName,
+} from "./infrastructure/queue/job-applications/bullmq-job-application.queue.js";
+import { PostgresAnalysisOutboxDispatcher } from "./infrastructure/persistence/postgres-analysis-outbox.dispatcher.js";
 import type { Knex } from "knex";
 import type { LlmWorkerEnv } from "./env.js";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";

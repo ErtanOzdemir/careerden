@@ -9,11 +9,19 @@ import {
   billingSubscriptionResponseSchema,
 } from "../contracts/billing/billing-subscription.schema.js";
 import { creditBalanceSchema } from "../contracts/billing/credit-balance.schema.js";
+import {
+  billingPaymentsResponseSchema,
+  creditActivityResponseSchema,
+} from "../contracts/billing/billing-history.schema.js";
+import type { ListBillingPaymentsUseCase } from "../application/billing/list-billing-payments.use-case.js";
+import type { ListCreditActivityUseCase } from "../application/billing/list-credit-activity.use-case.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
 
 export function createBillingRouter(dependencies: {
   getCreditBalance: Pick<GetCreditBalanceUseCase, "execute">;
   getBillingSubscription: Pick<GetBillingSubscriptionUseCase, "execute">;
+  listCreditActivity: Pick<ListCreditActivityUseCase, "execute">;
+  listPayments?: Pick<ListBillingPaymentsUseCase, "execute">;
   createCheckout?: Pick<CreateSubscriptionCheckoutUseCase, "execute">;
   createPortal?: Pick<CreateBillingPortalUseCase, "execute">;
 }) {
@@ -45,6 +53,53 @@ export function createBillingRouter(dependencies: {
               }
             : null,
         ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/credit-activity", async (request, response, next) => {
+    try {
+      const userId = (request as AuthenticatedRequest).user.id;
+      const activity = await dependencies.listCreditActivity.execute(userId);
+      response.json(
+        creditActivityResponseSchema.parse({
+          items: activity.map((entry) => ({
+            id: entry.id,
+            kind: entry.kind,
+            delta: entry.delta,
+            occurredAt: entry.occurredAt.toISOString(),
+            ...(entry.jobApplication ? { jobApplication: entry.jobApplication } : {}),
+          })),
+        }),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/payments", async (request, response, next) => {
+    try {
+      const userId = (request as AuthenticatedRequest).user.id;
+      const payments = dependencies.listPayments
+        ? await dependencies.listPayments.execute(userId)
+        : [];
+      response.json(
+        billingPaymentsResponseSchema.parse({
+          items: payments.map((payment) => ({
+            id: payment.id,
+            status: payment.status,
+            currency: payment.currency,
+            amountMinor: payment.amountMinor,
+            amountPaidMinor: payment.amountPaidMinor,
+            refundedAmountMinor: payment.refundedAmountMinor,
+            taxAmountMinor: payment.taxAmountMinor,
+            periodStart: payment.periodStart?.toISOString(),
+            periodEnd: payment.periodEnd?.toISOString(),
+            createdAt: payment.createdAt.toISOString(),
+          })),
+        }),
       );
     } catch (error) {
       next(error);

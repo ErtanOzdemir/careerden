@@ -173,8 +173,8 @@ export function Topbar({
       <Link
         aria-label="AI credits"
         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted [-webkit-app-region:no-drag]"
-        title={balanceError ?? "Open AI credit settings"}
-        to="/settings"
+        title={balanceError ?? "Open credits and billing"}
+        to="/billing"
       >
         <Sparkles className="size-3.5 text-primary" />
         {isLoading

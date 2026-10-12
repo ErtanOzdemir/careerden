@@ -82,7 +82,7 @@ describe("Topbar", () => {
       "[-webkit-app-region:no-drag]",
     );
     expect(screen.getByRole("link", { name: "AI credits" })).toHaveTextContent("8 credits(2 held)");
-    expect(screen.getByRole("link", { name: "AI credits" })).toHaveAttribute("href", "/settings");
+    expect(screen.getByRole("link", { name: "AI credits" })).toHaveAttribute("href", "/billing");
   });
 
   it("closes the notifications dropdown when clicking outside it", () => {

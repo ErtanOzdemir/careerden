@@ -21,6 +21,43 @@ export interface ApiBillingRedirect {
   url: string;
 }
 
+export type ApiBillingPaymentStatus =
+  | "pending"
+  | "paid"
+  | "refunded"
+  | "partially_refunded"
+  | "charged_back"
+  | "failed"
+  | "canceled";
+
+export interface ApiBillingPayment {
+  id: string;
+  status: ApiBillingPaymentStatus;
+  currency: string;
+  amountMinor: number;
+  amountPaidMinor?: number;
+  refundedAmountMinor?: number;
+  taxAmountMinor?: number;
+  periodStart?: string;
+  periodEnd?: string;
+  createdAt: string;
+}
+
+export type ApiCreditActivityKind = "free_monthly_grant" | "subscription_grant" | "analysis_usage";
+
+export interface ApiCreditActivity {
+  id: string;
+  kind: ApiCreditActivityKind;
+  delta: number;
+  occurredAt: string;
+  jobApplication?: {
+    id: string;
+    deleted: boolean;
+    roleTitle?: string;
+    companyName?: string;
+  };
+}
+
 export async function redirectToBillingUrl(url: string): Promise<void> {
   const openExternal = window.electronAPI?.openExternal;
   if (openExternal) {
@@ -38,6 +75,14 @@ export const billingApi = {
 
   getSubscription(): Promise<ApiBillingSubscription | null> {
     return requestJson<ApiBillingSubscription | null>("/billing/subscription");
+  },
+
+  async listPayments(): Promise<ApiBillingPayment[]> {
+    return (await requestJson<{ items: ApiBillingPayment[] }>("/billing/payments")).items;
+  },
+
+  async listCreditActivity(): Promise<ApiCreditActivity[]> {
+    return (await requestJson<{ items: ApiCreditActivity[] }>("/billing/credit-activity")).items;
   },
 
   createCheckout(): Promise<ApiBillingRedirect> {

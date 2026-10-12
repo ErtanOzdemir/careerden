@@ -713,7 +713,7 @@ export default function AppDetail() {
               The scraped job is safe. Add credits, then start the analysis again.
             </p>
           </div>
-          <Link className={buttonVariants({ size: "sm", variant: "outline" })} to="/settings">
+          <Link className={buttonVariants({ size: "sm", variant: "outline" })} to="/billing">
             View AI credits
           </Link>
         </div>

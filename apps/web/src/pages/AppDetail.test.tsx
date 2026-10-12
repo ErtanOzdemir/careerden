@@ -73,7 +73,7 @@ describe("AppDetail AI credits", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View AI credits" })).toHaveAttribute(
       "href",
-      "/settings",
+      "/billing",
     );
     expect(screen.queryByText("provider text can change")).not.toBeInTheDocument();
     await waitFor(() => expect(billingMocks.refreshBalance).toHaveBeenCalled());

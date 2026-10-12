@@ -11,32 +11,12 @@ const authMocks = vi.hoisted(() => ({
   requestEmailChange: vi.fn(),
   useSession: vi.fn(),
 }));
-const billingMocks = vi.hoisted(() => ({
-  createCheckout: vi.fn(),
-  createPortal: vi.fn(),
-  redirectToBillingUrl: vi.fn(),
-  refresh: vi.fn(async () => undefined),
-  useCreditBalance: vi.fn(),
-}));
-
 vi.mock("../api/auth.js", () => ({
   accountEmailApi: {
     confirmChange: authMocks.confirmEmailChange,
     requestChange: authMocks.requestEmailChange,
   },
   authClient: authMocks,
-}));
-
-vi.mock("../api/billing.js", () => ({
-  billingApi: {
-    createCheckout: billingMocks.createCheckout,
-    createPortal: billingMocks.createPortal,
-  },
-  redirectToBillingUrl: billingMocks.redirectToBillingUrl,
-}));
-
-vi.mock("../billing/CreditBalanceProvider.js", () => ({
-  useCreditBalance: billingMocks.useCreditBalance,
 }));
 
 vi.mock("../api/profiles.js", () => ({
@@ -66,15 +46,6 @@ describe("Settings", () => {
       isPending: false,
       refetch: authMocks.refetchSession,
     });
-    billingMocks.useCreditBalance.mockReturnValue({
-      balance: { totalCredits: 10, availableCredits: 9, reservedCredits: 1 },
-      balanceError: null,
-      isLoading: false,
-      isLoadingSubscription: false,
-      refresh: billingMocks.refresh,
-      subscription: null,
-      subscriptionError: null,
-    });
   });
 
   afterEach(() => {
@@ -98,9 +69,7 @@ describe("Settings", () => {
     );
     expect(screen.queryByText("Auto-generate documents")).not.toBeInTheDocument();
     expect(screen.queryByText("Save drafts before applying")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI credits" })).toBeInTheDocument();
-    expect(screen.getByText("9")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "AI credits" })).not.toBeInTheDocument();
   });
 
   it("changes the account email after password and new-address OTP verification", async () => {
@@ -251,70 +220,6 @@ describe("Settings", () => {
     dialog = screen.getByRole("dialog");
     expect(within(dialog).getByLabelText("New email address")).toHaveValue("");
     expect(within(dialog).getByLabelText("Current password")).toHaveValue("");
-  });
-
-  it("opens Creem checkout for an account without a subscription", async () => {
-    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
-    billingMocks.createCheckout.mockResolvedValue({ url: "https://checkout.creem.io/ch_123" });
-
-    render(<Settings />);
-    fireEvent.click(await screen.findByRole("button", { name: "Subscribe with Creem" }));
-
-    await waitFor(() => expect(billingMocks.createCheckout).toHaveBeenCalledOnce());
-    expect(billingMocks.redirectToBillingUrl).toHaveBeenCalledWith(
-      "https://checkout.creem.io/ch_123",
-    );
-    expect(billingMocks.refresh).toHaveBeenCalledOnce();
-  });
-
-  it("keeps a zero balance visible when a background refresh reports an error", async () => {
-    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
-    billingMocks.useCreditBalance.mockReturnValue({
-      balance: { totalCredits: 0, availableCredits: 0, reservedCredits: 0 },
-      balanceError: "Could not refresh AI credits.",
-      isLoading: false,
-      isLoadingSubscription: false,
-      refresh: billingMocks.refresh,
-      subscription: null,
-      subscriptionError: null,
-    });
-
-    render(<Settings />);
-
-    expect(await screen.findAllByText("0")).toHaveLength(3);
-    expect(screen.getByRole("alert")).toHaveTextContent("Could not refresh AI credits.");
-    expect(screen.getByRole("button", { name: "Subscribe with Creem" })).toBeEnabled();
-  });
-
-  it("shows scheduled cancellation and opens the Creem customer portal", async () => {
-    vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
-    billingMocks.useCreditBalance.mockReturnValue({
-      balance: { totalCredits: 100, availableCredits: 100, reservedCredits: 0 },
-      balanceError: null,
-      isLoading: false,
-      isLoadingSubscription: false,
-      refresh: billingMocks.refresh,
-      subscription: {
-        provider: "creem",
-        planKey: "pro",
-        status: "active",
-        currentPeriodStart: "2026-07-01T00:00:00.000Z",
-        currentPeriodEnd: "2026-08-01T00:00:00.000Z",
-        cancelAtPeriodEnd: true,
-      },
-      subscriptionError: null,
-    });
-    billingMocks.createPortal.mockResolvedValue({ url: "https://creem.io/portal/cust_123" });
-
-    render(<Settings />);
-
-    expect(await screen.findByText(/Cancellation is scheduled/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Manage billing" }));
-
-    await waitFor(() => expect(billingMocks.createPortal).toHaveBeenCalledOnce());
-    expect(billingMocks.redirectToBillingUrl).toHaveBeenCalledWith(
-      "https://creem.io/portal/cust_123",
-    );
   });
 
   it("saves auto-run match analysis preference changes", async () => {

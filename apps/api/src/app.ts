@@ -54,6 +54,9 @@ import { GetCreditBalanceUseCase } from "./application/billing/get-credit-balanc
 import { CreateBillingPortalUseCase } from "./application/billing/create-billing-portal.use-case.js";
 import { CreateSubscriptionCheckoutUseCase } from "./application/billing/create-subscription-checkout.use-case.js";
 import { GetBillingSubscriptionUseCase } from "./application/billing/get-billing-subscription.use-case.js";
+import { ListBillingPaymentsUseCase } from "./application/billing/list-billing-payments.use-case.js";
+import { ListCreditActivityUseCase } from "./application/billing/list-credit-activity.use-case.js";
+import { KnexCreditActivityReader } from "./infrastructure/billing/knex-credit-activity.reader.js";
 import { ProcessBillingProviderEventUseCase } from "./application/billing/process-billing-provider-event.use-case.js";
 import {
   AiProviderFactory,
@@ -112,18 +115,20 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   const getCreditBalance = new GetCreditBalanceUseCase(unitOfWork);
   const billingSubscriptions = new PostgresBillingSubscriptionRepository(db);
   const getBillingSubscription = new GetBillingSubscriptionUseCase(billingSubscriptions);
+  const listCreditActivity = new ListCreditActivityUseCase(new KnexCreditActivityReader(db));
   const creem = isCreemConfigured(env)
     ? (() => {
         const provider = new CreemSubscriptionBillingProvider({
           apiKey: env.CREEM_API_KEY,
           productId: env.CREEM_PRODUCT_ID,
           planKey: env.CREEM_PLAN_KEY,
-          successUrl: env.CREEM_SUCCESS_URL ?? `${env.WEB_ORIGIN}/settings?checkout=success`,
+          successUrl: env.CREEM_SUCCESS_URL ?? `${env.WEB_ORIGIN}/billing?checkout=success`,
           testMode: env.CREEM_TEST_MODE,
         });
         return {
           createCheckout: new CreateSubscriptionCheckoutUseCase(provider),
           createPortal: new CreateBillingPortalUseCase(billingSubscriptions, provider),
+          listPayments: new ListBillingPaymentsUseCase(billingSubscriptions, provider),
           parser: new CreemWebhookEventParser({
             webhookSecret: env.CREEM_WEBHOOK_SECRET,
             productId: env.CREEM_PRODUCT_ID,
@@ -224,10 +229,12 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     createBillingRouter({
       getCreditBalance,
       getBillingSubscription,
+      listCreditActivity,
       ...(creem
         ? {
             createCheckout: creem.createCheckout,
             createPortal: creem.createPortal,
+            listPayments: creem.listPayments,
           }
         : {}),
     }),

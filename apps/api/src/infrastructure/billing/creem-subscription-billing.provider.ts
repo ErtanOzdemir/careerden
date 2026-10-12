@@ -4,6 +4,11 @@ import type {
   CreateSubscriptionCheckoutInput,
   SubscriptionBillingProvider,
 } from "@careerden/domain";
+import type {
+  BillingPayment,
+  BillingPaymentHistoryProvider,
+  BillingPaymentStatus,
+} from "../../domain/billing/billing-payment.js";
 
 interface CreemClient {
   checkouts: {
@@ -18,7 +23,41 @@ interface CreemClient {
   customers: {
     generateBillingLinks(input: { customerId: string }): Promise<{ customerPortalLink: string }>;
   };
+  transactions: {
+    search(
+      customerId?: string,
+      orderId?: string,
+      productId?: string,
+      pageNumber?: number,
+      pageSize?: number,
+    ): Promise<{ result: { items: CreemTransaction[] } }>;
+  };
 }
+
+interface CreemTransaction {
+  id: string;
+  status: string;
+  currency: string;
+  amount: number;
+  amountPaid?: number | null;
+  refundedAmount?: number | null;
+  taxAmount?: number | null;
+  periodStart?: number;
+  periodEnd?: number;
+  createdAt: number;
+}
+
+const creemPaymentStatuses: Record<string, BillingPaymentStatus> = {
+  pending: "pending",
+  paid: "paid",
+  refunded: "refunded",
+  partialRefund: "partially_refunded",
+  chargedBack: "charged_back",
+  declined: "failed",
+  uncollectible: "failed",
+  canceled: "canceled",
+  void: "canceled",
+};
 
 export interface CreemSubscriptionBillingProviderOptions {
   apiKey: string;
@@ -28,7 +67,9 @@ export interface CreemSubscriptionBillingProviderOptions {
   testMode: boolean;
 }
 
-export class CreemSubscriptionBillingProvider implements SubscriptionBillingProvider {
+export class CreemSubscriptionBillingProvider
+  implements SubscriptionBillingProvider, BillingPaymentHistoryProvider
+{
   readonly provider = "creem";
   private readonly client: CreemClient;
 
@@ -65,4 +106,38 @@ export class CreemSubscriptionBillingProvider implements SubscriptionBillingProv
     });
     return { url: links.customerPortalLink };
   }
+
+  /** Lists this product's payments for one customer, newest first, as reported by Creem. */
+  async listPayments(providerCustomerId: string, limit: number): Promise<BillingPayment[]> {
+    const page = await this.client.transactions.search(
+      providerCustomerId,
+      undefined,
+      this.options.productId,
+      1,
+      limit,
+    );
+
+    return page.result.items
+      .map(toBillingPayment)
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+  }
+}
+
+function toBillingPayment(transaction: CreemTransaction): BillingPayment {
+  return {
+    id: transaction.id,
+    status: creemPaymentStatuses[transaction.status] ?? "pending",
+    currency: transaction.currency.toUpperCase(),
+    amountMinor: transaction.amount,
+    amountPaidMinor: transaction.amountPaid ?? undefined,
+    refundedAmountMinor: transaction.refundedAmount ?? undefined,
+    taxAmountMinor: transaction.taxAmount ?? undefined,
+    periodStart: optionalTimestamp(transaction.periodStart),
+    periodEnd: optionalTimestamp(transaction.periodEnd),
+    createdAt: new Date(transaction.createdAt),
+  };
+}
+
+function optionalTimestamp(value: number | undefined): Date | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? new Date(value) : undefined;
 }

@@ -6,6 +6,7 @@ import {
   ListChecks,
   UserRound,
   Settings,
+  CreditCard,
   CircleHelp,
   LogOut,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/applications", label: "Applications", icon: ListChecks },
   { to: "/profile", label: "Profile", icon: UserRound },
+  { to: "/billing", label: "Credits & billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

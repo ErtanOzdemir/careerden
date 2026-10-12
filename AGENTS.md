@@ -162,6 +162,9 @@ review or download.
   billing interfaces. Its webhook route consumes the exact raw request body before global
   JSON and authentication middleware, verifies `creem-signature`, records provider events
   idempotently, and grants subscription-cycle credits only for confirmed paid events.
+- The web Credits & billing page reads payment history live from the billing provider through
+  the provider-neutral `BillingPaymentHistoryProvider` and credit activity from the local credit
+  ledger. A provider failure only hides payment history; credit activity stays available.
 - Scheduled or completed Creem cancellation updates subscription state but does not revoke
   a paid-period credit grant before its provider-confirmed expiration.
 - The authenticated web shell owns credit and subscription reads through

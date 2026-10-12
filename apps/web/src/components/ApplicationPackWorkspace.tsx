@@ -19,7 +19,6 @@ import { TipsPanel, type ProfileSavableField, type RevealTarget } from "./TipsPa
 import { Button, buttonVariants } from "./ui/button.js";
 import {
   AlertTriangle,
-  Check,
   Download,
   FileText,
   Loader2,
@@ -44,6 +43,9 @@ interface ApplicationPackWorkspaceProps {
   onProfileUpdated?: (profile: ApiProfile) => void;
   /** Saves the draft without regenerating documents; used to persist accepted tips immediately. */
   onSaveContent?: (documentContent: ApiDocumentContent) => Promise<void>;
+  /** Provided when the job is scraped but AI analysis has not been requested yet. */
+  onStartAnalysis?: () => void | Promise<void>;
+  isStartingAnalysis?: boolean;
 }
 
 const defaultPreferences: ApiApplicationPackPreferences = {
@@ -62,6 +64,8 @@ export function ApplicationPackWorkspace({
   onUpdate,
   onProfileUpdated,
   onSaveContent,
+  onStartAnalysis,
+  isStartingAnalysis = false,
 }: ApplicationPackWorkspaceProps) {
   const [draftContent, setDraftContent] = useState(app.documentContent);
   const [preferences, setPreferences] = useState(
@@ -161,25 +165,9 @@ export function ApplicationPackWorkspace({
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex flex-col gap-4 border-b border-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Sparkles className="size-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-foreground">Application pack</h2>
-                <p className="text-sm text-muted-foreground">
-                  One tailored CV and cover letter for this role.
-                </p>
-              </div>
-            </div>
-          </div>
-          <PackStatus status={app.processingStatus} />
-        </div>
-        <PackProgress status={app.processingStatus} hasDocuments={pdfDocuments.length > 0} />
-      </section>
+      {onStartAnalysis && (
+        <StartAnalysisCard isStarting={isStartingAnalysis} onStart={onStartAnalysis} />
+      )}
 
       {readiness?.state === "blocked" && (
         <section className="flex flex-col gap-4 rounded-xl border border-warning/30 bg-warning-soft p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -597,75 +585,34 @@ function DocumentPreviewCard({
   );
 }
 
-function PackStatus({ status }: { status?: string }) {
-  const isWorking = ["analyzing", "generating_documents", "queued", "scraping"].includes(
-    status ?? "",
-  );
-  const label =
-    status === "completed"
-      ? "Ready"
-      : status === "failed"
-        ? "Needs attention"
-        : status === "review_ready"
-          ? "Ready to create"
-          : status === "generating_documents"
-            ? "Creating documents"
-            : status === "analyzing"
-              ? "Tailoring content"
-              : "Collecting job details";
-
+function StartAnalysisCard({
+  isStarting,
+  onStart,
+}: {
+  isStarting: boolean;
+  onStart: () => void | Promise<void>;
+}) {
   return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-        status === "completed" && "bg-success-soft text-success",
-        status === "failed" && "bg-danger-soft text-destructive",
-        status !== "completed" && status !== "failed" && "bg-info-soft text-info",
-      )}
-    >
-      {isWorking ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-      {label}
-    </span>
-  );
-}
-
-function PackProgress({ status, hasDocuments }: { status?: string; hasDocuments: boolean }) {
-  const steps = [
-    {
-      label: "Job captured",
-      done: ![undefined, "queued", "scraping"].includes(status),
-      active: ["queued", "scraping"].includes(status ?? ""),
-    },
-    {
-      label: "Content tailored",
-      done: ["completed", "generating_documents", "review_ready"].includes(status ?? ""),
-      active: status === "analyzing",
-    },
-    {
-      label: "Documents ready",
-      done: status === "completed" && hasDocuments,
-      active: status === "generating_documents",
-    },
-  ];
-
-  return (
-    <ol className="grid gap-3 px-5 py-4 sm:grid-cols-3">
-      {steps.map((step, index) => (
-        <li className="flex items-center gap-3" key={step.label}>
-          <span
-            className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-              step.done && "border-success bg-success-soft text-success",
-              step.active && !step.done && "border-info bg-info-soft text-info",
-              !step.done && !step.active && "border-border text-muted-foreground",
-            )}
-          >
-            {step.done ? <Check className="size-3.5" /> : index + 1}
-          </span>
-          <span className="text-xs font-medium text-muted-foreground">{step.label}</span>
-        </li>
-      ))}
-    </ol>
+    <section className="flex flex-col gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <Sparkles className="size-5" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">
+            Run AI analysis to build your application pack
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Careerden compares this job with your profile, scores the match, and drafts a tailored
+            CV and cover letter. Uses one AI credit.
+          </p>
+        </div>
+      </div>
+      <Button className="shrink-0" disabled={isStarting} onClick={() => void onStart()} size="lg">
+        {isStarting ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+        {isStarting ? "Starting..." : "Start AI analysis"}
+      </Button>
+    </section>
   );
 }
 

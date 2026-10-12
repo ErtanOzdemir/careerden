@@ -65,7 +65,7 @@ describe("AppDetail AI credits", () => {
     vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
 
     renderAppDetail();
-    fireEvent.click(await screen.findByRole("button", { name: "Start analysis" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start AI analysis" }));
 
     expect(await screen.findByText("AI analysis needs one credit")).toBeInTheDocument();
     expect(
@@ -118,6 +118,48 @@ describe("AppDetail AI credits", () => {
     expect(await screen.findByRole("button", { name: "Analysis queued" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
     expect(jobApplicationsApi.startAnalysis).not.toHaveBeenCalled();
+  });
+});
+
+describe("AppDetail application pack tab", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("asks the user to start AI analysis when it has not run yet", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      status: "scraped",
+    });
+    vi.mocked(jobApplicationsApi.startAnalysis).mockResolvedValue(undefined as never);
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+
+    renderAppDetail();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Run AI analysis to build your application pack",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start analysis" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Start AI analysis" }));
+    await waitFor(() => expect(jobApplicationsApi.startAnalysis).toHaveBeenCalledWith("job-1"));
+  });
+
+  it("shows the shared processing status bar instead of the analysis prompt while queued", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      analysisAttemptId: "attempt-1",
+      status: "scraped",
+    });
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+
+    renderAppDetail();
+
+    expect(await screen.findByText("AI analysis queued")).toBeInTheDocument();
+    expect(screen.getByText("Runs in the background")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start AI analysis" })).not.toBeInTheDocument();
   });
 });
 

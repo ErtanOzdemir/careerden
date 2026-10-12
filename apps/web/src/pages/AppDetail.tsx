@@ -495,6 +495,8 @@ export default function AppDetail() {
   const isNotesDirty = notes.trim() !== persistedNotes;
   const isArchived = Boolean(app.archivedAt);
   const canArchive = canArchiveApplication(app);
+  const canStartAnalysis =
+    !isArchived && !app.aiMatch && app.processingStatus === "scraped" && !app.analysisAttemptId;
 
   return (
     <div className="space-y-6">
@@ -598,12 +600,7 @@ export default function AppDetail() {
                 <Loader2 className="size-3.5 animate-spin" />
                 Analysis queued
               </Button>
-            ) : (
-              <Button size="sm" onClick={handleRetry} disabled={isRetrying}>
-                <RefreshCw className={`size-3.5 ${isRetrying ? "animate-spin" : ""}`} />
-                Start analysis
-              </Button>
-            ))}
+            ) : null)}
           <div ref={actionsMenuRef} className="relative">
             <Button
               variant="outline"
@@ -671,7 +668,7 @@ export default function AppDetail() {
         </div>
       </div>
 
-      {tab !== "pack" && isProcessing && app.processingStatus !== "failed" && (
+      {isProcessing && app.processingStatus !== "failed" && (
         <div className="rounded-xl border border-info/20 bg-info-soft/60 p-4">
           <div className="flex items-center gap-2.5">
             <Loader2 className="size-4 animate-spin text-info" />
@@ -692,7 +689,7 @@ export default function AppDetail() {
         </div>
       )}
 
-      {tab !== "pack" && app.processingStatus === "failed" && (
+      {app.processingStatus === "failed" && (
         <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 flex items-center justify-between">
           <p className="text-sm text-destructive">
             {app.processingFailureReason ?? "Processing failed"}
@@ -767,6 +764,8 @@ export default function AppDetail() {
           onUpdate={handleUpdateApplicationPack}
           onProfileUpdated={setProfile}
           onSaveContent={handleSaveDocumentContent}
+          onStartAnalysis={canStartAnalysis ? handleRetry : undefined}
+          isStartingAnalysis={isRetrying}
           profile={profile ?? undefined}
           templates={HTML_TEMPLATES}
         />

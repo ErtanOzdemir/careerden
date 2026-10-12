@@ -87,7 +87,8 @@ describe("ApplicationPackWorkspace", () => {
 
     renderWorkspace();
 
-    expect(screen.getByRole("heading", { name: "Application pack" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Application pack" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start AI analysis" })).not.toBeInTheDocument();
     expect(screen.getByText("Role match")).toBeInTheDocument();
     expect(screen.getByText("86%")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Tailored CV" })).toBeInTheDocument();
@@ -107,6 +108,18 @@ describe("ApplicationPackWorkspace", () => {
     expect(renderPagedPreview.mock.calls[0]?.[0]).toContain(
       "I would be glad to help Acme ship its product.",
     );
+  });
+
+  it("offers a prominent AI analysis action when analysis has not run", () => {
+    const onStartAnalysis = vi.fn();
+
+    renderWorkspace({ onStartAnalysis });
+
+    expect(
+      screen.getByRole("heading", { name: "Run AI analysis to build your application pack" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Start AI analysis" }));
+    expect(onStartAnalysis).toHaveBeenCalledOnce();
   });
 
   it("zooms the preview page with buttons and with ctrl+wheel", () => {
@@ -633,6 +646,7 @@ function renderWorkspace({
   templates = HTML_TEMPLATES,
   onUpdate = vi.fn(async () => undefined),
   onSaveContent,
+  onStartAnalysis,
 }: {
   app?: JobApplication;
   profile?: ApiProfile;
@@ -642,6 +656,7 @@ function renderWorkspace({
     preferences: ApiApplicationPackPreferences,
   ) => Promise<void>;
   onSaveContent?: (content: ApiDocumentContent) => Promise<void>;
+  onStartAnalysis?: () => void;
 } = {}) {
   return render(
     <MemoryRouter>
@@ -651,6 +666,7 @@ function renderWorkspace({
         isUpdating={false}
         onDownload={vi.fn(async () => undefined)}
         onSaveContent={onSaveContent}
+        onStartAnalysis={onStartAnalysis}
         onUpdate={onUpdate}
         profile={profile}
         templates={templates}

@@ -146,6 +146,11 @@ review or download.
   workflow derives it from the current repository so forks never default to upstream
   update metadata; packaged local builds without it keep the updater disabled.
 - PostgreSQL migrations are run through Knex during API startup.
+- Better Auth rate limits are stored in PostgreSQL and resolve client IPs through
+  `AUTH_TRUSTED_PROXIES`. Email OTPs additionally use per-email counters keyed by an email
+  hash: at most 5 codes per hour at least 90 seconds apart, and 10 verification attempts per
+  hour across all codes, reset after a successful verification. Limited requests return 429
+  with `X-Retry-After`, and the web resend controls show the matching cooldown.
 - AI credits belong to the Better Auth user. Free access is granted as one idempotent
   10-credit lot per UTC calendar month; authenticated balance reads and analysis requests
   lazily recover a missing current-month grant.

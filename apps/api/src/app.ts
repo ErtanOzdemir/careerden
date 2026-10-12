@@ -150,6 +150,8 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
     databaseUrl: env.DATABASE_URL,
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.WEB_ORIGIN, env.BETTER_AUTH_URL],
+    rateLimitEnabled: env.AUTH_RATE_LIMIT_ENABLED,
+    trustedProxies: env.AUTH_TRUSTED_PROXIES,
   });
   const storage = new S3CompatibleStorage({
     accessKeyId: env.OBJECT_STORAGE_ACCESS_KEY_ID,

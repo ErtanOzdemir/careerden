@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authClient } from "../api/auth";
+import {
+  formatOtpCooldown,
+  getOtpRetryAfterSeconds,
+  useOtpResendCooldown,
+} from "../lib/otp-resend-cooldown.js";
 import { cn } from "../lib/utils.js";
 import { Button } from "../components/ui/button.js";
 import {
@@ -35,6 +40,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const resendCooldown = useOtpResendCooldown("email-verification", email);
 
   if (!isPending && session) {
     return <Navigate to="/" replace />;
@@ -52,6 +58,7 @@ export default function Login() {
     if (result.error) {
       if (isEmailNotVerifiedError(result.error)) {
         setStep("otp");
+        resendCooldown.startIfIdle();
         return;
       }
 
@@ -92,7 +99,14 @@ export default function Login() {
 
     if (result.error) {
       setError(result.error.message ?? "Could not send a new code.");
+      const retryAfterSeconds = getOtpRetryAfterSeconds(result.error);
+      if (retryAfterSeconds !== null) {
+        resendCooldown.start(retryAfterSeconds);
+      }
+      return;
     }
+
+    resendCooldown.start();
   }
 
   function handleBackToCredentials() {
@@ -214,11 +228,15 @@ export default function Login() {
             size="lg"
             type="button"
             variant="outline"
-            disabled={isResending}
+            disabled={isResending || resendCooldown.isCoolingDown}
             onClick={() => void handleResendOtp()}
           >
             <RotateCw className="size-4" />
-            {isResending ? "Sending..." : "Send new code"}
+            {isResending
+              ? "Sending..."
+              : resendCooldown.isCoolingDown
+                ? `Send new code in ${formatOtpCooldown(resendCooldown.secondsRemaining)}`
+                : "Send new code"}
           </Button>
         </form>
       )}

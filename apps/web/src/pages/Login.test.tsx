@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Login from "./Login";
@@ -25,6 +25,8 @@ vi.mock("../api/auth", () => ({
 
 describe("Login", () => {
   afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.clear();
     cleanup();
     vi.resetAllMocks();
   });
@@ -80,6 +82,7 @@ describe("Login", () => {
   });
 
   it("can resend another registration verification code from the login OTP step", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
     authMocks.useSession.mockReturnValue({ data: null, isPending: false });
     authMocks.signInEmail.mockResolvedValue({
       data: null,
@@ -93,7 +96,11 @@ describe("Login", () => {
     fireEvent.click(screen.getByRole("button", { name: /log in/i }));
     await screen.findByRole("heading", { name: "Verify Email" });
 
-    fireEvent.click(screen.getByRole("button", { name: /send new code/i }));
+    expect(screen.getByRole("button", { name: "Send new code in 1:30" })).toBeDisabled();
+    act(() => {
+      vi.advanceTimersByTime(90_000);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send new code" }));
 
     await waitFor(() => {
       expect(authMocks.sendVerificationOtp).toHaveBeenCalledWith({

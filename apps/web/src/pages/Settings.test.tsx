@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Settings from "./Settings";
 import { THEME_STORAGE_KEY } from "../theme.js";
@@ -78,6 +78,8 @@ describe("Settings", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.clear();
     cleanup();
     vi.restoreAllMocks();
   });
@@ -215,6 +217,7 @@ describe("Settings", () => {
   });
 
   it("resends with the verified password and clears sensitive fields when canceled", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
     vi.mocked(profilesApi.me).mockResolvedValue(createProfile());
     authMocks.requestEmailChange.mockResolvedValue({ data: { success: true }, error: null });
 
@@ -231,6 +234,10 @@ describe("Settings", () => {
 
     dialog = await screen.findByRole("dialog");
     await within(dialog).findByLabelText("Verification code");
+    expect(within(dialog).getByRole("button", { name: "Send new code in 1:30" })).toBeDisabled();
+    act(() => {
+      vi.advanceTimersByTime(90_000);
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Send new code" }));
     await waitFor(() => expect(authMocks.requestEmailChange).toHaveBeenCalledTimes(2));
     expect(authMocks.requestEmailChange).toHaveBeenLastCalledWith({

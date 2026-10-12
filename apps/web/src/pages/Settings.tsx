@@ -5,6 +5,11 @@ import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import { Modal } from "../components/careerden/modal.js";
 import { Field } from "../components/careerden/field.js";
 import { cn } from "../lib/utils.js";
+import {
+  formatOtpCooldown,
+  getOtpRetryAfterSeconds,
+  useOtpResendCooldown,
+} from "../lib/otp-resend-cooldown.js";
 import { profilesApi } from "../api/profiles.js";
 import { billingApi, redirectToBillingUrl } from "../api/billing.js";
 import type { ApiProfile } from "../api/types.js";
@@ -132,6 +137,7 @@ export default function Settings() {
   const [isEmailChangeModalOpen, setIsEmailChangeModalOpen] = useState(false);
   const [emailChangeStep, setEmailChangeStep] = useState<"credentials" | "otp">("credentials");
   const [newAccountEmail, setNewAccountEmail] = useState("");
+  const emailChangeResendCooldown = useOtpResendCooldown("change-email", newAccountEmail);
   const [emailChangePassword, setEmailChangePassword] = useState("");
   const [isEmailChangePasswordVisible, setIsEmailChangePasswordVisible] = useState(false);
   const [emailChangeOtp, setEmailChangeOtp] = useState("");
@@ -308,9 +314,14 @@ export default function Settings() {
 
     if (result.error) {
       setEmailChangeError(result.error.message ?? "Could not send a verification code.");
+      const retryAfterSeconds = getOtpRetryAfterSeconds(result.error);
+      if (retryAfterSeconds !== null) {
+        emailChangeResendCooldown.start(retryAfterSeconds);
+      }
       return;
     }
 
+    emailChangeResendCooldown.start();
     setNewAccountEmail(normalizedEmail);
     setEmailChangeOtp("");
     setEmailChangeStep("otp");
@@ -705,8 +716,15 @@ export default function Settings() {
               <Button onClick={closeEmailChangeModal} type="button" variant="outline">
                 Cancel
               </Button>
-              <Button disabled={isRequestingEmailChange} type="submit">
-                {isRequestingEmailChange ? "Sending..." : "Send verification code"}
+              <Button
+                disabled={isRequestingEmailChange || emailChangeResendCooldown.isCoolingDown}
+                type="submit"
+              >
+                {isRequestingEmailChange
+                  ? "Sending..."
+                  : emailChangeResendCooldown.isCoolingDown
+                    ? `Send code in ${formatOtpCooldown(emailChangeResendCooldown.secondsRemaining)}`
+                    : "Send verification code"}
               </Button>
             </div>
           </form>
@@ -746,12 +764,20 @@ export default function Settings() {
                 Back
               </Button>
               <Button
-                disabled={isRequestingEmailChange || isConfirmingEmailChange}
+                disabled={
+                  isRequestingEmailChange ||
+                  isConfirmingEmailChange ||
+                  emailChangeResendCooldown.isCoolingDown
+                }
                 onClick={() => void requestEmailChange()}
                 type="button"
                 variant="outline"
               >
-                {isRequestingEmailChange ? "Sending..." : "Send new code"}
+                {isRequestingEmailChange
+                  ? "Sending..."
+                  : emailChangeResendCooldown.isCoolingDown
+                    ? `Send new code in ${formatOtpCooldown(emailChangeResendCooldown.secondsRemaining)}`
+                    : "Send new code"}
               </Button>
               <Button disabled={isRequestingEmailChange || isConfirmingEmailChange} type="submit">
                 {isConfirmingEmailChange ? "Verifying..." : "Verify and change email"}

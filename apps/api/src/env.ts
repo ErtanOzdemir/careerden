@@ -16,6 +16,15 @@ const booleanFromEnv = z.preprocess((value) => {
   if (value === "false") return false;
   return value;
 }, z.boolean());
+const commaSeparatedList = z
+  .string()
+  .default("")
+  .transform((value) =>
+    value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean),
+  );
 
 export const apiEnvSchema = z.preprocess(
   normalizeObjectStorageEnv,
@@ -28,6 +37,8 @@ export const apiEnvSchema = z.preprocess(
       BETTER_AUTH_SECRET: z.string().min(16).default(developmentBetterAuthSecret),
       BETTER_AUTH_URL: z.string().url().default("http://localhost:3000"),
       WEB_ORIGIN: z.string().url().default("http://localhost:5173"),
+      AUTH_RATE_LIMIT_ENABLED: booleanFromEnv.default(true),
+      AUTH_TRUSTED_PROXIES: commaSeparatedList,
       CREEM_API_KEY: z.string().min(1).optional(),
       CREEM_WEBHOOK_SECRET: z.string().min(16).optional(),
       CREEM_PRODUCT_ID: z.string().min(1).optional(),

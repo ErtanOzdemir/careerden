@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { betterAuth } from "better-auth";
 import type { EmailSender } from "@careerden/domain";
+import type { OtpRateLimiter } from "./otp-rate-limiter.js";
 import {
   createAuth,
-  createEmailChangeHooks,
+  createAuthHooks,
   createMonthlyCreditProvisioningHooks,
   createPasswordResetHandler,
   createVerificationOtpHandler,
@@ -25,11 +26,33 @@ describe("createAuth", () => {
       emailSender: createEmailSender(),
       secret: "test-auth-secret-with-enough-length",
       trustedOrigins: ["http://localhost:5173"],
+      rateLimitEnabled: true,
+      trustedProxies: [],
     });
 
     expect(vi.mocked(betterAuth)).toHaveBeenCalledWith(
       expect.objectContaining({
         emailVerification: expect.objectContaining({ sendOnSignUp: true }),
+      }),
+    );
+  });
+
+  it("stores rate limits in the database and resolves client IPs through trusted proxies", () => {
+    createAuth({
+      baseUrl: "http://localhost:3000",
+      creditProvisioner: { execute: vi.fn(async () => undefined) },
+      databaseUrl: "postgres://localhost/careerden",
+      emailSender: createEmailSender(),
+      secret: "test-auth-secret-with-enough-length",
+      trustedOrigins: ["http://localhost:5173"],
+      rateLimitEnabled: true,
+      trustedProxies: ["10.0.0.0/8"],
+    });
+
+    expect(vi.mocked(betterAuth)).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        rateLimit: { enabled: true, storage: "database" },
+        advanced: { ipAddress: { trustedProxies: ["10.0.0.0/8"] } },
       }),
     );
   });
@@ -106,6 +129,34 @@ describe("createVerificationOtpHandler", () => {
     });
   });
 
+  it("counts automatic sign-up and sign-in sends against the per-email limit", async () => {
+    const emailSender = createEmailSender();
+    const limiter = createOtpRateLimiter({ allowed: false, retryAfterSeconds: 90 });
+    const sendVerificationOTP = createVerificationOtpHandler(emailSender, limiter);
+
+    await sendVerificationOTP(
+      { email: "ada@example.com", otp: "123456", type: "email-verification" },
+      { request: new Request("http://localhost:3000/auth/sign-in/email") },
+    );
+
+    expect(limiter.consume).toHaveBeenCalledWith("ada@example.com", "send");
+    expect(emailSender.send).not.toHaveBeenCalled();
+  });
+
+  it("does not count direct resend requests twice", async () => {
+    const emailSender = createEmailSender();
+    const limiter = createOtpRateLimiter();
+    const sendVerificationOTP = createVerificationOtpHandler(emailSender, limiter);
+
+    await sendVerificationOTP(
+      { email: "ada@example.com", otp: "123456", type: "email-verification" },
+      { request: new Request("http://localhost:3000/auth/email-otp/send-verification-otp") },
+    );
+
+    expect(limiter.consume).not.toHaveBeenCalled();
+    expect(emailSender.send).toHaveBeenCalledOnce();
+  });
+
   it("does not send OTP emails for unsupported flows", async () => {
     const emailSender = createEmailSender();
     const sendVerificationOTP = createVerificationOtpHandler(emailSender);
@@ -120,10 +171,10 @@ describe("createVerificationOtpHandler", () => {
   });
 });
 
-describe("createEmailChangeHooks", () => {
+describe("createAuthHooks email change", () => {
   it("requires the current credential password before requesting an OTP", async () => {
     const verify = vi.fn(async () => true);
-    const hooks = createEmailChangeHooks();
+    const hooks = createAuthHooks({ otpRateLimiter: createOtpRateLimiter() });
 
     await hooks.before(
       createEmailChangeHookContext({
@@ -140,7 +191,7 @@ describe("createEmailChangeHooks", () => {
   });
 
   it("rejects an incorrect current password", async () => {
-    const hooks = createEmailChangeHooks();
+    const hooks = createAuthHooks({ otpRateLimiter: createOtpRateLimiter() });
 
     await expect(
       hooks.before(
@@ -160,7 +211,7 @@ describe("createEmailChangeHooks", () => {
 
   it("revokes every active session except the email-changing session", async () => {
     const deleteSession = vi.fn(async () => undefined);
-    const hooks = createEmailChangeHooks();
+    const hooks = createAuthHooks({ otpRateLimiter: createOtpRateLimiter() });
 
     const result = await hooks.after(
       createEmailChangeHookContext({
@@ -183,7 +234,10 @@ describe("createEmailChangeHooks", () => {
 
   it("reports a redacted partial success when other sessions cannot be revoked", async () => {
     const logFailure = vi.fn();
-    const hooks = createEmailChangeHooks(logFailure);
+    const hooks = createAuthHooks({
+      otpRateLimiter: createOtpRateLimiter(),
+      logRevocationFailure: logFailure,
+    });
 
     const result = await hooks.after(
       createEmailChangeHookContext({
@@ -202,6 +256,103 @@ describe("createEmailChangeHooks", () => {
       errorName: "Error",
     });
     expect(JSON.stringify(logFailure.mock.calls)).not.toContain("database details");
+  });
+});
+
+describe("createAuthHooks OTP rate limiting", () => {
+  it.each([
+    ["/email-otp/send-verification-otp", { email: "ada@example.com" }, "send"],
+    ["/email-otp/verify-email", { email: "ada@example.com", otp: "000000" }, "verify"],
+    ["/email-otp/check-verification-otp", { email: "ada@example.com", otp: "000000" }, "verify"],
+    ["/email-otp/change-email", { newEmail: "ada@example.com", otp: "000000" }, "verify"],
+  ] as const)("counts %s per email", async (path, body, action) => {
+    const otpRateLimiter = createOtpRateLimiter();
+    const hooks = createAuthHooks({ otpRateLimiter });
+
+    await hooks.before(createEmailChangeHookContext({ body, path }));
+
+    expect(otpRateLimiter.consume).toHaveBeenCalledWith("ada@example.com", action);
+  });
+
+  it("counts email-change code requests against the new email after the password check", async () => {
+    const otpRateLimiter = createOtpRateLimiter();
+    const hooks = createAuthHooks({ otpRateLimiter });
+
+    await hooks.before(
+      createEmailChangeHookContext({
+        body: { currentPassword: "correct-password", newEmail: "new@example.com" },
+        path: "/email-otp/request-email-change",
+      }),
+    );
+
+    expect(otpRateLimiter.consume).toHaveBeenCalledWith("new@example.com", "send");
+  });
+
+  it("rejects limited requests with 429 and a retry delay", async () => {
+    const hooks = createAuthHooks({
+      otpRateLimiter: createOtpRateLimiter({ allowed: false, retryAfterSeconds: 75 }),
+    });
+
+    const error = await hooks
+      .before(
+        createEmailChangeHookContext({
+          body: { email: "ada@example.com", otp: "000000" },
+          path: "/email-otp/verify-email",
+        }),
+      )
+      .catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      statusCode: 429,
+      body: { code: "OTP_RATE_LIMITED", retryAfterSeconds: 75 },
+      headers: { "X-Retry-After": "75" },
+    });
+  });
+
+  it("resets the verify counter after a successful verification", async () => {
+    const otpRateLimiter = createOtpRateLimiter();
+    const hooks = createAuthHooks({ otpRateLimiter });
+
+    await hooks.after(
+      createEmailChangeHookContext({
+        body: { email: "ada@example.com", otp: "123456" },
+        path: "/email-otp/verify-email",
+        returned: { status: true },
+      }),
+    );
+
+    expect(otpRateLimiter.reset).toHaveBeenCalledWith("ada@example.com", "verify");
+  });
+
+  it("keeps the verify counter after a failed verification", async () => {
+    const otpRateLimiter = createOtpRateLimiter();
+    const hooks = createAuthHooks({ otpRateLimiter });
+
+    await hooks.after(
+      createEmailChangeHookContext({
+        body: { email: "ada@example.com", otp: "000000" },
+        path: "/email-otp/verify-email",
+        returned: new Error("Invalid OTP"),
+      }),
+    );
+
+    expect(otpRateLimiter.reset).not.toHaveBeenCalled();
+  });
+
+  it("ignores unrelated auth paths and disabled limits", async () => {
+    const otpRateLimiter = createOtpRateLimiter();
+
+    await createAuthHooks({ otpRateLimiter }).before(
+      createEmailChangeHookContext({ body: { email: "ada@example.com" }, path: "/sign-in/email" }),
+    );
+    await createAuthHooks({ otpRateLimiter, otpRateLimitEnabled: false }).before(
+      createEmailChangeHookContext({
+        body: { email: "ada@example.com", otp: "000000" },
+        path: "/email-otp/verify-email",
+      }),
+    );
+
+    expect(otpRateLimiter.consume).not.toHaveBeenCalled();
   });
 });
 
@@ -227,6 +378,18 @@ describe("createPasswordResetHandler", () => {
 function createEmailSender(): EmailSender {
   return {
     send: vi.fn(async () => undefined),
+  };
+}
+
+function createOtpRateLimiter(
+  decision = { allowed: true, retryAfterSeconds: 0 },
+): OtpRateLimiter & {
+  consume: ReturnType<typeof vi.fn>;
+  reset: ReturnType<typeof vi.fn>;
+} {
+  return {
+    consume: vi.fn(async () => decision),
+    reset: vi.fn(async () => undefined),
   };
 }
 

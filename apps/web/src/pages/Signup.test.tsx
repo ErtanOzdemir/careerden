@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Signup from "./Signup";
@@ -25,6 +25,8 @@ vi.mock("../api/auth", () => ({
 
 describe("Signup", () => {
   afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.clear();
     cleanup();
     vi.resetAllMocks();
   });
@@ -75,7 +77,8 @@ describe("Signup", () => {
     expect(await screen.findByText("Home")).toBeInTheDocument();
   });
 
-  it("resends registration verification codes from the OTP step", async () => {
+  it("resends registration verification codes after the cooldown", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
     authMocks.useSession.mockReturnValue({ data: null, isPending: false });
     authMocks.signUpEmail.mockResolvedValue({ data: { token: null }, error: null });
     authMocks.sendVerificationOtp.mockResolvedValue({ data: { success: true }, error: null });
@@ -86,7 +89,11 @@ describe("Signup", () => {
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
     await screen.findByRole("heading", { name: "Verify Email" });
 
-    fireEvent.click(screen.getByRole("button", { name: /send new code/i }));
+    expect(screen.getByRole("button", { name: "Send new code in 1:30" })).toBeDisabled();
+    act(() => {
+      vi.advanceTimersByTime(90_000);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send new code" }));
 
     await waitFor(() => {
       expect(authMocks.sendVerificationOtp).toHaveBeenCalledWith({
@@ -94,6 +101,58 @@ describe("Signup", () => {
         type: "email-verification",
       });
     });
+    expect(await screen.findByRole("button", { name: "Send new code in 1:30" })).toBeDisabled();
+  });
+
+  it("keeps the resend countdown when the user goes back and returns to the OTP step", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    authMocks.useSession.mockReturnValue({ data: null, isPending: false });
+    authMocks.signUpEmail.mockResolvedValue({ data: { token: null }, error: null });
+
+    renderSignup();
+
+    fillSignupForm();
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+    await screen.findByRole("heading", { name: "Verify Email" });
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Change email" }));
+    fireEvent.click(await screen.findByRole("button", { name: /create account/i }));
+    await screen.findByRole("heading", { name: "Verify Email" });
+
+    expect(screen.getByRole("button", { name: "Send new code in 1:00" })).toBeDisabled();
+  });
+
+  it("shows the server retry delay when resending is rate limited", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    authMocks.useSession.mockReturnValue({ data: null, isPending: false });
+    authMocks.signUpEmail.mockResolvedValue({ data: { token: null }, error: null });
+    authMocks.sendVerificationOtp.mockResolvedValue({
+      data: null,
+      error: {
+        status: 429,
+        code: "OTP_RATE_LIMITED",
+        message: "Too many verification code attempts. Please try again later.",
+        retryAfterSeconds: 600,
+      },
+    });
+
+    renderSignup();
+
+    fillSignupForm();
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+    await screen.findByRole("heading", { name: "Verify Email" });
+    act(() => {
+      vi.advanceTimersByTime(90_000);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send new code" }));
+
+    expect(
+      await screen.findByText("Too many verification code attempts. Please try again later."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send new code in 10:00" })).toBeDisabled();
   });
 
   it("returns from the OTP step so the user can correct the email address", async () => {

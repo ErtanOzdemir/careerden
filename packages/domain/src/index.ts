@@ -2,6 +2,7 @@ export * from "./billing/credit-account.js";
 export * from "./billing/credit-repository.js";
 export * from "./billing/billing-subscription.js";
 export * from "./billing/billing-subscription-repository.js";
+export * from "./billing/subscription-entitlement.js";
 export * from "./profiles/user-profile.js";
 export * from "./profiles/user-profile-repository.js";
 export * from "./profiles/profile-readiness.js";

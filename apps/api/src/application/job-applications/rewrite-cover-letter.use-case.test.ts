@@ -2,6 +2,8 @@ import type { AiProvider, DocumentContent, ScrapeBundle } from "@careerden/domai
 import { richDocumentFromText } from "@careerden/domain";
 import { describe, expect, it, vi } from "vitest";
 import {
+  createActiveTestSubscription,
+  createBillingSubscriptionsDouble,
   createJobApplicationRepository,
   createProfiles,
   createTestJobApplication,
@@ -65,9 +67,25 @@ describe("RewriteCoverLetterUseCase", () => {
       }),
     ).rejects.toThrow("usable cover letter");
   });
+
+  it("uses the premium tier for subscribers and the free tier otherwise", async () => {
+    const aiProvider = createAiProvider({ paragraphs: ["Dear hiring team, I build APIs."] });
+    const subscriptions = createBillingSubscriptionsDouble(createActiveTestSubscription());
+    await createUseCase(aiProvider, subscriptions).execute("job-1", "user-1", { documentContent: draft });
+    await createUseCase(aiProvider).execute("job-1", "user-1", { documentContent: draft });
+
+    expect(subscriptions.findByUserId).toHaveBeenCalledWith("user-1");
+    expect(vi.mocked(aiProvider.generate).mock.calls.map(([params]) => params.tier)).toEqual([
+      "premium",
+      "free",
+    ]);
+  });
 });
 
-function createUseCase(aiProvider: AiProvider) {
+function createUseCase(
+  aiProvider: AiProvider,
+  subscriptions = createBillingSubscriptionsDouble(),
+) {
   const repository = createJobApplicationRepository({
     findById: vi.fn(async () => createTestJobApplication()),
     getScrapeBundle: vi.fn(
@@ -81,7 +99,12 @@ function createUseCase(aiProvider: AiProvider) {
         }) as ScrapeBundle,
     ),
   });
-  return new RewriteCoverLetterUseCase(repository, createProfiles() as never, aiProvider);
+  return new RewriteCoverLetterUseCase(
+    repository,
+    createProfiles() as never,
+    aiProvider,
+    subscriptions,
+  );
 }
 
 function createAiProvider(output: unknown): AiProvider {

@@ -75,6 +75,7 @@ import {
   PostgresBillingSubscriptionRepository,
   createResendEmailSender,
 } from "@careerden/infrastructure";
+import { aiProviderConfigFromEnv } from "@careerden/config";
 import { HttpRemoteImageFetcher } from "./infrastructure/scraping/http-remote-image.fetcher.js";
 import { MockSupportRequestNotifier } from "./infrastructure/support/mock-support-request.notifier.js";
 import { CreemSubscriptionBillingProvider } from "./infrastructure/billing/creem-subscription-billing.provider.js";
@@ -173,12 +174,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
   // below.
   let aiProvider: AiProvider | undefined;
   try {
-    aiProvider = new AiProviderFactory({
-      aiProvider: env.AI_PROVIDER,
-      openaiApiKey: env.OPENAI_API_KEY,
-      geminiApiKey: env.GEMINI_API_KEY,
-      deepseekApiKey: env.DEEPSEEK_API_KEY,
-    }).create();
+    aiProvider = new AiProviderFactory(aiProviderConfigFromEnv(env)).create();
   } catch {
     aiProvider = undefined;
   }
@@ -322,11 +318,13 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
               jobApplications,
               profiles,
               aiProvider,
+              billingSubscriptions,
             ),
             rewriteCoverLetter: new RewriteCoverLetterUseCase(
               jobApplications,
               profiles,
               aiProvider,
+              billingSubscriptions,
             ),
           }
         : {}),

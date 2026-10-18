@@ -2,13 +2,18 @@ import {
   aiJobRequirementsCandidateSchema,
   aiJobRequirementsSchema,
 } from "../../contracts/matching/ai-job-requirements.schema.js";
-import type { AiProvider, ScrapedJob } from "@careerden/domain";
+import type { AiProvider, AiTier, ScrapedJob } from "@careerden/domain";
 
 export class ExtractJobRequirementsUseCase {
   constructor(private readonly aiProvider: AiProvider) {}
 
-  async execute(input: { jobApplicationId: string; job: ScrapedJob }): Promise<ScrapedJob> {
+  async execute(input: {
+    jobApplicationId: string;
+    job: ScrapedJob;
+    aiTier: AiTier;
+  }): Promise<ScrapedJob> {
     const candidate = await this.aiProvider.generate({
+      tier: input.aiTier,
       system: [
         "You extract job requirements from scraped job descriptions.",
         "Use only requirements that are directly supported by the job description.",

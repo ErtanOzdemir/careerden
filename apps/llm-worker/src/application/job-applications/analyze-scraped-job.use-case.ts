@@ -1,10 +1,15 @@
 import type {
+  AiTier,
   JobApplicationQueuePayload,
   JobApplicationRepository,
   PersistenceUnitOfWork,
   UserProfileRepository,
 } from "@careerden/domain";
-import { assessProfileReadiness, documentContentFromProfile } from "@careerden/domain";
+import {
+  aiTierForSubscription,
+  assessProfileReadiness,
+  documentContentFromProfile,
+} from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
 import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.use-case.js";
 import type { RunMatchAnalysisUseCase } from "@careerden/application";
@@ -18,6 +23,7 @@ export class AnalyzeScrapedJobUseCase {
     private readonly matching: RunMatchAnalysisUseCase,
     private readonly unitOfWork: PersistenceUnitOfWork,
     private readonly extractRequirements?: Pick<ExtractJobRequirementsUseCase, "execute">,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(payload: JobApplicationQueuePayload): Promise<void> {
@@ -30,14 +36,21 @@ export class AnalyzeScrapedJobUseCase {
       );
     }
     const attemptId = payload.analysisAttemptId;
-    const started = await this.unitOfWork.execute(
-      async ({ credits, jobApplications, jobApplicationChanges }): Promise<boolean> => {
+    // The tier is resolved from the reserving user's subscription: subscribers use the premium
+    // provider, everyone else the free model pool.
+    const aiTier = await this.unitOfWork.execute(
+      async ({
+        billingSubscriptions,
+        credits,
+        jobApplications,
+        jobApplicationChanges,
+      }): Promise<AiTier | undefined> => {
         const reservation = await credits.findReservation(attemptId);
-        if (!reservation || reservation.status !== "reserved") return false;
+        if (!reservation || reservation.status !== "reserved") return undefined;
         const begin = await jobApplications.beginAnalysis(jobApplication.id, attemptId);
         if (!begin.accepted) {
           await credits.releaseReservation(attemptId, "superseded", new Date());
-          return false;
+          return undefined;
         }
         if (begin.started) {
           await jobApplications.addEvent({
@@ -48,10 +61,13 @@ export class AnalyzeScrapedJobUseCase {
           });
           await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         }
-        return true;
+        return aiTierForSubscription(
+          await billingSubscriptions.findByUserId(reservation.userId),
+          this.now(),
+        );
       },
     );
-    if (!started) return;
+    if (!aiTier) return;
 
     const profile = await this.profiles.findById(jobApplication.profileId);
 
@@ -72,6 +88,7 @@ export class AnalyzeScrapedJobUseCase {
       const job = await this.extractRequirements.execute({
         jobApplicationId: jobApplication.id,
         job: scrape.job,
+        aiTier,
       });
       scrape = { ...scrape, job };
       await this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges }) => {
@@ -91,6 +108,7 @@ export class AnalyzeScrapedJobUseCase {
       profile,
       scrape,
       applicationPackPreferences: jobApplication.applicationPackPreferences,
+      aiTier,
     });
 
     await this.unitOfWork.execute(

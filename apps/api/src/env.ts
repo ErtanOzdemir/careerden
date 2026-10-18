@@ -3,10 +3,12 @@ import { existsSync } from "node:fs";
 import { dirname, join, parse } from "node:path";
 import { z } from "zod";
 import {
+  aiEnvShape,
   normalizeObjectStorageEnv,
   objectStorageEnvShape,
   validateProductionObjectStorageEnv,
   validateProductionResendEmailEnv,
+  validateProductionAiEnv,
   validateProductionSecret,
 } from "@careerden/config";
 
@@ -49,10 +51,7 @@ export const apiEnvSchema = z.preprocess(
       SMTP_PORT: z.coerce.number().int().positive().default(1025),
       EMAIL_FROM: z.string().min(1).default("Careerden <no-reply@careerden.local>"),
       RESEND_API_KEY: z.string().default(""),
-      AI_PROVIDER: z.enum(["openai", "gemini", "deepseek"]).default("openai"),
-      OPENAI_API_KEY: z.string().optional(),
-      GEMINI_API_KEY: z.string().optional(),
-      DEEPSEEK_API_KEY: z.string().optional(),
+      ...aiEnvShape,
       ...objectStorageEnvShape,
       OPEN_OBSERVE_URL: z.string().url().default("http://localhost:5080"),
       OPEN_OBSERVE_KEY: z.string().min(1),
@@ -60,6 +59,7 @@ export const apiEnvSchema = z.preprocess(
     .superRefine((env, context) => {
       validateProductionObjectStorageEnv(env, context);
       validateProductionResendEmailEnv(env, context);
+      validateProductionAiEnv(env, context);
 
       const creemFields = [
         ["CREEM_API_KEY", env.CREEM_API_KEY],

@@ -1,6 +1,7 @@
 export * from "./job-applications/request-application-pack-generation.use-case.js";
 export * from "./matching/complete-enhancements.js";
 export * from "./matching/normalize-ai-match-result.js";
+export * from "./matching/resolve-ai-tier.js";
 export * from "./matching/run-match-analysis.use-case.js";
 export * from "./matching/sanitize-duration-claims.js";
 export * from "./documents/generate-documents.use-case.js";

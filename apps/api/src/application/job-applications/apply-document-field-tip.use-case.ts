@@ -5,11 +5,12 @@ import {
 import type { ApplyFieldTipFieldRef } from "../../contracts/documents/apply-field-tip.schema.js";
 import type {
   AiProvider,
+  BillingSubscriptionRepository,
   JobApplicationRepository,
   RichDocument,
   UserProfileAccountRepository,
 } from "@careerden/domain";
-import { ApplicationError } from "@careerden/application";
+import { ApplicationError, resolveAiTier } from "@careerden/application";
 import { durationClaimRules, factualityRules } from "@careerden/application";
 import { createTipGrounding } from "@careerden/application";
 import {
@@ -53,6 +54,8 @@ export class ApplyDocumentFieldTipUseCase {
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileAccountRepository,
     private readonly aiProvider: AiProvider,
+    private readonly subscriptions: Pick<BillingSubscriptionRepository, "findByUserId">,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(
@@ -93,6 +96,7 @@ export class ApplyDocumentFieldTipUseCase {
     );
 
     const revision = await this.aiProvider.generate({
+      tier: await resolveAiTier(this.subscriptions, userId, this.now()),
       system: applyFieldTipSystemPrompt(),
       prompt: applyFieldTipPrompt({
         field: input.field,

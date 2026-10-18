@@ -1,6 +1,13 @@
 import type { ZodType } from "zod";
 
+/**
+ * `free` routes to the no-cost model pool used for users without a paid subscription; `premium`
+ * routes to the paid provider reserved for subscribers.
+ */
+export type AiTier = "free" | "premium";
+
 export interface AiGenerateParams<T> {
+  tier: AiTier;
   system: string;
   prompt: string;
   outputSchema: ZodType<T>;

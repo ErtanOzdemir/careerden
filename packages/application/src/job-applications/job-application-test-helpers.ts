@@ -1,5 +1,7 @@
 import { vi } from "vitest";
 import type {
+  BillingSubscription,
+  BillingSubscriptionRepository,
   FileStorage,
   JobApplication,
   JobApplicationQueue,
@@ -107,6 +109,10 @@ export function createQueue(): JobApplicationQueue {
 export function createUnitOfWork(
   jobApplications: JobApplicationRepository,
   profiles: UserProfileAccessRepository = createProfiles(),
+  billingSubscriptions: Pick<
+    BillingSubscriptionRepository,
+    "findByUserId"
+  > = createBillingSubscriptionsDouble(),
 ): {
   unitOfWork: PersistenceUnitOfWork;
   addOutboxEvent: ReturnType<typeof vi.fn>;
@@ -131,7 +137,7 @@ export function createUnitOfWork(
     unitOfWork: {
       execute: async (work) =>
         work({
-          billingSubscriptions: {} as never,
+          billingSubscriptions: billingSubscriptions as never,
           credits,
           jobApplications,
           jobApplicationChanges: { changed: recordChanged, deleted: recordDeleted },
@@ -142,6 +148,31 @@ export function createUnitOfWork(
           outbox: { add: addOutboxEvent },
         }),
     },
+  };
+}
+
+/** Resolves `subscription` for every user; the default `null` means the user has no subscription. */
+export function createBillingSubscriptionsDouble(subscription: BillingSubscription | null = null) {
+  return { findByUserId: vi.fn(async (_userId: string) => subscription) };
+}
+
+export function createActiveTestSubscription(
+  overrides: Partial<BillingSubscription> = {},
+): BillingSubscription {
+  return {
+    id: "subscription-1",
+    userId: "user-1",
+    provider: "creem",
+    providerCustomerId: "customer-1",
+    providerSubscriptionId: "provider-subscription-1",
+    planKey: "pro",
+    status: "active",
+    currentPeriodStart: new Date("2026-01-01T00:00:00.000Z"),
+    currentPeriodEnd: new Date("2099-01-01T00:00:00.000Z"),
+    cancelAtPeriodEnd: false,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...overrides,
   };
 }
 

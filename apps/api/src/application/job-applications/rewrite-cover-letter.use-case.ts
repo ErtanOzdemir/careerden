@@ -1,6 +1,7 @@
 import { aiCoverLetterRewriteSchema } from "../../contracts/matching/ai-cover-letter-rewrite.schema.js";
 import type {
   AiProvider,
+  BillingSubscriptionRepository,
   DocumentContent,
   JobApplicationRepository,
   RichDocument,
@@ -11,7 +12,7 @@ import {
   richDocumentToPlainText,
   sanitizeDurationClaims,
 } from "@careerden/domain";
-import { ApplicationError } from "@careerden/application";
+import { ApplicationError, resolveAiTier } from "@careerden/application";
 import { resolveDocumentContent } from "@careerden/application";
 import { durationClaimRules, factualityRules } from "@careerden/application";
 import { getAccessibleJobApplication } from "@careerden/application";
@@ -29,6 +30,8 @@ export class RewriteCoverLetterUseCase {
     private readonly jobApplications: JobApplicationRepository,
     private readonly profiles: UserProfileAccountRepository,
     private readonly aiProvider: AiProvider,
+    private readonly subscriptions: Pick<BillingSubscriptionRepository, "findByUserId">,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(
@@ -58,6 +61,7 @@ export class RewriteCoverLetterUseCase {
     const preferences = jobApplication.applicationPackPreferences;
 
     const output = await this.aiProvider.generate({
+      tier: await resolveAiTier(this.subscriptions, userId, this.now()),
       system: rewriteCoverLetterSystemPrompt(),
       prompt: JSON.stringify({
         outputPreferences: { language: preferences.language, tone: preferences.tone },

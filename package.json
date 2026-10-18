@@ -11,7 +11,7 @@
     "dev:documents-worker": "pnpm --filter @careerden/documents-worker dev",
     "dev:notifications-worker": "pnpm --filter @careerden/notifications-worker dev",
     "dev:marketing": "pnpm --filter @careerden/marketing dev",
-    "dev:services": "docker compose up -d postgres redis rustfs",
+    "dev:services": "docker compose up -d postgres redis rustfs opencode",
     "migrate:make": "pnpm --filter @careerden/infrastructure exec knex migrate:make --knexfile knexfile.cjs",
     "migrate:latest": "pnpm --filter @careerden/infrastructure exec knex migrate:latest --knexfile knexfile.cjs",
     "migrate:rollback": "pnpm --filter @careerden/infrastructure exec knex migrate:rollback --knexfile knexfile.cjs",

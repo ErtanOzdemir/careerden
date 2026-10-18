@@ -15,6 +15,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "smoke:opencode": "node scripts/smoke-opencode.mjs",
     "smoke:playwright-pdf": "node scripts/smoke-playwright-pdf.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
@@ -27,6 +28,7 @@
     "@aws-sdk/s3-request-presigner": "^3.932.0",
     "@careerden/contracts": "workspace:*",
     "@careerden/domain": "workspace:*",
+    "@opencode-ai/sdk": "1.19.3",
     "ai": "^6.0.0",
     "bullmq": "^5.64.1",
     "ioredis": "^5.8.2",

@@ -28,6 +28,7 @@ describe("ExtractJobRequirementsUseCase", () => {
     };
 
     const enriched = await new ExtractJobRequirementsUseCase(provider).execute({
+      aiTier: "free",
       jobApplicationId: "job-application-1",
       job,
     });
@@ -66,6 +67,7 @@ describe("ExtractJobRequirementsUseCase", () => {
     };
 
     const enriched = await new ExtractJobRequirementsUseCase(provider).execute({
+      aiTier: "free",
       jobApplicationId: "manual-job-application-1",
       job,
     });
@@ -91,6 +93,7 @@ describe("ExtractJobRequirementsUseCase", () => {
     };
 
     const enriched = await new ExtractJobRequirementsUseCase(provider).execute({
+      aiTier: "free",
       jobApplicationId: "manual-job-application-2",
       job,
     });

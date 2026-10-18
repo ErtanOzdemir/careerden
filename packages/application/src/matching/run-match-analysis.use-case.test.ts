@@ -39,6 +39,7 @@ describe("RunMatchAnalysisUseCase", () => {
       profile: createProfile(),
       applicationPackPreferences: { language: "tr-TR", tone: "concise" },
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.matchScore).toBe(50);
@@ -46,6 +47,7 @@ describe("RunMatchAnalysisUseCase", () => {
     expect(calls).toHaveLength(1);
 
     const call = calls[0];
+    expect(call?.tier).toBe("free");
     expect(call?.system).toContain(
       "You are an expert career matching and recruiter-facing CV optimization assistant.",
     );
@@ -95,6 +97,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile(),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     const prompt = parsePrompt(calls[0]);
@@ -145,6 +148,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile(),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     // (2 matched + 1 of 2 partial, unprioritized counts as must) / (2 + 2 + 1)
@@ -163,6 +167,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile(),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.experienceTips).toEqual([
@@ -186,6 +191,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile({ summary: "Backend engineer building TypeScript services." }),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.coverLetterContent).toBe("I built production services at Analytical Engines.");
@@ -206,6 +212,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile({ summary: "Backend engineer building TypeScript services." }),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.coverLetterContent).toBe(
@@ -226,6 +233,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile({ startDate: "2018-01", endDate: "2024-01" }),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.coverLetterContent).toContain("4 years of TypeScript experience");
@@ -246,6 +254,7 @@ describe("RunMatchAnalysisUseCase", () => {
         summary: "Backend engineer with 4 years of TypeScript experience.",
       }),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.coverLetterContent).toContain("4 years of TypeScript experience");
@@ -267,6 +276,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile({ summary: "Backend engineer building TypeScript services." }),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.coverLetterContent).toContain("Backend Engineer");
@@ -283,6 +293,7 @@ describe("RunMatchAnalysisUseCase", () => {
       jobApplicationId: "job-1",
       profile: createProfile({ skills: ["Gardening", "TypeScript"] }),
       scrape: createScrape(),
+      aiTier: "free",
     });
 
     expect(analysis.skillsTips).toEqual([]);

@@ -2,6 +2,8 @@ export * from "./matching/ai/ai-provider.factory.js";
 export * from "./matching/ai/providers/deepseek-ai.provider.js";
 export * from "./matching/ai/providers/gemini-ai.provider.js";
 export * from "./matching/ai/providers/openai-ai.provider.js";
+export * from "./matching/ai/providers/opencode-ai.provider.js";
+export * from "./matching/ai/providers/tiered-ai.provider.js";
 export * from "./job-applications/redis-job-application-change.bus.js";
 export * from "./persistence/job-applications/in-memory-job-application.repository.js";
 export * from "./persistence/job-applications/knex-job-application.repository.js";

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "agent": {
+    "careerden": {
+      "mode": "primary",
+      "description": "Single-turn structured generation for Careerden. No tools.",
+      "prompt": "Follow the instructions in the user message and reply with only the requested JSON.",
+      "temperature": 0.2,
+      "steps": 1,
+      "permission": "deny"
+    }
+  }
+}

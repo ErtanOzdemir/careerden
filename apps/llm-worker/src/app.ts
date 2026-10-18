@@ -6,6 +6,7 @@ import { ExtractJobRequirementsUseCase } from "./application/matching/extract-jo
 import { FinalizeJobApplicationAnalysisFailureUseCase } from "./application/job-applications/finalize-job-application-analysis-failure.use-case.js";
 import { RunMatchAnalysisUseCase } from "@careerden/application";
 import type { JobApplicationQueuePayload } from "@careerden/domain";
+import { aiProviderConfigFromEnv } from "@careerden/config";
 import {
   AiProviderFactory,
   PostgresJobApplicationRepository,
@@ -57,13 +58,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
       console.error("LLM worker failed analysis outbox dispatch", error);
     });
   }, 1_000);
-  const aiProviderFactory = new AiProviderFactory({
-    aiProvider: env.AI_PROVIDER,
-    openaiApiKey: env.OPENAI_API_KEY,
-    geminiApiKey: env.GEMINI_API_KEY,
-    deepseekApiKey: env.DEEPSEEK_API_KEY,
-  });
-  const aiProvider = aiProviderFactory.create();
+  const aiProvider = new AiProviderFactory(aiProviderConfigFromEnv(env)).create();
   const analyzeScrapedJob = new AnalyzeScrapedJobUseCase(
     jobApplications,
     profiles,

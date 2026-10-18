@@ -1,6 +1,7 @@
 import { aiMatchResultCandidateSchema, aiMatchResultSchema } from "@careerden/contracts";
 import type {
   AiProvider,
+  AiTier,
   ApplicationPackPreferences,
   MatchAnalysisResult,
   ScrapeBundle,
@@ -19,9 +20,11 @@ export class RunMatchAnalysisUseCase {
     profile: UserProfile;
     scrape: ScrapeBundle;
     applicationPackPreferences?: ApplicationPackPreferences;
+    aiTier: AiTier;
   }): Promise<MatchAnalysisResult> {
     const { profile } = input;
     const candidate = await this.aiProvider.generate({
+      tier: input.aiTier,
       system: matchAnalysisSystemPrompt(),
       prompt: matchAnalysisPrompt(input),
       outputSchema: aiMatchResultCandidateSchema,

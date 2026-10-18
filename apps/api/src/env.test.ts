@@ -15,6 +15,8 @@ const validProductionEnv = {
   OBJECT_STORAGE_FORCE_PATH_STYLE: "false",
   OBJECT_STORAGE_SECRET_ACCESS_KEY: "JmW9mVfbx5XKcYd7vP2kQ8nL4rT6sH3z",
   OPEN_OBSERVE_KEY: "observability-key",
+  OPENCODE_BASE_URL: "http://opencode:4096",
+  OPENCODE_SERVER_PASSWORD: "Vq7tL2xR9nB4kM8sW3cH6pJ1dF5zG0yA",
   RESEND_API_KEY: "re_production",
 } as const;
 

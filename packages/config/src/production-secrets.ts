@@ -6,7 +6,7 @@ export const minimumProductionSecretBytes = 32;
 
 const insecureObjectStorageAccessKeys = new Set(["minioadmin", "rustfsadmin"]);
 const insecureObjectStorageSecretKeys = new Set(["minioadmin", "rustfsadmin"]);
-const localObjectStorageHostnames = new Set(["0.0.0.0", "[::1]", "localhost"]);
+const localHostnames = new Set(["0.0.0.0", "[::1]", "localhost"]);
 
 export interface ProductionResendEmailEnv {
   NODE_ENV: "development" | "test" | "production";
@@ -58,14 +58,7 @@ export function validateProductionObjectStorageEnv(
     return;
   }
 
-  const endpoint = new URL(input.OBJECT_STORAGE_ENDPOINT);
-  const hostname = endpoint.hostname.toLowerCase();
-
-  if (
-    localObjectStorageHostnames.has(hostname) ||
-    hostname.startsWith("127.") ||
-    hostname.endsWith(".localhost")
-  ) {
+  if (isLocalUrl(input.OBJECT_STORAGE_ENDPOINT)) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       message: "OBJECT_STORAGE_ENDPOINT must not target localhost in production",
@@ -129,6 +122,13 @@ export function validateProductionResendEmailEnv(
       path: ["EMAIL_FROM"],
     });
   }
+}
+
+export function isLocalUrl(value: string): boolean {
+  const hostname = new URL(value).hostname.toLowerCase();
+  return (
+    localHostnames.has(hostname) || hostname.startsWith("127.") || hostname.endsWith(".localhost")
+  );
 }
 
 function extractEmailAddress(sender: string): string {

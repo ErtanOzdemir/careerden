@@ -22,6 +22,11 @@ Start the complete development stack from the repository root:
 pnpm dev:desktop
 ```
 
+Turbo starts the API, workers, web app, and desktop app together. The desktop `dev` script builds
+the main process, then waits for the API health check and the Vite dev server before launching
+Electron. Unpackaged runs load development defaults such as `VITE_DEV_SERVER_URL` from
+`apps/desktop/.env.development`; variables already set in the environment take precedence.
+
 In a packaged application, the request path is:
 
 ```text

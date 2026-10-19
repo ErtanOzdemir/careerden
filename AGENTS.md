@@ -178,7 +178,7 @@ review or download.
 
 ## Runtime Validation Commands
 
-- Start all development targets:
+- Start PostgreSQL, Redis, and RustFS, then every development target through Turbo:
   ```bash
   pnpm dev
   ```
@@ -186,7 +186,12 @@ review or download.
   ```bash
   pnpm dev:llm-worker
   ```
-- Start the desktop app with the web dev server:
+- Start PostgreSQL, Redis, and RustFS and wait until they are ready:
+  ```bash
+  pnpm dev:services
+  ```
+- Start the API, workers, web dev server, and desktop app through Turbo; Electron waits for
+  `http://localhost:3000/health` and `http://localhost:5173` before opening:
   ```bash
   pnpm dev:desktop
   ```

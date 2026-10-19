@@ -10,6 +10,7 @@ import {
   shell,
 } from "electron";
 import electronUpdater from "electron-updater";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -48,6 +49,12 @@ import type { DesktopUpdatePolicy } from "./updates/desktop-update-policy.js";
 import { desktopUpdateIpcChannels } from "./updates/desktop-update-types.js";
 import { applyWindowControl, type WindowControlAction } from "./window-controls.js";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+
+if (!app.isPackaged) {
+  // Development defaults (dev server URL); variables already set in the environment win.
+  const developmentEnvPath = join(__dirname, "..", "..", ".env.development");
+  if (existsSync(developmentEnvPath)) process.loadEnvFile(developmentEnvPath);
+}
 
 let mainWindow: BrowserWindow | null = null;
 let mainWindowReady: Promise<BrowserWindow> | null = null;

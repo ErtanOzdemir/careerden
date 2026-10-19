@@ -94,7 +94,8 @@ pnpm dev:desktop
 ```
 
 The command starts the API, React/Vite web app, LLM worker, documents worker,
-notifications worker, and Electron desktop app. On first use, create an account and open MailHog at
+notifications worker, and Electron desktop app through Turbo. Electron waits until the API health
+check and the Vite dev server respond before opening its window. On first use, create an account and open MailHog at
 <http://localhost:8025> to read the verification OTP. The desktop app can then process submitted
 LinkedIn URLs through public guest endpoints without connecting a LinkedIn account.
 
@@ -284,19 +285,19 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 
 ### AI and Workers
 
-| Variable                           | Description                                      | Default                 |
-| ---------------------------------- | ------------------------------------------------ | ----------------------- |
-| `AI_PROVIDER`                      | `openai`, `gemini`, or `deepseek`                | `openai`                |
-| `OPENAI_API_KEY`                   | OpenAI API key                                   | —                       |
-| `GEMINI_API_KEY`                   | Google Gemini API key                            | —                       |
-| `DEEPSEEK_API_KEY`                 | DeepSeek API key                                 | —                       |
-| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs                     | `5`                     |
-| `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port                   | `3101`                  |
-| `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs                   | `1`                     |
-| `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port                    | `3102`                  |
-| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs                 | `1`                     |
-| `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port                | `3103`                  |
-| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through the active provider | `false`                 |
+| Variable                           | Description                                      | Default  |
+| ---------------------------------- | ------------------------------------------------ | -------- |
+| `AI_PROVIDER`                      | `openai`, `gemini`, or `deepseek`                | `openai` |
+| `OPENAI_API_KEY`                   | OpenAI API key                                   | —        |
+| `GEMINI_API_KEY`                   | Google Gemini API key                            | —        |
+| `DEEPSEEK_API_KEY`                 | DeepSeek API key                                 | —        |
+| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs                     | `5`      |
+| `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port                   | `3101`   |
+| `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs                   | `1`      |
+| `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port                    | `3102`   |
+| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs                 | `1`      |
+| `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port                | `3103`   |
+| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through the active provider | `false`  |
 
 ### Email, Storage, Scraping, and Tracing
 
@@ -475,11 +476,11 @@ stored in `compose.yaml`, anyone with repository access can read them.
 
 ### Profiles
 
-| Method         | Path            | Description                         |
-| -------------- | --------------- | ------------------------------------ |
-| `GET`, `PATCH` | `/profiles/me`  | Read or update the current profile   |
-| `POST`         | `/profiles`     | Create a profile                     |
-| `GET`, `PATCH` | `/profiles/:id` | Read or update an owned profile      |
+| Method         | Path            | Description                        |
+| -------------- | --------------- | ---------------------------------- |
+| `GET`, `PATCH` | `/profiles/me`  | Read or update the current profile |
+| `POST`         | `/profiles`     | Create a profile                   |
+| `GET`, `PATCH` | `/profiles/:id` | Read or update an owned profile    |
 
 CV and cover-letter documents are always rendered from the predefined HTML templates in
 `@careerden/contracts` (`html-template-registry.ts`); there is no upload step. A profile can
@@ -509,7 +510,7 @@ job application can override either per application via `applicationPackPreferen
 | `PUT`                    | `/job-applications/:id/document-content`               | Save editable document content                     |
 | `POST`                   | `/job-applications/:id/documents/generate`             | Generate CV and cover-letter files                 |
 | `GET`                    | `/job-applications/:id/documents/:documentId/download` | Create a signed download URL                       |
-| `POST`                   | `/job-applications/:id/document-preview`               | Render on-screen HTML preview from draft content    |
+| `POST`                   | `/job-applications/:id/document-preview`               | Render on-screen HTML preview from draft content   |
 
 Listing requires `profileId`. Supported filters include processing/application status,
 archive state, company, role, role type, priority, tag, date range, and free-text search.
@@ -553,25 +554,25 @@ The desktop scraping worker additionally uses these authenticated endpoints:
 
 ### Common Commands
 
-| Command                                                        | Purpose                                                 |
-| -------------------------------------------------------------- | ------------------------------------------------------- |
-| `pnpm dev`                                                     | Start every workspace development target through Turbo  |
-| `pnpm dev:desktop`                                             | Start API, web, all workers, and Electron with dev URLs |
-| `pnpm dev:services`                                            | Start PostgreSQL, Redis, and RustFS                     |
-| `pnpm dev:api`                                                 | Start only the API                                      |
-| `pnpm dev:llm-worker`                                          | Start only the LLM worker                               |
-| `pnpm dev:documents-worker`                                    | Start only the documents worker                         |
-| `pnpm dev:notifications-worker`                                | Start only the notifications worker                     |
-| `pnpm --filter @careerden/web dev`                             | Start only the Vite web app                             |
-| `pnpm --filter @careerden/desktop build`                       | Build the Electron main process and renderer            |
-| `pnpm --filter @careerden/desktop package`                     | Package desktop for the current host platform           |
-| `pnpm --filter @careerden/infrastructure smoke:playwright-pdf` | Verify local Playwright PDF rendering                   |
-| `pnpm build`                                                   | Build every workspace                                   |
-| `pnpm test`                                                    | Run all Vitest suites                                   |
-| `pnpm lint`                                                    | Run ESLint                                              |
-| `pnpm format:check`                                            | Check Prettier formatting                               |
-| `pnpm typecheck`                                               | Type-check every workspace                              |
-| `pnpm lint:fix` / `pnpm format`                                | Apply mechanical lint/format fixes                      |
+| Command                                                        | Purpose                                                  |
+| -------------------------------------------------------------- | -------------------------------------------------------- |
+| `pnpm dev`                                                     | Start Docker services, then every app through Turbo      |
+| `pnpm dev:desktop`                                             | Start API, web, workers, then Electron once they respond |
+| `pnpm dev:services`                                            | Start PostgreSQL, Redis, and RustFS and wait for them    |
+| `pnpm dev:api`                                                 | Start only the API                                       |
+| `pnpm dev:llm-worker`                                          | Start only the LLM worker                                |
+| `pnpm dev:documents-worker`                                    | Start only the documents worker                          |
+| `pnpm dev:notifications-worker`                                | Start only the notifications worker                      |
+| `pnpm --filter @careerden/web dev`                             | Start only the Vite web app                              |
+| `pnpm --filter @careerden/desktop build`                       | Build the Electron main process and renderer             |
+| `pnpm --filter @careerden/desktop package`                     | Package desktop for the current host platform            |
+| `pnpm --filter @careerden/infrastructure smoke:playwright-pdf` | Verify local Playwright PDF rendering                    |
+| `pnpm build`                                                   | Build every workspace                                    |
+| `pnpm test`                                                    | Run all Vitest suites                                    |
+| `pnpm lint`                                                    | Run ESLint                                               |
+| `pnpm format:check`                                            | Check Prettier formatting                                |
+| `pnpm typecheck`                                               | Type-check every workspace                               |
+| `pnpm lint:fix` / `pnpm format`                                | Apply mechanical lint/format fixes                       |
 
 Backend development commands run `tsx watch` with Node's `development` export condition. Internal
 `@careerden/*` packages therefore resolve directly to their TypeScript sources and trigger an app

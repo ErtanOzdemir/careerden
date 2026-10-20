@@ -1802,6 +1802,12 @@ a {
   padding: 7px 9px;
 }
 
+.dashboard-preview-tools > span.dashboard-preview-credits {
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .dashboard-preview-tools i {
   display: grid;
   width: 28px;

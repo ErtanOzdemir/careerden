@@ -7,8 +7,7 @@ import {
   ApplicationPackWorkflowPreview,
   JobProcessingWorkflowPreview,
   ProfileWorkflowPreview,
-  TemplateUploadWorkflowPreview,
-  VariableMappingWorkflowPreview,
+  TailoringTipsWorkflowPreview,
 } from "@/components/workflow-preview";
 import { pageMetadata } from "@/lib/metadata";
 import { absoluteUrl, githubUrl } from "@/lib/site";
@@ -31,7 +30,7 @@ const faqs = [
   ],
   [
     "What do I need to get started?",
-    "Open the desktop app and complete your career profile. Today, the desktop workflow can capture a LinkedIn posting automatically. You can also upload and map your own CV and cover-letter DOCX templates, or use the built-in layouts.",
+    "Open the desktop app and complete your career profile. Today, the desktop workflow can capture a LinkedIn posting automatically, or you can paste job details manually. Careerden renders your CV and cover letter with its built-in layouts, so there are no templates to set up.",
   ],
   [
     "Is Careerden only for LinkedIn jobs?",
@@ -43,7 +42,7 @@ const faqs = [
   ],
   [
     "Can I control the output?",
-    "Yes. Compare profile content with the AI-tailored draft, choose what to use, edit the CV or cover letter, and select Update pack to render the revised documents.",
+    "Yes. Preview each improvement tip as a suggested change before you accept or discard it, answer gap questions only with facts that are true, edit the CV or cover letter directly, and select Update pack to render the revised PDFs.",
   ],
   [
     "Is Careerden also a CV creator?",
@@ -197,8 +196,8 @@ export default function HomePage() {
             <span className="kicker">How Careerden works</span>
             <h2>Set up once. Track and review every application.</h2>
             <p>
-              Add your career details and document templates once, then create an application
-              workspace. Today, LinkedIn capture can fill the initial job details automatically.
+              Add your career details once, then create an application workspace for each role.
+              Today, LinkedIn capture can fill the initial job details automatically.
             </p>
           </div>
           <div className="workflow-story">
@@ -220,45 +219,9 @@ export default function HomePage() {
               </div>
             </article>
 
-            <article className="workflow-step reverse" id="template-setup">
-              <div className="workflow-step-copy">
-                <span className="workflow-number">02</span>
-                <span className="kicker">Document templates</span>
-                <h3>Upload your templates</h3>
-                <p>
-                  Add a DOCX file for your CV and another for your cover letter when you want to use
-                  your own layouts.
-                </p>
-                <small className="workflow-step-note">
-                  Built-in layouts remain available if you do not add custom templates.
-                </small>
-              </div>
-              <div className="workflow-preview-wrap">
-                <TemplateUploadWorkflowPreview />
-              </div>
-            </article>
-
-            <article className="workflow-step" id="variable-mapping">
-              <div className="workflow-step-copy">
-                <span className="workflow-number">03</span>
-                <span className="kicker">Variable mapping</span>
-                <h3>Connect profile data to the DOCX</h3>
-                <p>
-                  Match each template placeholder to the profile field it should use, then save the
-                  mapping.
-                </p>
-                <small className="workflow-step-note">
-                  Cover-letter templates map one standalone placeholder to Content.
-                </small>
-              </div>
-              <div className="workflow-preview-wrap">
-                <VariableMappingWorkflowPreview />
-              </div>
-            </article>
-
             <article className="workflow-step reverse" id="first-job">
               <div className="workflow-step-copy">
-                <span className="workflow-number">04</span>
+                <span className="workflow-number">02</span>
                 <span className="kicker">Application capture</span>
                 <h3>Add your first application</h3>
                 <p>
@@ -278,20 +241,41 @@ export default function HomePage() {
 
             <article className="workflow-step" id="application-pack">
               <div className="workflow-step-copy">
-                <span className="workflow-number">05</span>
-                <span className="kicker">Application workspace</span>
-                <h3>Review the pack and track progress</h3>
+                <span className="workflow-number">03</span>
+                <span className="kicker">Application pack</span>
+                <h3>Review the tailored CV</h3>
                 <p>
-                  Use the profile-aware CV creator and cover letter creator to review editable
-                  drafts beside the match analysis. Update the pack when needed, then keep status,
-                  contacts, notes, and follow-ups with the same application as it moves forward.
+                  See the match analysis, a live page preview of your tailored CV and cover letter,
+                  and improvement tips linked to the job&apos;s requirements—side by side in the
+                  same application.
                 </p>
                 <small className="workflow-step-note">
-                  The tracker remains useful even when you choose not to use AI-assisted content.
+                  Keyword coverage shows which job terms your CV already uses; add only the ones you
+                  can back up.
                 </small>
               </div>
               <div className="workflow-preview-wrap">
                 <ApplicationPackWorkflowPreview />
+              </div>
+            </article>
+
+            <article className="workflow-step reverse" id="improvement-tips">
+              <div className="workflow-step-copy">
+                <span className="workflow-number">04</span>
+                <span className="kicker">Improvement tips</span>
+                <h3>Accept only what you can back up</h3>
+                <p>
+                  Each tip opens as a suggested change you can accept or discard. Accepted edits
+                  appear in the CV preview immediately, and you can undo them or save them to your
+                  profile for future applications.
+                </p>
+                <small className="workflow-step-note">
+                  Then update the pack, download the PDFs, and keep status, contacts, notes, and
+                  follow-ups with the same application.
+                </small>
+              </div>
+              <div className="workflow-preview-wrap">
+                <TailoringTipsWorkflowPreview />
               </div>
             </article>
           </div>
@@ -329,7 +313,7 @@ export default function HomePage() {
                   <Check aria-hidden="true" /> Complete application tracker
                 </li>
                 <li>
-                  <Check aria-hidden="true" /> Profiles, templates, documents, and follow-ups
+                  <Check aria-hidden="true" /> Profiles, documents, and follow-ups
                 </li>
                 <li>
                   <Check aria-hidden="true" /> 10 AI credits every UTC calendar month

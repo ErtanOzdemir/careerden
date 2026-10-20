@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import HomePage, { metadata } from "./page";
 
 describe("marketing workflow story", () => {
-  it("presents the five real product stages in order", () => {
+  it("presents the four real product stages in order", () => {
     const { container } = render(<HomePage />);
     expect(
       screen.getByRole("heading", { level: 1, name: "Track every job application." }),
@@ -14,14 +14,11 @@ describe("marketing workflow story", () => {
 
     expect(steps).toEqual([
       "Add your profile",
-      "Upload your templates",
-      "Connect profile data to the DOCX",
       "Add your first application",
-      "Review the pack and track progress",
+      "Review the tailored CV",
+      "Accept only what you can back up",
     ]);
-    expect(
-      screen.getByText("Built-in layouts remain available if you do not add custom templates."),
-    ).toBeVisible();
+    expect(screen.queryByText(/DOCX/)).not.toBeInTheDocument();
     expect(screen.getByText("Keep the whole job search in view.")).toBeVisible();
     expect(screen.getByText("See every application and stage")).toBeVisible();
     expect(screen.getByText("Remember every follow-up")).toBeVisible();

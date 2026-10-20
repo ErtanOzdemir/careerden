@@ -2,13 +2,14 @@ import {
   ArrowRight,
   Bell,
   CalendarDays,
-  FileText,
+  CreditCard,
   LayoutDashboard,
   Link2,
   ListChecks,
   Plus,
   Search,
   Settings,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 
@@ -16,7 +17,7 @@ const navigation = [
   { label: "Dashboard", Icon: LayoutDashboard },
   { label: "Applications", Icon: ListChecks },
   { label: "Profile", Icon: UserRound },
-  { label: "Templates", Icon: FileText },
+  { label: "Credits & billing", Icon: CreditCard },
   { label: "Settings", Icon: Settings },
 ];
 
@@ -94,6 +95,9 @@ export function ProductPreview() {
               <span>Here&apos;s a calm overview of your job search.</span>
             </div>
             <div className="dashboard-preview-tools">
+              <span className="dashboard-preview-credits">
+                <Sparkles aria-hidden="true" className="preview-icon" />8 credits
+              </span>
               <span>
                 <Search aria-hidden="true" className="preview-icon" />
                 Search applications…

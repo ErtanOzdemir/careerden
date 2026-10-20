@@ -7,43 +7,41 @@ import {
   Check,
   ChevronDown,
   CircleHelp,
+  CreditCard,
   Download,
+  EllipsisVertical,
   ExternalLink,
   FileText,
   FolderGit2,
   GraduationCap,
   LayoutDashboard,
+  Lightbulb,
   ListChecks,
   LogOut,
   MapPin,
-  Menu,
+  MessageCircleQuestion,
   Minus,
-  MoreVertical,
   Pencil,
-  PenLine,
   Plus,
-  Printer,
-  Redo2,
-  RotateCw,
-  Save,
-  Scan,
   Search,
   Settings,
+  Settings2,
   Sparkles,
+  SpellCheck,
   Undo2,
-  Upload,
   UserRound,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
-type WorkspaceSection = "Dashboard" | "Applications" | "Profile" | "Templates" | "Settings";
+type WorkspaceSection = "Dashboard" | "Applications" | "Profile" | "Credits & billing" | "Settings";
 
 const workspaceNavigation: { label: WorkspaceSection; Icon: LucideIcon }[] = [
   { label: "Dashboard", Icon: LayoutDashboard },
   { label: "Applications", Icon: ListChecks },
   { label: "Profile", Icon: UserRound },
-  { label: "Templates", Icon: FileText },
+  { label: "Credits & billing", Icon: CreditCard },
   { label: "Settings", Icon: Settings },
 ];
 
@@ -113,6 +111,9 @@ function ApplicationPreviewFrame({
                 <small>{subtitle}</small>
               </span>
               <div className="native-preview-tools" aria-hidden="true">
+                <span className="native-credit-pill">
+                  <Sparkles />8 credits
+                </span>
                 <span className="native-preview-search">
                   <Search />
                   Search applications…
@@ -258,152 +259,6 @@ function PanelHeader({
   );
 }
 
-export function TemplateUploadWorkflowPreview() {
-  return (
-    <ApplicationPreviewFrame
-      active="Templates"
-      className="native-template-preview"
-      label="Fictional Careerden document template upload workflow preview"
-      subtitle="Manage your CV and cover letter templates."
-      title="Document templates"
-    >
-      <TemplateWorkspace expandedCoverLetter={false} />
-    </ApplicationPreviewFrame>
-  );
-}
-
-export function VariableMappingWorkflowPreview() {
-  return (
-    <ApplicationPreviewFrame
-      active="Templates"
-      className="native-template-preview native-template-mapping-preview"
-      label="Fictional Careerden template variable mapping workflow preview"
-      subtitle="Manage your CV and cover letter templates."
-      title="Document templates"
-    >
-      <TemplateWorkspace expandedCoverLetter />
-    </ApplicationPreviewFrame>
-  );
-}
-
-function TemplateWorkspace({ expandedCoverLetter }: { expandedCoverLetter: boolean }) {
-  return (
-    <div className="native-template-page">
-      <div className="native-upload-grid">
-        <TemplateUploadPanel
-          description="Upload a DOCX CV template and map its placeholders to your profile data."
-          title="Upload CV template"
-        />
-        <TemplateUploadPanel
-          description="Upload a DOCX cover-letter template, then map one placeholder to Content."
-          title="Upload cover letter template"
-        />
-      </div>
-      <div className="native-template-grid">
-        <section className="native-panel native-template-group">
-          <PanelHeader title="CV templates" />
-          <div className="native-template-list">
-            <TemplateRow fileName="alex-product-cv.docx" meta="DOCX · 6 variables · 7/18/2026" />
-            <TemplateRow
-              fileName="alex-engineering-cv.docx"
-              meta="DOCX · 9 variables · 7/18/2026"
-              status="Default"
-            />
-          </div>
-        </section>
-        <section className="native-panel native-template-group">
-          <PanelHeader title="Cover letter templates" />
-          <div className="native-template-list">
-            <TemplateRow
-              expanded={expandedCoverLetter}
-              fileName="alex-cover-letter.docx"
-              meta="DOCX · 1 variable · 7/18/2026"
-              status={expandedCoverLetter ? "Default" : "Mapping required"}
-            />
-            {expandedCoverLetter && <CoverLetterMapping />}
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function TemplateUploadPanel({ description, title }: { description: string; title: string }) {
-  return (
-    <section className="native-panel native-upload-panel">
-      <div>
-        <span className="native-upload-icon">
-          <Upload aria-hidden="true" />
-        </span>
-        <strong>{title}</strong>
-        <p>{description}</p>
-        <span className="native-outline-button">Browse DOCX</span>
-      </div>
-    </section>
-  );
-}
-
-function TemplateRow({
-  expanded = false,
-  fileName,
-  meta,
-  status,
-}: {
-  expanded?: boolean;
-  fileName: string;
-  meta: string;
-  status?: "Default" | "Mapping required";
-}) {
-  return (
-    <div className="native-template-row">
-      <span className="native-file-icon">
-        <FileText aria-hidden="true" />
-      </span>
-      <span>
-        <span className="native-template-name-line">
-          <strong>{fileName}</strong>
-          {status && (
-            <em className={status === "Mapping required" ? "warning" : "success"}>
-              {status === "Default" && <Check aria-hidden="true" />}
-              {status}
-            </em>
-          )}
-        </span>
-        <small>{meta}</small>
-      </span>
-      <ChevronDown className={expanded ? "expanded" : ""} aria-hidden="true" />
-    </div>
-  );
-}
-
-function CoverLetterMapping() {
-  return (
-    <div className="native-inline-mapping">
-      <p>
-        Content supports rich formatting, so its DOCX placeholder must be the only text in its
-        paragraph.
-      </p>
-      <div className="native-mapping-row">
-        <span>Content</span>
-        <strong>Reviewed cover-letter body</strong>
-        <span className="native-mapping-select">
-          {"{{content}}"} <ChevronDown aria-hidden="true" />
-        </span>
-      </div>
-      <div className="native-mapping-save">
-        <span />
-        <span className="native-disabled-button">
-          <Save aria-hidden="true" /> Save Mapping
-        </span>
-      </div>
-      <div className="native-template-actions">
-        <span className="native-disabled-outline-button">Default template</span>
-        <span className="native-delete-button">Delete template</span>
-      </div>
-    </div>
-  );
-}
-
 export function JobProcessingWorkflowPreview() {
   return (
     <ApplicationPreviewFrame
@@ -487,10 +342,10 @@ function ApplicationHero() {
           <span className="native-status applied">
             <i /> Applied
           </span>
+          <span className="native-status-select">
+            Applied (current) <ChevronDown aria-hidden="true" />
+          </span>
         </div>
-        <span className="native-status-select">
-          Applied (current) <ChevronDown aria-hidden="true" />
-        </span>
         <p>Google</p>
         <div className="native-job-meta">
           <span>
@@ -510,6 +365,9 @@ function ApplicationHero() {
         </span>
         <span className="native-primary-button">
           <Sparkles aria-hidden="true" /> View application pack
+        </span>
+        <span className="native-icon-button" aria-label="Application actions">
+          <EllipsisVertical aria-hidden="true" />
         </span>
       </div>
     </section>
@@ -563,24 +421,12 @@ function DetailRow({
 const packRequirements = [
   {
     className: "matched",
-    label: "Matched: TypeScript and React product development",
+    label: "Matched",
     text: "Strong TypeScript and React product development",
   },
-  {
-    className: "partial",
-    label: "Partially matched: Building scalable frontend systems",
-    text: "Experience building scalable frontend systems",
-  },
-  {
-    className: "partial",
-    label: "Partially matched: Cross-functional product delivery",
-    text: "Cross-functional product delivery experience",
-  },
-  {
-    className: "missing",
-    label: "Missing: Google Cloud Platform",
-    text: "Working knowledge of Google Cloud Platform",
-  },
+  { className: "partial", label: "Partially matched", text: "Building scalable frontend systems" },
+  { className: "partial", label: "Partially matched", text: "Cross-functional product delivery" },
+  { className: "missing", label: "Missing", text: "Google Cloud Platform" },
 ] as const;
 
 export function ApplicationPackWorkflowPreview() {
@@ -588,7 +434,7 @@ export function ApplicationPackWorkflowPreview() {
     <ApplicationPreviewFrame
       active="Applications"
       className="native-pack-preview"
-      label="Fictional Careerden application pack and customization workflow preview"
+      label="Fictional Careerden application pack with live CV preview and improvement tips"
       subtitle="Review, generate, and track."
       title="Application"
     >
@@ -596,31 +442,6 @@ export function ApplicationPackWorkflowPreview() {
         <BackToApplications />
         <ApplicationHero />
         <ApplicationTabs active="pack" />
-
-        <section className="native-panel native-pack-heading">
-          <div>
-            <span className="native-pack-icon">
-              <Sparkles aria-hidden="true" />
-            </span>
-            <span>
-              <strong>Application pack</strong>
-              <small>One tailored CV and cover letter for this role.</small>
-            </span>
-          </div>
-          <em>
-            <Check aria-hidden="true" /> Ready
-          </em>
-          <ol>
-            {["Job captured", "Content tailored", "Documents ready"].map((label) => (
-              <li key={label}>
-                <span>
-                  <Check aria-hidden="true" />
-                </span>
-                {label}
-              </li>
-            ))}
-          </ol>
-        </section>
 
         <section className="native-readiness-warning">
           <AlertTriangle aria-hidden="true" />
@@ -639,11 +460,10 @@ export function ApplicationPackWorkflowPreview() {
               Your profile shows strong React and TypeScript delivery. The draft emphasizes that
               evidence while clearly identifying the cloud-platform gap to review.
             </p>
-            <small>4 requirements supported</small>
             <div className="native-requirement-pills">
               {packRequirements.map((requirement) => (
                 <span
-                  aria-label={requirement.label}
+                  aria-label={`${requirement.label}: ${requirement.text}`}
                   className={requirement.className}
                   key={requirement.text}
                 >
@@ -655,190 +475,304 @@ export function ApplicationPackWorkflowPreview() {
           </div>
         </section>
 
-        <div className="native-document-grid">
-          <DocumentPreviewCard kind="cv" title="Tailored CV" />
-          <DocumentPreviewCard kind="letter" title="Cover letter" />
-        </div>
-
-        <section className="native-panel native-pack-customizer">
-          <header className="native-customizer-heading">
-            <span className="native-customizer-icon">
-              <Settings aria-hidden="true" />
-            </span>
-            <span>
-              <strong>Customize this pack</strong>
-              <small>Compare profile content, edit AI suggestions, and choose what appears</small>
-            </span>
-            <em>
-              Hide <ChevronDown aria-hidden="true" />
-            </em>
-          </header>
-          <div className="native-customizer-body">
-            <div className="native-preference-grid">
-              <PreferencePreview label="Language" value="English" />
-              <PreferencePreview label="Tone" value="Professional" />
-              <PreferencePreview label="CV template" value="alex-cv.docx" />
-              <PreferencePreview label="Cover letter" value="alex-letter.docx" />
-            </div>
-            <div className="native-customizer-identity">
-              <UserRound aria-hidden="true" />
-              <span>
-                <strong>Alex Morgan</strong>
-                <small>alex@example.test · Rotterdam, Netherlands</small>
-                <small>Identity and contact details stay linked to your profile.</small>
-              </span>
-              <span className="native-outline-button">Edit profile</span>
-            </div>
-            <section className="native-customization-section">
-              <header>
-                <span>
-                  <FileText aria-hidden="true" /> Summary
+        <div className="native-pack-grid">
+          <div className="native-pack-main">
+            <CvPreviewCard />
+            <section className="native-panel native-pack-customizer">
+              <header className="native-customizer-heading">
+                <span className="native-customizer-icon">
+                  <Settings2 aria-hidden="true" />
                 </span>
                 <span>
-                  AI source <ChevronDown aria-hidden="true" />
+                  <strong>Customize this pack</strong>
+                  <small>Edit your CV content directly, or apply a tip from the tips panel</small>
                 </span>
+                <em>
+                  Show <ChevronDown aria-hidden="true" />
+                </em>
               </header>
-              <div className="native-customizer-toolbar">
-                <small>Content source</small>
-                <span>
-                  <b>Use AI</b>
-                  <i>Use profile</i>
-                </span>
-              </div>
-              <div className="native-content-comparison">
-                <section>
-                  <small>Profile summary · Original</small>
-                  <p>
-                    Product engineer focused on accessible applications, reliable delivery, and
-                    clear collaboration.
-                  </p>
-                </section>
-                <section>
-                  <small>AI-tailored summary · Editable</small>
-                  <p>
-                    Product engineer delivering accessible React platforms and dependable systems
-                    for cross-functional teams.
-                  </p>
-                </section>
-              </div>
+            </section>
+            <section className="native-panel native-pack-actions">
+              <span>
+                <strong>Your application pack is up to date</strong>
+                <small>Updates run in the background; you can leave this page safely.</small>
+              </span>
+              <span className="native-outline-button">
+                <Download aria-hidden="true" /> Download both PDFs
+              </span>
+              <span className="native-primary-button">
+                <Sparkles aria-hidden="true" /> Update pack
+              </span>
             </section>
           </div>
-        </section>
-
-        <section className="native-panel native-pack-actions">
-          <span>
-            <strong>Your application pack is up to date</strong>
-            <small>Updates run in the background; you can leave this page safely.</small>
-          </span>
-          <span className="native-outline-button">
-            <Download aria-hidden="true" /> Download both PDFs
-          </span>
-          <span className="native-primary-button">
-            <Sparkles aria-hidden="true" /> Update pack
-          </span>
-        </section>
+          <TipsPanelPreview mode="overview" />
+        </div>
       </div>
     </ApplicationPreviewFrame>
   );
 }
 
-function PreferencePreview({ label, value }: { label: string; value: string }) {
+export function TailoringTipsWorkflowPreview() {
   return (
-    <span className="native-preference-field">
-      <small>{label}</small>
-      <b>
-        {value} <ChevronDown aria-hidden="true" />
-      </b>
-    </span>
+    <ApplicationPreviewFrame
+      active="Applications"
+      className="native-pack-preview native-tips-preview"
+      label="Fictional Careerden improvement tip review workflow preview"
+      subtitle="Review, generate, and track."
+      title="Application"
+    >
+      <div className="native-pack-page">
+        <BackToApplications />
+        <ApplicationTabs active="pack" />
+        <div className="native-pack-grid">
+          <div className="native-pack-main">
+            <CvPreviewCard highlightSkill />
+          </div>
+          <TipsPanelPreview mode="review" />
+        </div>
+      </div>
+    </ApplicationPreviewFrame>
   );
 }
 
-function DocumentPreviewCard({ kind, title }: { kind: "cv" | "letter"; title: string }) {
+function CvPreviewCard({ highlightSkill = false }: { highlightSkill?: boolean }) {
+  const skills = ["TypeScript", "React", "Accessibility", "Testing"];
+
   return (
-    <section className="native-panel native-document-card">
-      <header>
-        <span className="native-file-icon">
-          <FileText aria-hidden="true" />
-        </span>
-        <span>
-          <strong>{title}</strong>
-          <small>
-            {kind === "cv"
-              ? "Role-specific experience, summary, and skills"
-              : "A concise introduction grounded in your profile"}
-          </small>
+    <section className="native-panel native-cv-card">
+      <header className="native-cv-card-header">
+        <span className="native-segmented">
+          <b>Tailored CV</b>
+          <span>Cover letter</span>
         </span>
         <em>Ready</em>
       </header>
-      <div className="native-document-body">
-        <div className="native-document-toggle">
-          <span>Live content</span>
-          <b>Rendered PDF</b>
-        </div>
-        <StaticPdfViewer kind={kind} />
+      <div className="native-cv-toolbar">
+        <small>1 page</small>
+        <span className="native-zoom-control" aria-hidden="true">
+          <Minus />
+          <b>64%</b>
+          <Plus />
+        </span>
       </div>
-      <footer>
+      <div className="native-cv-scroll">
+        <article className="native-cv-page">
+          <header>
+            <strong>Alex Morgan</strong>
+            <span>Product Engineer</span>
+            <small>alex@example.test • Rotterdam, Netherlands • github.com/alexmorgan</small>
+          </header>
+          <section>
+            <h4>Summary</h4>
+            <p>
+              Product engineer focused on accessible React applications, dependable delivery, and
+              clear collaboration across design and engineering.
+            </p>
+          </section>
+          <section>
+            <h4>Experience</h4>
+            <h5>Senior Product Engineer · Harbor Studio</h5>
+            <em>2022 – Present</em>
+            <ul>
+              <li>Built TypeScript and React tooling used by 40+ product teams.</li>
+              <li>Led an accessibility program that brought core flows to WCAG 2.2 AA.</li>
+            </ul>
+            <h5>Frontend Engineer · Northwind Labs</h5>
+            <em>2019 – 2022</em>
+            <ul>
+              <li>Shipped a component library and testing setup for three web products.</li>
+            </ul>
+          </section>
+          <section>
+            <h4>Skills</h4>
+            <div className="native-cv-skills">
+              {skills.map((skill) => (
+                <span key={skill}>{skill}</span>
+              ))}
+              {highlightSkill && <span className="highlight">Design systems</span>}
+            </div>
+          </section>
+        </article>
+      </div>
+      <footer className="native-cv-card-footer">
         <span className="native-outline-button">
           <Download aria-hidden="true" /> PDF
-        </span>
-        <span className="native-outline-button">
-          <Download aria-hidden="true" /> DOCX
         </span>
       </footer>
     </section>
   );
 }
 
-function StaticPdfViewer({ kind }: { kind: "cv" | "letter" }) {
+function TipsPanelPreview({ mode }: { mode: "overview" | "review" }) {
+  const isReview = mode === "review";
+
   return (
-    <div className="native-pdf-viewer">
-      <div className="native-pdf-toolbar" aria-hidden="true">
-        <Menu />
-        <b>1</b>
-        <span>/ 1</span>
-        <i />
-        <Minus />
-        <Plus />
-        <i />
-        <Scan />
-        <RotateCw />
-        <i className="optional" />
-        <PenLine className="optional" />
-        <i className="optional" />
-        <Undo2 className="muted optional" />
-        <Redo2 className="muted optional" />
-        <span className="spacer" />
-        <Download />
-        <Printer />
-        <MoreVertical />
-      </div>
-      <div className="native-pdf-canvas">
-        <div className={"native-pdf-page " + kind}>
-          {kind === "cv" ? (
-            <>
-              <strong>ALEX MORGAN</strong>
-              <small>PRODUCT ENGINEER</small>
-              <span />
-              <span />
-              <span className="short" />
-              <b>EXPERIENCE</b>
-              <span />
-              <span />
-              <span className="medium" />
-            </>
-          ) : (
-            <>
-              <strong>Dear Hiring Team,</strong>
-              <span />
-              <span />
-              <span className="medium" />
-              <span />
-              <span />
-              <span className="short" />
-            </>
-          )}
+    <aside className="native-tips-panel" aria-label="Improvement tips preview">
+      <header className="native-tips-heading">
+        <span>
+          <Lightbulb aria-hidden="true" />
+        </span>
+        <span>
+          <strong>Improvement tips</strong>
+          <small>Click a tip to preview the change before applying it</small>
+        </span>
+      </header>
+
+      {isReview && (
+        <div className="native-last-change">
+          <span>
+            Applied to <b>Skills</b>
+          </span>
+          <span>
+            <Undo2 aria-hidden="true" /> Undo
+          </span>
         </div>
+      )}
+
+      <section className="native-keyword-card">
+        <div>
+          <strong>Job keywords in your CV</strong>
+          <small>{isReview ? "8 of 10" : "7 of 10"}</small>
+        </div>
+        <span className="native-keyword-bar">
+          <i style={{ width: isReview ? "80%" : "70%" }} />
+        </span>
+        <small>Missing — add only the ones you can back up:</small>
+        <p>
+          <span>Google Cloud Platform</span>
+          {!isReview && <span>Design systems</span>}
+          <span>Mentoring</span>
+        </p>
+      </section>
+
+      <div className="native-tip-group">
+        <div className="native-tip-group-heading">
+          <small>Summary</small>
+          {!isReview && <span>Apply all (2)</span>}
+        </div>
+        <TipPreview
+          highlighted={isReview}
+          requirement="Cross-functional product delivery"
+          text="Lead with the web platform work this team builds"
+        />
+        {isReview && <ProposalPreview />}
+        {!isReview && (
+          <TipPreview
+            requirement="Building scalable frontend systems"
+            text="Mention the scale of the React tooling you shipped"
+          />
+        )}
       </div>
+
+      {!isReview && (
+        <div className="native-tip-group">
+          <div className="native-tip-group-heading">
+            <small>Senior Product Engineer · Harbor Studio</small>
+          </div>
+          <TipPreview
+            requirement="Strong TypeScript and React product development"
+            text="Name the product outcome of the accessibility program"
+          />
+        </div>
+      )}
+
+      <div className="native-tip-group">
+        <div className="native-tip-group-heading">
+          <small>Skills</small>
+        </div>
+        <TipPreview applied={isReview} text="Add Design systems if you have used one" />
+      </div>
+
+      {isReview ? (
+        <TipsSection Icon={SpellCheck} title="Writing checks">
+          <span className="native-tip-card">
+            <strong>Frontend Engineer · Northwind Labs</strong>
+            <small>Add a result or number to show the impact.</small>
+          </span>
+        </TipsSection>
+      ) : (
+        <TipsSection Icon={MessageCircleQuestion} title="Fill the gaps">
+          <small className="native-tips-note">
+            Answer only what is true — your answer is the only new fact the AI may add.
+          </small>
+          <span className="native-tip-card">
+            <span>Have you used Google Cloud Platform in production? Which services?</span>
+            <small>Goes into Summary · For: Google Cloud Platform</small>
+            <span className="native-gap-answer">Your answer, in your own words</span>
+            <span className="native-xs-button disabled">Use answer</span>
+          </span>
+        </TipsSection>
+      )}
+    </aside>
+  );
+}
+
+function TipsSection({
+  children,
+  Icon,
+  title,
+}: {
+  children: ReactNode;
+  Icon: LucideIcon;
+  title: string;
+}) {
+  return (
+    <section className="native-tips-section">
+      <small className="native-tips-section-title">
+        <Icon aria-hidden="true" />
+        {title}
+      </small>
+      {children}
+    </section>
+  );
+}
+
+function TipPreview({
+  applied = false,
+  highlighted = false,
+  requirement,
+  text,
+}: {
+  applied?: boolean;
+  highlighted?: boolean;
+  requirement?: string;
+  text: string;
+}) {
+  return (
+    <span
+      className={"native-tip" + (highlighted ? " highlighted" : "") + (applied ? " applied" : "")}
+    >
+      {applied ? <Check aria-hidden="true" /> : <Plus aria-hidden="true" />}
+      <span>
+        {text}
+        {requirement && <small>For: {requirement}</small>}
+      </span>
+    </span>
+  );
+}
+
+function ProposalPreview() {
+  return (
+    <div className="native-proposal" aria-label="Suggested change for Summary">
+      <small>Suggested change</small>
+      <p>
+        Product engineer <del>focused on</del>
+        <ins>building</ins> accessible React <del>applications</del>
+        <ins>web platforms for product teams</ins>, dependable delivery, and clear collaboration
+        across design and engineering.
+      </p>
+      <span className="native-proposal-checkbox">
+        <i />
+        Also save this to my profile, so future applications can use it
+      </span>
+      <span className="native-proposal-actions">
+        <span className="native-xs-button ghost">
+          <X aria-hidden="true" /> Discard
+        </span>
+        <span className="native-xs-button">
+          <Check aria-hidden="true" /> Accept
+        </span>
+      </span>
     </div>
   );
 }

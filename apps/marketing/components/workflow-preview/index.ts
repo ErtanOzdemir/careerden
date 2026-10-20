@@ -2,6 +2,5 @@ export {
   ApplicationPackWorkflowPreview,
   JobProcessingWorkflowPreview,
   ProfileWorkflowPreview,
-  TemplateUploadWorkflowPreview,
-  VariableMappingWorkflowPreview,
+  TailoringTipsWorkflowPreview,
 } from "./workflow-preview";

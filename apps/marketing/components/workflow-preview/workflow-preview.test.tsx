@@ -4,8 +4,7 @@ import {
   ApplicationPackWorkflowPreview,
   JobProcessingWorkflowPreview,
   ProfileWorkflowPreview,
-  TemplateUploadWorkflowPreview,
-  VariableMappingWorkflowPreview,
+  TailoringTipsWorkflowPreview,
 } from "./workflow-preview";
 
 describe("marketing workflow previews", () => {
@@ -22,44 +21,12 @@ describe("marketing workflow previews", () => {
     expect(screen.getAllByText("Alex Morgan").length).toBeGreaterThan(0);
   });
 
-  it("shows separate CV and cover-letter DOCX uploads", () => {
-    render(<TemplateUploadWorkflowPreview />);
+  it("mirrors the current workspace navigation and credit balance", () => {
+    render(<ProfileWorkflowPreview />);
 
-    expect(
-      screen.getByRole("img", {
-        name: "Fictional Careerden document template upload workflow preview",
-      }),
-    ).toBeVisible();
-    expect(screen.getByText("Upload CV template")).toBeVisible();
-    expect(screen.getByText("Upload cover letter template")).toBeVisible();
-    expect(screen.getAllByText("Browse DOCX")).toHaveLength(2);
-    expect(screen.getByText("alex-product-cv.docx")).toBeVisible();
-    expect(screen.getByText("alex-engineering-cv.docx")).toBeVisible();
-    expect(screen.getByText("alex-cover-letter.docx")).toBeVisible();
-    expect(screen.getByText("Mapping required")).toBeVisible();
-    expect(
-      screen.queryByText(/Map Content before using the cover letter template/),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows the real inline cover-letter Content mapping state", () => {
-    render(<VariableMappingWorkflowPreview />);
-
-    expect(
-      screen.getByRole("img", {
-        name: "Fictional Careerden template variable mapping workflow preview",
-      }),
-    ).toBeVisible();
-    expect(
-      screen.getByText(/Content supports rich formatting, so its DOCX placeholder/),
-    ).toBeVisible();
-    expect(screen.getByText("{{content}}")).toBeVisible();
-    expect(screen.getByText("Reviewed cover-letter body")).toBeVisible();
-    expect(screen.getByText("Save Mapping")).toBeVisible();
-    expect(screen.getByText("Default template")).toBeVisible();
-    expect(screen.getByText("Delete template")).toBeVisible();
-    expect(screen.queryByText("DOCX placeholder")).not.toBeInTheDocument();
-    expect(screen.queryByText("Focused detail")).not.toBeInTheDocument();
+    expect(screen.getByText("Credits & billing")).toBeVisible();
+    expect(screen.getByText("8 credits")).toBeVisible();
+    expect(screen.queryByText("Templates")).not.toBeInTheDocument();
   });
 
   it("shows one full Application Overview state without compositing other states", () => {
@@ -85,19 +52,18 @@ describe("marketing workflow previews", () => {
     expect(screen.queryByText("Add & process")).not.toBeInTheDocument();
   });
 
-  it("shows generated documents, match evidence, and editable pack choices", () => {
+  it("shows the match analysis beside the live CV preview and improvement tips", () => {
     render(<ApplicationPackWorkflowPreview />);
 
     expect(
       screen.getByRole("img", {
-        name: "Fictional Careerden application pack and customization workflow preview",
+        name: "Fictional Careerden application pack with live CV preview and improvement tips",
       }),
     ).toBeVisible();
     expect(screen.getAllByText("Application pack").length).toBeGreaterThan(0);
     expect(
-      screen.getByLabelText("Matched: TypeScript and React product development"),
+      screen.getByLabelText("Matched: Strong TypeScript and React product development"),
     ).toBeVisible();
-    expect(screen.getByText("4 requirements supported")).toBeVisible();
     expect(
       screen.getByLabelText("Partially matched: Building scalable frontend systems"),
     ).toBeVisible();
@@ -105,14 +71,34 @@ describe("marketing workflow previews", () => {
     expect(screen.getByText("Review before applying")).toBeVisible();
     expect(screen.getByText("View match evidence", { exact: false })).toBeVisible();
     expect(screen.getByText("Tailored CV")).toBeVisible();
-    expect(screen.getAllByText("Cover letter").length).toBeGreaterThan(0);
-    expect(screen.getByText("Documents ready")).toBeVisible();
-    expect(screen.getAllByText("Rendered PDF")).toHaveLength(2);
-    expect(screen.getAllByText("DOCX")).toHaveLength(2);
+    expect(screen.getByText("Cover letter")).toBeVisible();
+    expect(screen.getByText("1 page")).toBeVisible();
+    expect(screen.getByText("Improvement tips")).toBeVisible();
+    expect(screen.getByText("Job keywords in your CV")).toBeVisible();
+    expect(screen.getByText("Apply all (2)")).toBeVisible();
+    expect(screen.getByText("Fill the gaps")).toBeVisible();
     expect(screen.getByText("Customize this pack")).toBeVisible();
-    expect(screen.getByText("Content source")).toBeVisible();
-    expect(screen.getByText("Use AI")).toBeVisible();
-    expect(screen.getByText("Use profile")).toBeVisible();
     expect(screen.getByText("Update pack")).toBeVisible();
+    expect(screen.queryByText("DOCX")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rendered PDF")).not.toBeInTheDocument();
+  });
+
+  it("shows a tip as a reviewable suggested change", () => {
+    render(<TailoringTipsWorkflowPreview />);
+
+    expect(
+      screen.getByRole("img", {
+        name: "Fictional Careerden improvement tip review workflow preview",
+      }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Suggested change for Summary")).toBeVisible();
+    expect(
+      screen.getByText("Also save this to my profile, so future applications can use it"),
+    ).toBeVisible();
+    expect(screen.getByText("Accept")).toBeVisible();
+    expect(screen.getByText("Discard")).toBeVisible();
+    expect(screen.getByText("Undo")).toBeVisible();
+    expect(screen.getAllByText("Design systems").length).toBeGreaterThan(0);
+    expect(screen.getByText("Writing checks")).toBeVisible();
   });
 });

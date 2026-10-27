@@ -244,7 +244,7 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_path }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
       - name: Remove macOS signing keychain
         if: always() && runner.os == 'macOS' && env.CAREERDEN_SIGNING_KEYCHAIN != ''

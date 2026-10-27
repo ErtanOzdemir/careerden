@@ -1,7 +1,7 @@
 {
   "name": "@careerden/desktop",
   "productName": "Careerden",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "type": "module",

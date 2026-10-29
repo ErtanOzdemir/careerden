@@ -180,7 +180,11 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
       ensureJobApplicationAccess: new EnsureJobApplicationAccessUseCase(jobApplications, profiles),
       updateJobApplicationStatus: new UpdateJobApplicationStatusUseCase(unitOfWork),
       listJobApplications: new ListJobApplicationsUseCase(jobApplications, profiles, storage),
-      getJobApplicationAnalytics: new GetJobApplicationAnalyticsUseCase(jobApplications, profiles),
+      getJobApplicationAnalytics: new GetJobApplicationAnalyticsUseCase(
+        jobApplications,
+        profiles,
+        storage,
+      ),
       getJobApplicationDetail,
       updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(unitOfWork),
       requestJobApplicationAnalysis: new RequestJobApplicationAnalysisUseCase(

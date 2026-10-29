@@ -302,7 +302,19 @@ function mapDashboardSankey(analytics: ApiJobApplicationAnalytics): DashboardSta
   }
 
   const statuses = dashboardSankeyStatuses
-    .map(({ id, label }) => ({ id, label, count: analytics.byStatus[id] ?? 0 }))
+    .map(({ id, label }) => {
+      const companies = (analytics.companiesByStatus?.[id] ?? []).map((company) => ({
+        id: company.jobApplicationId,
+        ...(company.companyName ? { name: company.companyName } : {}),
+        ...(company.companyLogoUrl ? { logoUrl: company.companyLogoUrl } : {}),
+      }));
+      return {
+        id,
+        label,
+        count: analytics.byStatus[id] ?? 0,
+        ...(companies.length > 0 ? { companies } : {}),
+      };
+    })
     .filter((status) => status.count > 0);
 
   return {

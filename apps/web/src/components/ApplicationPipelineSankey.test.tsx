@@ -69,4 +69,57 @@ describe("ApplicationPipelineSankey", () => {
     expect(screen.getByText("Add an application to see your pipeline.")).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
+
+  it("draws each status's company logos on its ribbon, with initials as a fallback", () => {
+    const { container } = render(
+      <ApplicationPipelineSankey
+        data={{
+          ...data,
+          nodes: data.nodes.map((node) =>
+            node.id === "applied"
+              ? {
+                  ...node,
+                  companies: [
+                    { id: "job-1", name: "Acme", logoUrl: "/api/files/acme.png?signature=s" },
+                    { id: "job-2", name: "globex" },
+                    { id: "job-3" },
+                  ],
+                }
+              : node,
+          ),
+        }}
+      />,
+    );
+    const logos = screen.getAllByTestId("sankey-company-logo");
+
+    expect(screen.getByTestId("sankey-logos-applied")).toBeInTheDocument();
+    expect(screen.queryByTestId("sankey-logos-offer")).not.toBeInTheDocument();
+    expect(logos).toHaveLength(3);
+    expect(container.querySelector("image")?.getAttribute("href")).toBe(
+      "/api/files/acme.png?signature=s",
+    );
+    expect(logos[1]).toHaveTextContent("G");
+    expect(logos[2]).toHaveTextContent("C");
+    expect(logos[0]?.querySelector("title")).toHaveTextContent("Acme");
+  });
+
+  it("falls back to initials when a logo fails to load", () => {
+    const { container } = render(
+      <ApplicationPipelineSankey
+        data={{
+          ...data,
+          nodes: data.nodes.map((node) =>
+            node.id === "offer"
+              ? { ...node, companies: [{ id: "job-9", name: "Initech", logoUrl: "/broken.png" }] }
+              : node,
+          ),
+        }}
+      />,
+    );
+
+    fireEvent.error(container.querySelector("image")!);
+
+    expect(container.querySelector("image")).toBeNull();
+    expect(screen.getByTestId("sankey-company-logo")).toHaveTextContent("I");
+  });
 });

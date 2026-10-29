@@ -224,10 +224,18 @@ export interface UpcomingInterview {
   meetLabel: string;
 }
 
+export interface DashboardSankeyCompany {
+  id: string;
+  name?: string;
+  logoUrl?: string;
+}
+
 export interface DashboardSankeyNode {
   id: string;
   label: string;
   count: number;
+  // Companies shown on the ribbon into this status, most recently updated first.
+  companies?: DashboardSankeyCompany[];
 }
 
 export interface DashboardSankeyLink {

@@ -91,7 +91,7 @@ export async function addDocumentsToJobApplications(
   );
 }
 
-async function getCompanyLogoUrl(
+export async function getCompanyLogoUrl(
   jobApplications: JobApplicationRepository,
   storage: FileStorage,
   jobApplicationId: string,

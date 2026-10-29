@@ -228,6 +228,33 @@ describe("API mappers", () => {
     expect(mapApiJobApplicationToUi(application).companyDescription).toBeUndefined();
   });
 
+  it("passes each status's companies to the pipeline chart", () => {
+    const stats = mapApiDashboardStats(
+      {
+        applicationsOverTime: {},
+        averageTimeToResponseDays: null,
+        byStatus: { applied: 2 },
+        interviewConversionRate: 0,
+        offers: 0,
+        rejections: 0,
+        responseRate: 0,
+        total: 2,
+        companiesByStatus: {
+          applied: [
+            { jobApplicationId: "job-1", companyName: "Acme", companyLogoUrl: "/logo.png" },
+            { jobApplicationId: "job-2" },
+          ],
+        },
+      },
+      [],
+    );
+
+    expect(stats.sankey.nodes.find((node) => node.id === "applied")?.companies).toEqual([
+      { id: "job-1", name: "Acme", logoUrl: "/logo.png" },
+      { id: "job-2" },
+    ]);
+  });
+
   it("maps analytics and details into dashboard stats", () => {
     const analytics: ApiJobApplicationAnalytics = {
       applicationsOverTime: { "2026-06-01": 1, "2026-06-02": 2 },

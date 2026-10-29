@@ -28,6 +28,7 @@
         "CAREERDEN_EDITION",
         "CAREERDEN_LOCAL_DEV_PORT",
         "CAREERDEN_LOCAL_DEV_TOKEN",
+        "VITE_API_BASE_URL",
         "VITE_CAREERDEN_EDITION"
       ]
     }

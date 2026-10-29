@@ -102,7 +102,12 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
 
   it("keeps the local profile across restarts", async () => {
     const first = await start();
-    const created = (await (await first.request("/profiles/me")).json()) as { id: string };
+    const created = (await (await first.request("/profiles/me")).json()) as {
+      id: string;
+      fullName: string;
+      email: string;
+    };
+    expect(created).toMatchObject({ fullName: "", email: "" });
     await first.request("/profiles/me", {
       method: "PATCH",
       body: JSON.stringify({ fullName: "Ada Lovelace" }),

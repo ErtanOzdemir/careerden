@@ -14,12 +14,13 @@ import { profilesApi, profileUpdatedEvent } from "../api/profiles.js";
 import { authClient } from "../api/auth.js";
 import type { ApiProfile } from "../api/types.js";
 import { BrandLogo } from "./BrandLogo.js";
+import { isLocalEdition } from "../edition.js";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/applications", label: "Applications", icon: ListChecks },
   { to: "/profile", label: "Profile", icon: UserRound },
-  { to: "/billing", label: "Credits & billing", icon: CreditCard },
+  ...(isLocalEdition ? [] : [{ to: "/billing", label: "Credits & billing", icon: CreditCard }]),
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -59,7 +60,9 @@ export default function Sidebar() {
         <BrandLogo className="size-8 object-contain" />
         <div className="leading-tight">
           <p className="text-sm font-semibold text-sidebar-foreground">Careerden</p>
-          <p className="text-xs text-muted-foreground">Career workspace</p>
+          <p className="text-xs text-muted-foreground">
+            {isLocalEdition ? "On this device" : "Career workspace"}
+          </p>
         </div>
       </div>
 
@@ -91,27 +94,31 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-3 pb-4">
-        <NavLink
-          to="/support"
-          className={({ isActive }) =>
-            cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-            )
-          }
-        >
-          <CircleHelp className="size-4 shrink-0" />
-          Help & support
-        </NavLink>
-        <button
-          onClick={() => authClient.signOut()}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-        >
-          <LogOut className="size-4 shrink-0" />
-          Log out
-        </button>
+        {!isLocalEdition && (
+          <>
+            <NavLink
+              to="/support"
+              className={({ isActive }) =>
+                cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                )
+              }
+            >
+              <CircleHelp className="size-4 shrink-0" />
+              Help & support
+            </NavLink>
+            <button
+              onClick={() => authClient.signOut()}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+            >
+              <LogOut className="size-4 shrink-0" />
+              Log out
+            </button>
+          </>
+        )}
         <div className="mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border bg-card px-3 py-2.5">
           <div className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
             {initials}

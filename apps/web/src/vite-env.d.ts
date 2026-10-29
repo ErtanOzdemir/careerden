@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  readonly VITE_CAREERDEN_EDITION?: "cloud" | "local";
+}
+
 interface DesktopNotificationActivation {
   notificationId: string;
   jobApplicationId?: string;

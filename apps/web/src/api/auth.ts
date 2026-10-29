@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { emailOTPClient } from "better-auth/client/plugins";
+import { isLocalEdition } from "../edition.js";
 import { apiBaseUrl } from "./config";
 
 const desktopAuthTransportOrigin = "https://desktop-auth.careerden.invalid";
@@ -12,6 +13,19 @@ export const authClient = createAuthClient({
     : undefined,
   plugins: [emailOTPClient()],
 });
+
+const noAccountSession = {
+  data: null,
+  error: null,
+  isPending: false,
+  isRefetching: false,
+  refetch: async () => undefined,
+};
+
+// The local edition has no accounts; skip the session request instead of letting it fail.
+export const useAccountSession: typeof authClient.useSession = isLocalEdition
+  ? ((() => noAccountSession) as unknown as typeof authClient.useSession)
+  : authClient.useSession;
 
 export interface ConfirmAccountEmailChangeResult {
   otherSessionsRevoked: boolean;

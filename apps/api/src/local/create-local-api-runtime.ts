@@ -50,9 +50,10 @@ import { HttpRemoteImageFetcher } from "../infrastructure/scraping/http-remote-i
 import { createLocalFileRouter } from "./local-files.routes.js";
 import { localSession } from "./local-session.middleware.js";
 
+// No name or email: the first profile starts blank so placeholders never reach generated documents.
 export const localUser: AuthenticatedUser = {
   id: "local-user",
-  email: "local@careerden.local",
+  email: "",
   name: "",
 };
 
@@ -85,7 +86,7 @@ export async function createLocalApiRuntime(
   const db = createPgliteDb(join(options.dataDir, "pglite"));
   await runPostgresMigrations(db);
   await db("user")
-    .insert({ id: localUser.id, name: "Careerden user", email: localUser.email })
+    .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")
     .ignore();
 

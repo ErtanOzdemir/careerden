@@ -12,6 +12,8 @@ const child = spawn(
       ...process.env,
       CAREERDEN_EDITION: "local",
       VITE_CAREERDEN_EDITION: "local",
+      // Overrides the cloud API URL in apps/web/.env.development so requests use the Vite proxy.
+      VITE_API_BASE_URL: "/api",
       CAREERDEN_LOCAL_DEV_PORT: process.env.CAREERDEN_LOCAL_DEV_PORT ?? "3010",
       CAREERDEN_LOCAL_DEV_TOKEN: randomBytes(24).toString("base64url"),
     },

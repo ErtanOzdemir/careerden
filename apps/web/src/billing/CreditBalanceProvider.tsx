@@ -133,6 +133,27 @@ export function CreditBalanceProvider({ children }: { children: ReactNode }) {
   return <CreditBalanceContext.Provider value={value}>{children}</CreditBalanceContext.Provider>;
 }
 
+const localCreditBalance: CreditBalanceContextValue = {
+  balance: null,
+  balanceError: null,
+  isLoading: false,
+  isLoadingSubscription: false,
+  refresh: async () => undefined,
+  refreshBalance: async () => undefined,
+  refreshSubscription: async () => undefined,
+  subscription: null,
+  subscriptionError: null,
+};
+
+// The local edition has no credits; consumers keep calling refresh without reaching billing.
+export function LocalCreditBalanceProvider({ children }: { children: ReactNode }) {
+  return (
+    <CreditBalanceContext.Provider value={localCreditBalance}>
+      {children}
+    </CreditBalanceContext.Provider>
+  );
+}
+
 export function useCreditBalance(): CreditBalanceContextValue {
   const value = useContext(CreditBalanceContext);
   if (!value) {

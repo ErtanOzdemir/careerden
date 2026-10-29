@@ -121,6 +121,7 @@ export async function createApiRuntime(env: ApiEnv): Promise<ApiRuntime> {
       geminiApiKey: env.GEMINI_API_KEY,
       deepseekApiKey: env.DEEPSEEK_API_KEY,
       anthropicApiKey: env.ANTHROPIC_API_KEY,
+      openrouterApiKey: env.OPENROUTER_API_KEY,
     }).create();
   } catch {
     aiProvider = undefined;

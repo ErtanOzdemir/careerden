@@ -138,4 +138,32 @@ describe("AiProviderSettings", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/^Add a key first$/);
   });
+
+  it("accepts a free-form OpenRouter model id and explains how to choose one", async () => {
+    const bridge = installBridge(status());
+    render(<AiProviderSettings />);
+    await waitFor(() => expect(bridge.getStatus).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("radio", { name: /openrouter/i }));
+    expect(screen.getByLabelText("Model")).toHaveAttribute(
+      "placeholder",
+      "Default: openrouter/auto",
+    );
+    expect(screen.getByText(/supports structured outputs/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("OpenRouter API key"), {
+      target: { value: "sk-or-key" },
+    });
+    fireEvent.change(screen.getByLabelText("Model"), {
+      target: { value: "thinkingmachines/inkling-small:free" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and use" }));
+
+    await waitFor(() =>
+      expect(bridge.save).toHaveBeenCalledWith({
+        provider: "openrouter",
+        apiKey: "sk-or-key",
+        model: "thinkingmachines/inkling-small:free",
+      }),
+    );
+  });
 });

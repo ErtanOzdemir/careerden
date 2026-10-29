@@ -12,6 +12,8 @@ const providers: Array<{
   label: string;
   defaultModel: string;
   keysUrl: string;
+  // Shown under the model field when the provider needs guidance on choosing one.
+  modelHint?: { text: string; linkLabel: string; url: string };
 }> = [
   {
     id: "openai",
@@ -36,6 +38,17 @@ const providers: Array<{
     label: "DeepSeek",
     defaultModel: "deepseek-chat",
     keysUrl: "https://platform.deepseek.com/api_keys",
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter",
+    defaultModel: "openrouter/auto",
+    keysUrl: "https://openrouter.ai/keys",
+    modelHint: {
+      text: "Enter any OpenRouter model id, such as one ending in :free. Choose a model that supports structured outputs, and note that some free models only work in approved apps.",
+      linkLabel: "Browse models",
+      url: "https://openrouter.ai/models?supported_parameters=structured_outputs",
+    },
   },
 ];
 
@@ -96,6 +109,7 @@ function AiProviderPanel({ bridge }: { bridge: AiCredentialsBridge }) {
 
   const providerInfo = providers.find((entry) => entry.id === provider) ?? providers[0];
   const saved = status?.providers.find((entry) => entry.provider === provider);
+  const modelHint = providerInfo.modelHint;
 
   function selectProvider(next: AiProviderName) {
     setProvider(next);
@@ -210,6 +224,18 @@ function AiProviderPanel({ bridge }: { bridge: AiCredentialsBridge }) {
                 placeholder={`Default: ${providerInfo.defaultModel}`}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20"
               />
+              {modelHint && (
+                <p className="text-xs text-muted-foreground">
+                  {modelHint.text}{" "}
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => void window.electronAPI?.openExternal?.(modelHint.url)}
+                  >
+                    {modelHint.linkLabel}
+                  </button>
+                </p>
+              )}
             </div>
           </div>
 

@@ -4,6 +4,7 @@ import { AnthropicAiProvider } from "./providers/anthropic-ai.provider.js";
 import { DeepSeekAiProvider } from "./providers/deepseek-ai.provider.js";
 import { GeminiAiProvider } from "./providers/gemini-ai.provider.js";
 import { OpenAiAiProvider } from "./providers/openai-ai.provider.js";
+import { OpenRouterAiProvider } from "./providers/openrouter-ai.provider.js";
 
 describe("createAiProvider", () => {
   it.each([
@@ -11,6 +12,7 @@ describe("createAiProvider", () => {
     ["gemini", GeminiAiProvider],
     ["deepseek", DeepSeekAiProvider],
     ["anthropic", AnthropicAiProvider],
+    ["openrouter", OpenRouterAiProvider],
   ] as const)("creates the %s provider", (provider, expected) => {
     expect(createAiProvider({ provider, apiKey: "key" })).toBeInstanceOf(expected);
   });
@@ -39,5 +41,20 @@ describe("AiProviderFactory", () => {
     expect(() =>
       new AiProviderFactory({ aiProvider: "unknown", openaiApiKey: "key" }).create(),
     ).toThrow(/No AI provider configured for "unknown"/);
+  });
+});
+
+describe("OpenRouterAiProvider", () => {
+  it("accepts any user-supplied model id and defaults to OpenRouter's router", () => {
+    expect(
+      createAiProvider({
+        provider: "openrouter",
+        apiKey: "key",
+        model: "thinkingmachines/inkling-small:free",
+      }),
+    ).toMatchObject({ model: "thinkingmachines/inkling-small:free" });
+    expect(createAiProvider({ provider: "openrouter", apiKey: "key" })).toMatchObject({
+      model: "openrouter/auto",
+    });
   });
 });

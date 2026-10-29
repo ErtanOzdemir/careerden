@@ -65,6 +65,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
     geminiApiKey: env.GEMINI_API_KEY,
     deepseekApiKey: env.DEEPSEEK_API_KEY,
     anthropicApiKey: env.ANTHROPIC_API_KEY,
+    openrouterApiKey: env.OPENROUTER_API_KEY,
   });
   const aiProvider = aiProviderFactory.create();
   const analyzeScrapedJob = new AnalyzeScrapedJobUseCase(

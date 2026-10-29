@@ -29,7 +29,7 @@ interface DesktopUpdateState {
   status: DesktopUpdateStatus;
 }
 
-type AiProviderName = "openai" | "gemini" | "deepseek" | "anthropic";
+type AiProviderName = "openai" | "gemini" | "deepseek" | "anthropic" | "openrouter";
 
 interface AiCredentialsStatus {
   encryptionAvailable: boolean;

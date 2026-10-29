@@ -4,6 +4,7 @@ export * from "./matching/ai/providers/anthropic-ai.provider.js";
 export * from "./matching/ai/providers/deepseek-ai.provider.js";
 export * from "./matching/ai/providers/gemini-ai.provider.js";
 export * from "./matching/ai/providers/openai-ai.provider.js";
+export * from "./matching/ai/providers/openrouter-ai.provider.js";
 export * from "./job-applications/in-memory-job-application-change.bus.js";
 export * from "./job-applications/redis-job-application-change.bus.js";
 export * from "./persistence/job-applications/in-memory-job-application.repository.js";

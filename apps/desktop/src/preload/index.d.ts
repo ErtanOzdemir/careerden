@@ -27,7 +27,7 @@ export interface DesktopUpdateState {
 
 export type DesktopEdition = "cloud" | "local";
 
-export type AiProviderName = "openai" | "gemini" | "deepseek" | "anthropic";
+export type AiProviderName = "openai" | "gemini" | "deepseek" | "anthropic" | "openrouter";
 
 export interface AiCredentialsStatus {
   encryptionAvailable: boolean;

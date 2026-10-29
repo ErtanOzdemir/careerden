@@ -22,7 +22,8 @@ review or download.
 - Persistence: PostgreSQL via `pg` and Knex 3.1 for API database access and
   migrations
 - Scraping: public LinkedIn guest HTTP responses and HTML parsing
-- AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
+- AI: Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek, and Anthropic provider packages, plus
+  OpenRouter through the OpenAI-compatible provider
 - Document generation: predefined HTML templates rendered to on-screen preview and PDF via
   Playwright
 - Storage: S3-compatible object storage via RustFS locally and Cloudflare R2 in production

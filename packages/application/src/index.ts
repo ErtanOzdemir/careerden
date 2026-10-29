@@ -18,3 +18,4 @@ export * from "./job-applications/generate-requested-application-pack.use-case.j
 export * from "./matching/extract-job-requirements.use-case.js";
 export * from "./notifications/deliver-follow-up-reminder.use-case.js";
 export * from "./notifications/recover-follow-up-reminders.js";
+export * from "./notifications/restore-follow-up-reminders.js";

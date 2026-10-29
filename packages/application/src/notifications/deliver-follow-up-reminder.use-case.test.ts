@@ -76,6 +76,7 @@ function createReminders(
     })),
     isPendingScheduleCurrent: vi.fn(async () => true),
     listPendingForRecovery: vi.fn(async () => []),
+    listUndeliveredSince: vi.fn(async () => []),
     markSent: vi.fn(async () => true),
     setSchedule: vi.fn(),
     ...overrides,

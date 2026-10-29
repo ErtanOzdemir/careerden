@@ -55,6 +55,8 @@ export interface FollowUpReminderRepository {
   clearSchedule(followUpId: string): Promise<void>;
   findValidReminder(input: FollowUpReminderQueuePayload): Promise<FollowUpReminderCandidate | null>;
   listPendingForRecovery(now: Date, limit?: number): Promise<FollowUpReminderCandidate[]>;
+  // Every unsent, enabled reminder whose follow-up is at or after `since`, scheduled or not.
+  listUndeliveredSince(since: Date, limit?: number): Promise<FollowUpReminderCandidate[]>;
   markSent(input: FollowUpReminderQueuePayload, sentAt: Date): Promise<boolean>;
   isPendingScheduleCurrent(input: FollowUpReminderQueuePayload): Promise<boolean>;
 }

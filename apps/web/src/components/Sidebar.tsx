@@ -15,6 +15,7 @@ import { profilesApi, profileUpdatedEvent } from "../api/profiles.js";
 import { authClient } from "../api/auth.js";
 import type { ApiProfile } from "../api/types.js";
 import { BrandLogo } from "./BrandLogo.js";
+import { UnpluggedBadge } from "./UnpluggedBadge.js";
 import { isLocalEdition } from "../edition.js";
 
 const navItems = [
@@ -63,9 +64,13 @@ export default function Sidebar() {
         <BrandLogo className="size-8 object-contain" />
         <div className="leading-tight">
           <p className="text-sm font-semibold text-sidebar-foreground">Careerden</p>
-          <p className="text-xs text-muted-foreground">
-            {isLocalEdition ? "On this device" : "Career workspace"}
-          </p>
+          {isLocalEdition ? (
+            <p className="mt-0.5">
+              <UnpluggedBadge />
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Career workspace</p>
+          )}
         </div>
       </div>
 

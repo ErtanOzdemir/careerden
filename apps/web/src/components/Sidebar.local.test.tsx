@@ -13,14 +13,14 @@ vi.mock("../api/auth.js", () => ({ authClient: { signOut: vi.fn() } }));
 describe("Sidebar in the local edition", () => {
   afterEach(cleanup);
 
-  it("drops billing, support, and sign-out and labels the workspace as on-device", () => {
+  it("drops billing, support, and sign-out and shows the Unplugged wordmark", () => {
     render(
       <MemoryRouter>
         <Sidebar />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("On this device")).toBeInTheDocument();
+    expect(screen.getByText("Unplugged")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /settings/i })).toHaveAttribute("href", "/settings");
     expect(screen.getByRole("link", { name: /ai provider/i })).toHaveAttribute(
       "href",

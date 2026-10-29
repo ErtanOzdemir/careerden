@@ -13,8 +13,9 @@ import { PostgresUserProfileRepository } from "./profiles/postgres-user-profile.
 
 const now = new Date("2026-10-29T10:00:00.000Z");
 
-// Runs the production migrations and Postgres repositories against embedded PGlite.
-describe("createPgliteDb", () => {
+// Runs the production migrations and Postgres repositories against embedded PGlite. Starting the
+// WASM database and migrating takes seconds under a parallel test run, hence the longer timeout.
+describe("createPgliteDb", { timeout: 30_000 }, () => {
   const databases: Knex[] = [];
   const directories: string[] = [];
 

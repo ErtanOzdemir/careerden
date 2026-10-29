@@ -13,6 +13,7 @@ import {
   PostgresFollowUpReminderRepository,
   PostgresOutboxRepository,
   PostgresPersistenceUnitOfWork,
+  PostgresReminderOutboxDispatcher,
   RedisNotificationChangeBus,
   PostgresStorageOutboxDispatcher,
   S3CompatibleStorage,
@@ -21,7 +22,6 @@ import {
   createSmtpEmailSender,
 } from "@careerden/infrastructure";
 import { PostgresEmailOutboxDispatcher } from "./infrastructure/persistence/postgres-email-outbox.dispatcher.js";
-import { PostgresReminderOutboxDispatcher } from "./infrastructure/persistence/postgres-reminder-outbox.dispatcher.js";
 import type { Knex } from "knex";
 import type { NotificationsWorkerEnv } from "./env.js";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";

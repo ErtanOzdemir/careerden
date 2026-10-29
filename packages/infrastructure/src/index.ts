@@ -31,6 +31,8 @@ export * from "./documents/playwright-pdf-renderer.js";
 export * from "./queue/bullmq-worker-health.server.js";
 export * from "./notifications/follow-up-reminder.repository.js";
 export * from "./notifications/in-memory-notification-change.bus.js";
+export * from "./notifications/in-process-follow-up-reminder.queue.js";
+export * from "./notifications/postgres-reminder-outbox.dispatcher.js";
 export * from "./notifications/redis-notification-change.bus.js";
 export * from "./notifications/resend-email.sender.js";
 export * from "./notifications/smtp-email.sender.js";

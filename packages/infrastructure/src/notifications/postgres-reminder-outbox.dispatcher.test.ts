@@ -4,7 +4,7 @@ import type {
   FollowUpReminderRepository,
   OutboxEvent,
 } from "@careerden/domain";
-import type { PostgresOutboxRepository } from "@careerden/infrastructure";
+import type { PostgresOutboxRepository } from "../persistence/postgres-outbox.repository.js";
 import { PostgresReminderOutboxDispatcher } from "./postgres-reminder-outbox.dispatcher.js";
 
 describe("PostgresReminderOutboxDispatcher", () => {

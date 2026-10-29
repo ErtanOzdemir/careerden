@@ -5,7 +5,7 @@ import type {
 } from "@careerden/domain";
 import { outboxEventTypes } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
-import type { PostgresOutboxRepository } from "@careerden/infrastructure";
+import type { PostgresOutboxRepository } from "../persistence/postgres-outbox.repository.js";
 
 const batchSize = 50;
 const leaseDurationMs = 30_000;

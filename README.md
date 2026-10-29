@@ -5,6 +5,8 @@
 <strong>Open-source desktop job application tracker and profile-aware CV and cover-letter creator.</strong>
 <br />
 Import LinkedIn jobs or paste any posting manually. Match your profile. Create tailored documents.
+<br />
+Use the Careerden cloud service, or keep everything on your device with Careerden Unplugged.
 <br /><br />
 
   <a href="https://github.com/ErtanOzdemir/careerden/releases/latest">
@@ -32,6 +34,26 @@ Import LinkedIn jobs or paste any posting manually. Match your profile. Create t
 
 ![Fictional Careerden application tracking dashboard](./docs/images/application-tracking-dashboard.png)
 
+## Editions
+
+Careerden ships as two desktop apps built from the same code and released together.
+
+|                      | **Careerden**                                                     | **Careerden Unplugged**                                                    |
+| -------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Where data lives     | Careerden's servers (PostgreSQL and object storage)               | Only on your device                                                        |
+| Account              | Email and password with email OTP                                 | None                                                                       |
+| AI                   | Included, metered by monthly credits and subscriptions            | Your own OpenAI, Anthropic, Gemini, DeepSeek, or OpenRouter key; unmetered |
+| Billing              | Free monthly credits and a Creem subscription                     | None                                                                       |
+| Reminders            | In-app, desktop, and optional email                               | In-app and desktop                                                         |
+| Works across devices | Yes, through your account                                         | No; one device, one profile                                                |
+| Network traffic      | The Careerden API, LinkedIn guest pages, and GitHub update checks | LinkedIn guest pages, your AI provider, and GitHub update checks only      |
+
+"Unplugged" means unplugged from Careerden's servers, not from the internet. Both editions
+share the same features otherwise: the tracker, the profile, LinkedIn import, AI match
+analysis, document editing and PDF generation, and follow-up reminders. They install side
+by side under separate identities (`com.careerden.desktop` and `com.careerden.unplugged`)
+with separate data, keychain entries, and update channels.
+
 ## Features
 
 - Add applications by pasting company and job details manually, with an optional company logo,
@@ -42,16 +64,17 @@ Import LinkedIn jobs or paste any posting manually. Match your profile. Create t
   real-time updates over server-sent events.
 - Maintain a reusable profile with experience, education, projects, certifications,
   links, and analysis/reminder preferences.
-- Analyze each role against the profile with OpenAI, Gemini, or DeepSeek and review
-  matched, partial, and missing requirements.
+- Analyze each role against the profile with OpenAI, Gemini, DeepSeek, Anthropic, or
+  OpenRouter and review matched, partial, and missing requirements.
 - Edit AI-assisted CV and cover-letter content before generating files, with a live
   on-screen HTML preview rendered from a predefined template as you edit.
 - Generate CV and cover-letter PDFs from the same predefined HTML templates, then
-  download them through signed S3-compatible storage URLs.
-- Receive in-app follow-up notifications and, when the desktop window is unfocused,
-  native operating-system alerts with optional email delivery through local SMTP or
-  production Resend.
-- Sign in with email and password using email OTP verification.
+  download them through signed, expiring URLs.
+- Receive follow-up reminders in the app and as native operating-system alerts, with
+  optional email delivery through local SMTP or production Resend in the cloud edition.
+- Cloud edition: sign in with email and password using email OTP verification.
+- Unplugged edition: no account; bring your own AI provider key, stored with the operating
+  system's keychain and never sent anywhere but the provider.
 
 ## Quick Start
 
@@ -87,7 +110,7 @@ Before starting the app, edit `.env`:
    AI jobs.
 3. Replace the development auth secret before using the app outside local development.
 
-Start the complete desktop development stack:
+Start the complete cloud desktop development stack:
 
 ```bash
 pnpm dev:desktop
@@ -102,6 +125,28 @@ LinkedIn URLs through public guest endpoints without connecting a LinkedIn accou
 The example environment also enables follow-up reminder email delivery, so those messages appear in
 the same MailHog inbox. Keep `NOTIFICATION_EMAIL_ENABLED=false` in environments where reminder
 emails should not be dispatched.
+
+### Careerden Unplugged in Development
+
+The Unplugged edition needs no Docker services, no `.env` changes, and no account:
+
+```bash
+pnpm dev:desktop:local
+```
+
+The command starts the Vite web app and Electron with the local edition enabled. Electron
+starts the embedded backend on loopback port `3010` with a per-run token that the Vite proxy
+forwards. Data lives in the `Careerden Unplugged` folder under the operating system's
+application data directory. To skip typing a profile, fill it with a fictional sample while
+the app is closed:
+
+```bash
+pnpm seed:local-profile
+```
+
+Add an AI provider key on the **AI provider** page to run match analysis. OpenRouter accepts
+any model id, but choose one that supports structured outputs; some free models only work in
+approved apps.
 
 ### Local Services
 
@@ -171,10 +216,36 @@ credit settings.
 
 In development, Electron loads the Vite renderer and connects to the standalone API. A
 packaged app instead serves the bundled renderer from `careerden://app` and proxies
-same-origin `/api` requests to its build-time API URL. See the
+same-origin `/api` requests to its build-time API URL, or to its embedded backend in
+Careerden Unplugged. See the
 [desktop runtime and release guide](apps/desktop/README.md) for notification behavior,
 automatic-update behavior, packaging, signing, checksums, and the manual release
 checklist.
+
+### Careerden Unplugged
+
+The Unplugged edition runs the same API and use cases inside the app instead of on
+Careerden's servers:
+
+```text
+React renderer at careerden://app
+           |
+           | /api/* through the custom-protocol proxy, which adds a per-launch token
+           v
+Local backend utility process on 127.0.0.1:<random port>
+  same Express routes and use cases, without auth, billing, or support routes
+  PGlite (embedded PostgreSQL) + files on disk
+  in-process outbox runner -> match analysis, document generation, storage cleanup
+  in-process reminder timers, restored from the database on every start
+           |
+           +-> Electron main process: PDF printing and the decrypted AI key, on request
+           +-> AI provider chosen by the user, called directly from the device
+```
+
+There are no credits: every analysis runs on the user's own key. Analysis is not queued
+while no provider key is configured, and the job shows an **Add API key** prompt instead.
+Reminders that fell due while the app was closed are delivered on the next start when the
+follow-up is at most seven days old.
 
 Job processing uses explicit states:
 
@@ -217,28 +288,78 @@ Dependencies point inward: apps compose packages, application code depends on do
 and contracts, and infrastructure implements domain interfaces. HTTP routes remain thin;
 ownership checks and business workflows live in application use cases.
 
+### Two Editions, One Codebase
+
+The editions differ only in the adapters their composition roots choose. `createApiApp`
+(`apps/api/src/api-app.ts`) wires every route and use case from injected adapters, and the
+use cases that the workers run live in `packages/application`. Two composition roots then pick
+the infrastructure:
+
+| Concern        | Cloud: `createApiRuntime` and workers | Unplugged: `createLocalApiRuntime`               |
+| -------------- | ------------------------------------- | ------------------------------------------------ |
+| Database       | PostgreSQL                            | PGlite in the app's data folder                  |
+| Files          | S3-compatible storage                 | Local disk with HMAC-signed, expiring links      |
+| Background     | Outbox → BullMQ → worker processes    | In-process outbox runner                         |
+| Realtime       | Redis pub/sub                         | In-memory change buses                           |
+| Authentication | Better Auth sessions                  | Per-launch token on loopback, one local user     |
+| Credits        | PostgreSQL credit ledger              | Same ledger behind an unmetered decorator        |
+| AI             | Server key from the environment       | User key resolved on every call                  |
+| PDF            | Playwright Chromium                   | Electron `printToPDF` without scripts or network |
+
+A build-time `CAREERDEN_EDITION` (`cloud` or `local`) selects the desktop runtime, and
+`VITE_CAREERDEN_EDITION` removes sign-in, billing, credits, and support from the Unplugged
+renderer. New routes and use cases belong in the shared composition, so both editions get them.
+
+### Architecture Decisions
+
+- **One codebase instead of a fork.** Every feature, fix, and migration reaches both editions
+  at once. The cost is a few edition checks in the composition roots, the desktop shell, and
+  the renderer.
+- **PGlite instead of SQLite.** PGlite is PostgreSQL compiled to WebAssembly, so the same Knex
+  migrations, `jsonb` queries, and repositories run unchanged in both editions. SQLite would
+  have meant a second SQL dialect for every query. The trade-off is about 38 MB of fixed
+  PostgreSQL files in each local data folder.
+- **An in-process outbox runner instead of an in-memory queue.** An outbox event is marked
+  processed only after its handler finishes, so analysis or document generation interrupted by
+  closing the app is retried on the next start. Retries, backoff, and dead-lettering match the
+  BullMQ workers.
+- **A utility process behind a loopback token.** The backend runs outside Electron's main
+  process so database and AI work never block the window. It listens only on `127.0.0.1`, and
+  only requests carrying the token that Electron generates for each launch are accepted.
+- **Keys in the operating system's keychain.** AI keys are encrypted with Electron
+  `safeStorage` and decrypted only in the main process, which hands the active key to the backend
+  for each AI call; the renderer can save, test, switch, and remove keys but never read one
+  back. Keys are never stored in plain
+  files.
+- **No Chromium cookie store in Unplugged.** The local edition reaches its backend with
+  Node's `fetch`, because opening the encrypted cookie store would trigger a keychain prompt on
+  every launch and the edition has no cookies to keep.
+- **One version for both editions.** A single `vX.Y.Z` tag builds both editions into one draft
+  release. Distinct artifact names and updater channels (`latest*.yml` and `local*.yml`) keep
+  each installation on its own edition.
+
 ### Tech Stack
 
-| Area                | Technology                                       |
-| ------------------- | ------------------------------------------------ |
-| Runtime             | Node.js 22                                       |
-| Language            | TypeScript 5.7, strict ESM, NodeNext resolution  |
-| Package management  | pnpm 9.15 and Turborepo 2.9                      |
-| Desktop             | Electron 43                                      |
-| Web                 | React 19, React Router 7, Vite 6, Tailwind CSS 4 |
-| Rich-text editing   | Tiptap 3                                         |
-| API and validation  | Express 4 and Zod 3                              |
-| Authentication      | Better Auth with email OTP verification          |
-| Database            | PostgreSQL 16 via Knex 3 and `pg`                |
-| Queues and realtime | Redis 7 and BullMQ 5                             |
-| AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek    |
-| Scraping            | Public guest HTTP responses and HTML parsing     |
-| PDF                 | Playwright 1.60                                  |
-| Documents           | Predefined HTML templates                        |
-| Storage             | AWS S3 SDK with RustFS locally and Cloudflare R2 |
-| Observability       | OpenTelemetry and OpenObserve                    |
-| Testing             | Vitest 2 and Testing Library                     |
-| Quality             | ESLint 10 and Prettier 3                         |
+| Area                | Technology                                                               |
+| ------------------- | ------------------------------------------------------------------------ |
+| Runtime             | Node.js 22                                                               |
+| Language            | TypeScript 5.7, strict ESM, NodeNext resolution                          |
+| Package management  | pnpm 9.15 and Turborepo 2.9                                              |
+| Desktop             | Electron 43                                                              |
+| Web                 | React 19, React Router 7, Vite 6, Tailwind CSS 4                         |
+| Rich-text editing   | Tiptap 3                                                                 |
+| API and validation  | Express 4 and Zod 3                                                      |
+| Authentication      | Better Auth with email OTP verification                                  |
+| Database            | PostgreSQL 16 via Knex 3 and `pg`; PGlite in Unplugged                   |
+| Queues and realtime | Redis 7 and BullMQ 5; in-process in Unplugged                            |
+| AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek, Anthropic, and OpenRouter |
+| Scraping            | Public guest HTTP responses and HTML parsing                             |
+| PDF                 | Playwright 1.60; Electron `printToPDF` in Unplugged                      |
+| Documents           | Predefined HTML templates                                                |
+| Storage             | AWS S3 SDK with RustFS locally and Cloudflare R2                         |
+| Observability       | OpenTelemetry and OpenObserve                                            |
+| Testing             | Vitest 2 and Testing Library                                             |
+| Quality             | ESLint 10 and Prettier 3                                                 |
 
 ## Environment Variables
 
@@ -285,19 +406,21 @@ requires `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, and `CREEM_PRODUCT_ID`, and re
 
 ### AI and Workers
 
-| Variable                           | Description                                      | Default  |
-| ---------------------------------- | ------------------------------------------------ | -------- |
-| `AI_PROVIDER`                      | `openai`, `gemini`, or `deepseek`                | `openai` |
-| `OPENAI_API_KEY`                   | OpenAI API key                                   | —        |
-| `GEMINI_API_KEY`                   | Google Gemini API key                            | —        |
-| `DEEPSEEK_API_KEY`                 | DeepSeek API key                                 | —        |
-| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs                     | `5`      |
-| `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port                   | `3101`   |
-| `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs                   | `1`      |
-| `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port                    | `3102`   |
-| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs                 | `1`      |
-| `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port                | `3103`   |
-| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through the active provider | `false`  |
+| Variable                           | Description                                                  | Default  |
+| ---------------------------------- | ------------------------------------------------------------ | -------- |
+| `AI_PROVIDER`                      | `openai`, `gemini`, `deepseek`, `anthropic`, or `openrouter` | `openai` |
+| `OPENAI_API_KEY`                   | OpenAI API key                                               | —        |
+| `GEMINI_API_KEY`                   | Google Gemini API key                                        | —        |
+| `DEEPSEEK_API_KEY`                 | DeepSeek API key                                             | —        |
+| `ANTHROPIC_API_KEY`                | Anthropic API key                                            | —        |
+| `OPENROUTER_API_KEY`               | OpenRouter API key                                           | —        |
+| `LLM_WORKER_CONCURRENCY`           | Parallel match-analysis jobs                                 | `5`      |
+| `LLM_WORKER_HEALTH_PORT`           | Private LLM worker health port                               | `3101`   |
+| `DOCUMENTS_WORKER_CONCURRENCY`     | Parallel application-pack jobs                               | `1`      |
+| `DOCUMENTS_WORKER_HEALTH_PORT`     | Private documents health port                                | `3102`   |
+| `NOTIFICATIONS_WORKER_CONCURRENCY` | Parallel follow-up reminder jobs                             | `1`      |
+| `NOTIFICATIONS_WORKER_HEALTH_PORT` | Private notifications health port                            | `3103`   |
+| `NOTIFICATION_EMAIL_ENABLED`       | Send reminder emails through the active provider             | `false`  |
 
 ### Email, Storage, Scraping, and Tracing
 
@@ -558,6 +681,8 @@ The desktop scraping worker additionally uses these authenticated endpoints:
 | -------------------------------------------------------------- | -------------------------------------------------------- |
 | `pnpm dev`                                                     | Start Docker services, then every app through Turbo      |
 | `pnpm dev:desktop`                                             | Start API, web, workers, then Electron once they respond |
+| `pnpm dev:desktop:local`                                       | Start the web app and Careerden Unplugged without Docker |
+| `pnpm seed:local-profile`                                      | Fill the Unplugged profile with a fictional sample       |
 | `pnpm dev:services`                                            | Start PostgreSQL, Redis, and RustFS and wait for them    |
 | `pnpm dev:api`                                                 | Start only the API                                       |
 | `pnpm dev:llm-worker`                                          | Start only the LLM worker                                |
@@ -566,6 +691,7 @@ The desktop scraping worker additionally uses these authenticated endpoints:
 | `pnpm --filter @careerden/web dev`                             | Start only the Vite web app                              |
 | `pnpm --filter @careerden/desktop build`                       | Build the Electron main process and renderer             |
 | `pnpm --filter @careerden/desktop package`                     | Package desktop for the current host platform            |
+| `pnpm --filter @careerden/desktop package:local`               | Package Careerden Unplugged after a local edition build  |
 | `pnpm --filter @careerden/infrastructure smoke:playwright-pdf` | Verify local Playwright PDF rendering                    |
 | `pnpm build`                                                   | Build every workspace                                    |
 | `pnpm test`                                                    | Run all Vitest suites                                    |
@@ -582,16 +708,19 @@ a local production-mode check keeps source hot reload while it is launched throu
 Use `docker compose up -d` instead of `pnpm dev:services` when local OTP email and
 OpenObserve are also needed.
 
-Desktop installers are produced by the tag-triggered GitHub Actions workflow as a draft
-release together with platform updater metadata and the minimum-supported-version
-policy. Publishing remains a manual verification step and is what makes a release
+Desktop installers for both editions are produced by the tag-triggered GitHub Actions
+workflow as one draft release together with platform updater metadata and the
+minimum-supported-version policy. Build Careerden Unplugged locally with
+`CAREERDEN_EDITION=local VITE_CAREERDEN_EDITION=local pnpm --filter @careerden/desktop build`. Publishing remains a manual verification step and is what makes a release
 visible to installed updaters. Follow the complete
 [desktop release checklist](apps/desktop/README.md#draft-release-workflow) before tagging
 or publishing a version.
 
 ### Database Migrations
 
-PostgreSQL migrations run automatically during API startup. They can also be managed
+PostgreSQL migrations run automatically during API startup, and in Careerden Unplugged on
+every app start against its embedded PGlite database. Because local migrations run on users'
+devices where they cannot be rolled back, keep migrations additive. They can also be managed
 from the repository root:
 
 ```bash

@@ -14,8 +14,19 @@ const desktopUpdateChannels = {
   stateChanged: "desktop-update-state-changed",
 };
 
+const aiCredentialsChannels = {
+  getStatus: "ai-credentials-get-status",
+  remove: "ai-credentials-remove",
+  save: "ai-credentials-save",
+  setActive: "ai-credentials-set-active",
+  test: "ai-credentials-test",
+};
+
+const edition = process.argv.includes("--careerden-edition=local") ? "local" : "cloud";
+
 const electronAPI = {
   platform: process.platform,
+  edition,
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   notifyJobApplicationQueued: () => ipcRenderer.invoke("job-application-queued"),
   setNativeThemeSource: (source) => ipcRenderer.invoke("set-native-theme-source", source),
@@ -35,6 +46,17 @@ const electronAPI = {
   onDesktopUpdateStateChanged: (callback) =>
     subscribeWithPayload(desktopUpdateChannels.stateChanged, callback),
 };
+
+if (edition === "local") {
+  // Only the local edition stores AI keys on the device; the cloud edition never exposes this.
+  electronAPI.aiCredentials = {
+    getStatus: () => ipcRenderer.invoke(aiCredentialsChannels.getStatus),
+    save: (input) => ipcRenderer.invoke(aiCredentialsChannels.save, input),
+    remove: (provider) => ipcRenderer.invoke(aiCredentialsChannels.remove, provider),
+    setActive: (provider) => ipcRenderer.invoke(aiCredentialsChannels.setActive, provider),
+    test: (input) => ipcRenderer.invoke(aiCredentialsChannels.test, input),
+  };
+}
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);
 

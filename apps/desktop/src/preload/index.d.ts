@@ -25,8 +25,38 @@ export interface DesktopUpdateState {
   status: DesktopUpdateStatus;
 }
 
+export type DesktopEdition = "cloud" | "local";
+
+export type AiProviderName = "openai" | "gemini" | "deepseek" | "anthropic";
+
+export interface AiCredentialsStatus {
+  encryptionAvailable: boolean;
+  activeProvider: AiProviderName | null;
+  providers: Array<{ provider: AiProviderName; model?: string; keyHint: string }>;
+}
+
+export interface AiCredentialsInput {
+  provider: AiProviderName;
+  // Omit to keep the stored key, for example when only the model changes.
+  apiKey?: string;
+  model?: string;
+}
+
+export type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
+
+export interface AiCredentialsAPI {
+  getStatus: () => Promise<AiCredentialsStatus>;
+  save: (input: AiCredentialsInput) => Promise<AiCredentialsStatus>;
+  remove: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
+  setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
+  test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
+  edition: DesktopEdition;
+  // Present only in the local edition.
+  aiCredentials?: AiCredentialsAPI;
   openExternal: (url: string) => Promise<void>;
   notifyJobApplicationQueued: () => Promise<void>;
   setNativeThemeSource: (source: NativeThemeSource) => Promise<void>;

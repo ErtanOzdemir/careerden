@@ -4,6 +4,7 @@ import { CheckCircle2, KeyRound, ShieldCheck, TriangleAlert } from "lucide-react
 import { Button } from "../components/ui/button.js";
 import { Panel } from "../components/careerden/panel.js";
 import { cn } from "../lib/utils.js";
+import { AiProviderLogo } from "./AiProviderLogo.js";
 
 export const aiProviderPath = "/ai-provider";
 
@@ -175,6 +176,7 @@ function AiProviderPanel({ bridge }: { bridge: AiCredentialsBridge }) {
                     : "border-border text-muted-foreground hover:text-foreground",
                 )}
               >
+                <AiProviderLogo provider={entry.id} className="size-4 shrink-0 text-foreground" />
                 {entry.label}
                 {status?.activeProvider === entry.id ? (
                   <CheckCircle2 aria-label="active" className="size-3.5 text-success" />
@@ -324,7 +326,7 @@ function Header() {
   return (
     <div className="flex items-center gap-2.5 px-5 py-4">
       <KeyRound className="size-4 text-muted-foreground" />
-      <h2 className="text-sm font-semibold text-foreground">AI provider</h2>
+      <h2 className="text-sm font-semibold text-foreground">AI provider &amp; API Keys</h2>
     </div>
   );
 }

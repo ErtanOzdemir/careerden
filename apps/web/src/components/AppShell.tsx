@@ -27,7 +27,7 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
     subtitle: "AI credit usage, top-ups, and your Creem subscription.",
   },
   "/ai-provider": {
-    title: "AI provider",
+    title: "AI provider & API Keys",
     subtitle: "Your own API key for analysis and tailored documents.",
   },
   "/settings": {

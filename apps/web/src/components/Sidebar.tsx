@@ -23,7 +23,7 @@ const navItems = [
   { to: "/applications", label: "Applications", icon: ListChecks },
   { to: "/profile", label: "Profile", icon: UserRound },
   ...(isLocalEdition
-    ? [{ to: "/ai-provider", label: "AI provider", icon: KeyRound }]
+    ? [{ to: "/ai-provider", label: "AI provider & API Keys", icon: KeyRound }]
     : [{ to: "/billing", label: "Credits & billing", icon: CreditCard }]),
   { to: "/settings", label: "Settings", icon: Settings },
 ];

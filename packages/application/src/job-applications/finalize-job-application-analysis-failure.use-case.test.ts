@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { InMemoryJobApplicationRepository } from "@careerden/infrastructure";
 import type { PersistenceUnitOfWork } from "@careerden/domain";
-import { createCreditRepositoryDouble, createProfiles } from "@careerden/application/testing";
+import { createCreditRepositoryDouble, createProfiles } from "./job-application-test-helpers.js";
 import { FinalizeJobApplicationAnalysisFailureUseCase } from "./finalize-job-application-analysis-failure.use-case.js";
 
 describe("FinalizeJobApplicationAnalysisFailureUseCase", () => {

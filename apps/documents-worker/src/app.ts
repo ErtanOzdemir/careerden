@@ -1,9 +1,11 @@
+import type { ApplicationPackGenerationQueuePayload } from "@careerden/domain";
+import {
+  FailApplicationPackGenerationUseCase,
+  GenerateRequestedApplicationPackUseCase,
+} from "@careerden/application";
 import { Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import { FailApplicationPackGenerationUseCase } from "./application/job-applications/fail-application-pack-generation.use-case.js";
 import { GenerateDocumentsUseCase } from "@careerden/application";
-import { GenerateRequestedApplicationPackUseCase } from "./application/job-applications/generate-requested-application-pack.use-case.js";
-import type { ApplicationPackGenerationQueuePayload } from "./domain/job-applications/application-pack-generation.queue.js";
 import {
   BullMqApplicationPackGenerationQueue,
   applicationPackGenerationQueueName,

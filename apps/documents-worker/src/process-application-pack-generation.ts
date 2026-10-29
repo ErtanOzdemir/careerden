@@ -1,7 +1,9 @@
-import type { ApplicationPackGenerationQueuePayload } from "./domain/job-applications/application-pack-generation.queue.js";
+import type { ApplicationPackGenerationQueuePayload } from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
-import type { FailApplicationPackGenerationUseCase } from "./application/job-applications/fail-application-pack-generation.use-case.js";
-import type { GenerateRequestedApplicationPackUseCase } from "./application/job-applications/generate-requested-application-pack.use-case.js";
+import type {
+  FailApplicationPackGenerationUseCase,
+  GenerateRequestedApplicationPackUseCase,
+} from "@careerden/application";
 import { toBullMqWorkerError } from "./bullmq-worker-error.js";
 
 export async function processApplicationPackGeneration(input: {

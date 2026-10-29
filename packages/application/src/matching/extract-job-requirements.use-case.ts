@@ -1,7 +1,4 @@
-import {
-  aiJobRequirementsCandidateSchema,
-  aiJobRequirementsSchema,
-} from "../../contracts/matching/ai-job-requirements.schema.js";
+import { aiJobRequirementsCandidateSchema, aiJobRequirementsSchema } from "@careerden/contracts";
 import type { AiProvider, ScrapedJob } from "@careerden/domain";
 
 export class ExtractJobRequirementsUseCase {

@@ -3,7 +3,7 @@ import {
   InMemoryJobApplicationRepository,
   InMemoryUserProfileRepository,
 } from "@careerden/infrastructure";
-import { createUnitOfWork } from "@careerden/application/testing";
+import { createUnitOfWork } from "./job-application-test-helpers.js";
 import { FailApplicationPackGenerationUseCase } from "./fail-application-pack-generation.use-case.js";
 import { GenerateRequestedApplicationPackUseCase } from "./generate-requested-application-pack.use-case.js";
 

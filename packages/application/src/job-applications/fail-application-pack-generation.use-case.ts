@@ -1,7 +1,9 @@
-import type { ApplicationPackGenerationQueuePayload } from "../../domain/job-applications/application-pack-generation.queue.js";
-import type { PersistenceUnitOfWork } from "@careerden/domain";
-import { generatedDocumentFileIds } from "@careerden/application";
-import { enqueueStorageDeletions } from "@careerden/application";
+import type {
+  ApplicationPackGenerationQueuePayload,
+  PersistenceUnitOfWork,
+} from "@careerden/domain";
+import { generatedDocumentFileIds } from "../documents/generate-documents.use-case.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 
 export class FailApplicationPackGenerationUseCase {
   constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}

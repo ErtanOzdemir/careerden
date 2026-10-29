@@ -1,9 +1,11 @@
+import {
+  AnalyzeScrapedJobUseCase,
+  ExpireStaleCreditReservationsUseCase,
+  ExtractJobRequirementsUseCase,
+  FinalizeJobApplicationAnalysisFailureUseCase,
+} from "@careerden/application";
 import { UnrecoverableError, Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import { AnalyzeScrapedJobUseCase } from "./application/job-applications/analyze-scraped-job.use-case.js";
-import { ExpireStaleCreditReservationsUseCase } from "./application/job-applications/expire-stale-credit-reservations.use-case.js";
-import { ExtractJobRequirementsUseCase } from "./application/matching/extract-job-requirements.use-case.js";
-import { FinalizeJobApplicationAnalysisFailureUseCase } from "./application/job-applications/finalize-job-application-analysis-failure.use-case.js";
 import { RunMatchAnalysisUseCase } from "@careerden/application";
 import type { JobApplicationQueuePayload } from "@careerden/domain";
 import {

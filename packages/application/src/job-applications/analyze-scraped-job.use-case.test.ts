@@ -10,8 +10,8 @@ import {
   InMemoryUserProfileRepository,
 } from "@careerden/infrastructure";
 import { AnalyzeScrapedJobUseCase } from "./analyze-scraped-job.use-case.js";
-import { createCreditRepositoryDouble } from "@careerden/application/testing";
-import { RunMatchAnalysisUseCase } from "@careerden/application";
+import { createCreditRepositoryDouble } from "./job-application-test-helpers.js";
+import { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
 
 describe("AnalyzeScrapedJobUseCase", () => {
   it("runs AI analysis and automatically queues application-pack generation", async () => {

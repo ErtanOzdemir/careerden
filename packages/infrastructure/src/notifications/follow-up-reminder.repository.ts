@@ -5,7 +5,7 @@ import type {
   FollowUpReminderRepository,
   UpdateFollowUpReminderScheduleInput,
 } from "@careerden/domain";
-import { followUpReminderLeadTimeMs } from "@careerden/domain";
+import { followUpReminderLeadTimeMs, getFollowUpReminderScheduledFor } from "@careerden/domain";
 import { nullableDate, nullableString } from "../persistence/mappers.js";
 
 export const followUpReminderRecoveryBatchLimit = 100;
@@ -149,10 +149,6 @@ export function buildFollowUpReminderBaseQuery(db: Knex): Knex.QueryBuilder {
       "job_application_follow_ups.reminder_scheduled_for",
       "job_application_follow_ups.reminder_sent_at",
     );
-}
-
-export function getFollowUpReminderScheduledFor(followUpAt: Date): Date {
-  return new Date(followUpAt.getTime() - followUpReminderLeadTimeMs);
 }
 
 export function shouldRecoverFollowUpReminder(

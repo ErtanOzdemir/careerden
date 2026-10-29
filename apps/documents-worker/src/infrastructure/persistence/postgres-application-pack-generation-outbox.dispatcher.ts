@@ -1,4 +1,4 @@
-import type { ApplicationPackGenerationQueue } from "../../domain/job-applications/application-pack-generation.queue.js";
+import type { ApplicationPackGenerationQueue } from "@careerden/domain";
 import { outboxEventTypes } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import type { PostgresOutboxRepository } from "@careerden/infrastructure";

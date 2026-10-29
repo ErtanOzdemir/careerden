@@ -1,5 +1,9 @@
 export const followUpReminderLeadTimeMs = 10 * 60 * 1000;
 
+export function getFollowUpReminderScheduledFor(followUpAt: Date): Date {
+  return new Date(followUpAt.getTime() - followUpReminderLeadTimeMs);
+}
+
 export interface FollowUpReminderQueuePayload {
   followUpId: string;
   jobApplicationId: string;

@@ -1,12 +1,12 @@
-import type { ApplicationPackGenerationQueuePayload } from "../../domain/job-applications/application-pack-generation.queue.js";
 import type {
+  ApplicationPackGenerationQueuePayload,
   JobApplicationRepository,
   PersistenceUnitOfWork,
   UserProfileRepository,
 } from "@careerden/domain";
-import type { GenerateDocumentsUseCase } from "@careerden/application";
-import { generatedDocumentFileIds } from "@careerden/application";
-import { enqueueStorageDeletions } from "@careerden/application";
+import type { GenerateDocumentsUseCase } from "../documents/generate-documents.use-case.js";
+import { generatedDocumentFileIds } from "../documents/generate-documents.use-case.js";
+import { enqueueStorageDeletions } from "../storage/enqueue-storage-deletions.js";
 
 export class GenerateRequestedApplicationPackUseCase {
   constructor(

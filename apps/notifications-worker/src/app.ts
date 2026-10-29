@@ -1,12 +1,10 @@
 import { Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
-import type {
-  EmailSender,
-  FollowUpReminderQueue,
-  FollowUpReminderQueuePayload,
-  FollowUpReminderRepository,
-} from "@careerden/domain";
-import { DeliverFollowUpReminderUseCase } from "./application/notifications/deliver-follow-up-reminder.use-case.js";
+import type { EmailSender, FollowUpReminderQueuePayload } from "@careerden/domain";
+import {
+  DeliverFollowUpReminderUseCase,
+  createFollowUpReminderRecoveryRunner,
+} from "@careerden/application";
 import {
   BullMqFollowUpReminderQueue,
   followUpReminderQueueName,
@@ -21,7 +19,6 @@ import {
   createPostgresDb,
   createResendEmailSender,
   createSmtpEmailSender,
-  getFollowUpReminderScheduledFor,
 } from "@careerden/infrastructure";
 import { PostgresEmailOutboxDispatcher } from "./infrastructure/persistence/postgres-email-outbox.dispatcher.js";
 import { PostgresReminderOutboxDispatcher } from "./infrastructure/persistence/postgres-reminder-outbox.dispatcher.js";
@@ -165,57 +162,4 @@ export function createEmailOutboxDispatcher(
         }
       })
     : undefined;
-}
-
-export function createFollowUpReminderRecoveryRunner(
-  reminders: FollowUpReminderRepository,
-  reminderQueue: FollowUpReminderQueue,
-  now: () => Date = () => new Date(),
-) {
-  let isRecovering = false;
-
-  return async function recoverFollowUpReminders(): Promise<void> {
-    if (isRecovering) {
-      console.warn("Notifications worker skipped follow-up reminder recovery; already running");
-      return;
-    }
-
-    isRecovering = true;
-    try {
-      await recoverPendingReminders(reminders, reminderQueue, now());
-    } finally {
-      isRecovering = false;
-    }
-  };
-}
-
-async function recoverPendingReminders(
-  reminders: FollowUpReminderRepository,
-  reminderQueue: FollowUpReminderQueue,
-  now: Date,
-) {
-  const pending = await reminders.listPendingForRecovery(now);
-
-  for (const reminder of pending) {
-    const scheduledFor = getFollowUpReminderScheduledFor(reminder.scheduledAt);
-
-    if (reminder.reminderJobId) {
-      await reminderQueue.remove(reminder.reminderJobId).catch(() => {
-        // The existing job may already be active or gone; re-adding below rebuilds delayed state.
-      });
-    }
-
-    const scheduled = await reminderQueue.enqueue({
-      followUpId: reminder.followUpId,
-      jobApplicationId: reminder.jobApplicationId,
-      profileId: reminder.profileId,
-      followUpAt: reminder.scheduledAt,
-      scheduledFor,
-    });
-
-    await reminders.setSchedule(reminder.followUpId, {
-      jobId: scheduled.jobId,
-      scheduledFor,
-    });
-  }
 }

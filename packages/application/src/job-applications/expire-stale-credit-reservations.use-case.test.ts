@@ -4,7 +4,7 @@ import {
   InMemoryCreditRepository,
   InMemoryJobApplicationRepository,
 } from "@careerden/infrastructure";
-import { createProfiles } from "@careerden/application/testing";
+import { createProfiles } from "./job-application-test-helpers.js";
 import { ExpireStaleCreditReservationsUseCase } from "./expire-stale-credit-reservations.use-case.js";
 
 describe("ExpireStaleCreditReservationsUseCase", () => {

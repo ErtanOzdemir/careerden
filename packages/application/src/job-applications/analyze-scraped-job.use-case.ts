@@ -5,11 +5,11 @@ import type {
   UserProfileRepository,
 } from "@careerden/domain";
 import { assessProfileReadiness, documentContentFromProfile } from "@careerden/domain";
-import { ApplicationError } from "@careerden/application";
+import { ApplicationError } from "../application-error.js";
 import type { ExtractJobRequirementsUseCase } from "../matching/extract-job-requirements.use-case.js";
-import type { RunMatchAnalysisUseCase } from "@careerden/application";
-import { enqueueApplicationPackGeneration } from "@careerden/application";
-import { validateApplicationPackPreferences } from "@careerden/application";
+import type { RunMatchAnalysisUseCase } from "../matching/run-match-analysis.use-case.js";
+import { enqueueApplicationPackGeneration } from "./enqueue-application-pack-generation.js";
+import { validateApplicationPackPreferences } from "./request-application-pack-generation.use-case.js";
 
 export class AnalyzeScrapedJobUseCase {
   constructor(

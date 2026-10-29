@@ -161,8 +161,13 @@ async function initializeDesktopRuntime(): Promise<void> {
   } else {
     apiBaseUrl = runtimeConfig.apiBaseUrl;
   }
-  const fetchApi = (input: string, init?: RequestInit) =>
-    session.defaultSession.fetch(input, withHeaders(init, apiRequestHeaders));
+  // The local edition reaches its loopback backend with Node's fetch. It needs no cookies, so it
+  // never opens Chromium's cookie store, whose encryption key would otherwise trigger a Keychain
+  // prompt, and it is not bound by Chromium's six-connection limit per host.
+  const fetchApi =
+    runtimeConfig.edition === "local"
+      ? (input: string, init?: RequestInit) => fetch(input, withHeaders(init, apiRequestHeaders))
+      : (input: string, init?: RequestInit) => session.defaultSession.fetch(input, init);
   const desktopUpdatePolicyUrl = desktopUpdateRepository
     ? `https://github.com/${desktopUpdateRepository}/releases/latest/download/careerden-desktop-update-policy.json`
     : undefined;
@@ -173,7 +178,7 @@ async function initializeDesktopRuntime(): Promise<void> {
       createPackagedRendererProtocolHandler({
         apiBaseUrl,
         apiRequestHeaders,
-        fetchApi: (input, init) => session.defaultSession.fetch(input, init),
+        fetchApi,
         fetchFile: (input, init) => net.fetch(input, init),
         onError: (error) => {
           console.error("Packaged renderer protocol error", error);
@@ -277,7 +282,12 @@ async function initializeDesktopRuntime(): Promise<void> {
       const timeout = setTimeout(() => controller.abort(), 10_000);
 
       try {
-        const response = await session.defaultSession.fetch(desktopUpdatePolicyUrl, {
+        // The local edition keeps Chromium's cookie store closed; see fetchApi.
+        const fetchPolicy =
+          runtimeConfig.edition === "local"
+            ? fetch
+            : session.defaultSession.fetch.bind(session.defaultSession);
+        const response = await fetchPolicy(desktopUpdatePolicyUrl, {
           headers: {
             Accept: "application/json",
             "Cache-Control": "no-cache",
@@ -498,7 +508,7 @@ async function shutdownDesktopRuntime(): Promise<void> {
   nativeNotificationPresenter?.closeAll();
   await Promise.all([
     notificationStream?.stop() ?? Promise.resolve(),
-    flushDefaultSessionCookies(),
+    runtimeConfig.edition === "cloud" ? flushDefaultSessionCookies() : Promise.resolve(),
   ]);
   await localBackend?.stop();
   localBackend = null;

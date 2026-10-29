@@ -133,12 +133,20 @@ async function proxyApiRequest(
     headers.set(name, value);
   }
 
+  // Electron does not abort a proxied request when the renderer abandons its response, so a
+  // closed EventSource would otherwise keep its upstream stream open. Leaked streams fill
+  // Chromium's per-host connection limit and every later API request waits forever.
+  const upstream = new AbortController();
+  const abortUpstream = (reason?: unknown) => upstream.abort(reason);
+  if (request.signal.aborted) abortUpstream(request.signal.reason);
+  else request.signal.addEventListener("abort", () => abortUpstream(request.signal.reason));
+
   const init: RequestInit = {
     credentials: "include",
     headers,
     method: request.method,
     redirect: "follow",
-    signal: request.signal,
+    signal: upstream.signal,
   };
 
   try {
@@ -146,11 +154,41 @@ async function proxyApiRequest(
       init.body = await request.arrayBuffer();
     }
 
-    return await options.fetchApi(targetUrl, init);
+    return cancelUpstreamWithBody(await options.fetchApi(targetUrl, init), abortUpstream);
   } catch (error) {
     options.onError?.(error);
     return textResponse("Careerden API is unavailable", 502);
   }
+}
+
+function cancelUpstreamWithBody(
+  response: Response,
+  abortUpstream: (reason?: unknown) => void,
+): Response {
+  if (!response.body) return response;
+
+  const reader = response.body.getReader();
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) controller.close();
+        else controller.enqueue(value);
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    async cancel(reason) {
+      abortUpstream(reason);
+      await reader.cancel(reason).catch(() => undefined);
+    },
+  });
+
+  return new Response(body, {
+    headers: response.headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
 }
 
 function resolveRendererFile(rendererDirectory: string, pathname: string): string | null {

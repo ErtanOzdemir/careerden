@@ -8,6 +8,7 @@ import {
   Settings,
   CreditCard,
   CircleHelp,
+  KeyRound,
   LogOut,
 } from "lucide-react";
 import { profilesApi, profileUpdatedEvent } from "../api/profiles.js";
@@ -20,7 +21,9 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/applications", label: "Applications", icon: ListChecks },
   { to: "/profile", label: "Profile", icon: UserRound },
-  ...(isLocalEdition ? [] : [{ to: "/billing", label: "Credits & billing", icon: CreditCard }]),
+  ...(isLocalEdition
+    ? [{ to: "/ai-provider", label: "AI provider", icon: KeyRound }]
+    : [{ to: "/billing", label: "Credits & billing", icon: CreditCard }]),
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

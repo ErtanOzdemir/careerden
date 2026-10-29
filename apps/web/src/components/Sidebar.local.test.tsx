@@ -22,6 +22,10 @@ describe("Sidebar in the local edition", () => {
 
     expect(screen.getByText("On this device")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /settings/i })).toHaveAttribute("href", "/settings");
+    expect(screen.getByRole("link", { name: /ai provider/i })).toHaveAttribute(
+      "href",
+      "/ai-provider",
+    );
     expect(screen.queryByRole("link", { name: /credits & billing/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /help & support/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /log out/i })).not.toBeInTheDocument();

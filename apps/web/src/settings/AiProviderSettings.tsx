@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button.js";
 import { Panel } from "../components/careerden/panel.js";
 import { cn } from "../lib/utils.js";
 
-export const aiProviderSettingsAnchor = "ai-provider";
+export const aiProviderPath = "/ai-provider";
 
 const providers: Array<{
   id: AiProviderName;
@@ -85,12 +85,6 @@ function AiProviderPanel({ bridge }: { bridge: AiCredentialsBridge }) {
   const [feedback, setFeedback] = useState<Feedback>(null);
 
   useEffect(() => {
-    if (window.location.hash === `#${aiProviderSettingsAnchor}`) {
-      document.getElementById(aiProviderSettingsAnchor)?.scrollIntoView({ block: "start" });
-    }
-  }, []);
-
-  useEffect(() => {
     let active = true;
     void bridge.getStatus().then(
       (next) => {
@@ -149,7 +143,6 @@ function AiProviderPanel({ bridge }: { bridge: AiCredentialsBridge }) {
 
   return (
     <Panel>
-      <div id={aiProviderSettingsAnchor} className="scroll-mt-6" />
       <Header />
       <div className="space-y-4 border-t border-border px-5 py-4">
         <p className="flex items-start gap-2 text-sm text-muted-foreground">

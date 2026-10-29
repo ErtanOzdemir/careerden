@@ -47,14 +47,14 @@ export async function enqueueMatchAnalysisIfEnabled(input: {
       if (input.insufficientCreditBehavior === "throw") {
         throw new ApplicationError(
           "ai_provider_not_configured",
-          "Add an AI provider API key in Settings to run AI analysis.",
+          "Add an AI provider API key on the AI provider page to run AI analysis.",
         );
       }
       await input.jobApplications.addEvent({
         jobApplicationId: input.jobApplicationId,
         type: "processing",
         title: "AI analysis skipped",
-        body: "The job was saved. Add an AI provider API key in Settings to run AI analysis.",
+        body: "The job was saved. Add an AI provider API key on the AI provider page to run AI analysis.",
         metadata: { reason: "ai_provider_not_configured" },
       });
       return false;

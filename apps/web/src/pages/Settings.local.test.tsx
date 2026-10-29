@@ -43,6 +43,7 @@ describe("Settings in the local edition", () => {
     expect(await screen.findByText("Processing preferences")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Account" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Security" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "AI provider" })).not.toBeInTheDocument();
     expect(authMocks.useSession).not.toHaveBeenCalled();
   });
 });

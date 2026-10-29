@@ -19,7 +19,7 @@ import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
-import { aiProviderSettingsAnchor } from "../settings/AiProviderSettings.js";
+import { aiProviderPath } from "../settings/AiProviderSettings.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
 import type {
   ApiApplicationPackPreferences,
@@ -733,13 +733,10 @@ export default function AppDetail() {
               Add an AI provider to analyze jobs
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              The job is saved. Add your own API key in Settings, then start the analysis.
+              The job is saved. Add your own API key, then start the analysis.
             </p>
           </div>
-          <Link
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-            to={`/settings#${aiProviderSettingsAnchor}`}
-          >
+          <Link className={buttonVariants({ size: "sm", variant: "outline" })} to={aiProviderPath}>
             Add API key
           </Link>
         </div>

@@ -38,6 +38,10 @@ vi.mock("./pages/Billing", () => ({ default: () => <p>Billing page</p> }));
 vi.mock("./pages/Support", () => ({ default: () => <p>Support page</p> }));
 vi.mock("./pages/ForgotPassword", () => ({ default: () => <p>ForgotPassword page</p> }));
 vi.mock("./pages/ResetPassword", () => ({ default: () => <p>ResetPassword page</p> }));
+vi.mock("./settings/AiProviderSettings.js", () => ({
+  aiProviderPath: "/ai-provider",
+  AiProviderSettings: () => <p>AI provider page</p>,
+}));
 
 function renderAt(path: string) {
   return render(
@@ -86,5 +90,16 @@ describe("App routes by edition", () => {
     }
     renderAt("/settings");
     expect(screen.getByText("Settings page")).toBeInTheDocument();
+  });
+
+  it("serves the AI provider page only in the local edition", () => {
+    edition.local = true;
+    renderAt("/ai-provider");
+    expect(screen.getByText("AI provider page")).toBeInTheDocument();
+    cleanup();
+
+    edition.local = false;
+    renderAt("/ai-provider");
+    expect(screen.queryByText("AI provider page")).not.toBeInTheDocument();
   });
 });

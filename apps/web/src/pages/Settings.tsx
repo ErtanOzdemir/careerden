@@ -14,7 +14,6 @@ import { profilesApi } from "../api/profiles.js";
 import type { ApiProfile } from "../api/types.js";
 import { accountEmailApi, authClient, useAccountSession } from "../api/auth.js";
 import { isLocalEdition } from "../edition.js";
-import { AiProviderSettings } from "../settings/AiProviderSettings.js";
 import {
   getStoredTheme,
   setThemePreference,
@@ -403,8 +402,6 @@ export default function Settings() {
           )}
         </Panel>
       )}
-
-      {isLocalEdition && <AiProviderSettings />}
 
       {!isLocalEdition && (
         <>

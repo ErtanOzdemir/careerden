@@ -85,7 +85,7 @@ describe("AppDetail AI credits", () => {
       status: "scraped",
     });
     vi.mocked(jobApplicationsApi.startAnalysis).mockRejectedValue(
-      new ApiError("Add an AI provider API key in Settings to run AI analysis.", 409, {
+      new ApiError("Add an AI provider API key on the AI provider page to run AI analysis.", 409, {
         code: "ai_provider_not_configured",
       }),
     );
@@ -97,7 +97,7 @@ describe("AppDetail AI credits", () => {
     expect(await screen.findByText("Add an AI provider to analyze jobs")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add API key" })).toHaveAttribute(
       "href",
-      "/settings#ai-provider",
+      "/ai-provider",
     );
   });
 
@@ -106,7 +106,7 @@ describe("AppDetail AI credits", () => {
     detail.status = "scraped";
     detail.events = [
       {
-        body: "The job was saved. Add an AI provider API key in Settings to run AI analysis.",
+        body: "The job was saved. Add an AI provider API key on the AI provider page to run AI analysis.",
         createdAt: "2026-07-17T08:01:00.000Z",
         id: "event-1",
         jobApplicationId: "job-1",

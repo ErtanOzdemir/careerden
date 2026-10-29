@@ -9,7 +9,9 @@ export interface AiProviderSelectionSource {
 
 export class AiProviderNotConfiguredError extends Error {
   constructor() {
-    super("No AI provider is configured. Add an API key in Settings to use AI features.");
+    super(
+      "No AI provider is configured. Add an API key on the AI provider page to use AI features.",
+    );
     this.name = "AiProviderNotConfiguredError";
   }
 }

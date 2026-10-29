@@ -12,6 +12,7 @@
     "build:renderer": "pnpm --dir ../web exec vite build --outDir ../desktop/renderer --emptyOutDir",
     "dev": "pnpm run build:main && node scripts/wait-for-dev-servers.mjs && electron .",
     "package": "electron-builder --config electron-builder.yml --publish never",
+    "package:local": "electron-builder --config electron-builder.local.yml --publish never",
     "rebuild": "echo 'No native desktop rebuild required'",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"

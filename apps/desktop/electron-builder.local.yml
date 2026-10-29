@@ -1,0 +1,20 @@
+# Careerden Local: the offline edition. Shares packaging, fuses, signing, and notarization with the
+# cloud edition and installs side by side with it under its own identity, data, and update channel.
+# Build with CAREERDEN_EDITION=local and VITE_CAREERDEN_EDITION=local so the embedded runtime
+# configuration and renderer match.
+extends: ./electron-builder.yml
+appId: com.careerden.local
+productName: Careerden Local
+executableName: CareerdenLocal
+artifactName: CareerdenLocal-${version}-${arch}.${ext}
+extraMetadata:
+  # electron-updater derives its download cache directory from the package name; keep the
+  # editions' pending updates apart.
+  name: "@careerden/desktop-local"
+directories:
+  buildResources: build
+  output: release-local
+publish:
+  provider: github
+  # Writes local-mac.yml, local.yml, and local-linux.yml so cloud and local updates never cross.
+  channel: local

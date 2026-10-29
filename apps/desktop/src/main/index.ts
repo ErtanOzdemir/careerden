@@ -255,6 +255,13 @@ async function initializeDesktopRuntime(): Promise<void> {
     },
   });
 
+  const updater = electronUpdater.autoUpdater;
+  if (runtimeConfig.edition === "local") {
+    // Read local-*.yml from the shared GitHub release so the editions never install each other.
+    updater.channel = "local";
+    // Setting a channel enables downgrades in electron-updater; keep stable-only behavior.
+    updater.allowDowngrade = false;
+  }
   const updatePolicyCachePath = join(app.getPath("userData"), "desktop-update-policy-cache.json");
   desktopUpdateManager = new DesktopUpdateManager({
     beforeInstall: async () => {
@@ -297,7 +304,7 @@ async function initializeDesktopRuntime(): Promise<void> {
         throw error;
       }
     },
-    updater: electronUpdater.autoUpdater as DesktopUpdater,
+    updater: updater as DesktopUpdater,
     writeCachedPolicy: async (policy: DesktopUpdatePolicy) => {
       await mkdir(app.getPath("userData"), { recursive: true });
       await writeFile(updatePolicyCachePath, `${JSON.stringify(policy, null, 2)}\n`, "utf8");

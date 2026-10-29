@@ -11,7 +11,7 @@
         "DESKTOP_UPDATE_REPOSITORY",
         "VITE_CAREERDEN_EDITION"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "renderer/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"],

@@ -107,6 +107,21 @@ review or download.
   unfocused. Clicking the alert restores the app and opens the related timeline.
 - Desktop LinkedIn scraping uses public guest HTTP responses in an isolated utility
   process and does not require or persist a user's LinkedIn account session.
+- The desktop app builds as two editions selected by `CAREERDEN_EDITION` (`cloud` or
+  `local`) and `VITE_CAREERDEN_EDITION` for the renderer. Careerden Local
+  (`com.careerden.local`) sends no data to a Careerden server: a utility process runs
+  `@careerden/api-app/local` on loopback behind a per-launch token with embedded PGlite,
+  on-disk file storage with signed links, in-memory change buses, and an in-process outbox
+  runner instead of Redis and BullMQ workers. It has no accounts, billing, credits, email, or
+  support routes, and its builds must not embed `DESKTOP_API_BASE_URL`.
+- Local edition AI uses the user's own provider key, stored by the main process with
+  `safeStorage` and never returned to the renderer. Analysis is not queued while no
+  provider is configured. Electron prints its PDFs in a hidden window without scripts or
+  network access. Reminders are restored from the database on start, delivering those up
+  to seven days overdue.
+- Shared composition lives in `createApiApp` (HTTP) and `packages/application` (use cases),
+  so cloud and local runtimes differ only in the adapters they pass. Add routes and use
+  cases there rather than in either runtime.
 - The API runtime uses PostgreSQL for state, S3-compatible object storage through RustFS
   locally or Cloudflare R2 in production, and Redis/BullMQ for enqueueing job application
   processing.
@@ -138,6 +153,8 @@ review or download.
   GitHub workflow builds platform installers and electron-updater metadata, validates
   `apps/desktop/release-policy.json`, generates SHA-256 checksums, and creates a draft
   release; publishing remains the manual gate that exposes an update to clients.
+- Both editions are released from the same tag and draft release with distinct artifact names
+  and updater channels: `latest*.yml` for Careerden and `local*.yml` for Careerden Local.
 - Packaged desktop builds check public GitHub Releases at startup, hourly, and on demand.
   Update discovery comes from electron-builder's platform `latest*.yml`; the separately
   published policy controls only `minimumSupportedVersion`. Private or unreachable
@@ -195,6 +212,10 @@ review or download.
   ```bash
   pnpm dev:desktop
   ```
+- Start the local edition web dev server and desktop app without Docker services:
+  ```bash
+  pnpm dev:desktop:local
+  ```
 - Check whether the Vite web dev server is listening:
   ```bash
   curl -I http://localhost:5173
@@ -214,6 +235,12 @@ review or download.
 - Package the already-built desktop app for the current host platform:
   ```bash
   pnpm --filter @careerden/desktop package
+  ```
+- Build and package the local edition for the current host platform:
+  ```bash
+  CAREERDEN_EDITION=local VITE_CAREERDEN_EDITION=local \
+    pnpm --filter @careerden/desktop build
+  pnpm --filter @careerden/desktop package:local
   ```
 - Build the production API and worker images from the repository root:
   ```bash

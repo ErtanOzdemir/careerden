@@ -1,8 +1,14 @@
 # Careerden Desktop
 
 The Careerden desktop app is the Electron runtime for the React application, local
-LinkedIn scraping, and native follow-up notifications. The API and BullMQ workers remain
-standalone services; the desktop installer does not embed the backend.
+LinkedIn scraping, and native follow-up notifications. It builds as two editions from the
+same code:
+
+- **Careerden** (`cloud`) connects to the standalone API and BullMQ workers; the installer
+  does not embed the backend.
+- **Careerden Local** (`local`) is the offline edition described in
+  [Careerden Local](#careerden-local). It embeds the backend and sends no data to a
+  Careerden server.
 
 ## Runtime Modes
 
@@ -52,6 +58,58 @@ Better Auth expects an HTTP(S) base URL internally. When the renderer runs on
 `https://desktop-auth.careerden.invalid`. A custom fetch implementation immediately
 rewrites those requests to `careerden://app/api/auth`; the `.invalid` address is only a
 local transport placeholder and is never contacted over the network.
+
+## Careerden Local
+
+The local edition runs the API and its background work inside the app, for the single
+person using the device. Nothing is sent to a Careerden server. The only network traffic is
+public LinkedIn guest pages for imports, the AI provider the user configures with their own
+key, and GitHub Releases for update checks.
+
+```text
+React renderer at careerden://app
+            |
+            | fetch /api/*
+            v
+Electron custom-protocol handler (adds the per-launch session token)
+            |
+            v
+Local backend utility process on 127.0.0.1:<random port>
+  @careerden/api-app/local: embedded PGlite, files on disk, in-process outbox runner
+            |
+            | PDF printing and the decrypted AI key
+            v
+Electron main process (hidden print window, safeStorage key store)
+```
+
+| Concern       | Cloud edition                    | Local edition                                           |
+| ------------- | -------------------------------- | ------------------------------------------------------- |
+| Accounts      | Better Auth sessions and cookies | None; one local user, per-launch token on loopback      |
+| Database      | PostgreSQL                       | PGlite in `userData/data/pglite`                        |
+| Files         | S3-compatible storage            | `userData/data/files` with signed, expiring links       |
+| Background    | BullMQ workers on Redis          | In-process outbox runner; reminders restored on start   |
+| PDF rendering | Playwright Chromium              | Electron `printToPDF` without scripts or network access |
+| AI            | Server keys and monthly credits  | User keys in `safeStorage`, unmetered                   |
+| Email         | Resend or SMTP                   | None; reminders are in-app and desktop notifications    |
+| Updates       | `latest*.yml`                    | `local*.yml` in the same GitHub release                 |
+| Identity      | `com.careerden.desktop`          | `com.careerden.local`, separate `userData` and keychain |
+
+The renderer is built with `VITE_CAREERDEN_EDITION=local`, which drops sign-in, billing,
+credits, and support, and adds the AI provider section to Settings. The preload exposes
+the key store only when the main process opens the window with
+`--careerden-edition=local`; it can save, test, switch, and remove keys but never read one
+back. Reminders missed while the app was closed are delivered on the next start if the
+follow-up is at most seven days old.
+
+Run it in development without Docker services:
+
+```bash
+pnpm dev:desktop:local
+```
+
+The launcher starts the web dev server and Electron with a fixed backend port (`3010`) and
+a per-run token so the Vite proxy can reach the backend. Local data lives in
+`Careerden Local` under the operating system's application data directory.
 
 ## Renderer Security Boundary
 
@@ -148,6 +206,22 @@ After building, package for the current host platform:
 ```bash
 pnpm --filter @careerden/desktop package
 ```
+
+Build and package the local edition with its edition variables and no API URL:
+
+```bash
+CAREERDEN_EDITION=local VITE_CAREERDEN_EDITION=local \
+  DESKTOP_UPDATE_REPOSITORY=owner/repository \
+  pnpm --filter @careerden/desktop build
+```
+
+```bash
+pnpm --filter @careerden/desktop package:local
+```
+
+`electron-builder.local.yml` extends `electron-builder.yml` and changes only the identity,
+artifact names (`CareerdenLocal-*`), output directory (`apps/desktop/release-local`), and
+updater channel. Local builds reject `DESKTOP_API_BASE_URL`.
 
 Installers are written to `apps/desktop/release`. The GitHub release workflow is the
 authoritative way to produce all supported targets and macOS notarization. On macOS,
@@ -277,6 +351,10 @@ version tag.
 
 ## Current Distribution Limits
 
+- Both editions currently ship the same `node_modules`, so each installer carries the other
+  edition's unused dependencies (about 105 MB uncompressed: PGlite in the cloud edition;
+  OpenTelemetry, Better Auth, and Creem in the local edition). Bundling the local backend
+  would remove them.
 - Windows installers are unsigned and may trigger operating-system reputation warnings.
 - Linux AppImages are not signed by this workflow.
 - macOS signing and notarization require real Apple credentials and should be verified in

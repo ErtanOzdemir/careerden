@@ -14,39 +14,37 @@ concurrency:
 
 jobs:
   build:
-    name: Build ${{ matrix.name }}
+    name: Build ${{ matrix.edition }} ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        # cloud is Careerden; local is Careerden Local, the offline edition. Both share one release
+        # with distinct artifact names and updater channels (latest*.yml and local*.yml).
+        edition: [cloud, local]
+        platform: [macos, windows-x64, linux-x64]
         include:
-          - name: macOS x64 and arm64
+          - platform: macos
+            name: macOS x64 and arm64
             os: macos-latest
-            artifact_name: desktop-macos
-            artifact_path: |
-              apps/desktop/release/*.dmg
-              apps/desktop/release/*.zip
-              apps/desktop/release/*.blockmap
-              apps/desktop/release/latest-mac.yml
-          - name: Windows x64 NSIS
+          - platform: windows-x64
+            name: Windows x64 NSIS
             os: windows-latest
-            artifact_name: desktop-windows-x64
-            artifact_path: |
-              apps/desktop/release/*.exe
-              apps/desktop/release/*.blockmap
-              apps/desktop/release/latest.yml
-          - name: Linux x64 AppImage
+          - platform: linux-x64
+            name: Linux x64 AppImage
             os: ubuntu-latest
-            artifact_name: desktop-linux-x64
-            artifact_path: |
-              apps/desktop/release/*.AppImage
-              apps/desktop/release/*.blockmap
-              apps/desktop/release/latest-linux.yml
     env:
-      DESKTOP_API_BASE_URL: ${{ vars.DESKTOP_API_BASE_URL }}
+      CAREERDEN_EDITION: ${{ matrix.edition }}
+      VITE_CAREERDEN_EDITION: ${{ matrix.edition }}
+      # The local edition talks to no Careerden server, so its build must not embed an API URL.
+      DESKTOP_API_BASE_URL: ${{ matrix.edition == 'cloud' && vars.DESKTOP_API_BASE_URL || '' }}
       DESKTOP_UPDATE_REPOSITORY: ${{ github.repository }}
-      CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL: "true"
+      CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL: ${{ matrix.edition == 'cloud' && 'true' || 'false' }}
       CAREERDEN_REQUIRE_DESKTOP_UPDATE_REPOSITORY: "true"
+      BUILDER_CONFIG: ${{ matrix.edition == 'local' && 'electron-builder.local.yml' || 'electron-builder.yml' }}
+      RELEASE_DIR: ${{ matrix.edition == 'local' && 'release-local' || 'release' }}
+      ARTIFACT_PREFIX: ${{ matrix.edition == 'local' && 'CareerdenLocal' || 'Careerden' }}
+      UPDATE_CHANNEL: ${{ matrix.edition == 'local' && 'local' || 'latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +65,7 @@ jobs:
             echo "::error::Tag ${GITHUB_REF_NAME} does not match desktop version ${package_version}"
             exit 1
           fi
-          if [[ -z "${DESKTOP_API_BASE_URL}" ]]; then
+          if [[ "${CAREERDEN_EDITION}" == "cloud" && -z "${DESKTOP_API_BASE_URL}" ]]; then
             echo "::error::Repository variable DESKTOP_API_BASE_URL is required"
             exit 1
           fi
@@ -104,13 +102,25 @@ jobs:
           const config = JSON.parse(
             await readFile("./apps/desktop/dist/main/desktop-runtime-config.json", "utf8"),
           );
-          const expectedApiBaseUrl = normalizeDesktopApiBaseUrl(process.env.DESKTOP_API_BASE_URL);
+          const edition = process.env.CAREERDEN_EDITION;
           const expectedUpdateRepository = process.env.DESKTOP_UPDATE_REPOSITORY;
 
-          if (config.apiBaseUrl !== expectedApiBaseUrl) {
+          if (config.edition !== edition) {
             throw new Error(
-              `Embedded API URL ${JSON.stringify(config.apiBaseUrl)} does not match ${JSON.stringify(expectedApiBaseUrl)}`,
+              `Embedded edition ${JSON.stringify(config.edition)} does not match ${JSON.stringify(edition)}`,
             );
+          }
+          if (edition === "local") {
+            if ("apiBaseUrl" in config) {
+              throw new Error("The local edition must not embed an API URL");
+            }
+          } else {
+            const expectedApiBaseUrl = normalizeDesktopApiBaseUrl(process.env.DESKTOP_API_BASE_URL);
+            if (config.apiBaseUrl !== expectedApiBaseUrl) {
+              throw new Error(
+                `Embedded API URL ${JSON.stringify(config.apiBaseUrl)} does not match ${JSON.stringify(expectedApiBaseUrl)}`,
+              );
+            }
           }
           if (config.desktopUpdateRepository !== expectedUpdateRepository) {
             throw new Error(
@@ -164,7 +174,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "true"
         run: >-
           pnpm --filter @careerden/desktop exec electron-builder
-          --config electron-builder.yml
+          --config ${{ env.BUILDER_CONFIG }}
           --config.publish.owner=${{ github.repository_owner }}
           --config.publish.repo=${{ github.event.repository.name }}
           --publish never
@@ -174,7 +184,7 @@ jobs:
         if: runner.os == 'Windows'
         run: >-
           pnpm --filter @careerden/desktop exec electron-builder
-          --config electron-builder.yml
+          --config ${{ env.BUILDER_CONFIG }}
           --config.publish.owner=${{ github.repository_owner }}
           --config.publish.repo=${{ github.event.repository.name }}
           --publish never
@@ -184,7 +194,7 @@ jobs:
         if: runner.os == 'Linux'
         run: >-
           pnpm --filter @careerden/desktop exec electron-builder
-          --config electron-builder.yml
+          --config ${{ env.BUILDER_CONFIG }}
           --config.publish.owner=${{ github.repository_owner }}
           --config.publish.repo=${{ github.event.repository.name }}
           --publish never
@@ -195,18 +205,18 @@ jobs:
         run: |
           case "${RUNNER_OS}" in
             macOS)
-              metadata_file="apps/desktop/release/latest-mac.yml"
+              metadata_file="apps/desktop/${RELEASE_DIR}/${UPDATE_CHANNEL}-mac.yml"
               package_version="$(node -p "require('./apps/desktop/package.json').version")"
               node --input-type=module - "${package_version}" <<'NODE'
               import { readFile, stat } from "node:fs/promises";
 
               const version = process.argv[2];
-              const releaseDirectory = "apps/desktop/release";
-              const metadataFile = `${releaseDirectory}/latest-mac.yml`;
+              const releaseDirectory = `apps/desktop/${process.env.RELEASE_DIR}`;
+              const metadataFile = `${releaseDirectory}/${process.env.UPDATE_CHANNEL}-mac.yml`;
               const metadata = await readFile(metadataFile, "utf8");
 
               for (const architecture of ["x64", "arm64"]) {
-                const artifactBase = `Careerden-${version}-${architecture}`;
+                const artifactBase = `${process.env.ARTIFACT_PREFIX}-${version}-${architecture}`;
                 for (const extension of ["dmg", "zip", "dmg.blockmap", "zip.blockmap"]) {
                   const artifactPath = `${releaseDirectory}/${artifactBase}.${extension}`;
                   if ((await stat(artifactPath)).size === 0) {
@@ -224,13 +234,13 @@ jobs:
               }
           NODE
 
-              if compgen -G "apps/desktop/release/*-universal.*" > /dev/null; then
+              if compgen -G "apps/desktop/${RELEASE_DIR}/*-universal.*" > /dev/null; then
                 echo "::error::Universal macOS artifacts must not be generated"
                 exit 1
               fi
               ;;
-            Windows) metadata_file="apps/desktop/release/latest.yml" ;;
-            Linux) metadata_file="apps/desktop/release/latest-linux.yml" ;;
+            Windows) metadata_file="apps/desktop/${RELEASE_DIR}/${UPDATE_CHANNEL}.yml" ;;
+            Linux) metadata_file="apps/desktop/${RELEASE_DIR}/${UPDATE_CHANNEL}-linux.yml" ;;
             *) echo "::error::Unsupported runner ${RUNNER_OS}"; exit 1 ;;
           esac
           test -s "${metadata_file}" || {
@@ -241,8 +251,14 @@ jobs:
       - name: Upload installer and updater metadata
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_path }}
+          name: desktop-${{ matrix.edition }}-${{ matrix.platform }}
+          path: |
+            apps/desktop/${{ env.RELEASE_DIR }}/*.dmg
+            apps/desktop/${{ env.RELEASE_DIR }}/*.zip
+            apps/desktop/${{ env.RELEASE_DIR }}/*.exe
+            apps/desktop/${{ env.RELEASE_DIR }}/*.AppImage
+            apps/desktop/${{ env.RELEASE_DIR }}/*.blockmap
+            apps/desktop/${{ env.RELEASE_DIR }}/${{ env.UPDATE_CHANNEL }}*.yml
           if-no-files-found: error
           retention-days: 1
 

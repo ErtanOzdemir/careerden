@@ -5,6 +5,16 @@
   "packageManager": "pnpm@9.15.0",
   "type": "module",
   "main": "./dist/server.js",
+  "exports": {
+    ".": {
+      "default": "./dist/server.js"
+    },
+    "./local": {
+      "development": "./src/local/index.ts",
+      "types": "./dist/local/index.d.ts",
+      "default": "./dist/local/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch --conditions=development --import ./src/tracing.register.ts src/server.ts",

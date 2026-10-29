@@ -100,6 +100,24 @@ describe("packaged renderer protocol", () => {
     expect(forwardedBody).toBe('{"read":true}');
   });
 
+  it("adds configured headers to proxied API requests and overrides renderer copies", async () => {
+    const fetchApi = vi.fn(async () => Response.json({ ok: true }));
+    const handler = createHandler({
+      apiBaseUrl: "http://127.0.0.1:3010",
+      apiRequestHeaders: { "x-careerden-local-token": "launch-token" },
+      fetchApi,
+    });
+
+    await handler(
+      new Request("careerden://app/api/profiles/me", {
+        headers: { "x-careerden-local-token": "renderer-guess" },
+      }),
+    );
+
+    const headers = new Headers(fetchApi.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("x-careerden-local-token")).toBe("launch-token");
+  });
+
   it("returns a safe gateway response when the upstream API is unavailable", async () => {
     const onError = vi.fn();
     const handler = createHandler({

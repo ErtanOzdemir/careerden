@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { Express } from "express";
 import type { Knex } from "knex";
@@ -79,6 +80,8 @@ export interface LocalApiRuntime {
 export async function createLocalApiRuntime(
   options: LocalApiRuntimeOptions,
 ): Promise<LocalApiRuntime> {
+  // PGlite creates only its own directory, not missing parents.
+  await mkdir(options.dataDir, { recursive: true });
   const db = createPgliteDb(join(options.dataDir, "pglite"));
   await runPostgresMigrations(db);
   await db("user")

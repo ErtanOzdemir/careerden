@@ -37,7 +37,8 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
 
   async function start(aiProvider?: AiProvider) {
     const runtime = await createLocalApiRuntime({
-      dataDir,
+      // A fresh install has no data directory yet.
+      dataDir: join(dataDir, "Careerden Local", "data"),
       sessionToken,
       pdfRenderer: { htmlToPdf: async () => Buffer.from("%PDF-test") },
       aiProviderSelection: { current: async () => selection },

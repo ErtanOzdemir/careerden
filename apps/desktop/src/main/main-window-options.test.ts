@@ -33,4 +33,13 @@ describe("getMainWindowOptions", () => {
       sandbox: true,
     });
   });
+
+  it("names the window after the edition and passes the edition to the preload", () => {
+    const cloud = getMainWindowOptions("/tmp/preload.cjs", "darwin");
+    const local = getMainWindowOptions("/tmp/preload.cjs", "darwin", "local");
+
+    expect(cloud.webPreferences?.additionalArguments).toEqual(["--careerden-edition=cloud"]);
+    expect(local.title).toBe("Careerden Local");
+    expect(local.webPreferences?.additionalArguments).toEqual(["--careerden-edition=local"]);
+  });
 });

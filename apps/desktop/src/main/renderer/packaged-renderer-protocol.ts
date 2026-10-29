@@ -35,6 +35,8 @@ type ProtocolFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export function createPackagedRendererProtocolHandler(options: {
   apiBaseUrl: string;
+  // Added to every proxied API request, such as the local edition's backend token.
+  apiRequestHeaders?: Record<string, string>;
   fetchApi: ProtocolFetch;
   fetchFile: ProtocolFetch;
   onError?: (error: unknown) => void;
@@ -104,6 +106,7 @@ async function proxyApiRequest(
   requestUrl: URL,
   apiBaseUrl: string,
   options: {
+    apiRequestHeaders?: Record<string, string>;
     fetchApi: ProtocolFetch;
     onError?: (error: unknown) => void;
   },
@@ -126,6 +129,9 @@ async function proxyApiRequest(
   }
 
   headers.set("Origin", targetOrigin);
+  for (const [name, value] of Object.entries(options.apiRequestHeaders ?? {})) {
+    headers.set(name, value);
+  }
 
   const init: RequestInit = {
     credentials: "include",

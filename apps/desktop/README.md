@@ -148,7 +148,7 @@ The notification path is:
 ```text
 notifications worker -> notification stored -> Redis notification-change channel
         -> authenticated API SSE stream -> Electron main process
-        -> renderer refresh and, when unfocused, an operating-system notification
+        -> renderer refresh and an operating-system notification
 ```
 
 The API exposes `GET /notifications/stream` as an authenticated, profile-scoped
@@ -163,7 +163,8 @@ Runtime behavior:
   notification is shown while requesting permission.
 - A newly created notification always tells the renderer to refresh its notification
   list and unread count when a window exists.
-- An operating-system notification is shown only when no Careerden window is focused.
+- An operating-system notification is shown for every new notification, including while
+  Careerden is in front.
 - Clicking the operating-system notification restores and focuses Careerden, opens the
   related application's timeline, and attempts to mark the notification as read.
 - Unsupported native notifications do not block the in-app refresh.

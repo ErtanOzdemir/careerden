@@ -103,9 +103,14 @@ review or download.
   regression-tested CSP and security-header policies. Production HTTP surfaces enable
   HSTS; Vite builds emit `dist/_headers`, which the static host must apply.
 - The desktop main process consumes the authenticated, profile-scoped notification SSE
-  stream with Electron's default session. It refreshes the renderer for every new
-  notification and shows an operating-system notification only when the app is
-  unfocused. Clicking the alert restores the app and opens the related timeline.
+  stream, with Electron's default session in the cloud edition and Node's fetch in the local
+  edition. It refreshes the renderer and shows an operating-system notification for every new
+  notification, including while the app is in front. Clicking the alert restores the app and
+  opens the related timeline.
+- The local edition never opens Chromium's cookie store, whose encryption key lives in the
+  macOS Keychain: its renderer proxy, notification stream, and update policy requests use
+  Node's fetch. The renderer proxy aborts upstream requests when the renderer cancels a
+  response, so closed event streams do not exhaust the per-host connection limit.
 - Desktop LinkedIn scraping uses public guest HTTP responses in an isolated utility
   process and does not require or persist a user's LinkedIn account session.
 - The desktop app builds as two editions selected by `CAREERDEN_EDITION` (`cloud` or

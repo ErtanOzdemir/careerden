@@ -3,25 +3,11 @@ import type { NotificationChangeDto } from "@careerden/contracts";
 import { DesktopNotificationCoordinator } from "./desktop-notification-coordinator.js";
 
 describe("DesktopNotificationCoordinator", () => {
-  it("refreshes the renderer without an OS alert while the window is focused", () => {
+  it("refreshes the renderer and shows an OS alert even while the window is in front", () => {
     const notifyRenderer = vi.fn();
     const showNativeNotification = vi.fn();
     const coordinator = new DesktopNotificationCoordinator({
-      getWindow: () => ({ isFocused: () => true, notifyRenderer }),
-      showNativeNotification,
-    });
-
-    coordinator.received(createChange());
-
-    expect(notifyRenderer).toHaveBeenCalledOnce();
-    expect(showNativeNotification).not.toHaveBeenCalled();
-  });
-
-  it("refreshes the renderer and shows an OS alert while the window is unfocused", () => {
-    const notifyRenderer = vi.fn();
-    const showNativeNotification = vi.fn();
-    const coordinator = new DesktopNotificationCoordinator({
-      getWindow: () => ({ isFocused: () => false, notifyRenderer }),
+      getWindow: () => ({ notifyRenderer }),
       showNativeNotification,
     });
 

@@ -240,7 +240,6 @@ async function initializeDesktopRuntime(): Promise<void> {
       if (!window) return null;
 
       return {
-        isFocused: () => window.isFocused(),
         notifyRenderer: () => {
           window.webContents.send(desktopNotificationIpcChannels.arrived);
         },

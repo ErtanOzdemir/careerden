@@ -144,6 +144,19 @@ describe("PostgresPersistenceUnitOfWork realtime changes", () => {
       expect.any(Error),
     );
   });
+
+  it("wraps each transaction's credit repository with the configured decorator", async () => {
+    const decorated = { getBalance: vi.fn() };
+    const decorateCredits = vi.fn(() => decorated as never);
+    const unitOfWork = new PostgresPersistenceUnitOfWork(createDb(), undefined, undefined, {
+      decorateCredits,
+    });
+
+    const credits = await unitOfWork.execute(async (transaction) => transaction.credits);
+
+    expect(decorateCredits).toHaveBeenCalledOnce();
+    expect(credits).toBe(decorated);
+  });
 });
 
 function createDb(afterCommit: () => void = () => undefined): Knex {

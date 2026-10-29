@@ -1,5 +1,6 @@
 import type { Knex } from "knex";
 import type {
+  CreditRepository,
   JobApplicationChange,
   JobApplicationChangePublisher,
   JobApplicationChangeRecorder,
@@ -18,11 +19,16 @@ import { PostgresNotificationRepository } from "./notifications/postgres-notific
 import { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
 import { PostgresUserProfileRepository } from "./profiles/postgres-user-profile.repository.js";
 
+export interface PostgresPersistenceUnitOfWorkOptions {
+  decorateCredits?: (credits: CreditRepository) => CreditRepository;
+}
+
 export class PostgresPersistenceUnitOfWork implements PersistenceUnitOfWork {
   constructor(
     private readonly db: Knex,
     private readonly jobApplicationChangePublisher?: JobApplicationChangePublisher,
     private readonly notificationChangePublisher?: NotificationChangePublisher,
+    private readonly options: PostgresPersistenceUnitOfWorkOptions = {},
   ) {}
 
   async execute<T>(work: (transaction: PersistenceTransaction) => Promise<T>): Promise<T> {
@@ -31,7 +37,7 @@ export class PostgresPersistenceUnitOfWork implements PersistenceUnitOfWork {
     const result = await this.db.transaction((transaction) =>
       work({
         billingSubscriptions: new PostgresBillingSubscriptionRepository(transaction),
-        credits: new PostgresCreditRepository(transaction),
+        credits: this.decorateCredits(new PostgresCreditRepository(transaction)),
         jobApplications: new PostgresJobApplicationRepository(transaction),
         jobApplicationChanges: changes,
         profiles: new PostgresUserProfileRepository(transaction),
@@ -47,6 +53,10 @@ export class PostgresPersistenceUnitOfWork implements PersistenceUnitOfWork {
       notificationChanges.publishBestEffort(this.notificationChangePublisher),
     ]);
     return result;
+  }
+
+  private decorateCredits(credits: CreditRepository): CreditRepository {
+    return this.options.decorateCredits?.(credits) ?? credits;
   }
 }
 

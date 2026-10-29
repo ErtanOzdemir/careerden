@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@careerden/api-app": "workspace:*",
     "@careerden/application": "workspace:*",
     "@careerden/config": "workspace:*",
     "@careerden/contracts": "workspace:*",

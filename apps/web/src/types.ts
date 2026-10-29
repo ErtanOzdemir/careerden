@@ -102,7 +102,7 @@ export interface GeneratedApplicationDocument {
 export interface JobApplication {
   analysisAttemptId?: string;
   archivedAt?: string;
-  analysisSkipReason?: "insufficient_credits";
+  analysisSkipReason?: "insufficient_credits" | "ai_provider_not_configured";
   applicationPackPreferences?: ApiApplicationPackPreferences;
   id: string;
   profileId?: string;

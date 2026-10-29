@@ -79,6 +79,52 @@ describe("AppDetail AI credits", () => {
     await waitFor(() => expect(billingMocks.refreshBalance).toHaveBeenCalled());
   });
 
+  it("sends the user to the AI provider settings when no key is configured", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      status: "scraped",
+    });
+    vi.mocked(jobApplicationsApi.startAnalysis).mockRejectedValue(
+      new ApiError("Add an AI provider API key in Settings to run AI analysis.", 409, {
+        code: "ai_provider_not_configured",
+      }),
+    );
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+
+    renderAppDetail();
+    fireEvent.click(await screen.findByRole("button", { name: "Start AI analysis" }));
+
+    expect(await screen.findByText("Add an AI provider to analyze jobs")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add API key" })).toHaveAttribute(
+      "href",
+      "/settings#ai-provider",
+    );
+  });
+
+  it("explains an automatic analysis skipped for a missing AI provider", async () => {
+    const detail = createApplicationDetail();
+    detail.status = "scraped";
+    detail.events = [
+      {
+        body: "The job was saved. Add an AI provider API key in Settings to run AI analysis.",
+        createdAt: "2026-07-17T08:01:00.000Z",
+        id: "event-1",
+        jobApplicationId: "job-1",
+        metadata: { reason: "ai_provider_not_configured" },
+        occurredAt: "2026-07-17T08:01:00.000Z",
+        title: "AI analysis skipped",
+        type: "processing",
+      },
+    ];
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue(detail);
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+
+    renderAppDetail();
+
+    expect(await screen.findByText("Add an AI provider to analyze jobs")).toBeInTheDocument();
+    expect(screen.queryByText("AI analysis needs one credit")).not.toBeInTheDocument();
+  });
+
   it("explains when automatic analysis was skipped without discarding the scrape", async () => {
     const detail = createApplicationDetail();
     detail.status = "scraped";

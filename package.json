@@ -20,6 +20,7 @@
     "migrate:status": "pnpm --filter @careerden/infrastructure exec knex migrate:status --knexfile knexfile.cjs",
     "dev:desktop": "turbo run dev --filter=@careerden/api-app --filter=@careerden/llm-worker --filter=@careerden/documents-worker --filter=@careerden/notifications-worker --filter=@careerden/web --filter=@careerden/desktop",
     "dev:desktop:local": "node scripts/dev-desktop-local.mjs",
+    "seed:local-profile": "node scripts/seed-local-profile.mjs",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "lint": "eslint .",

@@ -10,6 +10,7 @@ import { assessProfileReadiness, canTransitionJobApplicationStatus } from "@care
 import { ApplicationError } from "@careerden/application";
 import { enqueueStorageDeletions } from "@careerden/application";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
+import type { AiAvailability } from "../../domain/matching/ai-availability.js";
 import type { GetJobApplicationDetailUseCase } from "./get-job-application-detail.use-case.js";
 import { getActiveAccessibleJobApplication } from "@careerden/application";
 import type { JobApplicationDetail } from "./job-application-read-model.js";
@@ -23,6 +24,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
     private readonly remoteImages: RemoteImageFetcher,
     private readonly storage: FileStorage,
     private readonly getJobApplicationDetail: Pick<GetJobApplicationDetailUseCase, "execute">,
+    private readonly aiAvailability?: AiAvailability,
   ) {}
 
   async execute(
@@ -84,6 +86,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
             autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
             profileReadiness: assessProfileReadiness(profile),
             insufficientCreditBehavior: "skip",
+            aiAvailability: this.aiAvailability,
           });
           if (previousLogoFileId && previousLogoFileId !== logo.uploadedFileId) {
             await enqueueStorageDeletions(outbox, [previousLogoFileId]);

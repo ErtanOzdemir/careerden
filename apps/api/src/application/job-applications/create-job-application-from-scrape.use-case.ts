@@ -9,6 +9,7 @@ import { assessProfileReadiness } from "@careerden/domain";
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 import type { AuthenticatedProfileUser } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
+import type { AiAvailability } from "../../domain/matching/ai-availability.js";
 
 export interface CreateJobApplicationFromScrapeInput {
   sourceUrl: string;
@@ -24,6 +25,7 @@ export class CreateJobApplicationFromScrapeUseCase {
   constructor(
     private readonly getCurrentProfile: Pick<GetOrCreateCurrentProfileUseCase, "execute">,
     private readonly unitOfWork: PersistenceUnitOfWork,
+    private readonly aiAvailability?: AiAvailability,
   ) {}
 
   async execute(
@@ -65,6 +67,7 @@ export class CreateJobApplicationFromScrapeUseCase {
           autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
           profileReadiness: assessProfileReadiness(profile),
           insufficientCreditBehavior: "skip",
+          aiAvailability: this.aiAvailability,
         });
         await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         return jobApplication;

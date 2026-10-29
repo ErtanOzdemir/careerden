@@ -88,4 +88,81 @@ describe("enqueueMatchAnalysisIfEnabled", () => {
       details: { requiredCredits: 1, availableCredits: 0 },
     });
   });
+
+  it("skips automatic analysis without reserving credits when no AI provider is configured", async () => {
+    const credits = createCreditRepositoryDouble();
+    const addEvent = vi.fn();
+    const setAnalysisAttempt = vi.fn(async () => true);
+    const addOutbox = vi.fn();
+
+    await expect(
+      enqueueMatchAnalysisIfEnabled({
+        credits,
+        jobApplications: { addEvent, setAnalysisAttempt, clearAnalysisAttempt: vi.fn() },
+        outbox: { add: addOutbox },
+        userId: "user-1",
+        jobApplicationId: "job-1",
+        autoRunMatchAnalysis: true,
+        insufficientCreditBehavior: "skip",
+        aiAvailability: { isConfigured: async () => false },
+      }),
+    ).resolves.toBe(false);
+
+    expect(setAnalysisAttempt).not.toHaveBeenCalled();
+    expect(credits.reserve).not.toHaveBeenCalled();
+    expect(addOutbox).not.toHaveBeenCalled();
+    expect(addEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "AI analysis skipped",
+        metadata: { reason: "ai_provider_not_configured" },
+      }),
+    );
+  });
+
+  it("rejects an explicit analysis request when no AI provider is configured", async () => {
+    await expect(
+      enqueueMatchAnalysisIfEnabled({
+        credits: createCreditRepositoryDouble(),
+        jobApplications: {
+          addEvent: vi.fn(),
+          setAnalysisAttempt: vi.fn(async () => true),
+          clearAnalysisAttempt: vi.fn(),
+        },
+        outbox: { add: vi.fn() },
+        userId: "user-1",
+        jobApplicationId: "job-1",
+        autoRunMatchAnalysis: true,
+        insufficientCreditBehavior: "throw",
+        aiAvailability: { isConfigured: async () => false },
+      }),
+    ).rejects.toMatchObject({ code: "ai_provider_not_configured" });
+  });
+
+  it("queues analysis when the AI provider is configured", async () => {
+    const addOutbox = vi.fn();
+
+    await expect(
+      enqueueMatchAnalysisIfEnabled({
+        credits: createCreditRepositoryDouble(),
+        jobApplications: {
+          addEvent: vi.fn(),
+          setAnalysisAttempt: vi.fn(async () => true),
+          clearAnalysisAttempt: vi.fn(),
+        },
+        outbox: { add: addOutbox },
+        userId: "user-1",
+        jobApplicationId: "job-1",
+        autoRunMatchAnalysis: true,
+        insufficientCreditBehavior: "throw",
+        aiAvailability: { isConfigured: async () => true },
+        createAttemptId: () => "attempt-1",
+      }),
+    ).resolves.toBe(true);
+
+    expect(addOutbox).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: { jobApplicationId: "job-1", analysisAttemptId: "attempt-1" },
+      }),
+    );
+  });
 });

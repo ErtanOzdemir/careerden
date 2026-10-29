@@ -60,6 +60,7 @@ import type {
   UserProfileAccountRepository,
 } from "@careerden/domain";
 import { HtmlTemplateRenderer } from "@careerden/infrastructure";
+import type { AiAvailability } from "./domain/matching/ai-availability.js";
 import type { RemoteImageFetcher } from "./domain/scraping/remote-image-fetcher.js";
 import { createBillingRouter } from "./billing/billing.routes.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
@@ -83,6 +84,8 @@ export interface ApiAppDependencies {
   notificationChanges: NotificationChangeSubscriber;
   // Absent disables the AI-backed document editing routes.
   aiProvider?: AiProvider;
+  // Absent treats AI analysis as always available.
+  aiAvailability?: AiAvailability;
   http: {
     enableHsts: boolean;
     corsOrigin?: string;
@@ -104,6 +107,7 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
     storage,
     remoteImageFetcher,
     aiProvider,
+    aiAvailability,
   } = dependencies;
   const generateDocumentsUseCase = new GenerateDocumentsUseCase(
     new HtmlTemplateRenderer(),
@@ -159,6 +163,7 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
         profiles,
         storage,
         unitOfWork,
+        aiAvailability,
       ),
       submitJobApplication: new SubmitJobApplicationUseCase(unitOfWork),
       archiveJobApplication: new ArchiveJobApplicationUseCase(unitOfWork),
@@ -170,7 +175,7 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
         generateDocumentsUseCase,
         unitOfWork,
       ),
-      retryJobApplication: new RetryJobApplicationUseCase(unitOfWork),
+      retryJobApplication: new RetryJobApplicationUseCase(unitOfWork, aiAvailability),
       updateDocumentContent: new UpdateDocumentContentUseCase(unitOfWork),
       ensureJobApplicationAccess: new EnsureJobApplicationAccessUseCase(jobApplications, profiles),
       updateJobApplicationStatus: new UpdateJobApplicationStatusUseCase(unitOfWork),
@@ -178,12 +183,16 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
       getJobApplicationAnalytics: new GetJobApplicationAnalyticsUseCase(jobApplications, profiles),
       getJobApplicationDetail,
       updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(unitOfWork),
-      requestJobApplicationAnalysis: new RequestJobApplicationAnalysisUseCase(unitOfWork),
+      requestJobApplicationAnalysis: new RequestJobApplicationAnalysisUseCase(
+        unitOfWork,
+        aiAvailability,
+      ),
       requestApplicationPackGeneration: new RequestApplicationPackGenerationUseCase(unitOfWork),
       claimNextScrapeJob: new ClaimNextScrapeJobUseCase(getCurrentProfile, unitOfWork),
       createJobApplicationFromScrape: new CreateJobApplicationFromScrapeUseCase(
         getCurrentProfile,
         unitOfWork,
+        aiAvailability,
       ),
       renewScrapeClaim: new RenewScrapeClaimUseCase(unitOfWork),
       failScrapeJob: new FailScrapeJobUseCase(unitOfWork),
@@ -194,6 +203,7 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
         remoteImageFetcher,
         storage,
         getJobApplicationDetail,
+        aiAvailability,
       ),
       getProfile,
       jobApplicationChanges: dependencies.jobApplicationChanges,

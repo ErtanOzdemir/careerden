@@ -12,6 +12,7 @@ import { outboxEventTypes } from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import { ApplicationError } from "@careerden/application";
 import { ensureCurrentMonthlyCredits } from "../billing/ensure-current-monthly-credits.js";
+import type { AiAvailability } from "../../domain/matching/ai-availability.js";
 
 export async function enqueueMatchAnalysisIfEnabled(input: {
   credits: CreditRepository;
@@ -25,6 +26,8 @@ export async function enqueueMatchAnalysisIfEnabled(input: {
   autoRunMatchAnalysis: boolean;
   profileReadiness?: ProfileReadiness;
   insufficientCreditBehavior: "throw" | "skip";
+  // Absent means AI is always available, as in the cloud runtime.
+  aiAvailability?: AiAvailability;
   now?: Date;
   createAttemptId?: () => string;
 }): Promise<boolean> {
@@ -40,6 +43,23 @@ export async function enqueueMatchAnalysisIfEnabled(input: {
   }
 
   if (input.autoRunMatchAnalysis) {
+    if (input.aiAvailability && !(await input.aiAvailability.isConfigured())) {
+      if (input.insufficientCreditBehavior === "throw") {
+        throw new ApplicationError(
+          "ai_provider_not_configured",
+          "Add an AI provider API key in Settings to run AI analysis.",
+        );
+      }
+      await input.jobApplications.addEvent({
+        jobApplicationId: input.jobApplicationId,
+        type: "processing",
+        title: "AI analysis skipped",
+        body: "The job was saved. Add an AI provider API key in Settings to run AI analysis.",
+        metadata: { reason: "ai_provider_not_configured" },
+      });
+      return false;
+    }
+
     const now = input.now ?? new Date();
     const attemptId = input.createAttemptId?.() ?? randomUUID();
     const claimed = await input.jobApplications.setAnalysisAttempt(

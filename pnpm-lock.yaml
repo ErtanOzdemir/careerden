@@ -556,6 +556,9 @@ importers:
       '@careerden/domain':
         specifier: workspace:*
         version: link:../domain
+      '@electric-sql/pglite':
+        specifier: 0.5.10
+        version: 0.5.10
       ai:
         specifier: ^6.0.0
         version: 6.0.204(zod@3.25.76)
@@ -568,6 +571,9 @@ importers:
       knex:
         specifier: ^3.1.0
         version: 3.2.10(pg@8.22.0)
+      knex-pglite:
+        specifier: 0.14.0
+        version: 0.14.0(@electric-sql/pglite@0.5.10)(knex@3.2.10(pg@8.22.0))
       nodemailer:
         specifier: ^9.0.3
         version: 9.0.3
@@ -1019,6 +1025,9 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
+
+  '@electric-sql/pglite@0.5.10':
+    resolution: {integrity: sha512-tXc/25U3ulOkiRQuTFdwIv+JhBqtMdAF7Gvo6CfZZWtSB4+hgC4Wr2vwK5ngvvN5PJfAAEGIsfyCVy1JhCOBYw==}
 
   '@electron-internal/extract-zip@1.0.4':
     resolution: {integrity: sha512-Zr1Vs7E9tpCNhZHDAbFVXc2gEVCG9RqPDjrno5+bdgB6LRAuvgyMHJut4NCVyYwtAieapMzc3fiQ3CSTi75ARg==}
@@ -4541,6 +4550,12 @@ packages:
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
+  knex-pglite@0.14.0:
+    resolution: {integrity: sha512-6KVnjKFqhd/LK0ah4DGf/jcF7TjcDQkRxh3bGlZOfo26gfH5SIlN6LzhSxxiAgLy+shkiGnY9VnMtd36Yw/dfw==}
+    peerDependencies:
+      '@electric-sql/pglite': 0.x
+      knex: 3.x
+
   knex@3.2.10:
     resolution: {integrity: sha512-oypTHfrc9i72iyxaUQBKHOxhcr0xM65MPf6FpN02nimsftXwzXprIkLjfXdubvhbu4PMWLp023q8o8CYvHSuZw==}
     engines: {node: '>=16'}
@@ -6677,6 +6692,8 @@ snapshots:
       css-tree: 3.2.1
 
   '@csstools/css-tokenizer@4.0.0': {}
+
+  '@electric-sql/pglite@0.5.10': {}
 
   '@electron-internal/extract-zip@1.0.4': {}
 
@@ -10474,6 +10491,11 @@ snapshots:
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
+
+  knex-pglite@0.14.0(@electric-sql/pglite@0.5.10)(knex@3.2.10(pg@8.22.0)):
+    dependencies:
+      '@electric-sql/pglite': 0.5.10
+      knex: 3.2.10(pg@8.22.0)
 
   knex@3.2.10(pg@8.22.0):
     dependencies:

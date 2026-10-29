@@ -6,11 +6,11 @@ import { join, resolve } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-// Fills the Careerden Local profile with a fictional sample so matching and document generation
+// Fills the Careerden Unplugged profile with a fictional sample so matching and document generation
 // can be tried without typing a profile. Writes through the local API, so the same validation as
-// the Profile page applies. Quit Careerden Local first: its embedded database allows one process.
+// the Profile page applies. Quit Careerden Unplugged first: its embedded database allows one process.
 //
-//   node scripts/seed-local-profile.mjs [--data-dir <Careerden Local userData directory>]
+//   node scripts/seed-local-profile.mjs [--data-dir <Careerden Unplugged userData directory>]
 
 const sampleProfile = {
   fullName: "Ada Yilmaz",
@@ -104,7 +104,7 @@ if (!existsSync(runtimeModule)) {
   fail("Build the API first: pnpm --filter @careerden/api-app build");
 }
 if (isLocked(join(dataDirectory, "SingletonLock"))) {
-  fail("Careerden Local is running. Quit it, then run this script again.");
+  fail("Careerden Unplugged is running. Quit it, then run this script again.");
 }
 
 const { createLocalApiRuntime, localSessionTokenHeader } = await import(
@@ -135,7 +135,7 @@ try {
     throw new Error(`The profile was rejected (${response.status}): ${JSON.stringify(body)}`);
   }
   console.log(
-    `Seeded the Careerden Local profile for ${body.fullName}: ${body.skills.length} skills, ` +
+    `Seeded the Careerden Unplugged profile for ${body.fullName}: ${body.skills.length} skills, ` +
       `${body.experience.length} roles, ${body.education.length} education entries.`,
   );
   console.log(`Data directory: ${dataDirectory}`);
@@ -153,7 +153,7 @@ function resolveDataDirectory() {
     return resolve(value);
   }
 
-  const appName = "Careerden Local";
+  const appName = "Careerden Unplugged";
   if (process.platform === "darwin") {
     return join(homedir(), "Library", "Application Support", appName);
   }

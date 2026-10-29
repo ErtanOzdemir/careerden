@@ -6,8 +6,8 @@ same code:
 
 - **Careerden** (`cloud`) connects to the standalone API and BullMQ workers; the installer
   does not embed the backend.
-- **Careerden Local** (`local`) is the offline edition described in
-  [Careerden Local](#careerden-local). It embeds the backend and sends no data to a
+- **Careerden Unplugged** (`local`) is the local edition described in
+  [Careerden Unplugged](#careerden-unplugged). It embeds the backend and sends no data to a
   Careerden server.
 
 ## Runtime Modes
@@ -59,7 +59,10 @@ Better Auth expects an HTTP(S) base URL internally. When the renderer runs on
 rewrites those requests to `careerden://app/api/auth`; the `.invalid` address is only a
 local transport placeholder and is never contacted over the network.
 
-## Careerden Local
+## Careerden Unplugged
+
+"Unplugged" means unplugged from Careerden's servers, not from the internet: there is no
+account, and the user's data never leaves the device.
 
 The local edition runs the API and its background work inside the app, for the single
 person using the device. Nothing is sent to a Careerden server. The only network traffic is
@@ -82,17 +85,17 @@ Local backend utility process on 127.0.0.1:<random port>
 Electron main process (hidden print window, safeStorage key store)
 ```
 
-| Concern       | Cloud edition                    | Local edition                                           |
-| ------------- | -------------------------------- | ------------------------------------------------------- |
-| Accounts      | Better Auth sessions and cookies | None; one local user, per-launch token on loopback      |
-| Database      | PostgreSQL                       | PGlite in `userData/data/pglite`                        |
-| Files         | S3-compatible storage            | `userData/data/files` with signed, expiring links       |
-| Background    | BullMQ workers on Redis          | In-process outbox runner; reminders restored on start   |
-| PDF rendering | Playwright Chromium              | Electron `printToPDF` without scripts or network access |
-| AI            | Server keys and monthly credits  | User keys in `safeStorage`, unmetered                   |
-| Email         | Resend or SMTP                   | None; reminders are in-app and desktop notifications    |
-| Updates       | `latest*.yml`                    | `local*.yml` in the same GitHub release                 |
-| Identity      | `com.careerden.desktop`          | `com.careerden.local`, separate `userData` and keychain |
+| Concern       | Cloud edition                    | Local edition                                               |
+| ------------- | -------------------------------- | ----------------------------------------------------------- |
+| Accounts      | Better Auth sessions and cookies | None; one local user, per-launch token on loopback          |
+| Database      | PostgreSQL                       | PGlite in `userData/data/pglite`                            |
+| Files         | S3-compatible storage            | `userData/data/files` with signed, expiring links           |
+| Background    | BullMQ workers on Redis          | In-process outbox runner; reminders restored on start       |
+| PDF rendering | Playwright Chromium              | Electron `printToPDF` without scripts or network access     |
+| AI            | Server keys and monthly credits  | User keys in `safeStorage`, unmetered                       |
+| Email         | Resend or SMTP                   | None; reminders are in-app and desktop notifications        |
+| Updates       | `latest*.yml`                    | `local*.yml` in the same GitHub release                     |
+| Identity      | `com.careerden.desktop`          | `com.careerden.unplugged`, separate `userData` and keychain |
 
 The renderer is built with `VITE_CAREERDEN_EDITION=local`, which drops sign-in, billing,
 credits, and support, and adds the AI provider section to Settings. The preload exposes
@@ -109,7 +112,7 @@ pnpm dev:desktop:local
 
 The launcher starts the web dev server and Electron with a fixed backend port (`3010`) and
 a per-run token so the Vite proxy can reach the backend. Local data lives in
-`Careerden Local` under the operating system's application data directory.
+`Careerden Unplugged` under the operating system's application data directory.
 
 ## Renderer Security Boundary
 
@@ -221,7 +224,7 @@ pnpm --filter @careerden/desktop package:local
 ```
 
 `electron-builder.local.yml` extends `electron-builder.yml` and changes only the identity,
-artifact names (`CareerdenLocal-*`), output directory (`apps/desktop/release-local`), and
+artifact names (`CareerdenUnplugged-*`), output directory (`apps/desktop/release-local`), and
 updater channel. Local builds reject `DESKTOP_API_BASE_URL`.
 
 Installers are written to `apps/desktop/release`. The GitHub release workflow is the

@@ -8,7 +8,7 @@ export interface DesktopAppIdentity {
 // Each edition installs as its own app, so their data, keychain entries, and updates never mix.
 const identities: Record<DesktopEdition, DesktopAppIdentity> = {
   cloud: { id: "com.careerden.desktop", name: "Careerden" },
-  local: { id: "com.careerden.local", name: "Careerden Local" },
+  local: { id: "com.careerden.unplugged", name: "Careerden Unplugged" },
 };
 
 export function getDesktopAppIdentity(edition: DesktopEdition): DesktopAppIdentity {

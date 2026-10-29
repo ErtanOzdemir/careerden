@@ -65,7 +65,7 @@ export function AiProviderSettings() {
       <Panel>
         <Header />
         <p className="border-t border-border px-5 py-4 text-sm text-muted-foreground">
-          AI provider keys are managed in the Careerden Local desktop app.
+          AI provider keys are managed in the Careerden Unplugged desktop app.
         </p>
       </Panel>
     );

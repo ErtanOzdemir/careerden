@@ -39,7 +39,7 @@ describe("getMainWindowOptions", () => {
     const local = getMainWindowOptions("/tmp/preload.cjs", "darwin", "local");
 
     expect(cloud.webPreferences?.additionalArguments).toEqual(["--careerden-edition=cloud"]);
-    expect(local.title).toBe("Careerden Local");
+    expect(local.title).toBe("Careerden Unplugged");
     expect(local.webPreferences?.additionalArguments).toEqual(["--careerden-edition=local"]);
   });
 });

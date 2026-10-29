@@ -35,7 +35,7 @@ describe("AiProviderSettings", () => {
     render(<AiProviderSettings />);
 
     expect(
-      screen.getByText("AI provider keys are managed in the Careerden Local desktop app."),
+      screen.getByText("AI provider keys are managed in the Careerden Unplugged desktop app."),
     ).toBeInTheDocument();
   });
 

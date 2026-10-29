@@ -114,8 +114,8 @@ review or download.
 - Desktop LinkedIn scraping uses public guest HTTP responses in an isolated utility
   process and does not require or persist a user's LinkedIn account session.
 - The desktop app builds as two editions selected by `CAREERDEN_EDITION` (`cloud` or
-  `local`) and `VITE_CAREERDEN_EDITION` for the renderer. Careerden Local
-  (`com.careerden.local`) sends no data to a Careerden server: a utility process runs
+  `local`) and `VITE_CAREERDEN_EDITION` for the renderer. Careerden Unplugged
+  (`com.careerden.unplugged`) sends no data to a Careerden server: a utility process runs
   `@careerden/api-app/local` on loopback behind a per-launch token with embedded PGlite,
   on-disk file storage with signed links, in-memory change buses, and an in-process outbox
   runner instead of Redis and BullMQ workers. It has no accounts, billing, credits, email, or
@@ -160,7 +160,7 @@ review or download.
   `apps/desktop/release-policy.json`, generates SHA-256 checksums, and creates a draft
   release; publishing remains the manual gate that exposes an update to clients.
 - Both editions are released from the same tag and draft release with distinct artifact names
-  and updater channels: `latest*.yml` for Careerden and `local*.yml` for Careerden Local.
+  and updater channels: `latest*.yml` for Careerden and `local*.yml` for Careerden Unplugged.
 - Packaged desktop builds check public GitHub Releases at startup, hourly, and on demand.
   Update discovery comes from electron-builder's platform `latest*.yml`; the separately
   published policy controls only `minimumSupportedVersion`. Private or unreachable

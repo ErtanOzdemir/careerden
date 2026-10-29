@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # cloud is Careerden; local is Careerden Local, the offline edition. Both share one release
+        # cloud is Careerden; local is Careerden Unplugged, whose data stays on the device. Both share one release
         # with distinct artifact names and updater channels (latest*.yml and local*.yml).
         edition: [cloud, local]
         platform: [macos, windows-x64, linux-x64]
@@ -43,7 +43,7 @@ jobs:
       CAREERDEN_REQUIRE_DESKTOP_UPDATE_REPOSITORY: "true"
       BUILDER_CONFIG: ${{ matrix.edition == 'local' && 'electron-builder.local.yml' || 'electron-builder.yml' }}
       RELEASE_DIR: ${{ matrix.edition == 'local' && 'release-local' || 'release' }}
-      ARTIFACT_PREFIX: ${{ matrix.edition == 'local' && 'CareerdenLocal' || 'Careerden' }}
+      ARTIFACT_PREFIX: ${{ matrix.edition == 'local' && 'CareerdenUnplugged' || 'Careerden' }}
       UPDATE_CHANNEL: ${{ matrix.edition == 'local' && 'local' || 'latest' }}
     steps:
       - uses: actions/checkout@v4

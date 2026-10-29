@@ -34,4 +34,5 @@ export * from "./notifications/in-memory-notification-change.bus.js";
 export * from "./notifications/redis-notification-change.bus.js";
 export * from "./notifications/resend-email.sender.js";
 export * from "./notifications/smtp-email.sender.js";
+export * from "./storage/local-file.storage.js";
 export * from "./storage/s3-compatible.storage.js";

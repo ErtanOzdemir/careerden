@@ -1,4 +1,6 @@
 export * from "./matching/ai/ai-provider.factory.js";
+export * from "./matching/ai/resolving-ai.provider.js";
+export * from "./matching/ai/providers/anthropic-ai.provider.js";
 export * from "./matching/ai/providers/deepseek-ai.provider.js";
 export * from "./matching/ai/providers/gemini-ai.provider.js";
 export * from "./matching/ai/providers/openai-ai.provider.js";

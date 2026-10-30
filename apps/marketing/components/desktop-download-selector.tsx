@@ -20,9 +20,16 @@ type NavigatorDetails = {
 
 type DesktopDownloadRelease = {
   version: string;
-  publishedLabel: string;
+  publishedLabel?: string;
   downloads: readonly DesktopDownload[];
 };
+
+// The version line under the primary button, skipping details a release doesn't have yet.
+function releaseDetails(release: DesktopDownloadRelease, ...details: (string | undefined)[]) {
+  return [`Version ${release.version}`, ...details, release.publishedLabel]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 export function detectDesktopPlatform({
   platform = "",
@@ -94,10 +101,7 @@ export function DetectedDownloadButton({
             <span>Download for {detectedDownload.platformName}</span>
             <Download aria-hidden="true" />
           </DownloadLink>
-          <p>
-            Version {release.version} · {detectedDownload.architecture} · {detectedDownload.size} ·{" "}
-            {release.publishedLabel}
-          </p>
+          <p>{releaseDetails(release, detectedDownload.architecture, detectedDownload.size)}</p>
         </>
       ) : detectedDownloads.length > 1 && detectedPlatform && detectedPlatformName ? (
         <>
@@ -106,10 +110,7 @@ export function DetectedDownloadButton({
             <span>Choose your {detectedPlatformName} download</span>
             <ArrowDown aria-hidden="true" />
           </a>
-          <p>
-            Version {release.version} · {formatArchitectureChoices(detectedDownloads)} ·{" "}
-            {release.publishedLabel}
-          </p>
+          <p>{releaseDetails(release, formatArchitectureChoices(detectedDownloads))}</p>
         </>
       ) : (
         <>
@@ -165,8 +166,12 @@ export function DesktopDownloadGrid({
                 <span>
                   <strong>{download.fileName}</strong>
                   <small>
-                    {platformDownloads.length > 1 ? `${download.architecture} · ` : null}
-                    {download.size}
+                    {[
+                      platformDownloads.length > 1 ? download.architecture : undefined,
+                      download.size,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </small>
                 </span>
                 <Download aria-hidden="true" />

@@ -4,34 +4,36 @@ Careerden is a TypeScript open-source desktop job application tracker with a pro
 
 ## Intended workflow
 
-1. A user creates and authenticates an account, then enters factual CV information in the Career
-   Profile.
-2. For custom document layouts, the user uploads CV and cover-letter DOCX templates. The public
-   walkthrough presents this as the recommended setup; the product may also provide built-in layouts.
-3. The user maps detected template variables to profile data and saves the mapping. Cover-letter
-   content is mapped to the generated document-content field.
-4. In the desktop app, the user submits a LinkedIn job-posting URL and may choose output
+1. A user installs Careerden Unplugged, which needs no account, and enters factual CV information
+   in the Career Profile. AI features use a provider API key the user adds.
+2. On the Base resume page, the user previews the profile as an A4 page in six built-in CV layouts
+   (Classic, Editorial, Modern, Minimal, Technical, and Ledger) and sets one as the default for
+   tailored CVs. There is no template upload or variable mapping.
+3. In the desktop app, the user submits a LinkedIn job-posting URL and may choose output
    language and tone. Careerden queues and processes the posting while preserving source material for
    traceability. Manual application entry stores normalized pasted job/company details and optional
    company logos from other sources.
-5. The captured opportunity becomes a trackable application record. The user can update its stage,
-   interest, salary, work style, contacts, notes, and follow-ups while dashboard views show active
-   applications, upcoming follow-ups, recent activity, and the application pipeline.
-6. AI-supported analysis compares job requirements with the supplied profile and prepares editable
+4. The captured opportunity becomes a trackable application record. The user can update its stage,
+   interest, salary, work style, contacts, notes, and follow-ups. The dashboard shows active
+   applications, a month calendar that marks days with follow-ups, recent activity, and the
+   application pipeline. The applications list sorts by match, interest, salary, or date added.
+5. AI-supported analysis compares job requirements with the supplied profile and prepares editable
    CV and cover-letter content for the Application Pack.
-7. The user reviews the overview, match evidence, CV, and cover letter; edits generated content when
+6. The user reviews the overview, match evidence, CV, and cover letter; edits generated content when
    needed; and applies those edits with Update pack before deciding whether to use or submit the
    documents.
 
 Careerden is not an automatic job-application service. It does not promise employment outcomes or guarantee the accuracy of AI output. Users should verify every generated statement.
 
-The public marketing website explains the desktop product. It does not expose sign-in, signup, or
-browser-application links. Its `/download` page detects the visitor's desktop operating system and
-promotes the matching installer from the latest verified release, while also listing direct macOS
-DMG, Windows EXE, and Linux AppImage downloads.
+The public marketing website presents Careerden Unplugged as the edition available today. It does
+not expose sign-in, signup, or browser-application links. Its `/download` page detects the
+visitor's operating system and promotes the matching Careerden Unplugged installer, lists the macOS
+(Apple silicon and Intel) DMG, Windows EXE, and Linux AppImage downloads, and notes that Careerden
+Cloud is coming soon.
 
-The public pricing section describes the current credit model. Every authenticated account receives
-10 AI credits for each UTC calendar month. The $10 USD monthly subscription grants 100 credits for
+The public pricing section presents Careerden Unplugged as free, with AI billed by the user's own
+provider, and Careerden Cloud as coming soon. Cloud's planned credit model, which may change before
+launch: every authenticated account receives 10 AI credits for each UTC calendar month. The $10 USD monthly subscription grants 100 credits for
 each confirmed paid period, with applicable taxes potentially added at checkout. One completed
 match analysis costs one credit; tracking remains available without credits. Unused credits expire
 at the end of their applicable free month or paid period, and cancellation does not revoke credits
@@ -43,11 +45,20 @@ Public License v3.0.
 
 ## Public workflow demonstration
 
-The public landing page presents job-application tracking as the core workflow, followed by five
-presentation-only setup and preparation steps: Add your profile, Upload your templates, Map the
-variables, Add the application, and Review the pack and track progress. Its screen replicas use
-fictional data and do not upload files, submit jobs, or persist onboarding progress. The public copy
-does not claim a separate AI-regeneration action; it describes the current edit-and-Update-pack flow.
+The public landing page presents job-application tracking as the core workflow, followed by four
+presentation-only steps: Add your profile, Add your first application, Review the tailored CV, and
+Accept only what you can back up. A latest-features section shows the Base resume layouts and the
+sortable applications list. Its screen replicas use fictional data and do not upload files, submit
+jobs, or persist onboarding progress. The public copy does not claim a separate AI-regeneration action;
+it describes the current edit-and-Update-pack flow.
+
+## Careerden Unplugged
+
+Careerden Unplugged is the desktop edition available today. It keeps the
+profile, applications, follow-ups, and generated documents in a database and files on the user's
+device and sends no data to a Careerden server. AI features use the user's own OpenAI, Anthropic,
+Gemini, DeepSeek, or OpenRouter API key, stored with the operating system's secure storage. It has
+no accounts, billing, or credits, and installs side by side with Careerden.
 
 ## Data categories described by the public policies
 

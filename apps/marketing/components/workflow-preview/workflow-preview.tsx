@@ -1,6 +1,9 @@
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
+  ArrowUpDown,
+  Archive,
   Award,
   Bell,
   Briefcase,
@@ -35,12 +38,19 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
-type WorkspaceSection = "Dashboard" | "Applications" | "Profile" | "Credits & billing" | "Settings";
+type WorkspaceSection =
+  | "Dashboard"
+  | "Applications"
+  | "Profile"
+  | "Base resume"
+  | "Credits & billing"
+  | "Settings";
 
 const workspaceNavigation: { label: WorkspaceSection; Icon: LucideIcon }[] = [
   { label: "Dashboard", Icon: LayoutDashboard },
   { label: "Applications", Icon: ListChecks },
   { label: "Profile", Icon: UserRound },
+  { label: "Base resume", Icon: FileText },
   { label: "Credits & billing", Icon: CreditCard },
   { label: "Settings", Icon: Settings },
 ];
@@ -774,5 +784,264 @@ function ProposalPreview() {
         </span>
       </span>
     </div>
+  );
+}
+
+const resumeTemplates = [
+  { id: "classic", name: "Classic" },
+  { id: "editorial", name: "Editorial", isDefault: true },
+  { id: "modern", name: "Modern" },
+  { id: "minimal", name: "Minimal" },
+  { id: "technical", name: "Technical" },
+  { id: "ledger", name: "Ledger" },
+] as const;
+
+export function BaseResumeWorkflowPreview() {
+  return (
+    <ApplicationPreviewFrame
+      active="Base resume"
+      className="native-base-resume-preview"
+      label="Fictional Careerden base resume page with an A4 preview and six CV templates"
+      subtitle="Pick the CV layout every tailored document starts from."
+      title="Base resume"
+    >
+      <div className="native-base-resume-grid">
+        <section className="native-panel native-base-resume-page">
+          <header className="native-panel-header">
+            <span>
+              <strong>Editorial</strong>
+              <small>A4 · 1 page</small>
+            </span>
+            <em className="native-default-pill">
+              <Check aria-hidden="true" /> Default
+            </em>
+          </header>
+          <div className="native-base-resume-canvas">
+            <article className="native-editorial-page">
+              <h4>Alex Morgan</h4>
+              <p className="native-editorial-title">
+                Product engineer building accessible web platforms
+              </p>
+              <small>alex@example.test · Rotterdam, Netherlands · github.com/alexmorgan</small>
+              <h5>Profile</h5>
+              <p>
+                Product engineer focused on accessible React applications, dependable delivery, and
+                clear collaboration across design and engineering.
+              </p>
+              <h5>Experience</h5>
+              <div className="native-editorial-entry">
+                <strong>Senior Product Engineer · Harbor Studio</strong>
+                <em>2022 – Present</em>
+              </div>
+              <p>Built TypeScript and React tooling used by 40+ product teams.</p>
+              <p>Led an accessibility program that brought core flows to WCAG 2.2 AA.</p>
+              <div className="native-editorial-entry">
+                <strong>Frontend Engineer · Northwind Labs</strong>
+                <em>2019 – 2022</em>
+              </div>
+              <p>Shipped a component library and testing setup for three web products.</p>
+              <h5>Education</h5>
+              <div className="native-editorial-entry">
+                <strong>BSc Computer Science · Delft University</strong>
+                <em>2015 – 2019</em>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="native-panel native-template-panel">
+          <header className="native-panel-header">
+            <span>
+              <strong>Templates</strong>
+              <small>Tailored CVs start from your default layout.</small>
+            </span>
+          </header>
+          <div className="native-template-grid">
+            {resumeTemplates.map((template) => (
+              <span
+                className={"native-template-card" + (template.id === "editorial" ? " active" : "")}
+                key={template.id}
+              >
+                <span className={"native-template-thumb " + template.id} aria-hidden="true">
+                  <b />
+                  <i />
+                  <i />
+                  <u />
+                  <i />
+                  <i />
+                  <i />
+                  <u />
+                  <i />
+                  <i />
+                </span>
+                <span className="native-template-name">
+                  {template.name}
+                  {"isDefault" in template && <small>In use</small>}
+                </span>
+              </span>
+            ))}
+          </div>
+        </section>
+      </div>
+    </ApplicationPreviewFrame>
+  );
+}
+
+const sortedApplications = [
+  {
+    initials: "HS",
+    role: "Senior Product Engineer",
+    company: "Harbor Studio",
+    status: "Interviewing",
+    statusClass: "interview",
+    match: 84,
+    interest: "🔥 Highly interested",
+    interestClass: "high",
+    salary: "€85,000 – €95,000 / year",
+    added: "Jul 21",
+  },
+  {
+    initials: "NL",
+    role: "Frontend Engineer",
+    company: "Northwind Labs",
+    status: "Applied",
+    statusClass: "applied",
+    match: 76,
+    interest: "🔥 Highly interested",
+    interestClass: "high",
+    salary: "€78,000 / year",
+    added: "Jul 18",
+  },
+  {
+    initials: "LC",
+    role: "Design Systems Engineer",
+    company: "Lumen Cloud",
+    status: "Saved",
+    statusClass: "saved",
+    match: 72,
+    interest: "👀 Interested",
+    interestClass: "medium",
+    salary: "€70,000 – €80,000 / year",
+    added: "Jul 23",
+  },
+  {
+    initials: "QB",
+    role: "Web Platform Engineer",
+    company: "Quill Books",
+    status: "Saved",
+    statusClass: "saved",
+    match: 66,
+    interest: "👀 Interested",
+    interestClass: "medium",
+    salary: "€72,000 / year",
+    added: "Jul 15",
+  },
+  {
+    initials: "AF",
+    role: "Product Engineer",
+    company: "Atlas Freight",
+    status: "Applied",
+    statusClass: "applied",
+    match: 58,
+    interest: "🤔 Low interest",
+    interestClass: "low",
+    salary: "—",
+    added: "Jul 9",
+  },
+  {
+    initials: "BR",
+    role: "Frontend Developer",
+    company: "Brightline Retail",
+    status: "Saved",
+    statusClass: "saved",
+    match: 49,
+    interest: "—",
+    interestClass: "low",
+    salary: "—",
+    added: "Jul 6",
+  },
+] as const;
+
+export function ApplicationsSortingWorkflowPreview() {
+  const columns = [
+    { label: "Match" },
+    { label: "Interest", direction: "desc" },
+    { label: "Salary" },
+    { label: "Added", end: true },
+  ];
+
+  return (
+    <ApplicationPreviewFrame
+      active="Applications"
+      className="native-applications-preview"
+      label="Fictional Careerden applications list sorted by interest"
+      subtitle="Every role you're tracking, in one organized place."
+      title="Applications"
+    >
+      <div className="native-applications-toolbar">
+        <span className="native-applications-search">
+          <Search aria-hidden="true" />
+          Search company or role...
+        </span>
+        <span className="native-outline-button">
+          <Archive aria-hidden="true" /> Archived applications
+        </span>
+      </div>
+      <div className="native-status-chips">
+        {["All", "Processing", "Ready", "Saved", "Applied", "Interviewing", "Not selected"].map(
+          (chip) => (
+            <span className={chip === "All" ? "active" : ""} key={chip}>
+              {chip}
+            </span>
+          ),
+        )}
+      </div>
+      <section className="native-panel native-applications-table">
+        <div className="native-applications-row native-applications-head">
+          <span>Company &amp; role</span>
+          <span>Status</span>
+          {columns.map((column) => (
+            <span
+              className={(column.direction ? "sorted" : "") + (column.end ? " end" : "")}
+              key={column.label}
+            >
+              {column.label}
+              {column.direction ? (
+                <ArrowDown aria-hidden="true" />
+              ) : (
+                <ArrowUpDown aria-hidden="true" />
+              )}
+            </span>
+          ))}
+        </div>
+        {sortedApplications.map((application) => (
+          <div className="native-applications-row" key={application.role}>
+            <span className="native-applications-company">
+              <b>{application.initials}</b>
+              <span>
+                <strong>{application.role}</strong>
+                <small>{application.company}</small>
+              </span>
+            </span>
+            <span>
+              <em className={"native-status-pill " + application.statusClass}>
+                {application.status}
+              </em>
+            </span>
+            <span className="native-match-cell">
+              <i>
+                <i style={{ width: `${application.match}%` }} />
+              </i>
+              {application.match}%
+            </span>
+            <span className={"native-interest " + application.interestClass}>
+              {application.interest}
+            </span>
+            <small>{application.salary}</small>
+            <small className="end">{application.added}</small>
+          </div>
+        ))}
+      </section>
+    </ApplicationPreviewFrame>
   );
 }

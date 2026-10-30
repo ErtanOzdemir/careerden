@@ -1,27 +1,26 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { unpluggedRelease } from "@/lib/desktop-release";
 import DownloadPage, { metadata } from "./page";
 
 describe("desktop download page", () => {
-  it("offers the published desktop packages for every supported platform", () => {
-    render(<DownloadPage />);
+  it("offers a Careerden Unplugged package for every supported platform", () => {
+    const { container } = render(<DownloadPage />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: /Your job search,\s*now on desktop\./i }),
+      screen.getByRole("heading", { level: 1, name: /Your job search,\s*on your computer\./i }),
     ).toBeVisible();
-    const assets = {
-      "Careerden-0.2.0-universal.dmg":
-        "https://github.com/ErtanOzdemir/careerden/releases/download/v0.2.0/Careerden-0.2.0-universal.dmg",
-      "Careerden-0.2.0-x64.exe":
-        "https://github.com/ErtanOzdemir/careerden/releases/download/v0.2.0/Careerden-0.2.0-x64.exe",
-      "Careerden-0.2.0-x86_64.AppImage":
-        "https://github.com/ErtanOzdemir/careerden/releases/download/v0.2.0/Careerden-0.2.0-x86_64.AppImage",
-    };
-
-    for (const [fileName, url] of Object.entries(assets)) {
+    expect(container.querySelector(".download-hero-inner .unplugged-badge")).toHaveTextContent(
+      "Unplugged",
+    );
+    const base = `https://github.com/ErtanOzdemir/careerden/releases/download/v${unpluggedRelease.version}`;
+    for (const suffix of ["arm64.dmg", "x64.dmg", "x64.exe", "x86_64.AppImage"]) {
+      const fileName = `CareerdenUnplugged-${unpluggedRelease.version}-${suffix}`;
       expect(screen.getByRole("link", { name: new RegExp(fileName, "i") })).toHaveAttribute(
         "href",
-        url,
+        `${base}/${fileName}`,
       );
     }
     expect(screen.getByRole("link", { name: /Explore Careerden on GitHub/i })).toHaveAttribute(
@@ -30,16 +29,43 @@ describe("desktop download page", () => {
     );
   });
 
+  it("links Unplugged downloads for the version the desktop release will tag", () => {
+    const desktopPackage = JSON.parse(
+      // Tests run from apps/marketing.
+      readFileSync(resolve(process.cwd(), "../desktop/package.json"), "utf8"),
+    ) as { version: string };
+
+    expect(unpluggedRelease.version).toBe(desktopPackage.version);
+  });
+
+  it("explains Careerden Unplugged and marks Careerden Cloud as coming soon", () => {
+    const { container } = render(<DownloadPage />);
+
+    const panel = container.querySelector("#unplugged");
+    expect(panel).toBeInTheDocument();
+    expect(panel?.querySelector(".unplugged-badge")).toHaveTextContent("Unplugged");
+    expect(
+      screen.getByRole("heading", { name: "The whole workspace, without a Careerden server." }),
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: /Download Careerden Unplugged/ })).toHaveAttribute(
+      "href",
+      "#all-downloads",
+    );
+    expect(screen.getByText("Careerden Cloud · Coming soon")).toBeVisible();
+    expect(screen.getByText(/available from any computer you sign in on/)).toBeVisible();
+    expect(container.querySelector('a[href*="/Careerden-"]')).not.toBeInTheDocument();
+  });
+
   it("publishes unique, indexable metadata", () => {
-    expect(metadata.title).toBe("Download Careerden for Desktop | Careerden");
+    expect(metadata.title).toBe("Download Careerden Unplugged for Desktop | Careerden");
     expect(metadata.description).toMatch(/macOS, Windows, or Linux/);
-    expect(metadata.description).toMatch(/selected automatically/);
+    expect(metadata.description).toMatch(/keeps your data on your computer/);
     expect(metadata.alternates).toMatchObject({
       canonical: expect.stringMatching(/\/download$/),
     });
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
     expect(metadata.openGraph).toMatchObject({
-      title: "Download Careerden for Desktop | Careerden",
+      title: "Download Careerden Unplugged for Desktop | Careerden",
       url: expect.stringMatching(/\/download$/),
     });
   });

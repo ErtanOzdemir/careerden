@@ -1,5 +1,7 @@
 export {
   ApplicationPackWorkflowPreview,
+  ApplicationsSortingWorkflowPreview,
+  BaseResumeWorkflowPreview,
   JobProcessingWorkflowPreview,
   ProfileWorkflowPreview,
   TailoringTipsWorkflowPreview,

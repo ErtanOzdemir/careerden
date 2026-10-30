@@ -6,7 +6,8 @@ export type DesktopDownload = {
   format: string;
   architecture: string;
   fileName: string;
-  size: string;
+  // Omitted until the release's file sizes are known.
+  size?: string;
   url: string;
 };
 
@@ -42,5 +43,54 @@ export const desktopRelease = {
       size: "133.0 MB",
       url: "https://github.com/ErtanOzdemir/careerden/releases/download/v0.2.0/Careerden-0.2.0-x86_64.AppImage",
     },
+  ] satisfies DesktopDownload[],
+} as const;
+
+// Careerden Unplugged's installers, published by the desktop release workflow with the
+// CareerdenUnplugged artifact prefix. The version must match apps/desktop/package.json, because
+// release tags do.
+const unpluggedVersion = "0.7.0";
+const unpluggedDownloadBase = `https://github.com/ErtanOzdemir/careerden/releases/download/v${unpluggedVersion}`;
+
+function unpluggedDownload(
+  download: Omit<DesktopDownload, "fileName" | "url"> & { suffix: string },
+): DesktopDownload {
+  const { suffix, ...details } = download;
+  const fileName = `CareerdenUnplugged-${unpluggedVersion}-${suffix}`;
+  return { ...details, fileName, url: `${unpluggedDownloadBase}/${fileName}` };
+}
+
+export const unpluggedRelease = {
+  version: unpluggedVersion,
+  releaseNotesUrl: `https://github.com/ErtanOzdemir/careerden/releases/tag/v${unpluggedVersion}`,
+  downloads: [
+    unpluggedDownload({
+      platform: "macos",
+      platformName: "macOS",
+      format: "DMG",
+      architecture: "Apple silicon",
+      suffix: "arm64.dmg",
+    }),
+    unpluggedDownload({
+      platform: "macos",
+      platformName: "macOS",
+      format: "DMG",
+      architecture: "Intel",
+      suffix: "x64.dmg",
+    }),
+    unpluggedDownload({
+      platform: "windows",
+      platformName: "Windows",
+      format: "EXE",
+      architecture: "64-bit",
+      suffix: "x64.exe",
+    }),
+    unpluggedDownload({
+      platform: "linux",
+      platformName: "Linux",
+      format: "AppImage",
+      architecture: "64-bit",
+      suffix: "x86_64.AppImage",
+    }),
   ] satisfies DesktopDownload[],
 } as const;

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import HomePage, { metadata } from "./page";
 
@@ -8,7 +8,7 @@ describe("marketing workflow story", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Track every job application." }),
     ).toBeVisible();
-    const steps = [...container.querySelectorAll(".workflow-step-copy > h3")].map(
+    const steps = [...container.querySelectorAll("#how-it-works .workflow-step-copy > h3")].map(
       (heading) => heading.textContent,
     );
 
@@ -26,23 +26,19 @@ describe("marketing workflow story", () => {
     expect(screen.getByText("CV creator")).toBeVisible();
     expect(screen.getByText("Cover letter creator")).toBeVisible();
     expect(
-      screen.getByRole("heading", {
-        name: "Track for free. Add more AI credits when you need them.",
-      }),
+      screen.getByRole("heading", { name: "Free on your computer. Cloud is coming soon." }),
     ).toBeVisible();
     expect(screen.getByRole("heading", { name: "$0 forever" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "$10 USD / month" })).toBeVisible();
+    expect(screen.getByText("Available now")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Coming soon" })).toBeVisible();
     expect(screen.getByText("10 AI credits every UTC calendar month")).toBeVisible();
-    expect(screen.getByText("100 credits for each confirmed paid period")).toBeVisible();
-    expect(screen.getByText("Taxes may be added at checkout.")).toBeVisible();
+    expect(screen.getByText("Basic plan with 100 credits for $10 USD / month")).toBeVisible();
+    expect(screen.getByText(/Cloud plans and credit terms may change before launch/)).toBeVisible();
     expect(screen.getByText("What does a UTC calendar month mean?")).toBeInTheDocument();
     expect(
       screen.getByText(/Your 10 free credits apply to that shared month—not one month/),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Subscribe in the desktop app" })).toHaveAttribute(
-      "href",
-      "/download",
-    );
+    expect(screen.queryByRole("link", { name: /Subscribe/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Explore Careerden on GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/ErtanOzdemir/careerden",
@@ -59,11 +55,47 @@ describe("marketing workflow story", () => {
     );
   });
 
+  it("presents the latest workspace features and Careerden Unplugged as the main product", () => {
+    const { container } = render(<HomePage />);
+
+    expect(screen.getByRole("heading", { name: "Pick from six CV layouts" })).toBeVisible();
+    expect(
+      screen.getByRole("img", {
+        name: "Fictional Careerden base resume page with an A4 preview and six CV templates",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Sort by match, interest, salary, or date" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: "Fictional Careerden applications list sorted by interest" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Your job search, kept on your device." }),
+    ).toBeVisible();
+    const unpluggedSection = container.querySelector<HTMLElement>("#unplugged");
+    expect(unpluggedSection).not.toBeNull();
+    const section = within(unpluggedSection!);
+    expect(section.queryByText(/Coming soon/i)).not.toBeInTheDocument();
+    expect(section.getByText("Unplugged", { selector: ".unplugged-badge" })).toBeVisible();
+    expect(section.getByRole("link", { name: /Download Careerden Unplugged/ })).toHaveAttribute(
+      "href",
+      "/download#unplugged",
+    );
+    // The hero introduces Unplugged with the same yellow badge and its primary download.
+    expect(container.querySelector(".hero-copy .unplugged-badge")).toBeInTheDocument();
+    expect(screen.getByText("Everything stays on your computer")).toBeVisible();
+    expect(screen.getByText("What is Careerden Unplugged?")).toBeInTheDocument();
+    expect(screen.getByText(/dashboard calendar/)).toBeVisible();
+  });
+
   it("keeps public actions inside the desktop product explanation", () => {
     render(<HomePage />);
 
-    for (const link of screen.getAllByRole("link", { name: /download desktop app/i })) {
-      expect(link).toHaveAttribute("href", "/download");
+    const downloadLinks = screen.getAllByRole("link", { name: /download careerden unplugged/i });
+    expect(downloadLinks.length).toBeGreaterThanOrEqual(3);
+    for (const link of downloadLinks) {
+      expect(link.getAttribute("href")).toMatch(/^\/download/);
     }
     expect(screen.getByRole("link", { name: /see the tracking workspace/i })).toHaveAttribute(
       "href",

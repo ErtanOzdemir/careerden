@@ -1,11 +1,13 @@
 # Careerden
 
-> Careerden is an open-source desktop job application tracker, profile-aware CV creator, and cover letter creator that keeps each opportunity's status, follow-ups, notes, match analysis, and reviewable document drafts together.
+> Careerden Unplugged is an open-source desktop job application tracker, profile-aware CV creator, and cover letter creator that keeps each opportunity's status, follow-ups, notes, match analysis, and reviewable document drafts together.
 
 ## Public pages
 
-- [Home](/): Product overview, five-step workflow, pricing, features, privacy principles, and FAQ.
-- [Download](/download): OS-aware downloads for the latest verified macOS, Windows, and Linux installers.
+- [Home](/): Product overview, four-step workflow, latest features, Careerden Unplugged, pricing,
+  privacy principles, and FAQ.
+- [Download](/download): OS-aware Careerden Unplugged downloads for macOS (Apple silicon and Intel),
+  Windows, and Linux, and a note that Careerden Cloud is coming soon.
 - [Privacy Policy](/privacy): Intended personal-data practices and explicit owner/legal placeholders.
 - [Cookie Policy](/cookies): Browser storage and cookie information.
 - [Terms of Service](/terms): Draft service terms requiring legal review.
@@ -17,24 +19,28 @@
 - Careerden does not apply to jobs on a user's behalf.
 - The desktop workspace tracks applications through Saved, Applied, Interviewing, Offer,
   Rejected, and Ghosted stages and keeps follow-ups, contacts, notes, job context, and documents with
-  each application.
+  each application. The applications list sorts by match, interest, salary, or date added from its
+  column headers, and the dashboard shows follow-ups on a month calendar.
 - Generated analysis and documents require human review.
-- Every authenticated account receives 10 AI credits per UTC calendar month. The current
-  subscription is $10 USD per month before applicable taxes and grants 100 credits for each
-  confirmed paid period.
-- The public workflow shows fictional replicas of the profile, template upload, variable mapping,
-  job submission, and application-pack review screens.
+- Careerden Unplugged is free and available now. Careerden Cloud, a hosted edition with accounts
+  and AI credits, is coming soon; its planned terms are 10 AI credits per UTC calendar month and a
+  $10 USD monthly plan with 100 credits per paid period, which may change before launch.
+- The public site shows fictional replicas of the dashboard, profile, application overview,
+  application pack, improvement tips, Base resume, and applications list screens.
 - Automatic LinkedIn capture currently uses public guest responses through the desktop app and does
   not connect the user's LinkedIn account.
 - LinkedIn is the automated desktop capture source, not the product boundary. Users can also paste
   job and company details manually for applications from any source.
 - The public marketing website does not expose login, signup, or browser-application links. Its
-  download page detects the visitor's desktop operating system and promotes the matching installer,
-  with direct macOS DMG, Windows EXE, and Linux AppImage links also available.
+  download page detects the visitor's operating system and links the matching Careerden Unplugged
+  installer, with macOS DMG, Windows EXE, and Linux AppImage links also listed.
 - Careerden links directly to its repository at https://github.com/ErtanOzdemir/careerden. The current
   repository license is GNU Affero General Public License v3.0.
-- DOCX template upload and mapping is the recommended setup for custom document layouts; built-in
-  layouts may also be available in the authenticated product.
+- CVs use built-in layouts. The Base resume page previews six of them (Classic, Editorial, Modern,
+  Minimal, Technical, and Ledger) as A4 pages and sets the default for tailored CVs. There is no
+  template upload.
+- Careerden Unplugged is the edition available today. It keeps data on the device, sends no data to
+  a Careerden server, and uses the user's own AI provider key without accounts or credits.
 - Users can review generated CV and cover-letter content, edit it, and apply changes with Update
   pack. This page does not claim a separate AI-regeneration action.
 - Legal copy is a working draft wherever marked and must not be treated as a compliance guarantee.

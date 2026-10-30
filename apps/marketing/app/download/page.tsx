@@ -1,18 +1,28 @@
 import type { Metadata } from "next";
-import { ArrowRight, Check, FileText, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Cloud,
+  FileText,
+  HardDrive,
+  KeyRound,
+  ShieldCheck,
+  Sparkles,
+  WifiOff,
+} from "lucide-react";
 import {
   DesktopDownloadGrid,
   DetectedDownloadButton,
 } from "@/components/desktop-download-selector";
 import { GitHubMark } from "@/components/GitHubMark";
-import { desktopRelease } from "@/lib/desktop-release";
+import { UnpluggedWordmark } from "@/components/unplugged-badge";
+import { unpluggedRelease } from "@/lib/desktop-release";
 import { pageMetadata } from "@/lib/metadata";
 import { githubUrl } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Download Careerden for Desktop",
+  title: "Download Careerden Unplugged for Desktop",
   description:
-    "Download Careerden for macOS, Windows, or Linux. The right desktop installer is selected automatically for your operating system.",
+    "Download Careerden Unplugged for macOS, Windows, or Linux: a free, open-source job application tracker that keeps your data on your computer.",
   path: "/download",
 });
 
@@ -26,7 +36,7 @@ const highlights = [
   {
     Icon: ShieldCheck,
     title: "Your data stays yours",
-    description: "Open source, profile-aware, and designed as a dedicated desktop application.",
+    description: "Open source, profile-aware, and stored on your own computer.",
   },
   {
     Icon: FileText,
@@ -42,21 +52,18 @@ export default function DownloadPage() {
         <div className="download-hero-orb download-hero-orb-left" />
         <div className="download-hero-orb download-hero-orb-right" />
         <div className="container download-hero-inner">
-          <span className="download-eyebrow">
-            <span />
-            Careerden desktop · v{desktopRelease.version}
-          </span>
+          <UnpluggedWordmark size="large" />
           <h1>
             Your job search,
             <br />
-            <span>now on desktop.</span>
+            <span>on your computer.</span>
           </h1>
           <p className="download-hero-lede">
-            Track every application, remember every follow-up, and prepare tailored documents
-            without losing the thread.
+            Track every application, remember every follow-up, and prepare tailored documents.
+            Careerden Unplugged is free, open source, and keeps everything on your device.
           </p>
 
-          <DetectedDownloadButton />
+          <DetectedDownloadButton release={unpluggedRelease} />
 
           <a className="download-all-link" href="#all-downloads">
             See all downloads <span aria-hidden="true">↓</span>
@@ -69,23 +76,64 @@ export default function DownloadPage() {
           <div className="download-section-heading">
             <div>
               <span className="kicker">All platforms</span>
-              <h2 id="all-downloads-title">Download Careerden.</h2>
+              <h2 id="all-downloads-title">Download Careerden Unplugged.</h2>
             </div>
             <p>
-              Version {desktopRelease.version} is available for macOS, Windows, and Linux. Choose
+              Version {unpluggedRelease.version} is available for macOS, Windows, and Linux. Choose
               the package that matches your computer.
             </p>
           </div>
 
-          <DesktopDownloadGrid />
+          <DesktopDownloadGrid downloads={unpluggedRelease.downloads} />
+
+          <div className="unplugged-panel" id="unplugged">
+            <div>
+              <UnpluggedWordmark size="large" />
+              <h2>The whole workspace, without a Careerden server.</h2>
+              <p>
+                Careerden Unplugged is the desktop edition for people who want their job search to
+                stay on their own computer, with no account to create.
+              </p>
+            </div>
+            <div>
+              <ul>
+                <li>
+                  <HardDrive aria-hidden="true" />
+                  Profile, applications, follow-ups, and PDFs are stored on your computer.
+                </li>
+                <li>
+                  <KeyRound aria-hidden="true" />
+                  AI features use your own OpenAI, Anthropic, Gemini, DeepSeek, or OpenRouter key.
+                </li>
+                <li>
+                  <WifiOff aria-hidden="true" />
+                  No account, sign-up, or credits.
+                </li>
+              </ul>
+              <a className="button button-primary button-large" href="#all-downloads">
+                Download Careerden Unplugged <ArrowRight aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+
+          <div className="cloud-soon-card">
+            <span className="cloud-soon-icon">
+              <Cloud aria-hidden="true" />
+            </span>
+            <div>
+              <span className="kicker">Careerden Cloud · Coming soon</span>
+              <h2>Prefer an account and hosted AI credits?</h2>
+              <p>
+                Careerden Cloud adds sign-in and monthly AI credits, so you can work without your
+                own provider key. Your applications, profile, and documents are available from any
+                computer you sign in on. Its downloads will appear here when it launches.
+              </p>
+            </div>
+          </div>
 
           <div className="download-release-links">
-            <p>
-              <Check aria-hidden="true" />
-              macOS downloads support Apple silicon and Intel.
-            </p>
             <div>
-              <a href={desktopRelease.releaseNotesUrl} rel="noreferrer" target="_blank">
+              <a href={unpluggedRelease.releaseNotesUrl} rel="noreferrer" target="_blank">
                 Release notes <ArrowRight aria-hidden="true" />
               </a>
               <a href={githubUrl} rel="noreferrer" target="_blank">

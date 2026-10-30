@@ -16,5 +16,17 @@ describe("dashboard product preview", () => {
     expect(screen.getByText("Microsoft · Amsterdam")).toBeVisible();
     expect(screen.getByText("Spotify · Stockholm")).toBeVisible();
     expect(container.querySelector('img[src="/company-logos/google.svg"]')).toBeInTheDocument();
+    expect(screen.getByText("Base resume")).toBeVisible();
+    expect(screen.getByText("Northwind Labs · Berlin")).toBeVisible();
+    expect(
+      container.querySelector(
+        '.dashboard-preview-pipeline image[href="/company-logos/google.svg"]',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("July 2026")).toBeVisible();
+    expect(container.querySelectorAll(".dashboard-preview-calendar-grid span i")).toHaveLength(3);
+    expect(screen.getByText("Follow up with the recruiter")).toBeVisible();
+    expect(screen.getByText("Application pipeline")).toBeVisible();
+    expect(container.querySelectorAll(".dashboard-preview-pipeline path")).toHaveLength(4);
   });
 });

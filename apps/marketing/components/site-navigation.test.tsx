@@ -21,6 +21,9 @@ describe("marketing navigation", () => {
     for (const link of screen.getAllByRole("link", { name: "Application pack" })) {
       expect(link).toHaveAttribute("href", "/#application-pack");
     }
+    for (const link of screen.getAllByRole("link", { name: "Unplugged" })) {
+      expect(link).toHaveAttribute("href", "/#unplugged");
+    }
     for (const link of screen.getAllByRole("link", { name: "Pricing" })) {
       expect(link).toHaveAttribute("href", "/#pricing");
     }
@@ -35,6 +38,13 @@ describe("marketing navigation", () => {
       "target",
       "_blank",
     );
+    const primaryNavigation = screen.getByRole("navigation", { name: "Primary navigation" });
+    expect([...primaryNavigation.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
+      "Features",
+      "How it works",
+      "Pricing",
+    ]);
+    expect(container.querySelector(".header-download")).toHaveAttribute("href", "/download");
     expect(container.querySelector('a[href*="/login"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href*="/signup"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/onboarding"]')).not.toBeInTheDocument();

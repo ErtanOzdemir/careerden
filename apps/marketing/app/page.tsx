@@ -1,10 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarClock, Check, LayoutDashboard, Link2, ListChecks } from "lucide-react";
+import {
+  CalendarClock,
+  Check,
+  HardDrive,
+  KeyRound,
+  LayoutDashboard,
+  Link2,
+  ListChecks,
+  WifiOff,
+} from "lucide-react";
 import { GitHubMark } from "@/components/GitHubMark";
 import { ProductPreview } from "@/components/product-preview";
+import { UnpluggedWordmark } from "@/components/unplugged-badge";
 import {
   ApplicationPackWorkflowPreview,
+  ApplicationsSortingWorkflowPreview,
+  BaseResumeWorkflowPreview,
   JobProcessingWorkflowPreview,
   ProfileWorkflowPreview,
   TailoringTipsWorkflowPreview,
@@ -30,7 +42,7 @@ const faqs = [
   ],
   [
     "What do I need to get started?",
-    "Open the desktop app and complete your career profile. Today, the desktop workflow can capture a LinkedIn posting automatically, or you can paste job details manually. Careerden renders your CV and cover letter with its built-in layouts, so there are no templates to set up.",
+    "Download Careerden Unplugged and complete your career profile. Add your own AI provider key when you want match analysis and tailored documents. The desktop app can capture a LinkedIn posting automatically, or you can paste job details manually. Pick one of six built-in CV layouts on the Base resume page; there are no templates to build or upload.",
   ],
   [
     "Is Careerden only for LinkedIn jobs?",
@@ -49,12 +61,16 @@ const faqs = [
     "Yes. The profile-aware CV creator and cover letter creator use your factual profile and each job's requirements to prepare editable drafts. You review and update every draft before use.",
   ],
   [
+    "What is Careerden Unplugged?",
+    "Careerden Unplugged is the desktop edition available today. It keeps your profile, applications, and documents on your computer and sends no data to a Careerden server. AI features use your own provider API key, so there are no accounts or credits. A hosted Careerden Cloud edition with accounts and AI credits is coming soon.",
+  ],
+  [
     "What does a UTC calendar month mean?",
-    "UTC is the shared global time standard. A calendar month starts at 00:00 UTC on its first day and ends when the next month begins in UTC. Your 10 free credits apply to that shared month—not one month from your signup date—and unused free credits expire at the month boundary. The local reset time depends on your time zone.",
+    "It applies to Careerden Cloud, which is coming soon. UTC is the shared global time standard. A calendar month starts at 00:00 UTC on its first day and ends when the next month begins in UTC. Your 10 free credits apply to that shared month—not one month from your signup date—and unused free credits expire at the month boundary. The local reset time depends on your time zone.",
   ],
   [
     "How is my data handled?",
-    "The service needs profile, job, and generated-document data to provide its workflow. Read the Privacy Policy for the intended data model and the items still awaiting owner and legal confirmation.",
+    "Careerden Unplugged stores your profile, applications, and documents on your computer. Job details and profile content are sent only to the AI provider you configure when you run an analysis. The Privacy Policy describes the intended data model for the upcoming cloud edition and the items still awaiting owner and legal confirmation.",
   ],
 ];
 
@@ -81,18 +97,19 @@ export default function HomePage() {
         <div className="hero-orb hero-orb-one" aria-hidden="true" />
         <div className="hero-orb hero-orb-two" aria-hidden="true" />
         <div className="container hero-copy">
+          <UnpluggedWordmark size="large" />
           <h1>
             Track every <br />
             <span>job application.</span>
           </h1>
           <p className="hero-lede">
-            Careerden is an open-source desktop job application tracker with profile-aware CV and
-            cover-letter tools. Track opportunities, follow-ups, match insights, and documents in
-            one place.
+            Careerden Unplugged is an open-source desktop job application tracker with profile-aware
+            CV and cover-letter tools. Track opportunities, follow-ups, match insights, and
+            documents in one place, all stored on your computer.
           </p>
           <div className="hero-actions">
             <Link className="button button-primary button-large" href="/download">
-              Download desktop app <span aria-hidden="true">→</span>
+              Download Careerden Unplugged <span aria-hidden="true">→</span>
             </Link>
             <a className="button button-outline button-large" href="#application-tracking">
               See the tracking workspace <span aria-hidden="true">→</span>
@@ -142,7 +159,8 @@ export default function HomePage() {
               <h3>See every application and stage</h3>
               <p>
                 Review active applications, interview activity, match scores, recent changes, and
-                the overall pipeline from one dashboard.
+                the overall pipeline from one dashboard. Sort the full list by match, interest,
+                salary, or date added.
               </p>
             </article>
             <article>
@@ -163,8 +181,9 @@ export default function HomePage() {
               <small>Next actions</small>
               <h3>Remember every follow-up</h3>
               <p>
-                Schedule follow-ups and keep contacts and notes close to the application, so the
-                next conversation does not depend on memory or another spreadsheet.
+                Schedule follow-ups and see them on the dashboard calendar, with contacts and notes
+                kept close to the application, so the next conversation does not depend on memory or
+                another spreadsheet.
               </p>
             </article>
             <article>
@@ -186,6 +205,57 @@ export default function HomePage() {
               Use automated LinkedIn capture in the desktop app, or paste job and company details
               manually for other job boards, referrals, and company career pages.
             </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="section-pad workflow-section latest-section" id="latest">
+        <div className="container">
+          <div className="section-heading centered">
+            <span className="kicker">Latest in the workspace</span>
+            <h2>Choose your CV layout. Sort what matters.</h2>
+            <p>
+              Recent updates make the profile you already maintain look the way you want and keep a
+              growing list of applications easy to scan.
+            </p>
+          </div>
+          <div className="workflow-story">
+            <article className="workflow-step" id="base-resume">
+              <div className="workflow-step-copy">
+                <span className="kicker">Base resume</span>
+                <h3>Pick from six CV layouts</h3>
+                <p>
+                  Preview your profile as an A4 page in Classic, Editorial, Modern, Minimal,
+                  Technical, or Ledger, then set one as your default. Every tailored CV starts from
+                  that layout, and you can still switch it for a single application.
+                </p>
+                <small className="workflow-step-note">
+                  Without a filled-in profile, the layouts show sample content until you add your
+                  own details.
+                </small>
+              </div>
+              <div className="workflow-preview-wrap">
+                <BaseResumeWorkflowPreview />
+              </div>
+            </article>
+
+            <article className="workflow-step reverse" id="sorting">
+              <div className="workflow-step-copy">
+                <span className="kicker">Applications list</span>
+                <h3>Sort by match, interest, salary, or date</h3>
+                <p>
+                  Select a column header to sort every application by it, select again to reverse
+                  the order, and once more to return to the most recently updated first. Status
+                  filters and search work alongside it.
+                </p>
+                <small className="workflow-step-note">
+                  Applications without a value for the sorted column stay at the end of the list.
+                </small>
+              </div>
+              <div className="workflow-preview-wrap">
+                <ApplicationsSortingWorkflowPreview />
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -282,89 +352,148 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="section-pad unplugged-section" id="unplugged">
+        <div className="container">
+          <div className="tracking-heading">
+            <div className="section-heading">
+              <UnpluggedWordmark size="large" />
+              <h2>Your job search, kept on your device.</h2>
+            </div>
+            <div className="unplugged-intro">
+              <p>
+                Careerden Unplugged is a separate desktop edition with the same tracking workspace.
+                It sends no data to a Careerden server.
+              </p>
+              <Link className="button button-primary button-large" href="/download#unplugged">
+                Download Careerden Unplugged <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="tracking-grid unplugged-grid">
+            <article>
+              <span className="tracking-icon">
+                <HardDrive aria-hidden="true" />
+              </span>
+              <small>Local storage</small>
+              <h3>Everything stays on your computer</h3>
+              <p>
+                Your profile, applications, follow-ups, and generated PDFs are stored in a database
+                and files on your device.
+              </p>
+            </article>
+            <article>
+              <span className="tracking-icon">
+                <KeyRound aria-hidden="true" />
+              </span>
+              <small>Bring your own AI</small>
+              <h3>Use your own provider key</h3>
+              <p>
+                Connect OpenAI, Anthropic, Gemini, DeepSeek, or OpenRouter with your own API key.
+                The key is stored with the operating system&apos;s secure storage.
+              </p>
+            </article>
+            <article>
+              <span className="tracking-icon">
+                <WifiOff aria-hidden="true" />
+              </span>
+              <small>No account</small>
+              <h3>No sign-up and no credits</h3>
+              <p>
+                Open the app and start tracking. AI analysis is billed by your provider instead of
+                Careerden credits.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section className="section-pad pricing-section" id="pricing">
         <div className="container">
           <div className="section-heading centered">
             <span className="kicker">Simple pricing</span>
-            <h2>Track for free. Add more AI credits when you need them.</h2>
+            <h2>Free on your computer. Cloud is coming soon.</h2>
             <p>
-              The complete tracking workspace stays available without credits. Credits are used only
-              when Careerden completes an AI match analysis.
+              Careerden Unplugged is free and open source, and its AI features run on your own
+              provider key. A hosted cloud edition with accounts and AI credits is on the way.
             </p>
           </div>
 
           <div className="pricing-grid" aria-label="Pricing plans">
-            <article className="pricing-card">
+            <article className="pricing-card pricing-card-featured">
               <div className="pricing-card-heading">
                 <div>
-                  <span className="pricing-plan-name">Free</span>
+                  <UnpluggedWordmark />
                   <h3>
                     $0 <small>forever</small>
                   </h3>
                 </div>
-                <span className="pricing-plan-mark">For every account</span>
+                <span className="pricing-plan-mark">Available now</span>
               </div>
               <p className="pricing-description">
-                Organize applications and use a monthly allowance for occasional AI-assisted
-                matching.
+                The complete workspace on your own computer, with AI billed by the provider you
+                choose.
               </p>
               <ul>
                 <li>
                   <Check aria-hidden="true" /> Complete application tracker
                 </li>
                 <li>
-                  <Check aria-hidden="true" /> Profiles, documents, and follow-ups
+                  <Check aria-hidden="true" /> Profiles, CV layouts, documents, and follow-ups
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> Your own OpenAI, Anthropic, Gemini, DeepSeek, or
+                  OpenRouter key
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> No account, no credits, data stays on your computer
+                </li>
+              </ul>
+              <Link className="button button-primary button-large" href="/download">
+                Download Careerden Unplugged
+              </Link>
+            </article>
+
+            <article className="pricing-card pricing-card-soon">
+              <div className="pricing-card-heading">
+                <div>
+                  <span className="pricing-plan-name">Careerden Cloud</span>
+                  <h3 className="pricing-soon-title">Coming soon</h3>
+                </div>
+                <span className="pricing-plan-mark">In development</span>
+              </div>
+              <p className="pricing-description">
+                Sign in from any computer to reach your applications, and use hosted AI credits
+                instead of your own provider key.
+              </p>
+              <ul>
+                <li>
+                  <Check aria-hidden="true" /> Everything in the desktop workspace
+                </li>
+                <li>
+                  <Check aria-hidden="true" /> Your applications and documents on every computer
                 </li>
                 <li>
                   <Check aria-hidden="true" /> 10 AI credits every UTC calendar month
                 </li>
                 <li>
+                  <Check aria-hidden="true" /> Basic plan with 100 credits for $10 USD / month
+                </li>
+                <li>
                   <Check aria-hidden="true" /> One credit per completed match analysis
                 </li>
               </ul>
-              <Link className="button button-outline button-large" href="/download">
-                Download and start free
-              </Link>
-            </article>
-
-            <article className="pricing-card pricing-card-featured">
-              <div className="pricing-card-heading">
-                <div>
-                  <span className="pricing-plan-name">Basic</span>
-                  <h3>
-                    $10 <small>USD / month</small>
-                  </h3>
-                </div>
-                <span className="pricing-plan-mark">More AI-assisted applications</span>
-              </div>
-              <p className="pricing-description">
-                Add a larger paid-period credit grant while keeping the same focused Careerden
-                workspace.
-              </p>
-              <ul>
-                <li>
-                  <Check aria-hidden="true" /> Everything in Free
-                </li>
-                <li>
-                  <Check aria-hidden="true" /> 100 credits for each confirmed paid period
-                </li>
-                <li>
-                  <Check aria-hidden="true" /> Credits stay valid through the paid period
-                </li>
-                <li>
-                  <Check aria-hidden="true" /> Manage renewal and cancellation through Creem
-                </li>
-              </ul>
-              <Link className="button button-primary button-large" href="/download">
-                Subscribe in the desktop app
-              </Link>
-              <p className="pricing-tax-note">Taxes may be added at checkout.</p>
+              <span
+                className="button button-outline button-large button-disabled"
+                aria-disabled="true"
+              >
+                Coming soon
+              </span>
             </article>
           </div>
 
           <p className="pricing-footnote">
-            Unused credits expire at the end of their applicable UTC month or paid subscription
-            period. Canceling stops renewal but does not remove credits from a period already paid.
+            Cloud plans and credit terms may change before launch. Taxes may be added at checkout.
           </p>
         </div>
       </section>
@@ -435,7 +564,7 @@ export default function HomePage() {
           </div>
           <div className="cta-actions">
             <Link className="button button-light button-large" href="/download">
-              Download desktop app →
+              Download Careerden Unplugged →
             </Link>
             <a className="button button-dark-outline" href="#faq">
               Read the FAQs

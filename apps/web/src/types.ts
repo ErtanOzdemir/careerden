@@ -102,7 +102,7 @@ export interface GeneratedApplicationDocument {
 export interface JobApplication {
   analysisAttemptId?: string;
   archivedAt?: string;
-  analysisSkipReason?: "insufficient_credits";
+  analysisSkipReason?: "insufficient_credits" | "ai_provider_not_configured";
   applicationPackPreferences?: ApiApplicationPackPreferences;
   id: string;
   profileId?: string;
@@ -224,10 +224,18 @@ export interface UpcomingInterview {
   meetLabel: string;
 }
 
+export interface DashboardSankeyCompany {
+  id: string;
+  name?: string;
+  logoUrl?: string;
+}
+
 export interface DashboardSankeyNode {
   id: string;
   label: string;
   count: number;
+  // Companies shown on the ribbon into this status, most recently updated first.
+  companies?: DashboardSankeyCompany[];
 }
 
 export interface DashboardSankeyLink {

@@ -17,6 +17,7 @@ vi.mock("../api/auth.js", () => ({
     requestChange: authMocks.requestEmailChange,
   },
   authClient: authMocks,
+  useAccountSession: authMocks.useSession,
 }));
 
 vi.mock("../api/profiles.js", () => ({

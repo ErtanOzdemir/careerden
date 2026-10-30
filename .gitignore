@@ -14,5 +14,6 @@ storage/*
 storage/linkedin-session/
 apps/api/storage/linkedin-session/
 apps/desktop/release/
+apps/desktop/release-local/
 apps/desktop/renderer/
 .claude/settings.local.json

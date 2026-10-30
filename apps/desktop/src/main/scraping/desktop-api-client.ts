@@ -14,7 +14,10 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
     private readonly options: {
       apiBaseUrl: string;
       claimedBy: string;
-      getCookies: () => Promise<DesktopApiCookie[]>;
+      // Cloud edition: the signed-in session cookies.
+      getCookies?: () => Promise<DesktopApiCookie[]>;
+      // Local edition: the per-launch backend token, which is always present.
+      headers?: Record<string, string>;
     },
   ) {
     this.apiBaseUrl = options.apiBaseUrl.replace(/\/$/, "");
@@ -45,6 +48,7 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
   }
 
   async isAuthenticated(): Promise<boolean> {
+    if (!this.options.getCookies) return true;
     const cookies = await this.options.getCookies();
     return cookies.some((cookie) => isSessionCookie(cookie.name));
   }
@@ -85,7 +89,7 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
     path: string,
     input: { body?: unknown; method: "GET" | "POST" | "PUT" },
   ): Promise<Response> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...this.options.headers };
 
     if (input.body !== undefined) {
       headers["Content-Type"] = "application/json";
@@ -111,6 +115,7 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
   }
 
   private async cookieHeader(): Promise<string> {
+    if (!this.options.getCookies) return "";
     const cookies = await this.options.getCookies();
     return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
   }

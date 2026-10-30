@@ -3,9 +3,13 @@ import { assessProfileReadiness } from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
 import { getActiveAccessibleJobApplication } from "@careerden/application";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
+import type { AiAvailability } from "../../domain/matching/ai-availability.js";
 
 export class RequestJobApplicationAnalysisUseCase {
-  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
+  constructor(
+    private readonly unitOfWork: PersistenceUnitOfWork,
+    private readonly aiAvailability?: AiAvailability,
+  ) {}
 
   async execute(jobApplicationId: string, userId: string): Promise<JobApplication> {
     return this.unitOfWork.execute(
@@ -51,6 +55,7 @@ export class RequestJobApplicationAnalysisUseCase {
           autoRunMatchAnalysis: true,
           profileReadiness,
           insufficientCreditBehavior: "throw",
+          aiAvailability: this.aiAvailability,
         });
         await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
         return jobApplication;

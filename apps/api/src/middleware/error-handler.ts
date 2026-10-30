@@ -36,6 +36,7 @@ export function createErrorHandler(
 
     if (error instanceof ApplicationError) {
       const status = {
+        ai_provider_not_configured: 409,
         conflict: 409,
         forbidden: 403,
         not_found: 404,

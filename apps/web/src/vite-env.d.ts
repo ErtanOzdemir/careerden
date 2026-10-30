@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  readonly VITE_CAREERDEN_EDITION?: "cloud" | "local";
+}
+
 interface DesktopNotificationActivation {
   notificationId: string;
   jobApplicationId?: string;
@@ -25,9 +29,34 @@ interface DesktopUpdateState {
   status: DesktopUpdateStatus;
 }
 
+type AiProviderName = "openai" | "gemini" | "deepseek" | "anthropic" | "openrouter";
+
+interface AiCredentialsStatus {
+  encryptionAvailable: boolean;
+  activeProvider: AiProviderName | null;
+  providers: Array<{ provider: AiProviderName; model?: string; keyHint: string }>;
+}
+
+interface AiCredentialsInput {
+  provider: AiProviderName;
+  apiKey?: string;
+  model?: string;
+}
+
+type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
+
 interface Window {
   electronAPI?: {
     platform?: string;
+    edition?: "cloud" | "local";
+    // Present only in the local desktop edition. Never returns a stored key.
+    aiCredentials?: {
+      getStatus: () => Promise<AiCredentialsStatus>;
+      save: (input: AiCredentialsInput) => Promise<AiCredentialsStatus>;
+      remove: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
+      setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
+      test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
+    };
     openExternal?: (url: string) => Promise<void>;
     notifyJobApplicationQueued: () => Promise<void>;
     minimizeWindow?: () => Promise<void>;

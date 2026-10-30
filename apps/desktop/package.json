@@ -10,13 +10,15 @@
     "build": "pnpm run build:main && pnpm run build:renderer",
     "build:main": "tsc -p tsconfig.json && node scripts/prepare-main-build.mjs",
     "build:renderer": "pnpm --dir ../web exec vite build --outDir ../desktop/renderer --emptyOutDir",
-    "dev": "pnpm run build:main && wait-on --timeout 120000 http://localhost:3000/health http://localhost:5173 && electron .",
+    "dev": "pnpm run build:main && node scripts/wait-for-dev-servers.mjs && electron .",
     "package": "electron-builder --config electron-builder.yml --publish never",
+    "package:local": "electron-builder --config electron-builder.local.yml --publish never",
     "rebuild": "echo 'No native desktop rebuild required'",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@careerden/api-app": "workspace:*",
     "@careerden/application": "workspace:*",
     "@careerden/config": "workspace:*",
     "@careerden/contracts": "workspace:*",

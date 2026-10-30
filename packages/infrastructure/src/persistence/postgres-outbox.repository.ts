@@ -64,6 +64,20 @@ export class PostgresOutboxRepository implements OutboxRepository {
     });
   }
 
+  // Frees leases left by a previous process. Only safe while no other process claims these types.
+  async releaseLeases(types: string[], now = new Date()): Promise<number> {
+    return this.db("outbox_events")
+      .whereIn("type", types)
+      .whereNull("processed_at")
+      .whereNull("dead_lettered_at")
+      .whereNotNull("lease_owner")
+      .update({
+        lease_owner: null,
+        lease_expires_at: null,
+        updated_at: now,
+      });
+  }
+
   async markProcessed(id: string, leaseOwner: string, now = new Date()): Promise<boolean> {
     const updated = await this.db("outbox_events")
       .where({ id, lease_owner: leaseOwner })

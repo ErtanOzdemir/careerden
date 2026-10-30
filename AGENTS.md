@@ -22,7 +22,8 @@ review or download.
 - Persistence: PostgreSQL via `pg` and Knex 3.1 for API database access and
   migrations
 - Scraping: public LinkedIn guest HTTP responses and HTML parsing
-- AI: Vercel AI SDK 6 with OpenAI, Gemini, and DeepSeek provider packages 2.x
+- AI: Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek, and Anthropic provider packages, plus
+  OpenRouter through the OpenAI-compatible provider
 - Document generation: predefined HTML templates rendered to on-screen preview and PDF via
   Playwright
 - Storage: S3-compatible object storage via RustFS locally and Cloudflare R2 in production
@@ -102,11 +103,31 @@ review or download.
   regression-tested CSP and security-header policies. Production HTTP surfaces enable
   HSTS; Vite builds emit `dist/_headers`, which the static host must apply.
 - The desktop main process consumes the authenticated, profile-scoped notification SSE
-  stream with Electron's default session. It refreshes the renderer for every new
-  notification and shows an operating-system notification only when the app is
-  unfocused. Clicking the alert restores the app and opens the related timeline.
+  stream, with Electron's default session in the cloud edition and Node's fetch in the local
+  edition. It refreshes the renderer and shows an operating-system notification for every new
+  notification, including while the app is in front. Clicking the alert restores the app and
+  opens the related timeline.
+- The local edition never opens Chromium's cookie store, whose encryption key lives in the
+  macOS Keychain: its renderer proxy, notification stream, and update policy requests use
+  Node's fetch. The renderer proxy aborts upstream requests when the renderer cancels a
+  response, so closed event streams do not exhaust the per-host connection limit.
 - Desktop LinkedIn scraping uses public guest HTTP responses in an isolated utility
   process and does not require or persist a user's LinkedIn account session.
+- The desktop app builds as two editions selected by `CAREERDEN_EDITION` (`cloud` or
+  `local`) and `VITE_CAREERDEN_EDITION` for the renderer. Careerden Unplugged
+  (`com.careerden.unplugged`) sends no data to a Careerden server: a utility process runs
+  `@careerden/api-app/local` on loopback behind a per-launch token with embedded PGlite,
+  on-disk file storage with signed links, in-memory change buses, and an in-process outbox
+  runner instead of Redis and BullMQ workers. It has no accounts, billing, credits, email, or
+  support routes, and its builds must not embed `DESKTOP_API_BASE_URL`.
+- Local edition AI uses the user's own provider key, stored by the main process with
+  `safeStorage` and never returned to the renderer. Analysis is not queued while no
+  provider is configured. Electron prints its PDFs in a hidden window without scripts or
+  network access. Reminders are restored from the database on start, delivering those up
+  to seven days overdue.
+- Shared composition lives in `createApiApp` (HTTP) and `packages/application` (use cases),
+  so cloud and local runtimes differ only in the adapters they pass. Add routes and use
+  cases there rather than in either runtime.
 - The API runtime uses PostgreSQL for state, S3-compatible object storage through RustFS
   locally or Cloudflare R2 in production, and Redis/BullMQ for enqueueing job application
   processing.
@@ -138,6 +159,8 @@ review or download.
   GitHub workflow builds platform installers and electron-updater metadata, validates
   `apps/desktop/release-policy.json`, generates SHA-256 checksums, and creates a draft
   release; publishing remains the manual gate that exposes an update to clients.
+- Both editions are released from the same tag and draft release with distinct artifact names
+  and updater channels: `latest*.yml` for Careerden and `local*.yml` for Careerden Unplugged.
 - Packaged desktop builds check public GitHub Releases at startup, hourly, and on demand.
   Update discovery comes from electron-builder's platform `latest*.yml`; the separately
   published policy controls only `minimumSupportedVersion`. Private or unreachable
@@ -195,6 +218,10 @@ review or download.
   ```bash
   pnpm dev:desktop
   ```
+- Start the local edition web dev server and desktop app without Docker services:
+  ```bash
+  pnpm dev:desktop:local
+  ```
 - Check whether the Vite web dev server is listening:
   ```bash
   curl -I http://localhost:5173
@@ -214,6 +241,12 @@ review or download.
 - Package the already-built desktop app for the current host platform:
   ```bash
   pnpm --filter @careerden/desktop package
+  ```
+- Build and package the local edition for the current host platform:
+  ```bash
+  CAREERDEN_EDITION=local VITE_CAREERDEN_EDITION=local \
+    pnpm --filter @careerden/desktop build
+  pnpm --filter @careerden/desktop package:local
   ```
 - Build the production API and worker images from the repository root:
   ```bash

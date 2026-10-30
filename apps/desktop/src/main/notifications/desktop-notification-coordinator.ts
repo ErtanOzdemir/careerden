@@ -1,10 +1,11 @@
 import type { NotificationChangeDto } from "@careerden/contracts";
 
 export interface DesktopNotificationWindow {
-  isFocused(): boolean;
   notifyRenderer(): void;
 }
 
+// Refreshes the renderer and raises an operating-system alert for every new notification,
+// including while Careerden is in front, so reminders are noticed wherever the user is looking.
 export class DesktopNotificationCoordinator {
   constructor(
     private readonly options: {
@@ -14,11 +15,7 @@ export class DesktopNotificationCoordinator {
   ) {}
 
   received(change: NotificationChangeDto): void {
-    const window = this.options.getWindow();
-    window?.notifyRenderer();
-
-    if (!window?.isFocused()) {
-      this.options.showNativeNotification(change);
-    }
+    this.options.getWindow()?.notifyRenderer();
+    this.options.showNativeNotification(change);
   }
 }

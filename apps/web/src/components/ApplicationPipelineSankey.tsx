@@ -1,6 +1,7 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { sankey, sankeyLinkHorizontal, type SankeyLink, type SankeyNode } from "d3-sankey";
-import type { DashboardSankeyData, DashboardSankeyNode } from "../types.js";
+import type { DashboardSankeyCompany, DashboardSankeyData, DashboardSankeyNode } from "../types.js";
+import { layoutPipelineLogoRow } from "./pipeline-logo-layout.js";
 
 const chartHeight = 360;
 const defaultWidth = 720;
@@ -35,6 +36,8 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(defaultWidth);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [failedLogos, setFailedLogos] = useState<ReadonlySet<string>>(() => new Set());
+  const clipIdPrefix = `pipeline-logo-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -119,6 +122,36 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
           })}
         </g>
 
+        {graph.links.map((link) => {
+          const source = link.source as LayoutNode;
+          const target = link.target as LayoutNode;
+          const companies = target.companies ?? [];
+          if (companies.length === 0) return null;
+
+          const startX = source.x1 ?? 0;
+          const endX = target.x0 ?? 0;
+          const row = layoutPipelineLogoRow(companies.length, (endX - startX) * 0.6);
+          const firstX = (startX + endX) / 2 - row.width / 2 + row.size / 2;
+          const centerY = ((link.y0 ?? 0) + (link.y1 ?? 0)) / 2;
+
+          return (
+            <g key={`logos-${target.id}`} data-testid={`sankey-logos-${target.id}`}>
+              {companies.map((company, index) => (
+                <PipelineCompanyLogo
+                  key={company.id}
+                  clipId={`${clipIdPrefix}-${target.id}-${index}`}
+                  company={company}
+                  failed={failedLogos.has(company.id)}
+                  onFailed={() => setFailedLogos((current) => new Set(current).add(company.id))}
+                  size={row.size}
+                  x={firstX + row.step * index}
+                  y={centerY}
+                />
+              ))}
+            </g>
+          );
+        })}
+
         {graph.nodes.map((node) => {
           const x0 = node.x0 ?? 0;
           const x1 = node.x1 ?? 0;
@@ -181,6 +214,59 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
         </div>
       )}
     </div>
+  );
+}
+
+function PipelineCompanyLogo({
+  clipId,
+  company,
+  failed,
+  onFailed,
+  size,
+  x,
+  y,
+}: {
+  clipId: string;
+  company: DashboardSankeyCompany;
+  failed: boolean;
+  onFailed: () => void;
+  size: number;
+  x: number;
+  y: number;
+}) {
+  const radius = size / 2;
+  const name = company.name?.trim() || "Company";
+
+  return (
+    <g transform={`translate(${x} ${y})`} data-testid="sankey-company-logo">
+      <title>{name}</title>
+      <clipPath id={clipId}>
+        <circle r={radius} />
+      </clipPath>
+      <circle r={radius} className="fill-card stroke-border" strokeWidth={1.5} />
+      {company.logoUrl && !failed ? (
+        <image
+          href={company.logoUrl}
+          x={-radius}
+          y={-radius}
+          width={size}
+          height={size}
+          preserveAspectRatio="xMidYMid slice"
+          clipPath={`url(#${clipId})`}
+          onError={onFailed}
+        />
+      ) : (
+        <text
+          textAnchor="middle"
+          dominantBaseline="central"
+          className="fill-muted-foreground font-semibold"
+          fontSize={Math.max(7, size * 0.45)}
+        >
+          {name.charAt(0).toUpperCase()}
+        </text>
+      )}
+      <circle r={radius} fill="none" className="stroke-border" strokeWidth={1.5} />
+    </g>
   );
 }
 

@@ -5,6 +5,7 @@ import { enqueueStorageDeletions } from "@careerden/application";
 import { enqueueApplicationPackGeneration } from "@careerden/application";
 import { getActiveAccessibleJobApplication } from "@careerden/application";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
+import type { AiAvailability } from "../../domain/matching/ai-availability.js";
 
 export type JobApplicationRetryMode = "analysis" | "documents" | "scraping";
 
@@ -18,7 +19,10 @@ export interface RetryJobApplicationOptions {
 }
 
 export class RetryJobApplicationUseCase {
-  constructor(private readonly unitOfWork: PersistenceUnitOfWork) {}
+  constructor(
+    private readonly unitOfWork: PersistenceUnitOfWork,
+    private readonly aiAvailability?: AiAvailability,
+  ) {}
 
   async execute(
     jobApplicationId: string,
@@ -119,6 +123,7 @@ export class RetryJobApplicationUseCase {
             autoRunMatchAnalysis: true,
             profileReadiness: assessProfileReadiness(profile),
             insufficientCreditBehavior: "throw",
+            aiAvailability: this.aiAvailability,
           });
         }
 

@@ -44,6 +44,29 @@ describe("DesktopApiClient", () => {
     });
   });
 
+  it("authenticates the local edition with fixed headers instead of cookies", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+    const client = new DesktopApiClient({
+      apiBaseUrl: "http://127.0.0.1:3010",
+      claimedBy: "desktop-a",
+      headers: { "x-careerden-local-token": "launch-token" },
+    });
+
+    await expect(client.isAuthenticated()).resolves.toBe(true);
+    await expect(client.claimNextScrapeJob()).resolves.toBeNull();
+    expect(fetch).toHaveBeenCalledWith("http://127.0.0.1:3010/job-applications/scraping/claim", {
+      body: JSON.stringify({ claimedBy: "desktop-a" }),
+      headers: {
+        "x-careerden-local-token": "launch-token",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+  });
+
   it("detects Better Auth session cookies for authenticated desktop polling", async () => {
     const client = new DesktopApiClient({
       apiBaseUrl: "http://127.0.0.1:3000",

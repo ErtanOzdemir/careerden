@@ -1,8 +1,8 @@
 import knex from "knex";
 import { afterAll, describe, expect, it } from "vitest";
+import { getFollowUpReminderScheduledFor } from "@careerden/domain";
 import {
   buildFollowUpReminderBaseQuery,
-  getFollowUpReminderScheduledFor,
   shouldRecoverFollowUpReminder,
 } from "./follow-up-reminder.repository.js";
 

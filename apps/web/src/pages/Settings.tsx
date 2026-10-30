@@ -12,7 +12,8 @@ import {
 } from "../lib/otp-resend-cooldown.js";
 import { profilesApi } from "../api/profiles.js";
 import type { ApiProfile } from "../api/types.js";
-import { accountEmailApi, authClient } from "../api/auth.js";
+import { accountEmailApi, authClient, useAccountSession } from "../api/auth.js";
+import { isLocalEdition } from "../edition.js";
 import {
   getStoredTheme,
   setThemePreference,
@@ -101,7 +102,7 @@ export default function Settings() {
     data: session,
     isPending: isLoadingSession,
     refetch: refetchSession,
-  } = authClient.useSession();
+  } = useAccountSession();
   const {
     checkForUpdates,
     isSupported: isDesktopUpdaterSupported,
@@ -402,115 +403,119 @@ export default function Settings() {
         </Panel>
       )}
 
-      <Panel>
-        <div className="flex items-center gap-2.5 px-5 py-4">
-          <CircleUser className="size-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Account</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 border-t border-border px-5 py-4 sm:grid-cols-2">
-          <Field
-            label="Display name"
-            value={profile?.fullName ?? (isLoadingProfile ? "Loading..." : "")}
-            readOnly
-          />
-          <div className="space-y-2">
-            <Field
-              label="Account email"
-              type="email"
-              value={
-                accountEmailOverride ??
-                session?.user.email ??
-                (isLoadingSession ? "Loading..." : "")
-              }
-              readOnly
-            />
-            <div className="flex justify-end">
-              <Button
-                className="shrink-0"
-                disabled={!session || isLoadingSession}
-                onClick={openEmailChangeModal}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Change email
-              </Button>
+      {!isLocalEdition && (
+        <>
+          <Panel>
+            <div className="flex items-center gap-2.5 px-5 py-4">
+              <CircleUser className="size-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Account</h2>
             </div>
-          </div>
-        </div>
-        {profileError && (
-          <p className="border-t border-border px-5 py-3 text-sm text-destructive">
-            {profileError}
-          </p>
-        )}
-        {emailChangeResult && (
-          <p
-            className={cn(
-              "border-t border-border px-5 py-3 text-sm",
-              emailChangeResult.kind === "success" ? "text-success" : "text-warning",
+            <div className="grid grid-cols-1 gap-4 border-t border-border px-5 py-4 sm:grid-cols-2">
+              <Field
+                label="Display name"
+                value={profile?.fullName ?? (isLoadingProfile ? "Loading..." : "")}
+                readOnly
+              />
+              <div className="space-y-2">
+                <Field
+                  label="Account email"
+                  type="email"
+                  value={
+                    accountEmailOverride ??
+                    session?.user.email ??
+                    (isLoadingSession ? "Loading..." : "")
+                  }
+                  readOnly
+                />
+                <div className="flex justify-end">
+                  <Button
+                    className="shrink-0"
+                    disabled={!session || isLoadingSession}
+                    onClick={openEmailChangeModal}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Change email
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {profileError && (
+              <p className="border-t border-border px-5 py-3 text-sm text-destructive">
+                {profileError}
+              </p>
             )}
-            role={emailChangeResult.kind === "success" ? "status" : "alert"}
-          >
-            {emailChangeResult.message}
-          </p>
-        )}
-      </Panel>
+            {emailChangeResult && (
+              <p
+                className={cn(
+                  "border-t border-border px-5 py-3 text-sm",
+                  emailChangeResult.kind === "success" ? "text-success" : "text-warning",
+                )}
+                role={emailChangeResult.kind === "success" ? "status" : "alert"}
+              >
+                {emailChangeResult.message}
+              </p>
+            )}
+          </Panel>
 
-      <Panel>
-        <div className="flex items-center gap-2.5 px-5 py-4">
-          <LockKeyhole className="size-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Security</h2>
-        </div>
-        <form
-          className="space-y-4 border-t border-border px-5 py-4"
-          onSubmit={(event) => void handlePasswordChange(event)}
-        >
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <SettingsPasswordField
-              autoComplete="current-password"
-              isVisible={isCurrentPasswordVisible}
-              label="Current password"
-              onChange={setCurrentPassword}
-              onToggleVisibility={() => setIsCurrentPasswordVisible((value) => !value)}
-              value={currentPassword}
-            />
-            <SettingsPasswordField
-              autoComplete="new-password"
-              isVisible={isNewPasswordVisible}
-              label="New password"
-              onChange={setNewPassword}
-              onToggleVisibility={() => setIsNewPasswordVisible((value) => !value)}
-              value={newPassword}
-            />
-            <SettingsPasswordField
-              autoComplete="new-password"
-              isVisible={isConfirmedPasswordVisible}
-              label="Confirm new password"
-              onChange={setConfirmedPassword}
-              onToggleVisibility={() => setIsConfirmedPasswordVisible((value) => !value)}
-              value={confirmedPassword}
-            />
-          </div>
-          {passwordError && (
-            <p role="alert" className="text-sm text-destructive">
-              {passwordError}
-            </p>
-          )}
-          {passwordSuccess && (
-            <p role="status" className="text-sm text-success">
-              {passwordSuccess}
-            </p>
-          )}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">
-              Use between 8 and 128 characters. Updating your password signs out other sessions.
-            </p>
-            <Button type="submit" disabled={isChangingPassword}>
-              {isChangingPassword ? "Updating..." : "Update password"}
-            </Button>
-          </div>
-        </form>
-      </Panel>
+          <Panel>
+            <div className="flex items-center gap-2.5 px-5 py-4">
+              <LockKeyhole className="size-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Security</h2>
+            </div>
+            <form
+              className="space-y-4 border-t border-border px-5 py-4"
+              onSubmit={(event) => void handlePasswordChange(event)}
+            >
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <SettingsPasswordField
+                  autoComplete="current-password"
+                  isVisible={isCurrentPasswordVisible}
+                  label="Current password"
+                  onChange={setCurrentPassword}
+                  onToggleVisibility={() => setIsCurrentPasswordVisible((value) => !value)}
+                  value={currentPassword}
+                />
+                <SettingsPasswordField
+                  autoComplete="new-password"
+                  isVisible={isNewPasswordVisible}
+                  label="New password"
+                  onChange={setNewPassword}
+                  onToggleVisibility={() => setIsNewPasswordVisible((value) => !value)}
+                  value={newPassword}
+                />
+                <SettingsPasswordField
+                  autoComplete="new-password"
+                  isVisible={isConfirmedPasswordVisible}
+                  label="Confirm new password"
+                  onChange={setConfirmedPassword}
+                  onToggleVisibility={() => setIsConfirmedPasswordVisible((value) => !value)}
+                  value={confirmedPassword}
+                />
+              </div>
+              {passwordError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {passwordError}
+                </p>
+              )}
+              {passwordSuccess && (
+                <p role="status" className="text-sm text-success">
+                  {passwordSuccess}
+                </p>
+              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Use between 8 and 128 characters. Updating your password signs out other sessions.
+                </p>
+                <Button type="submit" disabled={isChangingPassword}>
+                  {isChangingPassword ? "Updating..." : "Update password"}
+                </Button>
+              </div>
+            </form>
+          </Panel>
+        </>
+      )}
 
       <Panel>
         <div className="flex items-center gap-2.5 px-5 py-4">

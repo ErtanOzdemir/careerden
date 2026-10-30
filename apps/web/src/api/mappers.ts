@@ -150,9 +150,10 @@ export function mapApiJobApplicationToUi(
 function getAnalysisSkipReason(
   events: ApiJobApplicationEvent[],
 ): JobApplication["analysisSkipReason"] {
-  return events.some((event) => event.metadata.reason === "insufficient_credits")
-    ? "insufficient_credits"
-    : undefined;
+  for (const reason of ["insufficient_credits", "ai_provider_not_configured"] as const) {
+    if (events.some((event) => event.metadata.reason === reason)) return reason;
+  }
+  return undefined;
 }
 
 /**
@@ -301,7 +302,19 @@ function mapDashboardSankey(analytics: ApiJobApplicationAnalytics): DashboardSta
   }
 
   const statuses = dashboardSankeyStatuses
-    .map(({ id, label }) => ({ id, label, count: analytics.byStatus[id] ?? 0 }))
+    .map(({ id, label }) => {
+      const companies = (analytics.companiesByStatus?.[id] ?? []).map((company) => ({
+        id: company.jobApplicationId,
+        ...(company.companyName ? { name: company.companyName } : {}),
+        ...(company.companyLogoUrl ? { logoUrl: company.companyLogoUrl } : {}),
+      }));
+      return {
+        id,
+        label,
+        count: analytics.byStatus[id] ?? 0,
+        ...(companies.length > 0 ? { companies } : {}),
+      };
+    })
     .filter((status) => status.count > 0);
 
   return {

@@ -12,6 +12,7 @@ import type {
 import { assessProfileReadiness } from "@careerden/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
+import type { AiAvailability } from "../../domain/matching/ai-availability.js";
 
 export interface ManualCompanyLogo {
   body: Buffer;
@@ -44,6 +45,7 @@ export class CreateManualJobApplicationUseCase {
     private readonly profiles: UserProfileAccessRepository,
     private readonly storage: FileStorage,
     private readonly unitOfWork: PersistenceUnitOfWork,
+    private readonly aiAvailability?: AiAvailability,
   ) {}
 
   async execute(input: CreateManualJobApplicationInput, userId: string): Promise<JobApplication> {
@@ -110,6 +112,7 @@ export class CreateManualJobApplicationUseCase {
             autoRunMatchAnalysis: profile.autoRunMatchAnalysis,
             profileReadiness: assessProfileReadiness(profile),
             insufficientCreditBehavior: "skip",
+            aiAvailability: this.aiAvailability,
           });
           await jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
 

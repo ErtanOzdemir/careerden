@@ -1,23 +1,30 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   nativeTheme,
   net,
   Notification,
   protocol,
+  safeStorage,
   session,
   shell,
 } from "electron";
 import electronUpdater from "electron-updater";
+import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { desktopAppIdentity } from "./desktop-app-identity.js";
-import { loadDesktopRuntimeConfig } from "./desktop-runtime-config.js";
+import { registerAiCredentialsIpc } from "./ai-credentials/ai-credentials-ipc.js";
+import { AiCredentialsStore } from "./ai-credentials/ai-credentials-store.js";
+import { getDesktopAppIdentity } from "./desktop-app-identity.js";
+import { loadDesktopRuntimeConfig, type DesktopRuntimeConfig } from "./desktop-runtime-config.js";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
+import { ElectronPdfRenderer } from "./local-backend/electron-pdf-renderer.js";
+import { LocalBackendProcess } from "./local-backend/local-backend-process.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
 import { DesktopNotificationActivationQueue } from "./notifications/desktop-notification-activation.js";
@@ -56,6 +63,14 @@ if (!app.isPackaged) {
   if (existsSync(developmentEnvPath)) process.loadEnvFile(developmentEnvPath);
 }
 
+const runtimeConfig = loadDesktopRuntimeConfig({
+  configPath: join(__dirname, "desktop-runtime-config.json"),
+  environment: process.env,
+  isPackaged: app.isPackaged,
+});
+const appIdentity = getDesktopAppIdentity(runtimeConfig.edition);
+const localSessionTokenHeader = "x-careerden-local-token";
+
 let mainWindow: BrowserWindow | null = null;
 let mainWindowReady: Promise<BrowserWindow> | null = null;
 let localScrapingWorker: LocalScrapingWorker | null = null;
@@ -63,15 +78,20 @@ let utilityScrapingRunner: UtilityProcessLinkedInScrapingRunner | null = null;
 let notificationStream: DesktopNotificationStream | null = null;
 let nativeNotificationPresenter: NativeNotificationPresenter | null = null;
 let desktopUpdateManager: DesktopUpdateManager | null = null;
+let localBackend: LocalBackendProcess | null = null;
 let flushCookiesTimeout: NodeJS.Timeout | undefined;
 let isQuittingAfterCookieFlush = false;
 const notificationActivations = new DesktopNotificationActivationQueue();
 
 protocol.registerSchemesAsPrivileged([packagedRendererSchemeRegistration]);
-app.setName(desktopAppIdentity.name);
+app.setName(appIdentity.name);
+if (runtimeConfig.edition === "local") {
+  // Keep the local edition's database, files, and keys apart from the cloud edition's profile.
+  app.setPath("userData", join(app.getPath("appData"), appIdentity.name));
+}
 
 if (process.platform === "win32") {
-  app.setAppUserModelId(desktopAppIdentity.id);
+  app.setAppUserModelId(appIdentity.id);
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -115,12 +135,39 @@ async function initializeDesktopRuntime(): Promise<void> {
     app.dock.setIcon(join(__dirname, "..", "..", "build", "icon-dev.png"));
   }
 
-  const runtimeConfig = loadDesktopRuntimeConfig({
-    configPath: join(__dirname, "desktop-runtime-config.json"),
-    environment: process.env,
-    isPackaged: app.isPackaged,
-  });
-  const { apiBaseUrl, desktopUpdateRepository } = runtimeConfig;
+  const { desktopUpdateRepository } = runtimeConfig;
+  let aiCredentialsStore: AiCredentialsStore | undefined;
+  let apiBaseUrl: string;
+  let apiRequestHeaders: Record<string, string> = {};
+
+  if (runtimeConfig.edition === "local") {
+    aiCredentialsStore = new AiCredentialsStore(
+      join(app.getPath("userData"), "ai-credentials.bin"),
+      safeStorage,
+    );
+    try {
+      const backend = await startLocalBackend(runtimeConfig, aiCredentialsStore);
+      apiBaseUrl = backend.baseUrl;
+      apiRequestHeaders = backend.headers;
+    } catch (error) {
+      console.error("Failed to start the local backend", error);
+      dialog.showErrorBox(
+        `${appIdentity.name} could not start`,
+        `Your local data could not be opened. ${error instanceof Error ? error.message : ""}`.trim(),
+      );
+      app.exit(1);
+      return;
+    }
+  } else {
+    apiBaseUrl = runtimeConfig.apiBaseUrl;
+  }
+  // The local edition reaches its loopback backend with Node's fetch. It needs no cookies, so it
+  // never opens Chromium's cookie store, whose encryption key would otherwise trigger a Keychain
+  // prompt, and it is not bound by Chromium's six-connection limit per host.
+  const fetchApi =
+    runtimeConfig.edition === "local"
+      ? (input: string, init?: RequestInit) => fetch(input, withHeaders(init, apiRequestHeaders))
+      : (input: string, init?: RequestInit) => session.defaultSession.fetch(input, init);
   const desktopUpdatePolicyUrl = desktopUpdateRepository
     ? `https://github.com/${desktopUpdateRepository}/releases/latest/download/careerden-desktop-update-policy.json`
     : undefined;
@@ -130,7 +177,8 @@ async function initializeDesktopRuntime(): Promise<void> {
       packagedRendererScheme,
       createPackagedRendererProtocolHandler({
         apiBaseUrl,
-        fetchApi: (input, init) => session.defaultSession.fetch(input, init),
+        apiRequestHeaders,
+        fetchApi,
         fetchFile: (input, init) => net.fetch(input, init),
         onError: (error) => {
           console.error("Packaged renderer protocol error", error);
@@ -141,7 +189,7 @@ async function initializeDesktopRuntime(): Promise<void> {
   }
 
   configureRendererPermissionPolicy(session.defaultSession);
-  registerAuthCookiePersistence();
+  if (runtimeConfig.edition === "cloud") registerAuthCookiePersistence();
 
   const claimedBy = getDesktopScrapingClaimOwner();
   utilityScrapingRunner = new UtilityProcessLinkedInScrapingRunner({
@@ -152,7 +200,9 @@ async function initializeDesktopRuntime(): Promise<void> {
     api: new DesktopApiClient({
       apiBaseUrl,
       claimedBy,
-      getCookies: () => session.defaultSession.cookies.get({ url: apiBaseUrl }),
+      ...(runtimeConfig.edition === "local"
+        ? { headers: apiRequestHeaders }
+        : { getCookies: () => session.defaultSession.cookies.get({ url: apiBaseUrl }) }),
     }),
     runner: utilityScrapingRunner,
   });
@@ -190,7 +240,6 @@ async function initializeDesktopRuntime(): Promise<void> {
       if (!window) return null;
 
       return {
-        isFocused: () => window.isFocused(),
         notifyRenderer: () => {
           window.webContents.send(desktopNotificationIpcChannels.arrived);
         },
@@ -203,13 +252,20 @@ async function initializeDesktopRuntime(): Promise<void> {
 
   notificationStream = new DesktopNotificationStream({
     apiBaseUrl,
-    fetch: (input, init) => session.defaultSession.fetch(input, init),
+    fetch: fetchApi,
     onChange: (change) => notificationCoordinator.received(change),
     onError: (error) => {
       console.error("Desktop notification stream error", error);
     },
   });
 
+  const updater = electronUpdater.autoUpdater;
+  if (runtimeConfig.edition === "local") {
+    // Read local-*.yml from the shared GitHub release so the editions never install each other.
+    updater.channel = "local";
+    // Setting a channel enables downgrades in electron-updater; keep stable-only behavior.
+    updater.allowDowngrade = false;
+  }
   const updatePolicyCachePath = join(app.getPath("userData"), "desktop-update-policy-cache.json");
   desktopUpdateManager = new DesktopUpdateManager({
     beforeInstall: async () => {
@@ -225,7 +281,12 @@ async function initializeDesktopRuntime(): Promise<void> {
       const timeout = setTimeout(() => controller.abort(), 10_000);
 
       try {
-        const response = await session.defaultSession.fetch(desktopUpdatePolicyUrl, {
+        // The local edition keeps Chromium's cookie store closed; see fetchApi.
+        const fetchPolicy =
+          runtimeConfig.edition === "local"
+            ? fetch
+            : session.defaultSession.fetch.bind(session.defaultSession);
+        const response = await fetchPolicy(desktopUpdatePolicyUrl, {
           headers: {
             Accept: "application/json",
             "Cache-Control": "no-cache",
@@ -252,14 +313,18 @@ async function initializeDesktopRuntime(): Promise<void> {
         throw error;
       }
     },
-    updater: electronUpdater.autoUpdater as DesktopUpdater,
+    updater: updater as DesktopUpdater,
     writeCachedPolicy: async (policy: DesktopUpdatePolicy) => {
       await mkdir(app.getPath("userData"), { recursive: true });
       await writeFile(updatePolicyCachePath, `${JSON.stringify(policy, null, 2)}\n`, "utf8");
     },
   });
 
-  new IpcHandlerRegistry(ipcMain, (event) => isTrustedMainWindowIpcSender(event, getMainWindow()))
+  const ipcHandlers = new IpcHandlerRegistry(ipcMain, (event) =>
+    isTrustedMainWindowIpcSender(event, getMainWindow()),
+  );
+  if (aiCredentialsStore) registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore);
+  ipcHandlers
     .register("open-external", (_event, url: unknown) => {
       const allowedUrl = getAllowedExternalUrl(url);
       if (!allowedUrl) {
@@ -306,7 +371,11 @@ async function createWindow(): Promise<BrowserWindow> {
   if (existingWindow && mainWindowReady) return mainWindowReady;
 
   const window = new BrowserWindow(
-    getMainWindowOptions(join(__dirname, "..", "preload", "index.cjs")),
+    getMainWindowOptions(
+      join(__dirname, "..", "preload", "index.cjs"),
+      process.platform,
+      runtimeConfig.edition,
+    ),
   );
   mainWindow = window;
 
@@ -438,8 +507,49 @@ async function shutdownDesktopRuntime(): Promise<void> {
   nativeNotificationPresenter?.closeAll();
   await Promise.all([
     notificationStream?.stop() ?? Promise.resolve(),
-    flushDefaultSessionCookies(),
+    runtimeConfig.edition === "cloud" ? flushDefaultSessionCookies() : Promise.resolve(),
   ]);
+  await localBackend?.stop();
+  localBackend = null;
+}
+
+async function startLocalBackend(
+  config: Extract<DesktopRuntimeConfig, { edition: "local" }>,
+  aiCredentialsStore: AiCredentialsStore,
+): Promise<{ baseUrl: string; headers: Record<string, string> }> {
+  const sessionToken =
+    config.developmentBackend?.sessionToken ?? randomBytes(32).toString("base64url");
+  const pdfRenderer = new ElectronPdfRenderer({
+    createWindow: (options) => new BrowserWindow(options),
+    getSession: (partition) => session.fromPartition(partition),
+  });
+  localBackend = new LocalBackendProcess({
+    modulePath: join(__dirname, "local-backend", "local-backend-utility-process.js"),
+    dataDir: join(app.getPath("userData"), "data"),
+    sessionToken,
+    port: config.developmentBackend?.port ?? 0,
+    renderPdf: (html) => pdfRenderer.htmlToPdf(html),
+    getAiSelection: () => aiCredentialsStore.currentSelection(),
+    onUnexpectedExit: (code) => {
+      console.error(`The local backend exited unexpectedly with code ${code}`);
+      dialog.showErrorBox(
+        `${appIdentity.name} needs to restart`,
+        "The local data service stopped unexpectedly. Your data is safe; the app will restart.",
+      );
+      app.relaunch();
+      app.exit(1);
+    },
+  });
+
+  const { baseUrl } = await localBackend.start();
+  return { baseUrl, headers: { [localSessionTokenHeader]: sessionToken } };
+}
+
+function withHeaders(init: RequestInit | undefined, headers: Record<string, string>): RequestInit {
+  if (Object.keys(headers).length === 0) return init ?? {};
+  const merged = new Headers(init?.headers);
+  for (const [name, value] of Object.entries(headers)) merged.set(name, value);
+  return { ...init, headers: merged };
 }
 
 function isAuthCookie(name: string): boolean {

@@ -27,6 +27,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
+import { isLocalEdition } from "../edition.js";
 
 interface ApplicationPackWorkspaceProps {
   app: JobApplication;
@@ -604,7 +605,8 @@ function StartAnalysisCard({
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Careerden compares this job with your profile, scores the match, and drafts a tailored
-            CV and cover letter. Uses one AI credit.
+            CV and cover letter.{" "}
+            {isLocalEdition ? "Uses your AI provider's API key." : "Uses one AI credit."}
           </p>
         </div>
       </div>

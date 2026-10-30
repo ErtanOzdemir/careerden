@@ -100,6 +100,82 @@ describe("packaged renderer protocol", () => {
     expect(forwardedBody).toBe('{"read":true}');
   });
 
+  it("adds configured headers to proxied API requests and overrides renderer copies", async () => {
+    const fetchApi = vi.fn(async () => Response.json({ ok: true }));
+    const handler = createHandler({
+      apiBaseUrl: "http://127.0.0.1:3010",
+      apiRequestHeaders: { "x-careerden-local-token": "launch-token" },
+      fetchApi,
+    });
+
+    await handler(
+      new Request("careerden://app/api/profiles/me", {
+        headers: { "x-careerden-local-token": "renderer-guess" },
+      }),
+    );
+
+    const headers = new Headers(fetchApi.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("x-careerden-local-token")).toBe("launch-token");
+  });
+
+  it("aborts the upstream request when the renderer cancels a streamed response", async () => {
+    let upstreamSignal: AbortSignal | undefined;
+    const fetchApi = vi.fn(async (_input: string, init?: RequestInit) => {
+      upstreamSignal = init?.signal ?? undefined;
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("event: open\n\n"));
+        },
+      });
+      return new Response(stream, { headers: { "Content-Type": "text/event-stream" } });
+    });
+    const handler = createHandler({ fetchApi });
+
+    const response = await handler(new Request("careerden://app/api/job-applications/stream"));
+    const reader = response.body!.getReader();
+    await expect(reader.read()).resolves.toMatchObject({ done: false });
+    expect(upstreamSignal?.aborted).toBe(false);
+    await reader.cancel("closed");
+
+    expect(upstreamSignal?.aborted).toBe(true);
+    expect(response.headers.get("Content-Type")).toBe("text/event-stream");
+  });
+
+  it("aborts the upstream request when the renderer aborts before a response arrives", async () => {
+    let upstreamSignal: AbortSignal | undefined;
+    const fetchApi = vi.fn(
+      (_input: string, init?: RequestInit) =>
+        new Promise<Response>(() => {
+          upstreamSignal = init?.signal ?? undefined;
+        }),
+    );
+    const handler = createHandler({ fetchApi });
+    const renderer = new AbortController();
+
+    void handler(new Request("careerden://app/api/profiles/me", { signal: renderer.signal }));
+    await vi.waitFor(() => expect(upstreamSignal).toBeDefined());
+    renderer.abort();
+
+    expect(upstreamSignal?.aborted).toBe(true);
+  });
+
+  it("passes complete and empty upstream responses through unchanged", async () => {
+    const handler = createHandler({
+      fetchApi: vi.fn(async (input: string) =>
+        input.endsWith("/empty")
+          ? new Response(null, { status: 204 })
+          : Response.json({ ok: true }, { status: 201 }),
+      ),
+    });
+
+    const created = await handler(new Request("careerden://app/api/items"));
+    const empty = await handler(new Request("careerden://app/api/empty"));
+
+    expect(created.status).toBe(201);
+    await expect(created.json()).resolves.toEqual({ ok: true });
+    expect(empty.status).toBe(204);
+  });
+
   it("returns a safe gateway response when the upstream API is unavailable", async () => {
     const onError = vi.fn();
     const handler = createHandler({

@@ -3,6 +3,17 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, loadEnv } from "vite";
 import { createWebSecurityHeaders, createWebSecurityHeadersPlugin } from "./security-headers.js";
 
+// The local desktop edition's dev launcher serves its backend on a fixed loopback port behind a
+// per-run token; every other run proxies to the cloud API dev server.
+function createApiProxyTarget(): { target: string; headers?: Record<string, string> } {
+  const port = process.env.CAREERDEN_LOCAL_DEV_PORT;
+  const token = process.env.CAREERDEN_LOCAL_DEV_TOKEN;
+  if (process.env.CAREERDEN_EDITION === "local" && port && token) {
+    return { target: `http://127.0.0.1:${port}`, headers: { "x-careerden-local-token": token } };
+  }
+  return { target: "http://localhost:3000" };
+}
+
 export default defineConfig(({ mode }) => {
   const development = mode === "development";
   const env = loadEnv(mode, import.meta.dirname, "VITE_");
@@ -27,7 +38,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         "/api": {
-          target: "http://localhost:3000",
+          ...createApiProxyTarget(),
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
         },

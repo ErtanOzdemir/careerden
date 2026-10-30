@@ -5,10 +5,11 @@ import type {
   FollowUpReminderRepository,
   UpdateFollowUpReminderScheduleInput,
 } from "@careerden/domain";
-import { followUpReminderLeadTimeMs } from "@careerden/domain";
+import { followUpReminderLeadTimeMs, getFollowUpReminderScheduledFor } from "@careerden/domain";
 import { nullableDate, nullableString } from "../persistence/mappers.js";
 
 export const followUpReminderRecoveryBatchLimit = 100;
+export const followUpReminderRestoreBatchLimit = 1_000;
 
 export class PostgresFollowUpReminderRepository implements FollowUpReminderRepository {
   constructor(private readonly db: Knex) {}
@@ -74,6 +75,20 @@ export class PostgresFollowUpReminderRepository implements FollowUpReminderRepos
             [followUpReminderLeadTimeMs],
           );
       })
+      .orderBy("job_application_follow_ups.scheduled_at", "asc")
+      .limit(limit);
+
+    return rows.map(toFollowUpReminderCandidate);
+  }
+
+  async listUndeliveredSince(
+    since: Date,
+    limit = followUpReminderRestoreBatchLimit,
+  ): Promise<FollowUpReminderCandidate[]> {
+    const rows = await this.baseQuery()
+      .whereNull("job_application_follow_ups.reminder_sent_at")
+      .where("user_profiles.follow_up_reminders_enabled", true)
+      .where("job_application_follow_ups.scheduled_at", ">=", since)
       .orderBy("job_application_follow_ups.scheduled_at", "asc")
       .limit(limit);
 
@@ -149,10 +164,6 @@ export function buildFollowUpReminderBaseQuery(db: Knex): Knex.QueryBuilder {
       "job_application_follow_ups.reminder_scheduled_for",
       "job_application_follow_ups.reminder_sent_at",
     );
-}
-
-export function getFollowUpReminderScheduledFor(followUpAt: Date): Date {
-  return new Date(followUpAt.getTime() - followUpReminderLeadTimeMs);
 }
 
 export function shouldRecoverFollowUpReminder(

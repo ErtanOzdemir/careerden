@@ -4,12 +4,14 @@
     "build": {
       "dependsOn": ["^build"],
       "env": [
+        "CAREERDEN_EDITION",
         "CAREERDEN_REQUIRE_DESKTOP_API_BASE_URL",
         "CAREERDEN_REQUIRE_DESKTOP_UPDATE_REPOSITORY",
         "DESKTOP_API_BASE_URL",
-        "DESKTOP_UPDATE_REPOSITORY"
+        "DESKTOP_UPDATE_REPOSITORY",
+        "VITE_CAREERDEN_EDITION"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "renderer/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"],
@@ -21,7 +23,14 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": [
+        "CAREERDEN_EDITION",
+        "CAREERDEN_LOCAL_DEV_PORT",
+        "CAREERDEN_LOCAL_DEV_TOKEN",
+        "VITE_API_BASE_URL",
+        "VITE_CAREERDEN_EDITION"
+      ]
     }
   }
 }

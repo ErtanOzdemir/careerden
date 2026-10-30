@@ -1,16 +1,18 @@
 import type { BrowserWindowConstructorOptions } from "electron";
-import { desktopAppIdentity } from "./desktop-app-identity.js";
+import { getDesktopAppIdentity } from "./desktop-app-identity.js";
+import type { DesktopEdition } from "./desktop-runtime-config.js";
 
 export function getMainWindowOptions(
   preloadPath: string,
   platform: NodeJS.Platform = process.platform,
+  edition: DesktopEdition = "cloud",
 ): BrowserWindowConstructorOptions {
   const options: BrowserWindowConstructorOptions = {
     width: 1280,
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    title: desktopAppIdentity.name,
+    title: getDesktopAppIdentity(edition).name,
     backgroundColor: "#ffffff",
     hasShadow: true,
     autoHideMenuBar: true,
@@ -19,6 +21,8 @@ export function getMainWindowOptions(
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // The preload exposes edition-specific capabilities from this flag.
+      additionalArguments: [`--careerden-edition=${edition}`],
     },
   };
 

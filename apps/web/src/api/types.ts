@@ -258,6 +258,12 @@ export interface ApiJobApplicationAnalytics {
   rejections: number;
   responseRate: number;
   total: number;
+  companiesByStatus?: Partial<
+    Record<
+      ApiApplicationStatus,
+      Array<{ jobApplicationId: string; companyName?: string; companyLogoUrl?: string }>
+    >
+  >;
 }
 
 export interface ApiProfileExperience {

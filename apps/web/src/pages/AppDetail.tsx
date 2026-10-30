@@ -19,6 +19,7 @@ import { mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
+import { aiProviderPath } from "../settings/AiProviderSettings.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
 import type {
   ApiApplicationPackPreferences,
@@ -62,6 +63,7 @@ export default function AppDetail() {
   const [profile, setProfile] = useState<ApiProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [analysisCreditError, setAnalysisCreditError] = useState(false);
+  const [aiProviderMissing, setAiProviderMissing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get("tab")) ?? "pack");
   const [isUpdatingPack, setIsUpdatingPack] = useState(false);
@@ -383,6 +385,7 @@ export default function AppDetail() {
       setIsRetrying(true);
       setError(null);
       setAnalysisCreditError(false);
+      setAiProviderMissing(false);
       if (app?.processingStatus === "scraped") {
         await jobApplicationsApi.startAnalysis(id);
       } else {
@@ -392,6 +395,8 @@ export default function AppDetail() {
     } catch (e) {
       if (hasApiErrorCode(e, "payment_required")) {
         setAnalysisCreditError(true);
+      } else if (hasApiErrorCode(e, "ai_provider_not_configured")) {
+        setAiProviderMissing(true);
       } else {
         setError(e instanceof Error ? e.message : "Failed.");
       }
@@ -715,6 +720,24 @@ export default function AppDetail() {
           </div>
           <Link className={buttonVariants({ size: "sm", variant: "outline" })} to="/billing">
             View AI credits
+          </Link>
+        </div>
+      )}
+
+      {(aiProviderMissing ||
+        (app.processingStatus === "scraped" &&
+          app.analysisSkipReason === "ai_provider_not_configured")) && (
+        <div className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Add an AI provider to analyze jobs
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              The job is saved. Add your own API key, then start the analysis.
+            </p>
+          </div>
+          <Link className={buttonVariants({ size: "sm", variant: "outline" })} to={aiProviderPath}>
+            Add API key
           </Link>
         </div>
       )}

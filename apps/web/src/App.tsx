@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import ApplicationsLog from "./pages/ApplicationsLog";
 import AppDetail from "./pages/AppDetail";
 import ProfileManager from "./pages/ProfileManager";
+import BaseResume from "./pages/BaseResume";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Settings from "./pages/Settings";
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/applications/archived" element={<ApplicationsLog archiveMode />} />
       <Route path="/applications/:id" element={<AppDetail />} />
       <Route path="/profile" element={<ProfileManager />} />
+      <Route path="/base-resume" element={<BaseResume />} />
     </>
   );
 

@@ -1,5 +1,10 @@
 import { isRichDocument, renderRichDocumentToHtml } from "./rich-document-html.js";
 import { cvDefaultHtml } from "./templates/cv-default.js";
+import { cvEditorialHtml } from "./templates/cv-editorial.js";
+import { cvLedgerHtml } from "./templates/cv-ledger.js";
+import { cvMinimalHtml } from "./templates/cv-minimal.js";
+import { cvModernHtml } from "./templates/cv-modern.js";
+import { cvTechnicalHtml } from "./templates/cv-technical.js";
 import { coverLetterDefaultHtml } from "./templates/cover-letter-default.js";
 
 export type DocumentTemplateKind = "cv" | "cover_letter";
@@ -19,6 +24,41 @@ export const HTML_TEMPLATES: HtmlTemplateDefinition[] = [
     name: "Classic",
     description: "A clean, single-column CV layout.",
     html: cvDefaultHtml,
+  },
+  {
+    id: "cv.editorial",
+    kind: "cv",
+    name: "Editorial",
+    description: "Serif headings with a warm accent and right-aligned dates.",
+    html: cvEditorialHtml,
+  },
+  {
+    id: "cv.modern",
+    kind: "cv",
+    name: "Modern",
+    description: "A bold header with dates in a left-hand column.",
+    html: cvModernHtml,
+  },
+  {
+    id: "cv.minimal",
+    kind: "cv",
+    name: "Minimal",
+    description: "Monochrome, airy, and quiet.",
+    html: cvMinimalHtml,
+  },
+  {
+    id: "cv.technical",
+    kind: "cv",
+    name: "Technical",
+    description: "Monospace accents with skills up front.",
+    html: cvTechnicalHtml,
+  },
+  {
+    id: "cv.ledger",
+    kind: "cv",
+    name: "Ledger",
+    description: "A centered, traditional serif layout.",
+    html: cvLedgerHtml,
   },
   {
     id: "cover-letter.default",

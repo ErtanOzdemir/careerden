@@ -67,6 +67,7 @@ export const cvDefaultHtml = `<!doctype html>
         margin-top: 26px;
       }
       section > h2 {
+        break-after: avoid;
         border-bottom: 1.5px solid #e2e8f0;
         color: #2563eb;
         font-size: 10.5pt;

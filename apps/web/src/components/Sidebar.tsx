@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { cn } from "../lib/utils.js";
 import {
   LayoutDashboard,
+  FileText,
   ListChecks,
   UserRound,
   Settings,
@@ -22,6 +23,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/applications", label: "Applications", icon: ListChecks },
   { to: "/profile", label: "Profile", icon: UserRound },
+  { to: "/base-resume", label: "Base resume", icon: FileText },
   ...(isLocalEdition
     ? [{ to: "/ai-provider", label: "AI provider & API Keys", icon: KeyRound }]
     : [{ to: "/billing", label: "Credits & billing", icon: CreditCard }]),

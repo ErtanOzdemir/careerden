@@ -22,6 +22,10 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
     title: "Career profile",
     subtitle: "The foundation for every tailored document.",
   },
+  "/base-resume": {
+    title: "Base resume",
+    subtitle: "Pick the CV layout every tailored document starts from.",
+  },
   "/billing": {
     title: "Credits & billing",
     subtitle: "AI credit usage, top-ups, and your Creem subscription.",

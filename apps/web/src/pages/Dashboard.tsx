@@ -4,6 +4,7 @@ import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import { StatusBadge } from "../components/careerden/status-badge.js";
 import { ApplicationPipelineSankey } from "../components/ApplicationPipelineSankey.js";
+import { FollowUpCalendar, type CalendarFollowUp } from "../components/FollowUpCalendar.js";
 import type { DisplayStatus } from "../components/careerden/status-badge.js";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
@@ -118,27 +119,17 @@ export default function Dashboard() {
               : "added") as keyof typeof activityIcon,
     }));
 
-  const followUps = (() => {
-    if (stats?.upcomingInterviews && stats.upcomingInterviews.length > 0) {
-      return stats.upcomingInterviews.map((u) => ({
-        jobApplicationId: u.jobApplicationId,
-        company: u.company,
-        type: "Follow-up: " + u.role,
-        date: `${u.month} ${u.day}`,
-        relative: u.time,
-      }));
-    }
-    return applications
-      .filter((a) => a.status === "Interviewing")
-      .slice(0, 3)
-      .map((a) => ({
-        jobApplicationId: a.id,
-        company: a.company,
-        type: "Follow-up",
-        date: a.dateApplied,
-        relative: a.dateLabel,
-      }));
-  })();
+  const followUps: CalendarFollowUp[] = applications.flatMap((app) =>
+    (app.followUps ?? [])
+      .map((followUp) => ({
+        id: followUp.id,
+        jobApplicationId: app.id,
+        title: followUp.title,
+        company: app.company,
+        scheduledAt: new Date(followUp.scheduledAt),
+      }))
+      .filter((followUp) => !Number.isNaN(followUp.scheduledAt.getTime())),
+  );
 
   return (
     <div className="space-y-6">
@@ -234,34 +225,13 @@ export default function Dashboard() {
         </Panel>
 
         <Panel>
-          <PanelHeader title="Upcoming follow-ups" />
-          <div className="divide-y divide-border border-t border-border">
-            {followUps.length > 0 ? (
-              followUps.map((f) => (
-                <button
-                  key={f.jobApplicationId}
-                  type="button"
-                  onClick={() => navigate(`/applications/${f.jobApplicationId}?tab=timeline`)}
-                  className="flex w-full gap-3 px-5 py-3.5 text-left transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex size-9 shrink-0 flex-col items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                    <CalendarDays className="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">{f.type}</p>
-                    <p className="truncate text-xs text-muted-foreground">{f.company}</p>
-                    <p className="mt-1 text-xs font-medium text-primary">
-                      {f.relative} {f.date ? "·" : ""} {f.date}
-                    </p>
-                  </div>
-                </button>
-              ))
-            ) : (
-              <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-                No upcoming follow-ups.
-              </div>
-            )}
-          </div>
+          <PanelHeader title="Follow-ups" />
+          <FollowUpCalendar
+            followUps={followUps}
+            onOpen={(jobApplicationId) =>
+              navigate(`/applications/${jobApplicationId}?tab=timeline`)
+            }
+          />
         </Panel>
       </div>
       <Panel>

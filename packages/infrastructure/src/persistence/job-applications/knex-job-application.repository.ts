@@ -856,6 +856,19 @@ function applySort(query: Knex.QueryBuilder, filter: ListJobApplicationsFilter):
 
   if (sortBy === "matchScore") {
     query.orderByRaw(`(match_analysis->>'matchScore')::numeric ${direction} nulls last`);
+  } else if (sortBy === "priority") {
+    query.orderByRaw(
+      `case priority when 'high' then 3 when 'medium' then 2 when 'low' then 1 end ${direction} nulls last`,
+    );
+  } else if (sortBy === "salary") {
+    // Ranks by the top of the range; amounts in different currencies or periods aren't converted.
+    query.orderByRaw(
+      `coalesce(salary_max_amount, salary_min_amount)::numeric ${direction} nulls last`,
+    );
+  } else if (sortBy === "addedAt") {
+    query.orderByRaw(
+      `coalesce(left(date_applied, 10), to_char(created_at, 'YYYY-MM-DD')) ${direction}, created_at ${direction}`,
+    );
   } else {
     query.orderBy(toColumnName(sortBy), direction);
   }

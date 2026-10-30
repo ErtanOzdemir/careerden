@@ -318,6 +318,9 @@ export const listJobApplicationsQuerySchema = z.object({
       "roleTitle",
       "applicationStatus",
       "matchScore",
+      "priority",
+      "salary",
+      "addedAt",
       "updatedAt",
     ])
     .default("updatedAt"),

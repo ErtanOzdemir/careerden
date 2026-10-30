@@ -79,6 +79,66 @@ describe("ApplicationsLog", () => {
     );
   });
 
+  it("sorts by a column header, cycling descending, ascending, and the default order", async () => {
+    mocks.me.mockResolvedValue({ id: "profile-1" });
+    mocks.list.mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 20,
+      totalItems: 0,
+      totalPages: 0,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/applications?sort=salary&dir=asc"]}>
+        <Routes>
+          <Route path="/applications" element={<ApplicationsLog />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(mocks.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: "salary", sortDirection: "asc" }),
+      ),
+    );
+    expect(screen.getByRole("columnheader", { name: "Salary" })).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+    // A sort from the URL loads once instead of reloading on every render.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocks.list).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Interest" }));
+    await waitFor(() =>
+      expect(mocks.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: "priority", sortDirection: "desc" }),
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Interest" }));
+    await waitFor(() =>
+      expect(mocks.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: "priority", sortDirection: "asc" }),
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Interest" }));
+    await waitFor(() =>
+      expect(mocks.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: "updatedAt", sortDirection: "desc" }),
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Added" }));
+    await waitFor(() =>
+      expect(mocks.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: "addedAt", sortDirection: "desc" }),
+      ),
+    );
+  });
+
   it("refreshes credits when an application SSE change settles background work", async () => {
     mocks.me.mockResolvedValue({ id: "profile-1" });
     mocks.list.mockResolvedValue({

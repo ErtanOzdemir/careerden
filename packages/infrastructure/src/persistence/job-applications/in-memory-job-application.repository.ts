@@ -877,22 +877,30 @@ function compareJobs(
   const leftValue = sortableValue(left, sortBy, leftMatch);
   const rightValue = sortableValue(right, sortBy, rightMatch);
 
-  if (leftValue < rightValue) {
+  // Like the Postgres repository's `nulls last`, missing priorities and salaries trail either way.
+  if (leftValue === undefined || rightValue === undefined) {
+    if (leftValue !== rightValue) return leftValue === undefined ? 1 : -1;
+  } else if (leftValue < rightValue) {
     return -1 * modifier;
+  } else if (leftValue > rightValue) {
+    return 1 * modifier;
   }
 
-  if (leftValue > rightValue) {
-    return 1 * modifier;
+  if (sortBy === "addedAt") {
+    const createdOrder = left.createdAt.getTime() - right.createdAt.getTime();
+    if (createdOrder !== 0) return createdOrder * modifier;
   }
 
   return left.id.localeCompare(right.id) * modifier;
 }
 
+const priorityRanks = { low: 1, medium: 2, high: 3 } as const;
+
 function sortableValue(
   job: JobApplication,
   sortBy: NonNullable<ListJobApplicationsFilter["sortBy"]>,
   match?: MatchAnalysisResult,
-) {
+): string | number | undefined {
   if (sortBy === "matchScore") {
     return match?.matchScore ?? -1;
   }
@@ -901,6 +909,15 @@ function sortableValue(
   }
   if (sortBy === "archivedAt") {
     return job.archivedAt?.toISOString() ?? "";
+  }
+  if (sortBy === "priority") {
+    return job.tracking.priority ? priorityRanks[job.tracking.priority] : undefined;
+  }
+  if (sortBy === "salary") {
+    return job.tracking.salaryMaxAmount ?? job.tracking.salaryMinAmount;
+  }
+  if (sortBy === "addedAt") {
+    return job.tracking.dateApplied?.slice(0, 10) ?? job.createdAt.toISOString().slice(0, 10);
   }
 
   return job.tracking[sortBy] ?? "";

@@ -71,6 +71,35 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(secondPage).toMatchObject({ totalItems: 2, items: [{ id: lowMatch.id }] });
   });
 
+  it("sorts by interest, salary, and added date with missing values last", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const high = await repository.create({
+      profileId: "profile-1",
+      priority: "high",
+      salaryMinAmount: 50_000,
+      dateApplied: "2026-03-01",
+    });
+    const low = await repository.create({
+      profileId: "profile-1",
+      priority: "low",
+      salaryMinAmount: 40_000,
+      salaryMaxAmount: 90_000,
+      dateApplied: "2026-01-15",
+    });
+    const unset = await repository.create({ profileId: "profile-1" });
+    const ids = async (sortBy: "priority" | "salary" | "addedAt", sortDirection: "asc" | "desc") =>
+      (await repository.listByProfileId("profile-1", { sortBy, sortDirection })).items.map(
+        (item) => item.id,
+      );
+
+    await expect(ids("priority", "desc")).resolves.toEqual([high.id, low.id, unset.id]);
+    await expect(ids("priority", "asc")).resolves.toEqual([low.id, high.id, unset.id]);
+    await expect(ids("salary", "desc")).resolves.toEqual([low.id, high.id, unset.id]);
+    await expect(ids("salary", "asc")).resolves.toEqual([high.id, low.id, unset.id]);
+    // Without an applied date, the application counts as added on the day it was created.
+    await expect(ids("addedAt", "desc")).resolves.toEqual([unset.id, high.id, low.id]);
+  });
+
   it("hides archived applications by default and restores them", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const active = await repository.create({ profileId: "profile-1", companyName: "Active" });

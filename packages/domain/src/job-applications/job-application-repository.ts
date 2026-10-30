@@ -44,6 +44,10 @@ export type JobApplicationSortField =
   | "roleTitle"
   | "applicationStatus"
   | "matchScore"
+  | "priority"
+  | "salary"
+  // The date shown as "Added": the applied date when set, otherwise when it was created.
+  | "addedAt"
   | "updatedAt";
 
 export interface ListJobApplicationsFilter {

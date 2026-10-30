@@ -26,12 +26,15 @@ export interface ListJobApplicationsParams {
   pageSize?: number;
   search?: string;
   sortBy?:
+    | "addedAt"
     | "archivedAt"
     | "applicationStatus"
     | "companyName"
     | "dateApplied"
     | "matchScore"
+    | "priority"
     | "roleTitle"
+    | "salary"
     | "updatedAt";
   sortDirection?: "asc" | "desc";
 }

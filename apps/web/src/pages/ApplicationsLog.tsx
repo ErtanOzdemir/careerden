@@ -14,20 +14,23 @@ import {
 } from "../api/jobApplicationChanges.js";
 import { cn } from "../lib/utils.js";
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   ArrowUpDown,
   Archive,
   ArchiveRestore,
   EllipsisVertical,
   Search,
-  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import type { JobApplication } from "../types.js";
 import type { ApiApplicationStatus } from "../api/types.js";
 
-type SortKey = "recent" | "match" | "company";
+type SortColumn = "match" | "interest" | "salary" | "added";
+type SortDirection = "asc" | "desc";
+type ColumnSort = { column: SortColumn; direction: SortDirection };
 const PAGE_SIZE = 20;
 const processingStatuses = ["queued", "scraping", "analyzing", "generating_documents"];
 const applicationsGridColumns =
@@ -58,7 +61,10 @@ export default function ApplicationsLog({ archiveMode = false }: { archiveMode?:
     ? filters.filter((candidate) => candidate.id !== "processing")
     : filters;
   const filter = parseFilter(searchParams.get("status"), visibleFilters);
-  const sort = parseSort(searchParams.get("sort"));
+  const sortParam = searchParams.get("sort");
+  const dirParam = searchParams.get("dir");
+  // Memoized so the list only reloads when the URL's sort changes, not on every render.
+  const sort = useMemo(() => parseSort(sortParam, dirParam), [sortParam, dirParam]);
   const page = parsePage(searchParams.get("page"));
   const urlQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
@@ -133,15 +139,12 @@ export default function ApplicationsLog({ archiveMode = false }: { archiveMode?:
           search: urlQuery || undefined,
           page,
           pageSize: PAGE_SIZE,
-          sortBy:
-            sort === "match"
-              ? "matchScore"
-              : sort === "company"
-                ? "companyName"
-                : archiveMode
-                  ? "archivedAt"
-                  : "updatedAt",
-          sortDirection: sort === "company" ? "asc" : "desc",
+          sortBy: sort
+            ? toSortField(sort.column, archiveMode)
+            : archiveMode
+              ? "archivedAt"
+              : "updatedAt",
+          sortDirection: sort?.direction ?? "desc",
         });
         if (sequence === loadSequence.current) {
           if (page > Math.max(result.totalPages, 1)) {
@@ -250,6 +253,20 @@ export default function ApplicationsLog({ archiveMode = false }: { archiveMode?:
     }
   }, [deleteCandidate, loadApplications]);
 
+  // Each click on a column header cycles it from descending to ascending to the default order.
+  const toggleSort = useCallback(
+    (column: SortColumn) => {
+      const direction: SortDirection | undefined =
+        sort?.column !== column ? "desc" : sort.direction === "desc" ? "asc" : undefined;
+      updateSearchParams({
+        sort: direction ? column : undefined,
+        dir: direction === "asc" ? "asc" : undefined,
+        page: undefined,
+      });
+    },
+    [sort, updateSearchParams],
+  );
+
   const rows = useMemo(() => applications, [applications]);
   const visibleRows = isLoading ? [] : rows;
 
@@ -274,27 +291,6 @@ export default function ApplicationsLog({ archiveMode = false }: { archiveMode?:
           >
             {archiveMode ? <ArrowLeft className="size-3.5" /> : <Archive className="size-3.5" />}
             {archiveMode ? "Active applications" : "Archived applications"}
-          </Button>
-          <div className="flex items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 py-1.5">
-            <ArrowUpDown className="size-3.5 text-muted-foreground" />
-            <select
-              value={sort}
-              onChange={(e) =>
-                updateSearchParams({
-                  sort: e.target.value === "recent" ? undefined : e.target.value,
-                  page: undefined,
-                })
-              }
-              className="bg-transparent text-sm text-foreground outline-none"
-            >
-              <option value="recent">Most recent</option>
-              <option value="match">Highest match</option>
-              <option value="company">Company A–Z</option>
-            </select>
-          </div>
-          <Button variant="outline" size="sm">
-            <SlidersHorizontal className="size-3.5" />
-            Filters
           </Button>
         </div>
       </div>
@@ -335,10 +331,22 @@ export default function ApplicationsLog({ archiveMode = false }: { archiveMode?:
         >
           <div>Company & role</div>
           <div>Status</div>
-          <div>Match</div>
-          <div>Interest</div>
-          <div className="md:pl-2">Salary</div>
-          <div className="text-right">{archiveMode ? "Archived" : "Added"}</div>
+          <SortableHeader column="match" label="Match" onSort={toggleSort} sort={sort} />
+          <SortableHeader column="interest" label="Interest" onSort={toggleSort} sort={sort} />
+          <SortableHeader
+            className="md:pl-2"
+            column="salary"
+            label="Salary"
+            onSort={toggleSort}
+            sort={sort}
+          />
+          <SortableHeader
+            align="end"
+            column="added"
+            label={archiveMode ? "Archived" : "Added"}
+            onSort={toggleSort}
+            sort={sort}
+          />
           <div className="text-center">Actions</div>
         </div>
 
@@ -607,8 +615,62 @@ function parseFilter(
     : "all";
 }
 
-function parseSort(value: string | null): SortKey {
-  return value === "match" || value === "company" ? value : "recent";
+const sortColumns: readonly SortColumn[] = ["match", "interest", "salary", "added"];
+
+function parseSort(column: string | null, direction: string | null): ColumnSort | undefined {
+  if (!sortColumns.includes(column as SortColumn)) return undefined;
+  return { column: column as SortColumn, direction: direction === "asc" ? "asc" : "desc" };
+}
+
+function toSortField(column: SortColumn, archiveMode: boolean) {
+  if (column === "match") return "matchScore";
+  if (column === "interest") return "priority";
+  if (column === "salary") return "salary";
+  return archiveMode ? "archivedAt" : "addedAt";
+}
+
+function SortableHeader({
+  align = "start",
+  className,
+  column,
+  label,
+  onSort,
+  sort,
+}: {
+  align?: "start" | "end";
+  className?: string;
+  column: SortColumn;
+  label: string;
+  onSort: (column: SortColumn) => void;
+  sort?: ColumnSort;
+}) {
+  const direction = sort?.column === column ? sort.direction : undefined;
+  const Icon = direction === "asc" ? ArrowUp : direction === "desc" ? ArrowDown : ArrowUpDown;
+
+  return (
+    <div
+      aria-sort={
+        direction === "asc" ? "ascending" : direction === "desc" ? "descending" : undefined
+      }
+      className={cn("flex", align === "end" && "justify-end", className)}
+      role="columnheader"
+    >
+      <button
+        className={cn(
+          "group -mx-1 inline-flex items-center gap-1 rounded px-1 transition-colors hover:text-foreground",
+          direction && "text-foreground",
+        )}
+        onClick={() => onSort(column)}
+        type="button"
+      >
+        {label}
+        <Icon
+          aria-hidden="true"
+          className={cn("size-3", !direction && "opacity-40 group-hover:opacity-100")}
+        />
+      </button>
+    </div>
+  );
 }
 
 function parsePage(value: string | null): number {

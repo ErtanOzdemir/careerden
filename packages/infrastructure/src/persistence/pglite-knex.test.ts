@@ -97,6 +97,36 @@ describe("createPgliteDb", { timeout: 30_000 }, () => {
     expect(sorted.items.map((item) => item.id)).toEqual([high.id, low.id]);
   });
 
+  it("sorts job applications by interest, salary, and added date with nulls last", async () => {
+    const db = await openDb();
+    const profile = await seedProfile(db);
+    const jobApplications = new PostgresJobApplicationRepository(db);
+    const high = await jobApplications.create({
+      profileId: profile.id,
+      priority: "high",
+      salaryMinAmount: 50_000,
+      dateApplied: "2026-03-01",
+    });
+    const low = await jobApplications.create({
+      profileId: profile.id,
+      priority: "low",
+      salaryMinAmount: 40_000,
+      salaryMaxAmount: 90_000,
+      dateApplied: "2026-01-15",
+    });
+    const unset = await jobApplications.create({ profileId: profile.id });
+    const ids = async (sortBy: "priority" | "salary" | "addedAt", sortDirection: "asc" | "desc") =>
+      (await jobApplications.listByProfileId(profile.id, { sortBy, sortDirection })).items.map(
+        (item) => item.id,
+      );
+
+    await expect(ids("priority", "desc")).resolves.toEqual([high.id, low.id, unset.id]);
+    await expect(ids("priority", "asc")).resolves.toEqual([low.id, high.id, unset.id]);
+    await expect(ids("salary", "desc")).resolves.toEqual([low.id, high.id, unset.id]);
+    await expect(ids("salary", "asc")).resolves.toEqual([high.id, low.id, unset.id]);
+    await expect(ids("addedAt", "desc")).resolves.toEqual([unset.id, high.id, low.id]);
+  });
+
   it("commits and rolls back unit-of-work transactions", async () => {
     const db = await openDb();
     const profile = await seedProfile(db);

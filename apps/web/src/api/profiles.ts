@@ -1,5 +1,5 @@
 import { requestJson } from "./client";
-import type { ApiProfile, ApiUpdateProfilePayload } from "./types";
+import type { ApiProfile, ApiUpdateOnboardingPayload, ApiUpdateProfilePayload } from "./types";
 
 export const profileUpdatedEvent = "careerden:profile-updated";
 
@@ -16,7 +16,20 @@ export const profilesApi = {
       method: "PATCH",
     });
 
-    window.dispatchEvent(new CustomEvent<ApiProfile>(profileUpdatedEvent, { detail: profile }));
+    dispatchProfileUpdated(profile);
+    return profile;
+  },
+  async updateOnboarding(payload: ApiUpdateOnboardingPayload): Promise<ApiProfile> {
+    const profile = await requestJson<ApiProfile>("/profiles/me/onboarding", {
+      body: payload,
+      method: "PATCH",
+    });
+
+    dispatchProfileUpdated(profile);
     return profile;
   },
 };
+
+function dispatchProfileUpdated(profile: ApiProfile): void {
+  window.dispatchEvent(new CustomEvent<ApiProfile>(profileUpdatedEvent, { detail: profile }));
+}

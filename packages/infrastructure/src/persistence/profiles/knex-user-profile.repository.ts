@@ -1,5 +1,10 @@
 import type { Knex } from "knex";
-import type { CreateUserProfileInput, UpdateUserProfileInput, UserProfile, UserProfileRepository } from "@careerden/domain";
+import type {
+  CreateUserProfileInput,
+  UpdateUserProfileInput,
+  UserProfile,
+  UserProfileRepository,
+} from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 import { toUserProfile } from "../mappers.js";
 
@@ -76,6 +81,12 @@ export class KnexUserProfileRepository implements UserProfileRepository {
     }
     if (input.defaultCoverLetterTemplateId !== undefined) {
       patch.default_cover_letter_template_id = input.defaultCoverLetterTemplateId ?? null;
+    }
+    if (input.onboardingCompletedAt !== undefined) {
+      patch.onboarding_completed_at = input.onboardingCompletedAt;
+    }
+    if (input.onboardingChecklistDismissedAt !== undefined) {
+      patch.onboarding_checklist_dismissed_at = input.onboardingChecklistDismissedAt;
     }
 
     const [row] = await this.db("user_profiles").where({ id }).update(patch).returning("*");

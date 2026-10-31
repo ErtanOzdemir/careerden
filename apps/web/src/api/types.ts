@@ -310,12 +310,19 @@ export interface ApiProfile {
   id: string;
   links: string[];
   location?: string;
+  onboardingChecklistDismissedAt?: string;
+  onboardingCompletedAt?: string;
   profession?: string;
   projects: ApiProfileProject[];
   skills: string[];
   summary?: string;
   summaryRichText?: RichDocument;
   updatedAt: string;
+}
+
+export interface ApiUpdateOnboardingPayload {
+  checklistDismissed?: boolean;
+  completed?: boolean;
 }
 
 export type ApiUpdateProfilePayload = Partial<

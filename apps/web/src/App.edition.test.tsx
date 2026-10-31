@@ -23,6 +23,9 @@ vi.mock("./components/AuthenticatedLayout", () => ({
     </div>
   ),
 }));
+vi.mock("./onboarding/OnboardingGate.js", () => ({
+  OnboardingGate: ({ children }: { children: React.ReactNode }) => children,
+}));
 vi.mock("./desktop-updates/DesktopUpdateProvider.js", () => ({
   DesktopUpdateProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

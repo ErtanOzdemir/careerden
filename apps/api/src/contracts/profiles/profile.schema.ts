@@ -84,3 +84,15 @@ export const updateProfileSchema = profileObjectSchema
 
 export type CreateProfileDto = z.infer<typeof createProfileSchema>;
 export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;
+
+export const updateOnboardingStateSchema = z
+  .object({
+    completed: z.boolean().optional(),
+    checklistDismissed: z.boolean().optional(),
+  })
+  .strict()
+  .refine((value) => value.completed !== undefined || value.checklistDismissed !== undefined, {
+    message: "Provide completed or checklistDismissed",
+  });
+
+export type UpdateOnboardingStateDto = z.infer<typeof updateOnboardingStateSchema>;

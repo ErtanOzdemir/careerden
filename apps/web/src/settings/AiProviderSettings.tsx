@@ -55,7 +55,7 @@ const providers: Array<{
 
 type Feedback = { tone: "success" | "error"; message: string } | null;
 
-type AiCredentialsBridge = NonNullable<NonNullable<Window["electronAPI"]>["aiCredentials"]>;
+export type AiCredentialsBridge = NonNullable<NonNullable<Window["electronAPI"]>["aiCredentials"]>;
 
 // Local edition only: the user's own AI provider key, kept by the desktop app in the OS keychain.
 export function AiProviderSettings() {
@@ -75,7 +75,13 @@ export function AiProviderSettings() {
   return <AiProviderPanel bridge={bridge} />;
 }
 
-function AiProviderPanel({ bridge }: { bridge: AiCredentialsBridge }) {
+export function AiProviderPanel({
+  bridge,
+  onStatusChange,
+}: {
+  bridge: AiCredentialsBridge;
+  onStatusChange?: (status: AiCredentialsStatus) => void;
+}) {
   const keyInputId = useId();
   const modelInputId = useId();
   const [status, setStatus] = useState<AiCredentialsStatus | null>(null);
@@ -101,6 +107,10 @@ function AiProviderPanel({ bridge }: { bridge: AiCredentialsBridge }) {
       active = false;
     };
   }, [bridge]);
+
+  useEffect(() => {
+    if (status) onStatusChange?.(status);
+  }, [onStatusChange, status]);
 
   const providerInfo = providers.find((entry) => entry.id === provider) ?? providers[0];
   const saved = status?.providers.find((entry) => entry.provider === provider);

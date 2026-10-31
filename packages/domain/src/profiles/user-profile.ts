@@ -49,6 +49,8 @@ export interface UserProfile {
   projects: ProfileProject[];
   defaultCvTemplateId?: string;
   defaultCoverLetterTemplateId?: string;
+  onboardingCompletedAt?: Date;
+  onboardingChecklistDismissedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +69,8 @@ export type CreateUserProfileInput = Omit<
   | "links"
   | "defaultCvTemplateId"
   | "defaultCoverLetterTemplateId"
+  | "onboardingCompletedAt"
+  | "onboardingChecklistDismissedAt"
 > &
   Partial<
     Pick<
@@ -83,7 +87,12 @@ export type CreateUserProfileInput = Omit<
     >
   >;
 
-export type UpdateUserProfileInput = Partial<CreateUserProfileInput>;
+export interface UserProfileOnboardingInput {
+  onboardingCompletedAt?: Date | null;
+  onboardingChecklistDismissedAt?: Date | null;
+}
+
+export type UpdateUserProfileInput = Partial<CreateUserProfileInput> & UserProfileOnboardingInput;
 
 export function normalizeCreateUserProfileInput(
   input: CreateUserProfileInput,

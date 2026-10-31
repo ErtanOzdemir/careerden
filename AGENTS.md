@@ -125,6 +125,12 @@ review or download.
   provider is configured. Electron prints its PDFs in a hidden window without scripts or
   network access. Reminders are restored from the database on start, delivering those up
   to seven days overdue.
+- First-run onboarding is shared by both editions. `OnboardingGate` shows the setup wizard in
+  place of the app shell until `user_profiles.onboarding_completed_at` is set, and fails open
+  when the profile cannot be read. The server stamps onboarding timestamps through
+  `PATCH /profiles/me/onboarding`. Only the local desktop edition shows the AI provider step.
+  The dashboard setup checklist derives its items from profile, provider, and application data
+  rather than storing them. Profiles that existed before onboarding are backfilled as complete.
 - Shared composition lives in `createApiApp` (HTTP) and `packages/application` (use cases),
   so cloud and local runtimes differ only in the adapters they pass. Add routes and use
   cases there rather than in either runtime.

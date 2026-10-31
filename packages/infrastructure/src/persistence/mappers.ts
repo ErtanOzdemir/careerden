@@ -143,6 +143,8 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     projects: jsonArray<ProfileProject>(row.projects).map(withDescriptionRichText),
     defaultCvTemplateId: nullableString(row.default_cv_template_id),
     defaultCoverLetterTemplateId: nullableString(row.default_cover_letter_template_id),
+    onboardingCompletedAt: nullableDate(row.onboarding_completed_at),
+    onboardingChecklistDismissedAt: nullableDate(row.onboarding_checklist_dismissed_at),
     createdAt: new Date(String(row.created_at)),
     updatedAt: new Date(String(row.updated_at)),
   };

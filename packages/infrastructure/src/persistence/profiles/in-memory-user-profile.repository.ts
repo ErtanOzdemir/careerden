@@ -1,4 +1,9 @@
-import type { CreateUserProfileInput, UpdateUserProfileInput, UserProfile, UserProfileRepository } from "@careerden/domain";
+import type {
+  CreateUserProfileInput,
+  UpdateUserProfileInput,
+  UserProfile,
+  UserProfileRepository,
+} from "@careerden/domain";
 import { randomUUID } from "node:crypto";
 
 export class InMemoryUserProfileRepository implements UserProfileRepository {
@@ -41,10 +46,26 @@ export class InMemoryUserProfileRepository implements UserProfileRepository {
       education: input.education ?? existing.education,
       certifications: input.certifications ?? existing.certifications,
       projects: input.projects ?? existing.projects,
+      onboardingCompletedAt: resolveOnboardingDate(
+        input.onboardingCompletedAt,
+        existing.onboardingCompletedAt,
+      ),
+      onboardingChecklistDismissedAt: resolveOnboardingDate(
+        input.onboardingChecklistDismissedAt,
+        existing.onboardingChecklistDismissedAt,
+      ),
       updatedAt: new Date(),
     };
 
     this.profiles.set(id, updated);
     return updated;
   }
+}
+
+function resolveOnboardingDate(
+  next: Date | null | undefined,
+  existing: Date | undefined,
+): Date | undefined {
+  if (next === undefined) return existing;
+  return next ?? undefined;
 }

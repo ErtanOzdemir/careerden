@@ -10,6 +10,8 @@ import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
 import { mapApiJobApplicationToUi, mapApiDashboardStats } from "../api/mappers.js";
 import type { JobApplication, DashboardStats } from "../types.js";
+import type { ApiProfile } from "../api/types.js";
+import { OnboardingChecklist } from "../onboarding/OnboardingChecklist.js";
 import { cn } from "../lib/utils.js";
 import {
   Link2,
@@ -34,6 +36,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [profile, setProfile] = useState<ApiProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +55,7 @@ export default function Dashboard() {
         const mappedDetails = details.map((d) => mapApiJobApplicationToUi(d));
 
         if (isMounted) {
+          setProfile(profile);
           setApplications(mappedDetails);
           setStats(mapApiDashboardStats(analytics, details));
         }
@@ -133,6 +137,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {profile && (
+        <OnboardingChecklist profile={profile} hasApplications={applications.length > 0} />
+      )}
+
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3.5">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">

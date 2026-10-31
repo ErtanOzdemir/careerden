@@ -223,4 +223,24 @@ describe("createPgliteDb", { timeout: 30_000 }, () => {
       new PostgresUserProfileRepository(second).findById(profile.id),
     ).resolves.toMatchObject({ fullName: "Ada Lovelace" });
   });
+
+  it("starts new profiles without onboarding and stores its timestamps", async () => {
+    const db = await openDb();
+    const profiles = new PostgresUserProfileRepository(db);
+    const profile = await seedProfile(db);
+
+    expect(profile.onboardingCompletedAt).toBeUndefined();
+    expect(profile.onboardingChecklistDismissedAt).toBeUndefined();
+
+    const completed = await profiles.update(profile.id, {
+      onboardingCompletedAt: now,
+      onboardingChecklistDismissedAt: now,
+    });
+    expect(completed?.onboardingCompletedAt?.toISOString()).toBe(now.toISOString());
+    expect(completed?.onboardingChecklistDismissedAt?.toISOString()).toBe(now.toISOString());
+
+    const restarted = await profiles.update(profile.id, { onboardingCompletedAt: null });
+    expect(restarted?.onboardingCompletedAt).toBeUndefined();
+    expect(restarted?.onboardingChecklistDismissedAt?.toISOString()).toBe(now.toISOString());
+  });
 });

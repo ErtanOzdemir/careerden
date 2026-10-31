@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  emptyRichDocument,
-  listHtmlTemplates,
-  renderHtmlTemplate,
-  richDocumentFromText,
-} from "@careerden/contracts";
+import { listHtmlTemplates, renderHtmlTemplate } from "@careerden/contracts";
 import { Check, Info, Loader2 } from "lucide-react";
 import { profilesApi } from "../api/profiles.js";
-import type { ApiDocumentContent, ApiProfile } from "../api/types.js";
+import type { ApiProfile } from "../api/types.js";
 import { Panel } from "../components/careerden/panel.js";
 import { TemplateThumbnail } from "../components/TemplateThumbnail.js";
 import { Button } from "../components/ui/button.js";
+import { baseContentFor, hasResumeContent } from "../lib/base-resume.js";
 import { buildPreviewTemplateData } from "../lib/document-preview.js";
 import { renderPagedPreview } from "../lib/paged-preview.js";
 import { sampleResumeProfile } from "../lib/sample-resume-profile.js";
@@ -22,23 +18,6 @@ const fallbackTemplateId = cvTemplates[0]?.id ?? "cv.default";
 // A4 at 96 CSS px/inch (210mm), matching the PDF page width Playwright renders.
 const pageWidthPx = 794;
 const previewPaddingPx = 64;
-
-function hasResumeContent(profile: ApiProfile): boolean {
-  return Boolean(profile.fullName.trim()) && profile.experience.length > 0;
-}
-
-function baseContentFor(profile: ApiProfile): ApiDocumentContent {
-  return {
-    customizedSummary:
-      profile.summaryRichText ??
-      (profile.summary ? richDocumentFromText(profile.summary) : emptyRichDocument()),
-    experienceEnhancements: [],
-    skillSuggestions: [],
-    educationEnhancements: [],
-    projectEnhancements: [],
-    certificationSuggestions: [],
-  };
-}
 
 export default function BaseResume() {
   const [profile, setProfile] = useState<ApiProfile | null>(null);

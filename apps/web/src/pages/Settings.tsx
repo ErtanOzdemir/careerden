@@ -4,6 +4,7 @@ import { Button } from "../components/ui/button.js";
 import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import { Modal } from "../components/careerden/modal.js";
 import { Field } from "../components/careerden/field.js";
+import { Toggle } from "../components/careerden/toggle.js";
 import { cn } from "../lib/utils.js";
 import {
   formatOtpCooldown,
@@ -26,6 +27,7 @@ import {
   Sparkles,
   Bell,
   Palette,
+  Compass,
   CircleUser,
   ArrowUpCircle,
   Monitor,
@@ -35,61 +37,6 @@ import {
   EyeOff,
   LockKeyhole,
 } from "lucide-react";
-
-function Toggle({
-  checked,
-  defaultOn = false,
-  disabled = false,
-  label,
-  desc,
-  onChange,
-}: {
-  checked?: boolean;
-  defaultOn?: boolean;
-  disabled?: boolean;
-  label: string;
-  desc: string;
-  onChange?: (checked: boolean) => void;
-}) {
-  const [on, setOn] = useState(defaultOn);
-  const isOn = checked ?? on;
-
-  function handleClick() {
-    const next = !isOn;
-    if (checked === undefined) {
-      setOn(next);
-    }
-    onChange?.(next);
-  }
-
-  return (
-    <div className="flex items-center justify-between gap-4 px-5 py-3.5">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground">{desc}</p>
-      </div>
-      <button
-        role="switch"
-        aria-checked={isOn}
-        aria-label={label}
-        disabled={disabled}
-        onClick={handleClick}
-        className={cn(
-          "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-          isOn ? "bg-primary" : "bg-muted",
-          disabled && "cursor-not-allowed opacity-60",
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 left-0.5 size-4 rounded-full bg-card transition-transform",
-            isOn && "translate-x-4",
-          )}
-        />
-      </button>
-    </div>
-  );
-}
 
 const themeOptions: { id: Theme; label: string; icon: typeof Sun }[] = [
   { id: "light", label: "Light", icon: Sun },
@@ -114,6 +61,8 @@ export default function Settings() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingPreference, setIsSavingPreference] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [isRestartingOnboarding, setIsRestartingOnboarding] = useState(false);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmedPassword, setConfirmedPassword] = useState("");
@@ -212,6 +161,19 @@ export default function Settings() {
       setProfileError(error instanceof Error ? error.message : "Failed to save preference.");
     } finally {
       setIsSavingPreference(false);
+    }
+  }
+
+  async function handleRestartOnboarding() {
+    setIsRestartingOnboarding(true);
+    setOnboardingError(null);
+    try {
+      await profilesApi.updateOnboarding({ completed: false, checklistDismissed: false });
+    } catch (restartError) {
+      setOnboardingError(
+        restartError instanceof Error ? restartError.message : "Could not restart the setup guide.",
+      );
+      setIsRestartingOnboarding(false);
     }
   }
 
@@ -574,6 +536,31 @@ export default function Settings() {
             ))}
           </div>
         </div>
+      </Panel>
+
+      <Panel>
+        <div className="flex items-center gap-2.5 px-5 py-4">
+          <Compass className="size-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Setup guide</h2>
+        </div>
+        <div className="flex flex-col gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Walk through the first-run setup again to review your essentials.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isRestartingOnboarding}
+            onClick={() => void handleRestartOnboarding()}
+          >
+            {isRestartingOnboarding ? "Opening…" : "Restart setup guide"}
+          </Button>
+        </div>
+        {onboardingError && (
+          <p role="alert" className="border-t border-border px-5 py-3 text-sm text-destructive">
+            {onboardingError}
+          </p>
+        )}
       </Panel>
 
       {updateState && (

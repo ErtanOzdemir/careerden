@@ -14,6 +14,7 @@ import { GenerateJobApplicationDocumentsUseCase } from "./application/job-applic
 import { RetryJobApplicationUseCase } from "./application/job-applications/retry-job-application.use-case.js";
 import { SubmitJobApplicationUseCase } from "./application/job-applications/submit-job-application.use-case.js";
 import { UpdateDocumentContentUseCase } from "./application/job-applications/update-document-content.use-case.js";
+import { UpdateOnboardingStateUseCase } from "./application/profiles/update-onboarding-state.use-case.js";
 import { UpdateProfileUseCase } from "./application/profiles/update-profile.use-case.js";
 import { GetOrCreateCurrentProfileUseCase } from "./application/profiles/get-or-create-current-profile.use-case.js";
 import { GetProfileUseCase } from "./application/profiles/get-profile.use-case.js";
@@ -154,6 +155,7 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
       getCurrentProfile,
       getProfile,
       updateProfile: new UpdateProfileUseCase(profiles),
+      updateOnboardingState: new UpdateOnboardingStateUseCase(profiles),
     }),
   );
   app.use(

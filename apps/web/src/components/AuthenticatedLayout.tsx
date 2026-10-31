@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { authClient } from "../api/auth";
 import { CreditBalanceProvider } from "../billing/CreditBalanceProvider.js";
+import { OnboardingGate } from "../onboarding/OnboardingGate.js";
 import AppShell from "./AppShell";
 
 export default function AuthenticatedLayout() {
@@ -20,7 +21,9 @@ export default function AuthenticatedLayout() {
 
   return (
     <CreditBalanceProvider>
-      <AppShell />
+      <OnboardingGate>
+        <AppShell />
+      </OnboardingGate>
     </CreditBalanceProvider>
   );
 }

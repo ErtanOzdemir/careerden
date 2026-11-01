@@ -617,6 +617,37 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     return rows.map(toJobApplicationEvent);
   }
 
+  async listStatusChanges(jobApplicationIds: string[]): Promise<JobApplicationEvent[]> {
+    if (jobApplicationIds.length === 0) return [];
+
+    const rows = await this.db("job_application_events")
+      .whereIn("job_application_id", jobApplicationIds)
+      .where({ type: "status_changed" })
+      .orderBy("occurred_at", "asc")
+      .orderBy("created_at", "asc");
+
+    return rows.map(toJobApplicationEvent);
+  }
+
+  async deleteLatestStatusChange(
+    jobApplicationId: string,
+    eventId: string,
+  ): Promise<JobApplicationEvent | null> {
+    return this.db.transaction(async (transaction) => {
+      await transaction("job_applications").where({ id: jobApplicationId }).forUpdate().first();
+      const latest = await transaction("job_application_events")
+        .where({ job_application_id: jobApplicationId, type: "status_changed" })
+        .whereRaw("metadata->>'to' is not null")
+        .orderBy("occurred_at", "desc")
+        .orderBy("created_at", "desc")
+        .first();
+      if (latest?.id !== eventId) return null;
+
+      await transaction("job_application_events").where({ id: eventId }).delete();
+      return toJobApplicationEvent(latest);
+    });
+  }
+
   async createContact(input: CreateJobApplicationContactInput): Promise<JobApplicationContact> {
     const id = randomUUID();
     const [row] = await this.db("job_application_contacts")

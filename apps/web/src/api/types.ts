@@ -6,6 +6,8 @@ export type ApiApplicationStatus =
   | "interview"
   | "offer"
   | "phone_screen"
+  | "declined"
+  | "rescinded"
   | "rejected"
   | "ghosted";
 
@@ -57,6 +59,8 @@ export interface ApiProfileReadiness {
 
 export interface ApiJobApplication {
   analysisAttemptId?: string;
+  // Present on an update that changed the status; undoes it through undoStatusChange.
+  statusChangeId?: string;
   archivedAt?: string;
   applicationPackPreferences: ApiApplicationPackPreferences;
   companyLogoUrl?: string;
@@ -258,12 +262,12 @@ export interface ApiJobApplicationAnalytics {
   rejections: number;
   responseRate: number;
   total: number;
-  companiesByStatus?: Partial<
-    Record<
-      ApiApplicationStatus,
-      Array<{ jobApplicationId: string; companyName?: string; companyLogoUrl?: string }>
-    >
-  >;
+  pipeline?: Array<{
+    source: "applications" | ApiApplicationStatus;
+    target: ApiApplicationStatus;
+    count: number;
+    companies: Array<{ jobApplicationId: string; companyName?: string; companyLogoUrl?: string }>;
+  }>;
 }
 
 export interface ApiProfileExperience {

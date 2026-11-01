@@ -19,6 +19,7 @@ vi.mock("../api/jobApplications.js", () => ({
     restore: vi.fn(),
     retry: vi.fn(),
     startAnalysis: vi.fn(),
+    undoStatusChange: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -270,6 +271,77 @@ describe("AppDetail contacts", () => {
 
     expect(await screen.findByText("Follow-ups")).toBeInTheDocument();
     expect(screen.getByText("Contacts")).toBeInTheDocument();
+  });
+});
+
+describe("AppDetail status undo", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  const statusChange = (id: string, from: string, to: string, occurredAt: string) => ({
+    createdAt: occurredAt,
+    id,
+    jobApplicationId: "job-1",
+    metadata: { from, to },
+    occurredAt,
+    title: `Status changed to ${to}`,
+    type: "status_changed",
+  });
+
+  it("offers to undo a status change from its toast", async () => {
+    const changed = {
+      ...createApplicationDetail(),
+      events: [statusChange("event-9", "saved", "interview", "2026-07-18T08:00:00.000Z")],
+      tracking: { ...createApplicationDetail().tracking, applicationStatus: "interview" as const },
+    };
+    vi.mocked(jobApplicationsApi.get)
+      .mockResolvedValueOnce(createApplicationDetail())
+      .mockResolvedValueOnce(changed)
+      .mockResolvedValue(createApplicationDetail());
+    vi.mocked(jobApplicationsApi.update).mockResolvedValue({
+      ...changed,
+      statusChangeId: "event-9",
+    });
+    vi.mocked(jobApplicationsApi.undoStatusChange).mockResolvedValue(createApplicationDetail());
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+
+    renderAppDetail();
+    fireEvent.change(await screen.findByDisplayValue("Saved (current)"), {
+      target: { value: "Interviewing" },
+    });
+
+    const toast = await screen.findByText("Status changed to Interviewing.");
+    expect(screen.queryByRole("button", { name: /Undo Saved/ })).not.toBeInTheDocument();
+    fireEvent.click(within(toast.parentElement!).getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(jobApplicationsApi.undoStatusChange).toHaveBeenCalledWith("job-1", "event-9"),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Status changed to Interviewing.")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("keeps the latest status change undoable after the toast is gone", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      events: [
+        statusChange("event-1", "saved", "applied", "2026-07-17T09:00:00.000Z"),
+        statusChange("event-2", "applied", "interview", "2026-07-18T09:00:00.000Z"),
+      ],
+      tracking: { ...createApplicationDetail().tracking, applicationStatus: "interview" },
+    });
+    vi.mocked(jobApplicationsApi.undoStatusChange).mockResolvedValue(createApplicationDetail());
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+
+    renderAppDetail();
+    fireEvent.click(await screen.findByRole("button", { name: "Undo Applied → Interview" }));
+
+    await waitFor(() =>
+      expect(jobApplicationsApi.undoStatusChange).toHaveBeenCalledWith("job-1", "event-2"),
+    );
   });
 });
 

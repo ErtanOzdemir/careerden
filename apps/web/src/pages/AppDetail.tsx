@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, buttonVariants } from "../components/ui/button.js";
 import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
+import { UndoToast } from "../components/careerden/undo-toast.js";
 import { Panel, PanelHeader } from "../components/careerden/panel.js";
 import { StatusBadge } from "../components/careerden/status-badge.js";
 import type { DisplayStatus } from "../components/careerden/status-badge.js";
@@ -14,8 +15,8 @@ import {
   useJobApplicationChanges,
   type JobApplicationChange,
 } from "../api/jobApplicationChanges.js";
-import type { InterestLevel, JobApplication } from "../types.js";
-import { mapUiStatusToApi } from "../api/mappers.js";
+import type { ApplicationStatus, InterestLevel, JobApplication } from "../types.js";
+import { formatApplicationStatus, mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
@@ -70,6 +71,9 @@ export default function AppDetail() {
   const [isRetrying, setIsRetrying] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  // The latest status change, while it can still be undone from its toast.
+  const [statusUndo, setStatusUndo] = useState<{ eventId: string; label: string } | null>(null);
+  const dismissStatusUndo = useCallback(() => setStatusUndo(null), []);
   const [isSavingFollowUp, setIsSavingFollowUp] = useState(false);
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -191,15 +195,30 @@ export default function AppDetail() {
     try {
       setIsUpdatingStatus(true);
       setError(null);
-      await jobApplicationsApi.update(id, {
-        applicationStatus: mapUiStatusToApi(
-          newStatus as "Saved" | "Applied" | "Interviewing" | "Offer" | "Rejected" | "Ghosted",
-        ),
+      const updated = await jobApplicationsApi.update(id, {
+        applicationStatus: mapUiStatusToApi(newStatus as ApplicationStatus),
       });
+      const label = statusOptions.find((option) => option.value === newStatus)?.label ?? newStatus;
+      setStatusUndo(updated.statusChangeId ? { eventId: updated.statusChangeId, label } : null);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update status.");
     } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
+  async function handleUndoStatusChange(eventId: string) {
+    if (!id) return;
+    try {
+      setIsUpdatingStatus(true);
+      setError(null);
+      await jobApplicationsApi.undoStatusChange(id, eventId);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to undo the status change.");
+    } finally {
+      setStatusUndo(null);
       setIsUpdatingStatus(false);
     }
   }
@@ -544,13 +563,27 @@ export default function AppDetail() {
                   disabled={isUpdatingStatus}
                   className="rounded-lg border border-input bg-card px-2 py-0.5 text-xs font-medium text-foreground outline-none focus:border-ring"
                 >
-                  {["Saved", "Applied", "Interviewing", "Offer", "Rejected", "Ghosted"].map((s) => (
-                    <option key={s} value={s}>
-                      {s === app.status ? `${s} (current)` : `→ ${s}`}
+                  {statusOptions.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {value === app.status ? `${label} (current)` : `→ ${label}`}
                     </option>
                   ))}
                 </select>
               )}
+              {/* Stays after the toast is gone, so a mistaken change can be taken back later. */}
+              {!isArchived &&
+                app.lastStatusChange &&
+                app.lastStatusChange.id !== statusUndo?.eventId && (
+                  <button
+                    type="button"
+                    onClick={() => void handleUndoStatusChange(app.lastStatusChange!.id)}
+                    disabled={isUpdatingStatus}
+                    className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+                  >
+                    Undo {formatApplicationStatus(app.lastStatusChange.from)} →{" "}
+                    {formatApplicationStatus(app.lastStatusChange.to)}
+                  </button>
+                )}
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">{app.company}</p>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
@@ -834,6 +867,14 @@ export default function AppDetail() {
         open={deleteDialogOpen}
         title="Delete application?"
       />
+      {statusUndo && (
+        <UndoToast
+          message={`Status changed to ${statusUndo.label}.`}
+          busy={isUpdatingStatus}
+          onUndo={() => void handleUndoStatusChange(statusUndo.eventId)}
+          onDismiss={dismissStatusUndo}
+        />
+      )}
     </div>
   );
 }
@@ -1778,6 +1819,17 @@ export function FollowUpsEmptyState({ onAdd }: { onAdd: () => void }) {
 }
 // --- helpers ---
 
+const statusOptions: Array<{ value: ApplicationStatus; label: string }> = [
+  { value: "Saved", label: "Saved" },
+  { value: "Applied", label: "Applied" },
+  { value: "Interviewing", label: "Interviewing" },
+  { value: "Offer", label: "Offer" },
+  { value: "Declined", label: "Offer declined" },
+  { value: "Rescinded", label: "Offer rescinded" },
+  { value: "Rejected", label: "Rejected" },
+  { value: "Ghosted", label: "Ghosted" },
+];
+
 function mapStatus(app: JobApplication): DisplayStatus {
   const ps = app.processingStatus;
   if (ps && ["queued", "scraping", "analyzing", "generating_documents"].includes(ps))
@@ -1790,6 +1842,10 @@ function mapStatus(app: JobApplication): DisplayStatus {
       return "interview";
     case "Offer":
       return "offer";
+    case "Declined":
+      return "declined";
+    case "Rescinded":
+      return "rescinded";
     case "Rejected":
       return "rejected";
     case "Ghosted":

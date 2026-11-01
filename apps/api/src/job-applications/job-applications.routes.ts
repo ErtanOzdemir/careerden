@@ -17,6 +17,7 @@ import type { RequestJobApplicationAnalysisUseCase } from "../application/job-ap
 import type { RequestApplicationPackGenerationUseCase } from "@careerden/application";
 import type { UpdateJobApplicationStatusUseCase } from "../application/job-applications/update-job-application-status.use-case.js";
 import type { UpdateJobApplicationTrackingUseCase } from "../application/job-applications/update-job-application-tracking.use-case.js";
+import type { UndoJobApplicationStatusChangeUseCase } from "../application/job-applications/undo-job-application-status-change.use-case.js";
 import type { ClaimNextScrapeJobUseCase } from "../application/job-applications/claim-next-scrape-job.use-case.js";
 import type { CreateJobApplicationFromScrapeUseCase } from "../application/job-applications/create-job-application-from-scrape.use-case.js";
 import type { FailScrapeJobUseCase } from "../application/job-applications/fail-scrape-job.use-case.js";
@@ -79,6 +80,7 @@ export function createJobApplicationRouter(dependencies: {
   getJobApplicationAnalytics: GetJobApplicationAnalyticsUseCase;
   getJobApplicationDetail: GetJobApplicationDetailUseCase;
   updateJobApplicationTracking: UpdateJobApplicationTrackingUseCase;
+  undoJobApplicationStatusChange: UndoJobApplicationStatusChangeUseCase;
   requestJobApplicationAnalysis: RequestJobApplicationAnalysisUseCase;
   requestApplicationPackGeneration: RequestApplicationPackGenerationUseCase;
   claimNextScrapeJob: ClaimNextScrapeJobUseCase;
@@ -392,6 +394,20 @@ export function createJobApplicationRouter(dependencies: {
       }
     },
   );
+
+  router.post("/:id/status-changes/:eventId/undo", async (request, response, next) => {
+    try {
+      response.json(
+        await dependencies.undoJobApplicationStatusChange.execute(
+          request.params.id,
+          request.params.eventId,
+          currentUser(request).id,
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.delete("/:id", async (request, response, next) => {
     try {

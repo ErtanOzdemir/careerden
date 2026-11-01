@@ -605,6 +605,36 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       .map(({ event }) => event);
   }
 
+  async listStatusChanges(jobApplicationIds: string[]): Promise<JobApplicationEvent[]> {
+    return jobApplicationIds
+      .flatMap((id) => this.events.get(id) ?? [])
+      .filter((event) => event.type === "status_changed")
+      .map((event, index) => ({ event, index }))
+      .sort(
+        (left, right) =>
+          left.event.occurredAt.getTime() - right.event.occurredAt.getTime() ||
+          left.event.createdAt.getTime() - right.event.createdAt.getTime() ||
+          left.index - right.index,
+      )
+      .map(({ event }) => event);
+  }
+
+  async deleteLatestStatusChange(
+    jobApplicationId: string,
+    eventId: string,
+  ): Promise<JobApplicationEvent | null> {
+    const [latest] = (await this.listEvents(jobApplicationId)).filter(
+      (event) => event.type === "status_changed" && "to" in event.metadata,
+    );
+    if (latest?.id !== eventId) return null;
+
+    this.events.set(
+      jobApplicationId,
+      (this.events.get(jobApplicationId) ?? []).filter((event) => event.id !== eventId),
+    );
+    return latest;
+  }
+
   async createContact(input: CreateJobApplicationContactInput): Promise<JobApplicationContact> {
     const contact: JobApplicationContact = {
       id: randomUUID(),

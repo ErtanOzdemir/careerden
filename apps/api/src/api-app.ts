@@ -32,6 +32,7 @@ import { ListJobApplicationsUseCase } from "./application/job-applications/list-
 import { RequestJobApplicationAnalysisUseCase } from "./application/job-applications/request-job-application-analysis.use-case.js";
 import { UpdateJobApplicationStatusUseCase } from "./application/job-applications/update-job-application-status.use-case.js";
 import { UpdateJobApplicationTrackingUseCase } from "./application/job-applications/update-job-application-tracking.use-case.js";
+import { UndoJobApplicationStatusChangeUseCase } from "./application/job-applications/undo-job-application-status-change.use-case.js";
 import { ClaimNextScrapeJobUseCase } from "./application/job-applications/claim-next-scrape-job.use-case.js";
 import { CreateJobApplicationFromScrapeUseCase } from "./application/job-applications/create-job-application-from-scrape.use-case.js";
 import { FailScrapeJobUseCase } from "./application/job-applications/fail-scrape-job.use-case.js";
@@ -189,6 +190,7 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
       ),
       getJobApplicationDetail,
       updateJobApplicationTracking: new UpdateJobApplicationTrackingUseCase(unitOfWork),
+      undoJobApplicationStatusChange: new UndoJobApplicationStatusChangeUseCase(unitOfWork),
       requestJobApplicationAnalysis: new RequestJobApplicationAnalysisUseCase(
         unitOfWork,
         aiAvailability,

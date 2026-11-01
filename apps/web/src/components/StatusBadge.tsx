@@ -5,6 +5,8 @@ const statusStyles: Record<ApplicationStatus, string> = {
   Applied: "bg-secondary-container text-on-secondary-container",
   Interviewing: "bg-primary-container/10 text-primary",
   Offer: "bg-secondary-fixed text-on-secondary-fixed-variant",
+  Declined: "bg-surface-container-high text-on-surface-variant",
+  Rescinded: "bg-error-container text-on-error-container",
   Rejected: "bg-error-container text-on-error-container",
   Ghosted: "bg-surface-container-high text-on-surface-variant",
 };

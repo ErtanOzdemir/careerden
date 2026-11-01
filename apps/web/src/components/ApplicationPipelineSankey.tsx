@@ -1,11 +1,23 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { sankey, sankeyLinkHorizontal, type SankeyLink, type SankeyNode } from "d3-sankey";
-import type { DashboardSankeyCompany, DashboardSankeyData, DashboardSankeyNode } from "../types.js";
+import {
+  sankey,
+  sankeyLeft,
+  sankeyLinkHorizontal,
+  type SankeyLink,
+  type SankeyNode,
+} from "d3-sankey";
+import type {
+  DashboardSankeyCompany,
+  DashboardSankeyData,
+  DashboardSankeyLink,
+  DashboardSankeyNode,
+} from "../types.js";
 import { layoutPipelineLogoRow } from "./pipeline-logo-layout.js";
 
-const chartHeight = 360;
+const chartHeight = 380;
 const defaultWidth = 720;
-const sourceId = "all-applications";
+const sourceId = "applications";
+const outcomeIds = new Set(["rejected", "ghosted", "declined", "rescinded"]);
 
 const nodeColors: Record<string, string> = {
   [sourceId]: "var(--foreground)",
@@ -14,25 +26,32 @@ const nodeColors: Record<string, string> = {
   phone_screen: "var(--chart-3)",
   interview: "var(--warning)",
   offer: "var(--success)",
+  declined: "var(--chart-4)",
+  rescinded: "var(--destructive)",
   rejected: "var(--destructive)",
   ghosted: "var(--muted-foreground)",
 };
 
-interface LinkExtra {
-  [key: string]: unknown;
-}
+type LinkExtra = Omit<DashboardSankeyLink, "source" | "target" | "value">;
 type LayoutNode = SankeyNode<DashboardSankeyNode, LinkExtra>;
 type LayoutLink = SankeyLink<DashboardSankeyNode, LinkExtra>;
 
 interface TooltipState {
-  id: string;
-  label: string;
-  count: number;
+  // Node id, or "source>target" for a ribbon.
+  key: string;
+  title: string;
+  lines: string[];
   x: number;
   y: number;
 }
 
-export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData }) {
+export function ApplicationPipelineSankey({
+  data,
+  showCompanyLogos = true,
+}: {
+  data: DashboardSankeyData;
+  showCompanyLogos?: boolean;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(defaultWidth);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
@@ -54,17 +73,23 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
   const graph = useMemo(() => {
     if (data.links.length === 0) return null;
 
-    return sankey<DashboardSankeyNode, LinkExtra>()
-      .nodeId((node) => node.id)
-      .nodeWidth(14)
-      .nodePadding(14)
-      .extent([
-        [24, 52],
-        [Math.max(width - 150, 170), chartHeight - 24],
-      ])({
-      nodes: data.nodes.map((node) => ({ ...node })),
-      links: data.links.map((link) => ({ ...link })),
-    });
+    // Left alignment keeps every stage in the column of its step, so a ribbon into an outcome
+    // shows which stage the application last reached.
+    return (
+      sankey<DashboardSankeyNode, LinkExtra>()
+        .nodeId((node) => node.id)
+        .nodeAlign(sankeyLeft)
+        .nodeWidth(12)
+        // Room for the two-line label beside even the smallest node.
+        .nodePadding(30)
+        .extent([
+          [24, 52],
+          [Math.max(width - 110, 170), chartHeight - 16],
+        ])({
+        nodes: data.nodes.map((node) => ({ ...node })),
+        links: data.links.map((link) => ({ ...link })),
+      })
+    );
   }, [data, width]);
 
   if (!graph) {
@@ -77,42 +102,73 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
 
   const total = data.nodes.find((node) => node.id === sourceId)?.count ?? 0;
   const linkPath = sankeyLinkHorizontal<DashboardSankeyNode, LinkExtra>();
+  const activeNode = tooltip && !tooltip.key.includes(">") ? tooltip.key : null;
 
-  function showTooltip(node: LayoutNode, x: number, y: number) {
-    setTooltip({ id: node.id, label: node.label, count: node.count, x, y });
+  function showNodeTooltip(node: LayoutNode) {
+    const movedOn = (node.sourceLinks ?? []).reduce((sum, link) => sum + link.value, 0);
+    const lines = [`${formatApplicationCount(node.count)} · ${percent(node.count, total)} of all`];
+    if (node.id !== sourceId && node.status !== "saved" && !outcomeIds.has(node.status)) {
+      lines.push(`${movedOn} moved on · ${node.count - movedOn} still here`);
+    }
+    setTooltip({
+      key: node.id,
+      title: outcomeIds.has(node.status)
+        ? `${node.label} after ${((node.targetLinks?.[0]?.source as LayoutNode | undefined)?.label ?? "").toLowerCase()}`
+        : node.label,
+      lines,
+      x: ((node.x0 ?? 0) + (node.x1 ?? 0)) / 2,
+      y: ((node.y0 ?? 0) + (node.y1 ?? 0)) / 2,
+    });
   }
 
   function showLinkTooltip(link: LayoutLink) {
+    const source = link.source as LayoutNode;
     const target = link.target as LayoutNode;
-    showTooltip(
-      target,
-      ((target.x0 ?? 0) + ((link.source as LayoutNode).x1 ?? 0)) / 2,
-      ((link.y0 ?? 0) + (link.y1 ?? 0)) / 2,
-    );
+    setTooltip({
+      key: linkKey(link),
+      title: source.id === sourceId ? target.label : `${source.label} → ${target.label}`,
+      lines: [
+        source.id === sourceId
+          ? `${formatApplicationCount(link.value)} · ${percent(link.value, total)} of all`
+          : `${formatApplicationCount(link.value)} · ${percent(link.value, source.count)} of ${source.label}`,
+      ],
+      x: ((source.x1 ?? 0) + (target.x0 ?? 0)) / 2,
+      y: ((link.y0 ?? 0) + (link.y1 ?? 0)) / 2,
+    });
+  }
+
+  function linkOpacity(link: LayoutLink) {
+    if (!tooltip) return 0.3;
+    const source = link.source as LayoutNode;
+    const target = link.target as LayoutNode;
+    const isActive =
+      tooltip.key === linkKey(link) || activeNode === source.id || activeNode === target.id;
+    return isActive ? 0.55 : 0.12;
   }
 
   return (
     <div ref={containerRef} className="relative border-t border-border py-2">
       <svg
         viewBox={`0 0 ${width} ${chartHeight}`}
-        className="block h-[360px] w-full"
+        className="block h-[380px] w-full"
         role="img"
-        aria-label="Current application status distribution"
+        aria-label="Application pipeline: how applications moved between stages"
       >
         <g fill="none">
           {graph.links.map((link) => {
             const target = link.target as LayoutNode;
-            const isActive = tooltip?.id === target.id;
+            const source = link.source as LayoutNode;
             return (
               <path
-                key={target.id}
+                key={linkKey(link)}
+                data-testid={`sankey-link-${linkKey(link)}`}
                 d={linkPath(link) ?? undefined}
-                stroke={nodeColors[target.id] ?? "var(--chart-2)"}
+                stroke={nodeColors[target.status] ?? "var(--chart-2)"}
                 strokeWidth={Math.max(1, link.width ?? 0)}
-                strokeOpacity={isActive ? 0.52 : 0.24}
-                className="transition-opacity focus:outline-none"
+                strokeOpacity={linkOpacity(link)}
+                className="transition-[stroke-opacity] focus:outline-none"
                 tabIndex={0}
-                aria-label={`${target.label}: ${formatApplicationCount(target.count)}`}
+                aria-label={`${source.label} to ${target.label}: ${formatApplicationCount(link.value)}`}
                 onMouseEnter={() => showLinkTooltip(link)}
                 onMouseLeave={() => setTooltip(null)}
                 onFocus={() => showLinkTooltip(link)}
@@ -125,27 +181,32 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
         {graph.links.map((link) => {
           const source = link.source as LayoutNode;
           const target = link.target as LayoutNode;
-          const companies = target.companies ?? [];
+          const companies = showCompanyLogos ? (link.companies ?? []) : [];
           if (companies.length === 0) return null;
 
+          // Logos sit at the end of the ribbon, where it has left the crossings behind and
+          // runs straight into its stage.
           const startX = source.x1 ?? 0;
           const endX = target.x0 ?? 0;
-          const row = layoutPipelineLogoRow(companies.length, (endX - startX) * 0.6);
-          const firstX = (startX + endX) / 2 - row.width / 2 + row.size / 2;
-          const centerY = ((link.y0 ?? 0) + (link.y1 ?? 0)) / 2;
+          const row = layoutPipelineLogoRow(companies.length, (endX - startX) * 0.45);
+          const firstX = endX - 8 - row.width + row.size / 2;
 
           return (
-            <g key={`logos-${target.id}`} data-testid={`sankey-logos-${target.id}`}>
+            <g
+              key={`logos-${linkKey(link)}`}
+              data-testid={`sankey-logos-${linkKey(link)}`}
+              className="pointer-events-none"
+            >
               {companies.map((company, index) => (
                 <PipelineCompanyLogo
                   key={company.id}
-                  clipId={`${clipIdPrefix}-${target.id}-${index}`}
+                  clipId={`${clipIdPrefix}-${source.id}-${target.id}-${index}`}
                   company={company}
                   failed={failedLogos.has(company.id)}
                   onFailed={() => setFailedLogos((current) => new Set(current).add(company.id))}
                   size={row.size}
                   x={firstX + row.step * index}
-                  y={centerY}
+                  y={linkYAt(link, firstX + row.step * index)}
                 />
               ))}
             </g>
@@ -158,9 +219,8 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
           const y0 = node.y0 ?? 0;
           const y1 = node.y1 ?? 0;
           const isSource = node.id === sourceId;
-          const labelX = isSource ? x0 : x1 + 10;
-          const labelY = isSource ? 30 : (y0 + y1) / 2 + 4;
-          const isActive = tooltip?.id === node.id;
+          const labelX = isSource ? x0 : x1 + 8;
+          const labelY = isSource ? 22 : (y0 + y1) / 2 - 2;
 
           return (
             <g
@@ -168,29 +228,36 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
               data-testid={`sankey-node-${node.id}`}
               tabIndex={0}
               aria-label={`${node.label}: ${formatApplicationCount(node.count)}`}
-              onMouseEnter={() => showTooltip(node, (x0 + x1) / 2, (y0 + y1) / 2)}
+              className="focus:outline-none"
+              onMouseEnter={() => showNodeTooltip(node)}
               onMouseLeave={() => setTooltip(null)}
-              onFocus={() => showTooltip(node, (x0 + x1) / 2, (y0 + y1) / 2)}
+              onFocus={() => showNodeTooltip(node)}
               onBlur={() => setTooltip(null)}
             >
               <rect
                 x={x0}
                 y={y0}
                 width={Math.max(1, x1 - x0)}
-                height={Math.max(1, y1 - y0)}
-                rx={4}
-                fill={nodeColors[node.id] ?? "var(--chart-2)"}
-                stroke={isActive ? "var(--ring)" : "none"}
+                height={Math.max(2, y1 - y0)}
+                rx={3}
+                fill={nodeColors[node.status] ?? "var(--chart-2)"}
+                stroke={activeNode === node.id ? "var(--ring)" : "none"}
                 strokeWidth={2}
               />
               <text
                 x={labelX}
                 y={labelY}
                 textAnchor="start"
-                className="fill-foreground text-[12px]"
+                paintOrder="stroke"
+                stroke="var(--card)"
+                strokeWidth={4}
+                strokeLinejoin="round"
+                className="pointer-events-none fill-foreground"
               >
-                <tspan className="font-medium">{node.label}</tspan>
-                <tspan className="fill-muted-foreground"> · {node.count}</tspan>
+                <tspan className="text-[15px] font-semibold tabular-nums">{node.count}</tspan>
+                <tspan x={labelX} dy={14} className="fill-muted-foreground text-[11px]">
+                  {node.label}
+                </tspan>
               </text>
             </g>
           );
@@ -203,18 +270,47 @@ export function ApplicationPipelineSankey({ data }: { data: DashboardSankeyData 
           className="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md"
           style={{
             left: Math.max(80, Math.min(width - 80, tooltip.x)),
-            top: tooltip.y + 8,
+            top: tooltip.y - 8,
           }}
         >
-          <p className="font-medium">{tooltip.label}</p>
-          <p className="mt-0.5 text-muted-foreground">
-            {formatApplicationCount(tooltip.count)} ·{" "}
-            {total === 0 ? 0 : Math.round((tooltip.count / total) * 100)}%
-          </p>
+          <p className="font-medium">{tooltip.title}</p>
+          {tooltip.lines.map((line) => (
+            <p key={line} className="mt-0.5 text-muted-foreground">
+              {line}
+            </p>
+          ))}
         </div>
       )}
     </div>
   );
+}
+
+// Height of the centre of a horizontal Sankey ribbon at `x`. The ribbon is a cubic Bézier whose
+// control points share the midpoint's x, so x grows with t and a bisection finds it.
+function linkYAt(link: LayoutLink, x: number) {
+  const x0 = (link.source as LayoutNode).x1 ?? 0;
+  const x1 = (link.target as LayoutNode).x0 ?? 0;
+  const y0 = link.y0 ?? 0;
+  const y1 = link.y1 ?? 0;
+  const xm = (x0 + x1) / 2;
+  let low = 0;
+  let high = 1;
+  for (let step = 0; step < 24; step += 1) {
+    const t = (low + high) / 2;
+    const xt = (1 - t) ** 3 * x0 + 3 * (1 - t) * t * xm + t ** 3 * x1;
+    if (xt < x) low = t;
+    else high = t;
+  }
+  const t = (low + high) / 2;
+  return ((1 - t) ** 3 + 3 * (1 - t) ** 2 * t) * y0 + (3 * (1 - t) * t ** 2 + t ** 3) * y1;
+}
+
+function linkKey(link: LayoutLink) {
+  return `${(link.source as LayoutNode).id}>${(link.target as LayoutNode).id}`;
+}
+
+function percent(count: number, of: number) {
+  return `${of === 0 ? 0 : Math.round((count / of) * 100)}%`;
 }
 
 function PipelineCompanyLogo({

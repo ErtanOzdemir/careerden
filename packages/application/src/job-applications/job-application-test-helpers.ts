@@ -42,6 +42,8 @@ export function createJobApplicationRepository(
     listByProfileId: vi.fn(async () => ({ items: [], totalItems: 0 })),
     listGeneratedDocuments: vi.fn(async () => []),
     listEvents: vi.fn(async () => []),
+    listStatusChanges: vi.fn(async () => []),
+    deleteLatestStatusChange: vi.fn(async () => null),
     listContacts: vi.fn(async () => []),
     listFollowUps: vi.fn(async () => []),
     getScrapeBundle: vi.fn(async () => null),

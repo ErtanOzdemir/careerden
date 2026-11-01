@@ -32,6 +32,32 @@ const activityIcon = {
   ghosted: FileCheck2,
 };
 
+const pipelineLogosStorageKey = "careerden.dashboard.pipelineCompanyLogos";
+
+// A per-browser display preference: storage can be missing or blocked, so it falls back to the
+// default and still works for the current visit.
+function useStoredFlag(key: string, defaultValue: boolean) {
+  const [value, setValue] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem(key);
+      return stored === null ? defaultValue : stored === "true";
+    } catch {
+      return defaultValue;
+    }
+  });
+
+  function update(next: boolean) {
+    setValue(next);
+    try {
+      window.localStorage.setItem(key, String(next));
+    } catch {
+      // The preference only lasts for this visit.
+    }
+  }
+
+  return [value, update] as const;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<JobApplication[]>([]);
@@ -39,6 +65,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<ApiProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCompanyLogos, setShowCompanyLogos] = useStoredFlag(pipelineLogosStorageKey, true);
 
   useEffect(() => {
     let isMounted = true;
@@ -76,7 +103,9 @@ export default function Dashboard() {
     return <div className="py-16 text-center text-muted-foreground">Loading dashboard...</div>;
   if (error) return <div className="py-16 text-center text-destructive">{error}</div>;
 
-  const active = applications.filter((a) => !["Rejected", "Ghosted"].includes(a.status));
+  const active = applications.filter(
+    (a) => !["Rejected", "Ghosted", "Declined", "Rescinded"].includes(a.status),
+  );
   const interviewingCount = applications.filter((a) => a.status === "Interviewing").length;
   const readyCount = applications.filter((a) => a.processingStatus === "review_ready").length;
   const matchScores = applications.filter((a) => (a.matchScore ?? 0) > 0);
@@ -107,9 +136,13 @@ export default function Dashboard() {
               ? "Not selected"
               : app.status === "Ghosted"
                 ? "No response"
-                : app.matchScore
-                  ? "Match analysis completed"
-                  : "Job added",
+                : app.status === "Declined"
+                  ? "Offer declined"
+                  : app.status === "Rescinded"
+                    ? "Offer rescinded"
+                    : app.matchScore
+                      ? "Match analysis completed"
+                      : "Job added",
       meta: `${app.company} · ${app.role}`,
       time: app.dateLabel,
       kind: (app.status === "Interviewing"
@@ -243,8 +276,24 @@ export default function Dashboard() {
         </Panel>
       </div>
       <Panel>
-        <PanelHeader title="Application pipeline" />
-        <ApplicationPipelineSankey data={stats?.sankey ?? { nodes: [], links: [] }} />
+        <PanelHeader
+          title="Application pipeline"
+          action={
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                className="size-3.5 accent-primary"
+                checked={showCompanyLogos}
+                onChange={(event) => setShowCompanyLogos(event.target.checked)}
+              />
+              Company logos
+            </label>
+          }
+        />
+        <ApplicationPipelineSankey
+          data={stats?.sankey ?? { nodes: [], links: [] }}
+          showCompanyLogos={showCompanyLogos}
+        />
       </Panel>
       <Panel>
         <PanelHeader title="Recent activity" />
@@ -286,6 +335,10 @@ function mapStatus(app: JobApplication): DisplayStatus {
       return "interview";
     case "Offer":
       return "offer";
+    case "Declined":
+      return "declined";
+    case "Rescinded":
+      return "rescinded";
     case "Rejected":
       return "rejected";
     case "Ghosted":

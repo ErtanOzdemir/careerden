@@ -29,6 +29,8 @@ export const applicationStatusSchema = z.enum([
   "phone_screen",
   "interview",
   "offer",
+  "declined",
+  "rescinded",
   "rejected",
   "ghosted",
 ]);

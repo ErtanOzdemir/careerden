@@ -5,13 +5,15 @@ import type { DashboardSankeyData } from "../types.js";
 
 const data: DashboardSankeyData = {
   nodes: [
-    { id: "all-applications", label: "All applications", count: 4 },
-    { id: "applied", label: "Applied", count: 3 },
-    { id: "offer", label: "Offer", count: 1 },
+    { id: "applications", status: "applications", label: "Applications", count: 4 },
+    { id: "applied", status: "applied", label: "Applied", count: 4 },
+    { id: "interview", status: "interview", label: "Interview", count: 2 },
+    { id: "interview:rejected", status: "rejected", label: "Rejected", count: 1 },
   ],
   links: [
-    { source: "all-applications", target: "applied", value: 3 },
-    { source: "all-applications", target: "offer", value: 1 },
+    { source: "applications", target: "applied", value: 4 },
+    { source: "applied", target: "interview", value: 2 },
+    { source: "interview", target: "interview:rejected", value: 1 },
   ],
 };
 
@@ -21,27 +23,44 @@ describe("ApplicationPipelineSankey", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders nodes, links, and readable values", () => {
-    const { container } = render(<ApplicationPipelineSankey data={data} />);
+  it("renders every stage and the ribbons between them", () => {
+    render(<ApplicationPipelineSankey data={data} />);
 
-    expect(screen.getByTestId("sankey-node-all-applications")).toBeInTheDocument();
-    expect(screen.getByTestId("sankey-node-applied")).toBeInTheDocument();
-    expect(screen.getByTestId("sankey-node-applied")).toHaveTextContent("Applied · 3");
-    expect(container.querySelectorAll("path")).toHaveLength(2);
+    expect(screen.getByTestId("sankey-node-applications")).toHaveTextContent("4Applications");
+    expect(screen.getByTestId("sankey-node-interview")).toHaveTextContent("2Interview");
+    expect(screen.getByTestId("sankey-link-applied>interview")).toBeInTheDocument();
+    expect(screen.getByTestId("sankey-link-interview>interview:rejected")).toBeInTheDocument();
   });
 
-  it("shows the count and percentage on hover and keyboard focus", () => {
+  it("explains how many applications moved on from a stage", () => {
     render(<ApplicationPipelineSankey data={data} />);
-    const offer = screen.getByTestId("sankey-node-offer");
+    const interview = screen.getByTestId("sankey-node-interview");
 
-    fireEvent.mouseEnter(offer);
-    expect(screen.getByRole("status")).toHaveTextContent("1 application · 25%");
+    fireEvent.mouseEnter(interview);
+    expect(screen.getByRole("status")).toHaveTextContent("2 applications · 50% of all");
+    expect(screen.getByRole("status")).toHaveTextContent("1 moved on · 1 still here");
 
-    fireEvent.mouseLeave(offer);
+    fireEvent.mouseLeave(interview);
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
 
-    fireEvent.focus(offer);
-    expect(screen.getByRole("status")).toHaveTextContent("Offer");
+    fireEvent.focus(screen.getByTestId("sankey-node-interview:rejected"));
+    expect(screen.getByRole("status")).toHaveTextContent("Rejected after interview");
+    expect(screen.getByRole("status")).not.toHaveTextContent("still here");
+  });
+
+  it("shows a ribbon's share of the stage it left", () => {
+    render(<ApplicationPipelineSankey data={data} />);
+    const link = screen.getByTestId("sankey-link-applied>interview");
+
+    fireEvent.mouseEnter(link);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Applied → Interview");
+    expect(screen.getByRole("status")).toHaveTextContent("2 applications · 50% of Applied");
+    expect(link).toHaveAttribute("stroke-opacity", "0.55");
+    expect(screen.getByTestId("sankey-link-applications>applied")).toHaveAttribute(
+      "stroke-opacity",
+      "0.12",
+    );
   });
 
   it("updates the layout width when its container is resized", () => {
@@ -60,7 +79,7 @@ describe("ApplicationPipelineSankey", () => {
 
     render(<ApplicationPipelineSankey data={data} />);
 
-    expect(screen.getByRole("img")).toHaveAttribute("viewBox", "0 0 840 360");
+    expect(screen.getByRole("img")).toHaveAttribute("viewBox", "0 0 840 380");
   });
 
   it("renders an empty state without a chart", () => {
@@ -70,30 +89,32 @@ describe("ApplicationPipelineSankey", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
-  it("draws each status's company logos on its ribbon, with initials as a fallback", () => {
+  it("draws company logos on the ribbon into their current stage, with initials as a fallback", () => {
     const { container } = render(
       <ApplicationPipelineSankey
         data={{
           ...data,
-          nodes: data.nodes.map((node) =>
-            node.id === "applied"
+          links: data.links.map((link) =>
+            link.target === "interview"
               ? {
-                  ...node,
+                  ...link,
                   companies: [
                     { id: "job-1", name: "Acme", logoUrl: "/api/files/acme.png?signature=s" },
                     { id: "job-2", name: "globex" },
                     { id: "job-3" },
                   ],
                 }
-              : node,
+              : link,
           ),
         }}
       />,
     );
     const logos = screen.getAllByTestId("sankey-company-logo");
 
-    expect(screen.getByTestId("sankey-logos-applied")).toBeInTheDocument();
-    expect(screen.queryByTestId("sankey-logos-offer")).not.toBeInTheDocument();
+    expect(screen.getByTestId("sankey-logos-applied>interview")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("sankey-logos-interview>interview:rejected"),
+    ).not.toBeInTheDocument();
     expect(logos).toHaveLength(3);
     expect(container.querySelector("image")?.getAttribute("href")).toBe(
       "/api/files/acme.png?signature=s",
@@ -103,15 +124,33 @@ describe("ApplicationPipelineSankey", () => {
     expect(logos[0]?.querySelector("title")).toHaveTextContent("Acme");
   });
 
+  it("leaves company logos out when they are hidden", () => {
+    render(
+      <ApplicationPipelineSankey
+        showCompanyLogos={false}
+        data={{
+          ...data,
+          links: data.links.map((link) => ({
+            ...link,
+            companies: [{ id: "job-1", name: "Acme" }],
+          })),
+        }}
+      />,
+    );
+
+    expect(screen.queryByTestId("sankey-company-logo")).not.toBeInTheDocument();
+    expect(screen.getByTestId("sankey-link-applied>interview")).toBeInTheDocument();
+  });
+
   it("falls back to initials when a logo fails to load", () => {
     const { container } = render(
       <ApplicationPipelineSankey
         data={{
           ...data,
-          nodes: data.nodes.map((node) =>
-            node.id === "offer"
-              ? { ...node, companies: [{ id: "job-9", name: "Initech", logoUrl: "/broken.png" }] }
-              : node,
+          links: data.links.map((link) =>
+            link.target === "interview:rejected"
+              ? { ...link, companies: [{ id: "job-9", name: "Initech", logoUrl: "/broken.png" }] }
+              : link,
           ),
         }}
       />,

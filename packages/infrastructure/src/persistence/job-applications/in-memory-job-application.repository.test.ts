@@ -473,6 +473,60 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(await repository.listGeneratedDocuments(job.id)).toEqual([]);
   });
 
+  it("lists status changes across applications oldest first", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const first = await repository.create({ profileId: "profile-1", companyName: "Acme" });
+    const second = await repository.create({ profileId: "profile-1", companyName: "Globex" });
+    const change = (jobApplicationId: string, to: string, occurredAt: string) =>
+      repository.addEvent({
+        jobApplicationId,
+        type: "status_changed",
+        title: `Status changed to ${to}`,
+        occurredAt: new Date(occurredAt),
+        metadata: { to },
+      });
+    await change(first.id, "interview", "2026-07-03T00:00:00.000Z");
+    await change(second.id, "applied", "2026-07-02T00:00:00.000Z");
+    await change(first.id, "applied", "2026-07-01T00:00:00.000Z");
+    await repository.addEvent({ jobApplicationId: first.id, type: "note", title: "Note" });
+
+    const events = await repository.listStatusChanges([first.id, second.id]);
+
+    expect(events.map((event) => [event.jobApplicationId, event.metadata.to])).toEqual([
+      [first.id, "applied"],
+      [second.id, "applied"],
+      [first.id, "interview"],
+    ]);
+  });
+
+  it("deletes a status change only while it is the latest one", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({ profileId: "profile-1", companyName: "Acme" });
+    const change = (from: string, to: string, occurredAt: string) =>
+      repository.addEvent({
+        jobApplicationId: job.id,
+        type: "status_changed",
+        title: `Status changed to ${to}`,
+        occurredAt: new Date(occurredAt),
+        metadata: { from, to },
+      });
+    const first = await change("saved", "applied", "2026-07-01T00:00:00.000Z");
+    const second = await change("applied", "interview", "2026-07-02T00:00:00.000Z");
+    await repository.addEvent({
+      jobApplicationId: job.id,
+      type: "status_changed",
+      title: "Application archived",
+      occurredAt: new Date("2026-07-03T00:00:00.000Z"),
+      metadata: { archivedAt: "2026-07-03T00:00:00.000Z" },
+    });
+
+    expect(await repository.deleteLatestStatusChange(job.id, first.id)).toBeNull();
+    expect(await repository.deleteLatestStatusChange(job.id, second.id)).toEqual(second);
+    expect((await repository.listStatusChanges([job.id])).map((event) => event.id)).not.toContain(
+      second.id,
+    );
+  });
+
   it("manages contacts for a job application", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({

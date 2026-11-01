@@ -7,6 +7,10 @@ export type ApplicationStatus =
   | "phone_screen"
   | "interview"
   | "offer"
+  // The candidate turned the offer down.
+  | "declined"
+  // The company withdrew the offer.
+  | "rescinded"
   | "rejected"
   | "ghosted";
 

@@ -7,6 +7,8 @@ export type DisplayStatus =
   | "applied"
   | "interview"
   | "offer"
+  | "declined"
+  | "rescinded"
   | "rejected"
   | "ghosted";
 
@@ -19,6 +21,8 @@ const statusLabels: Record<DisplayStatus, string> = {
   applied: "Applied",
   interview: "Interviewing",
   offer: "Offer",
+  declined: "Offer declined",
+  rescinded: "Offer rescinded",
   rejected: "Rejected",
   ghosted: "Ghosted",
 };
@@ -36,6 +40,8 @@ const statusStyles: Record<DisplayStatus, string> = {
   applied: "bg-info-soft text-info",
   interview: "bg-warning-soft text-warning-emphasis",
   offer: "bg-success-soft text-success",
+  declined: "bg-muted text-muted-foreground",
+  rescinded: "bg-destructive/10 text-destructive",
   rejected: "bg-muted text-muted-foreground",
   ghosted: "bg-muted text-muted-foreground",
 };
@@ -47,6 +53,8 @@ const statusDot: Record<DisplayStatus, string> = {
   applied: "bg-info",
   interview: "bg-warning",
   offer: "bg-success",
+  declined: "bg-muted-foreground/50",
+  rescinded: "bg-destructive",
   rejected: "bg-muted-foreground/50",
   ghosted: "bg-muted-foreground/50",
 };

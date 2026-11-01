@@ -8,7 +8,7 @@ import {
 import { UpdateJobApplicationTrackingUseCase } from "./update-job-application-tracking.use-case.js";
 
 describe("UpdateJobApplicationTrackingUseCase", () => {
-  it("records an event when the application status changes", async () => {
+  it("records an event when the application status changes and returns its id", async () => {
     const job = createTestJobApplication();
     const updated = createTestJobApplication({
       tracking: { ...job.tracking, applicationStatus: "interview" },
@@ -16,12 +16,23 @@ describe("UpdateJobApplicationTrackingUseCase", () => {
     const repository = createJobApplicationRepository({
       findById: vi.fn(async () => job),
       updateTracking: vi.fn(async () => updated),
+      addEvent: vi.fn(async (input) => ({
+        ...input,
+        id: "event-1",
+        metadata: input.metadata ?? {},
+        occurredAt: new Date(),
+        createdAt: new Date(),
+      })),
     });
     const { unitOfWork, recordChanged } = createUnitOfWork(repository, createProfiles());
 
-    await new UpdateJobApplicationTrackingUseCase(unitOfWork).execute(job.id, "user-1", {
-      applicationStatus: "interview",
-    });
+    const result = await new UpdateJobApplicationTrackingUseCase(unitOfWork).execute(
+      job.id,
+      "user-1",
+      { applicationStatus: "interview" },
+    );
+
+    expect(result.statusChangeId).toBe("event-1");
 
     expect(repository.addEvent).toHaveBeenCalledWith({
       jobApplicationId: job.id,

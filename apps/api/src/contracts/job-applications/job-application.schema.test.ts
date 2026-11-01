@@ -153,6 +153,12 @@ describe("job application schemas", () => {
     expect(result.applicationStatus).toBe("ghosted");
   });
 
+  it.each(["declined", "rescinded"])("accepts the %s offer outcome", (applicationStatus) => {
+    const result = updateJobApplicationSchema.parse({ applicationStatus });
+
+    expect(result.applicationStatus).toBe(applicationStatus);
+  });
+
   it("accepts setting and clearing interest priority", () => {
     expect(updateJobApplicationSchema.parse({ priority: "high" }).priority).toBe("high");
     expect(updateJobApplicationSchema.parse({ priority: null }).priority).toBeNull();

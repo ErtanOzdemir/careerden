@@ -1,5 +1,6 @@
 import type {
   ApiApplicationPackPreferences,
+  ApiApplicationStatus,
   ApiDocumentContent,
   ApiGapQuestionField,
   ApiProfileReadiness,
@@ -10,6 +11,8 @@ export type ApplicationStatus =
   | "Applied"
   | "Interviewing"
   | "Offer"
+  | "Declined"
+  | "Rescinded"
   | "Rejected"
   | "Ghosted";
 
@@ -117,6 +120,8 @@ export interface JobApplication {
   dateApplied: string;
   dateLabel: string;
   status: ApplicationStatus;
+  // The latest status change, while it can still be undone.
+  lastStatusChange?: { id: string; from: ApiApplicationStatus; to: ApiApplicationStatus };
   interestLevel?: InterestLevel;
   tags: string[];
   description?: string;
@@ -232,16 +237,19 @@ export interface DashboardSankeyCompany {
 
 export interface DashboardSankeyNode {
   id: string;
+  // Application status the node stands for; outcome nodes repeat it once per stage.
+  status: string;
   label: string;
+  // Applications that reached this stage.
   count: number;
-  // Companies shown on the ribbon into this status, most recently updated first.
-  companies?: DashboardSankeyCompany[];
 }
 
 export interface DashboardSankeyLink {
   source: string;
   target: string;
   value: number;
+  // Companies shown on this ribbon, most recently updated first.
+  companies?: DashboardSankeyCompany[];
 }
 
 export interface DashboardSankeyData {

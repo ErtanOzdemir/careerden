@@ -14,6 +14,7 @@ import type {
   ApplicationStatus,
   CvListTip,
   CvTip,
+  DashboardSankeyNode,
   DashboardStats,
   FollowUp,
   JobApplication,
@@ -32,6 +33,10 @@ export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatu
       return "Saved";
     case "offer":
       return "Offer";
+    case "declined":
+      return "Declined";
+    case "rescinded":
+      return "Rescinded";
     case "rejected":
       return "Rejected";
     case "ghosted":
@@ -50,6 +55,10 @@ export function mapUiStatusToApi(status: ApplicationStatus): ApiApplicationStatu
       return "saved";
     case "Offer":
       return "offer";
+    case "Declined":
+      return "declined";
+    case "Rescinded":
+      return "rescinded";
     case "Rejected":
       return "rejected";
     case "Ghosted":
@@ -103,6 +112,9 @@ export function mapApiJobApplicationToUi(
     dateApplied: formatDate(dateSource),
     dateLabel: formatRelativeDate(dateSource),
     status: mapApiStatusToUi(application.tracking.applicationStatus),
+    lastStatusChange: detail
+      ? getUndoableStatusChange(detail.events, application.tracking.applicationStatus)
+      : undefined,
     interestLevel: application.tracking.priority as InterestLevel | undefined,
     tags: application.tracking.tags,
     description: scrapeJob?.description,
@@ -255,6 +267,8 @@ export function mapApiDashboardStats(
         count: activeInterviews,
       },
       { status: "Offer", count: analytics.byStatus.offer ?? 0 },
+      { status: "Offer declined", count: analytics.byStatus.declined ?? 0 },
+      { status: "Offer rescinded", count: analytics.byStatus.rescinded ?? 0 },
       { status: "Rejected", count: analytics.byStatus.rejected ?? 0 },
       { status: "Ghosted", count: analytics.byStatus.ghosted ?? 0 },
     ],
@@ -286,46 +300,69 @@ export function mapApiDashboardStats(
   };
 }
 
-const dashboardSankeyStatuses: Array<{ id: ApiApplicationStatus; label: string }> = [
-  { id: "saved", label: "Saved" },
-  { id: "applied", label: "Applied" },
-  { id: "phone_screen", label: "Phone screen" },
-  { id: "interview", label: "Interview" },
-  { id: "offer", label: "Offer" },
-  { id: "rejected", label: "Rejected" },
-  { id: "ghosted", label: "Ghosted" },
-];
+const dashboardSankeyLabels: Record<"applications" | ApiApplicationStatus, string> = {
+  applications: "Applications",
+  saved: "Saved",
+  applied: "Applied",
+  phone_screen: "Phone screen",
+  interview: "Interview",
+  offer: "Offer",
+  declined: "Declined",
+  rescinded: "Rescinded",
+  rejected: "Rejected",
+  ghosted: "Ghosted",
+};
 
+const dashboardSankeyOutcomes = new Set<string>(["declined", "rescinded", "rejected", "ghosted"]);
+
+// Stages share one node each. Outcomes get a node per stage they end, placed right after that
+// stage, so ribbons into "Rejected" never cross the rest of the pipeline.
 function mapDashboardSankey(analytics: ApiJobApplicationAnalytics): DashboardStats["sankey"] {
-  if (analytics.total === 0) {
+  const flows = analytics.pipeline ?? [];
+  if (analytics.total === 0 || flows.length === 0) {
     return { nodes: [], links: [] };
   }
 
-  const statuses = dashboardSankeyStatuses
-    .map(({ id, label }) => {
-      const companies = (analytics.companiesByStatus?.[id] ?? []).map((company) => ({
-        id: company.jobApplicationId,
-        ...(company.companyName ? { name: company.companyName } : {}),
-        ...(company.companyLogoUrl ? { logoUrl: company.companyLogoUrl } : {}),
-      }));
-      return {
-        id,
-        label,
-        count: analytics.byStatus[id] ?? 0,
-        ...(companies.length > 0 ? { companies } : {}),
-      };
-    })
-    .filter((status) => status.count > 0);
+  const order = Object.keys(dashboardSankeyLabels);
+  const nodeId = (status: string, source: string) =>
+    dashboardSankeyOutcomes.has(status) ? `${source}:${status}` : status;
+  const nodes = new Map<string, DashboardSankeyNode>([
+    [
+      "applications",
+      { id: "applications", status: "applications", label: "Applications", count: analytics.total },
+    ],
+  ]);
+  for (const flow of flows) {
+    const id = nodeId(flow.target, flow.source);
+    const node = nodes.get(id) ?? {
+      id,
+      status: flow.target,
+      label: dashboardSankeyLabels[flow.target] ?? flow.target,
+      count: 0,
+    };
+    node.count += flow.count;
+    nodes.set(id, node);
+  }
+  const rank = (node: DashboardSankeyNode) => {
+    const [source, status] = node.id.includes(":") ? node.id.split(":") : [node.id, ""];
+    return order.indexOf(source ?? "") * (order.length + 1) + order.indexOf(status ?? "") + 1;
+  };
 
   return {
-    nodes: [
-      { id: "all-applications", label: "All applications", count: analytics.total },
-      ...statuses,
-    ],
-    links: statuses.map((status) => ({
-      source: "all-applications",
-      target: status.id,
-      value: status.count,
+    nodes: [...nodes.values()].sort((left, right) => rank(left) - rank(right)),
+    links: flows.map((flow) => ({
+      source: flow.source,
+      target: nodeId(flow.target, flow.source),
+      value: flow.count,
+      ...(flow.companies.length > 0
+        ? {
+            companies: flow.companies.map((company) => ({
+              id: company.jobApplicationId,
+              ...(company.companyName ? { name: company.companyName } : {}),
+              ...(company.companyLogoUrl ? { logoUrl: company.companyLogoUrl } : {}),
+            })),
+          }
+        : {}),
     })),
   };
 }
@@ -334,6 +371,49 @@ function mapTimeline(
   _application: ApiJobApplication | ApiJobApplicationDetail,
 ): TimelineMilestone[] {
   return [];
+}
+
+const applicationStatusLabels: Record<ApiApplicationStatus, string> = {
+  saved: "Saved",
+  applied: "Applied",
+  phone_screen: "Phone screen",
+  interview: "Interview",
+  offer: "Offer",
+  declined: "Offer declined",
+  rescinded: "Offer rescinded",
+  rejected: "Rejected",
+  ghosted: "Ghosted",
+};
+
+export function formatApplicationStatus(status: ApiApplicationStatus): string {
+  return applicationStatusLabels[status] ?? status;
+}
+
+// The latest status change, matching the server's undo rule: archive and restore events don't
+// count, and a change only stays undoable while the application still has the status it set.
+function getUndoableStatusChange(
+  events: ApiJobApplicationEvent[],
+  currentStatus: ApiApplicationStatus,
+): JobApplication["lastStatusChange"] {
+  const [latest] = events
+    .filter(
+      (event) =>
+        event.type === "status_changed" &&
+        typeof event.metadata.from === "string" &&
+        typeof event.metadata.to === "string",
+    )
+    .sort(
+      (left, right) =>
+        Date.parse(right.occurredAt) - Date.parse(left.occurredAt) ||
+        Date.parse(right.createdAt) - Date.parse(left.createdAt),
+    );
+  if (!latest || latest.metadata.to !== currentStatus) return undefined;
+
+  return {
+    id: latest.id,
+    from: latest.metadata.from as ApiApplicationStatus,
+    to: latest.metadata.to as ApiApplicationStatus,
+  };
 }
 
 function mapProcessingLog(events: ApiJobApplicationEvent[]): ProcessingLogItem[] {

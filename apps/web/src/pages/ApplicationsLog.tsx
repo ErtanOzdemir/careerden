@@ -700,6 +700,10 @@ function mapUiStatusToDisplay(app: JobApplication): DisplayStatus {
       return "interview";
     case "Offer":
       return "offer";
+    case "Declined":
+      return "declined";
+    case "Rescinded":
+      return "rescinded";
     case "Rejected":
       return "rejected";
     case "Ghosted":

@@ -5,11 +5,56 @@ import {
   mapApiJobApplicationToUi,
   mapApiProfileToUi,
   mapApiStatusToUi,
+  mapUiStatusToApi,
 } from "./mappers";
-import type { ApiJobApplicationAnalytics, ApiJobApplicationDetail, ApiProfile } from "./types";
+import type {
+  ApiApplicationStatus,
+  ApiJobApplicationAnalytics,
+  ApiJobApplicationDetail,
+  ApiProfile,
+} from "./types";
 import { richDocumentToPlainText } from "@careerden/contracts";
 
 describe("API mappers", () => {
+  it("exposes the latest status change while the application still has its status", () => {
+    const event = (id: string, type: string, metadata: Record<string, unknown>, at: string) => ({
+      createdAt: at,
+      id,
+      jobApplicationId: "job-1",
+      metadata,
+      occurredAt: at,
+      title: "",
+      type,
+    });
+    const detail = {
+      ...createApplicationDetail(),
+      events: [
+        event("event-a", "status_changed", { from: "applied", to: "interview" }, "2026-06-02"),
+        event("event-b", "status_changed", { archivedAt: "2026-06-03" }, "2026-06-03"),
+        event("event-c", "status_changed", { from: "saved", to: "applied" }, "2026-06-01"),
+      ],
+    };
+
+    expect(mapApiJobApplicationToUi(detail).lastStatusChange).toEqual({
+      id: "event-a",
+      from: "applied",
+      to: "interview",
+    });
+    expect(
+      mapApiJobApplicationToUi({
+        ...detail,
+        tracking: { ...detail.tracking, applicationStatus: "offer" },
+      }).lastStatusChange,
+    ).toBeUndefined();
+  });
+
+  it("round-trips declined and rescinded offer statuses", () => {
+    expect(mapApiStatusToUi("declined")).toBe("Declined");
+    expect(mapApiStatusToUi("rescinded")).toBe("Rescinded");
+    expect(mapUiStatusToApi("Declined")).toBe("declined");
+    expect(mapUiStatusToApi("Rescinded")).toBe("rescinded");
+  });
+
   it("maps API status values to UI labels", () => {
     expect(mapApiStatusToUi("saved")).toBe("Saved");
     expect(mapApiStatusToUi("applied")).toBe("Applied");
@@ -228,31 +273,54 @@ describe("API mappers", () => {
     expect(mapApiJobApplicationToUi(application).companyDescription).toBeUndefined();
   });
 
-  it("passes each status's companies to the pipeline chart", () => {
+  it("maps pipeline flows to stage nodes and company ribbons", () => {
     const stats = mapApiDashboardStats(
       {
         applicationsOverTime: {},
         averageTimeToResponseDays: null,
-        byStatus: { applied: 2 },
+        byStatus: { applied: 1, rejected: 1 },
         interviewConversionRate: 0,
         offers: 0,
-        rejections: 0,
+        rejections: 1,
         responseRate: 0,
         total: 2,
-        companiesByStatus: {
-          applied: [
-            { jobApplicationId: "job-1", companyName: "Acme", companyLogoUrl: "/logo.png" },
-            { jobApplicationId: "job-2" },
-          ],
-        },
+        pipeline: [
+          {
+            source: "applications",
+            target: "applied",
+            count: 2,
+            companies: [
+              { jobApplicationId: "job-1", companyName: "Acme", companyLogoUrl: "/logo.png" },
+              { jobApplicationId: "job-2" },
+            ],
+          },
+          {
+            source: "applied",
+            target: "rejected",
+            count: 1,
+            companies: [{ jobApplicationId: "job-2" }],
+          },
+        ],
       },
       [],
     );
 
-    expect(stats.sankey.nodes.find((node) => node.id === "applied")?.companies).toEqual([
-      { id: "job-1", name: "Acme", logoUrl: "/logo.png" },
-      { id: "job-2" },
+    expect(stats.sankey.nodes).toEqual([
+      { id: "applications", status: "applications", label: "Applications", count: 2 },
+      { id: "applied", status: "applied", label: "Applied", count: 2 },
+      { id: "applied:rejected", status: "rejected", label: "Rejected", count: 1 },
     ]);
+    expect(stats.sankey.links[0]).toEqual({
+      source: "applications",
+      target: "applied",
+      value: 2,
+      companies: [{ id: "job-1", name: "Acme", logoUrl: "/logo.png" }, { id: "job-2" }],
+    });
+    expect(stats.sankey.links[1]).toMatchObject({
+      source: "applied",
+      target: "applied:rejected",
+      value: 1,
+    });
   });
 
   it("maps analytics and details into dashboard stats", () => {
@@ -275,56 +343,53 @@ describe("API mappers", () => {
     expect(stats.weeklyTrend).toEqual([1, 2]);
     expect(stats.upcomingInterviews).toHaveLength(1);
     expect(stats.upcomingInterviews[0]?.jobApplicationId).toBe("job-1");
-    expect(stats.sankey).toEqual({
-      nodes: [
-        { id: "all-applications", label: "All applications", count: 4 },
-        { id: "applied", label: "Applied", count: 1 },
-        { id: "interview", label: "Interview", count: 1 },
-        { id: "offer", label: "Offer", count: 1 },
-        { id: "rejected", label: "Rejected", count: 1 },
-      ],
-      links: [
-        { source: "all-applications", target: "applied", value: 1 },
-        { source: "all-applications", target: "interview", value: 1 },
-        { source: "all-applications", target: "offer", value: 1 },
-        { source: "all-applications", target: "rejected", value: 1 },
-      ],
-    });
   });
 
-  it("maps every current application status into Sankey data in canonical order", () => {
+  it("orders stages canonically, each followed by the outcomes it ended in", () => {
+    const flow = (source: "applications" | ApiApplicationStatus, target: ApiApplicationStatus) => ({
+      source,
+      target,
+      count: 1,
+      companies: [],
+    });
     const analytics: ApiJobApplicationAnalytics = {
       applicationsOverTime: {},
       averageTimeToResponseDays: null,
-      byStatus: {
-        saved: 1,
-        applied: 2,
-        phone_screen: 3,
-        interview: 4,
-        offer: 5,
-        rejected: 6,
-        ghosted: 7,
-      },
+      byStatus: {},
       interviewConversionRate: 0,
-      offers: 5,
-      rejections: 6,
+      offers: 1,
+      rejections: 1,
       responseRate: 0,
-      total: 28,
+      total: 3,
+      pipeline: [
+        flow("applications", "applied"),
+        flow("applied", "ghosted"),
+        flow("applications", "applied"),
+        flow("applied", "interview"),
+        flow("interview", "offer"),
+        flow("offer", "rejected"),
+        flow("offer", "declined"),
+        flow("offer", "rescinded"),
+        flow("applied", "phone_screen"),
+        flow("applications", "saved"),
+      ],
     };
 
     const stats = mapApiDashboardStats(analytics, []);
 
-    expect(stats.sankey.nodes.map((node) => node.label)).toEqual([
-      "All applications",
-      "Saved",
-      "Applied",
-      "Phone screen",
-      "Interview",
-      "Offer",
-      "Rejected",
-      "Ghosted",
+    expect(stats.sankey.nodes.map((node) => node.id)).toEqual([
+      "applications",
+      "saved",
+      "applied",
+      "applied:ghosted",
+      "phone_screen",
+      "interview",
+      "offer",
+      "offer:declined",
+      "offer:rescinded",
+      "offer:rejected",
     ]);
-    expect(stats.sankey.links.map((link) => link.value)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(stats.sankey.links).toHaveLength(10);
   });
 
   it("returns empty Sankey data when there are no applications", () => {

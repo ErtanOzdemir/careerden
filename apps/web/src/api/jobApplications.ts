@@ -207,6 +207,14 @@ export const jobApplicationsApi = {
     });
   },
 
+  // Returns the application to the status it had before its latest status change.
+  undoStatusChange(id: string, statusChangeId: string): Promise<ApiJobApplication> {
+    return requestJson<ApiJobApplication>(
+      `/job-applications/${id}/status-changes/${statusChangeId}/undo`,
+      { method: "POST" },
+    );
+  },
+
   delete(id: string): Promise<void> {
     return requestJson<void>(`/job-applications/${id}`, {
       method: "DELETE",

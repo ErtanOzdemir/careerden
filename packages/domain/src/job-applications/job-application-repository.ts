@@ -142,6 +142,14 @@ export interface JobApplicationRepository {
   getDocumentContent(id: string): Promise<DocumentContent | null>;
   addEvent(input: CreateJobApplicationEventInput): Promise<JobApplicationEvent>;
   listEvents(jobApplicationId: string): Promise<JobApplicationEvent[]>;
+  // Status changes of several applications, oldest first.
+  listStatusChanges(jobApplicationIds: string[]): Promise<JobApplicationEvent[]>;
+  // Deletes the status change only while it is the application's latest one, holding the
+  // application row so a concurrent change cannot slip in. Returns null otherwise.
+  deleteLatestStatusChange(
+    jobApplicationId: string,
+    eventId: string,
+  ): Promise<JobApplicationEvent | null>;
   createContact(input: CreateJobApplicationContactInput): Promise<JobApplicationContact>;
   findContactById(id: string): Promise<JobApplicationContact | null>;
   listContacts(jobApplicationId: string): Promise<JobApplicationContact[]>;

@@ -221,7 +221,7 @@ export default function Dashboard() {
             }
           />
           <div className="divide-y divide-border border-t border-border">
-            {active.slice(0, 4).map((app) => (
+            {active.slice(0, 6).map((app) => (
               <button
                 key={app.id}
                 onClick={() => navigate(`/applications/${app.id}`)}

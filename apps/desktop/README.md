@@ -232,6 +232,12 @@ authoritative way to produce all supported targets and macOS notarization. On ma
 packaging produces separate x64 and arm64 DMGs and updater ZIPs so each installation
 contains only the Electron binary for its architecture.
 
+Only Careerden Unplugged is released for now. The cloud edition is deferred rather than
+dropped: releasing it again means adding `cloud` back to the `edition` matrix in
+[`desktop-release.yml`](../../.github/workflows/desktop-release.yml) and dropping the
+"Unplugged" suffix from the draft release title, both marked with a TODO there. The cloud
+edition can still be packaged locally with `pnpm --filter @careerden/desktop package`.
+
 ## Automatic Updates
 
 Packaged desktop builds use `electron-updater` and public GitHub Releases. Development

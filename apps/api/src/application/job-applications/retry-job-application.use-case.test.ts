@@ -89,7 +89,15 @@ describe("RetryJobApplicationUseCase", () => {
     const scrape = createScrapeBundle();
     const analysis = createMatchAnalysis();
     const documentContent = documentContentFromProfile(
-      { education: [], experience: [], projects: [], skills: [], certifications: [], summary: undefined, summaryRichText: undefined },
+      {
+        education: [],
+        experience: [],
+        projects: [],
+        skills: [],
+        certifications: [],
+        summary: undefined,
+        summaryRichText: undefined,
+      },
       analysis,
     );
     await repository.saveScrapeBundle(job.id, scrape);

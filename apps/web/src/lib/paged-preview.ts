@@ -76,7 +76,10 @@ export function renderPagedPreview(html: string, container: HTMLElement): PagedP
     const targetTop = topRatio * scrollArea.scrollHeight;
     const targetHeight = heightRatio * scrollArea.scrollHeight;
     const centered = targetTop - scrollArea.clientHeight / 2 + targetHeight / 2;
-    const clamped = Math.max(0, Math.min(centered, scrollArea.scrollHeight - scrollArea.clientHeight));
+    const clamped = Math.max(
+      0,
+      Math.min(centered, scrollArea.scrollHeight - scrollArea.clientHeight),
+    );
     scrollArea.scrollTo({ top: clamped, behavior: "smooth" });
   }
 

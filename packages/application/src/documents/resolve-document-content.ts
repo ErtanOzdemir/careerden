@@ -68,7 +68,8 @@ function resolveExperiences(
       (item) => item.experienceIndex === index,
     );
     const description =
-      enhancement?.description ?? toRichDocument(experience.description, experience.descriptionRichText);
+      enhancement?.description ??
+      toRichDocument(experience.description, experience.descriptionRichText);
 
     return {
       company: experience.company,

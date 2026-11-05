@@ -15,7 +15,10 @@ describe("resolveDocumentContent", () => {
         { description: richDocumentFromText("Revised education details."), educationIndex: 0 },
       ],
       experienceEnhancements: [
-        { description: richDocumentFromText("Revised experience description."), experienceIndex: 0 },
+        {
+          description: richDocumentFromText("Revised experience description."),
+          experienceIndex: 0,
+        },
       ],
       projectEnhancements: [],
       skillSuggestions: ["TypeScript", "React"],

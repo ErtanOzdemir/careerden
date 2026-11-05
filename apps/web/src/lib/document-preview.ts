@@ -1,5 +1,9 @@
 import type { RichDocument } from "@careerden/contracts";
-import { emptyRichDocument, mergeRichDocumentsAsProse, richDocumentFromText } from "@careerden/contracts";
+import {
+  emptyRichDocument,
+  mergeRichDocumentsAsProse,
+  richDocumentFromText,
+} from "@careerden/contracts";
 import type { ApiDocumentContent, ApiProfile } from "../api/types.js";
 
 /**
@@ -31,8 +35,8 @@ export function buildPreviewTemplateData(
     );
     const description =
       enhancement?.description ??
-      (experience.descriptionRichText ??
-        (experience.description ? richDocumentFromText(experience.description) : undefined));
+      experience.descriptionRichText ??
+      (experience.description ? richDocumentFromText(experience.description) : undefined);
 
     return toItemContent(
       `${experience.title} · ${experience.company}`,
@@ -42,17 +46,18 @@ export function buildPreviewTemplateData(
   });
 
   const educationContent = profile.education.map((education, index) => {
-    const enhancement = content.educationEnhancements.find(
-      (item) => item.educationIndex === index,
-    );
+    const enhancement = content.educationEnhancements.find((item) => item.educationIndex === index);
     const description =
       enhancement?.description ??
-      (education.descriptionRichText ??
-        (education.description ? richDocumentFromText(education.description) : undefined));
+      education.descriptionRichText ??
+      (education.description ? richDocumentFromText(education.description) : undefined);
 
     return toItemContent(
       education.institution,
-      [[education.degree, education.field].filter(Boolean).join(", "), formatPeriod(education.startDate, education.endDate)]
+      [
+        [education.degree, education.field].filter(Boolean).join(", "),
+        formatPeriod(education.startDate, education.endDate),
+      ]
         .filter(Boolean)
         .join(" · "),
       description,

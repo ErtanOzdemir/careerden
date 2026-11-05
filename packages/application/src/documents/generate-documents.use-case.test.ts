@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FileStorage, RichDocument, StoredFileInput, TemplateRenderer } from "@careerden/domain";
+import type {
+  FileStorage,
+  RichDocument,
+  StoredFileInput,
+  TemplateRenderer,
+} from "@careerden/domain";
 import { richDocumentFromText, richDocumentToPlainText } from "@careerden/domain";
 import {
   InMemoryJobApplicationRepository,
@@ -237,9 +242,7 @@ describe("GenerateDocumentsUseCase", () => {
         start_date: "2022",
         end_date: "Present",
         period: "2022 - Present",
-        description: richDocumentFromText(
-          "User-edited TypeScript automation for backend systems.",
-        ),
+        description: richDocumentFromText("User-edited TypeScript automation for backend systems."),
       },
     ]);
     expect(capturedData[0]?.selected_projects).toEqual([
@@ -251,7 +254,9 @@ describe("GenerateDocumentsUseCase", () => {
       },
     ]);
     expect(capturedData[0]?.summary).toEqual(richDocumentFromText("User-edited summary."));
-    expect(capturedData[0]?.customized_summary).toEqual(richDocumentFromText("User-edited summary."));
+    expect(capturedData[0]?.customized_summary).toEqual(
+      richDocumentFromText("User-edited summary."),
+    );
     expect(capturedData[0]?.skills).toEqual(["TypeScript", "Node.js"]);
     expect(capturedData[0]?.certifications).toEqual(["AWS Practitioner"]);
     expect(capturedData[0]?.selected_education).toHaveLength(1);

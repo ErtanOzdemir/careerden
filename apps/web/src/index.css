@@ -242,6 +242,42 @@
 }
 
 @layer utilities {
+  /* The sidebar is a solid panel by default. In the macOS desktop app the window carries a
+     native vibrancy layer (see getMainWindowOptions), so these surfaces drop to a tint and the
+     blurred desktop reads through them. The `data-mac-glass` attribute is set by mac-glass.ts. */
+  .sidebar-surface {
+    background-color: var(--sidebar);
+  }
+
+  .sidebar-nav-active {
+    background-color: var(--sidebar-accent);
+  }
+
+  .sidebar-footer-card {
+    background-color: var(--card);
+  }
+
+  :root[data-mac-glass],
+  :root[data-mac-glass] body,
+  :root[data-mac-glass] #root,
+  :root[data-mac-glass] .app-shell {
+    background-color: transparent;
+  }
+
+  :root[data-mac-glass] .sidebar-surface {
+    background-color: color-mix(in oklch, var(--sidebar) 30%, transparent);
+    border-right-color: color-mix(in oklch, var(--sidebar-border) 55%, transparent);
+  }
+
+  :root[data-mac-glass] .sidebar-nav-active {
+    background-color: color-mix(in oklch, var(--sidebar-accent) 65%, transparent);
+  }
+
+  :root[data-mac-glass] .sidebar-footer-card {
+    background-color: color-mix(in oklch, var(--card) 45%, transparent);
+    border-color: color-mix(in oklch, var(--sidebar-border) 55%, transparent);
+  }
+
   .scrollbar-soft {
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;

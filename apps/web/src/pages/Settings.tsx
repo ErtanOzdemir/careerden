@@ -508,7 +508,6 @@ export default function Settings() {
             desc="Automatically notify you 10 minutes before each scheduled follow-up."
             onChange={(checked) => void handleFollowUpRemindersChange(checked)}
           />
-          <Toggle label="Weekly summary" desc="A calm recap of your job search every Monday." />
         </div>
       </Panel>
 

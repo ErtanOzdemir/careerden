@@ -118,6 +118,23 @@ export default function AppDetail() {
     }
   }, [searchParams]);
 
+  // Every draft below belongs to one application, and the route keeps this page mounted when the
+  // id changes. Without the reset an open follow-up or contact form, a pending status undo, or a
+  // failed analysis notice follows the user to the next application and reads as data it owns.
+  useEffect(() => {
+    setFollowUpForm({ id: "", title: "", description: "", nextFollowUpAt: "" });
+    setEditingFollowUpId(null);
+    setShowFollowUpForm(false);
+    setContactForm({ name: "", role: "", email: "", phone: "" });
+    setShowContactForm(false);
+    setStatusUndo(null);
+    setActionsMenuOpen(false);
+    setDeleteDialogOpen(false);
+    setDeleteError(null);
+    setAnalysisCreditError(false);
+    setAiProviderMissing(false);
+  }, [id]);
+
   useEffect(() => {
     if (!id) {
       setError("Missing ID");

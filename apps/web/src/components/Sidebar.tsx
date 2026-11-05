@@ -18,6 +18,7 @@ import type { ApiProfile } from "../api/types.js";
 import { BrandLogo } from "./BrandLogo.js";
 import { UnpluggedBadge } from "./UnpluggedBadge.js";
 import { isLocalEdition } from "../edition.js";
+import { useDesktopUpdates } from "../desktop-updates/DesktopUpdateProvider.js";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -32,8 +33,11 @@ const navItems = [
 
 export default function Sidebar() {
   const [profile, setProfile] = useState<ApiProfile | null>(null);
+  const { state: updateState } = useDesktopUpdates();
 
   useEffect(() => {
+    // The local edition has no account, so the footer shows the app version instead.
+    if (isLocalEdition) return;
     let isMounted = true;
 
     profilesApi
@@ -129,15 +133,23 @@ export default function Sidebar() {
             </button>
           </>
         )}
-        <div className="mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border bg-card px-3 py-2.5">
-          <div className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
-            {initials}
+        {isLocalEdition ? (
+          updateState && (
+            <p className="mt-3 px-3 text-xs text-muted-foreground">
+              Version {updateState.currentVersion}
+            </p>
+          )
+        ) : (
+          <div className="mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border bg-card px-3 py-2.5">
+            <div className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
+              {initials}
+            </div>
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-sm font-medium text-sidebar-foreground">{fullName}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            </div>
           </div>
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-medium text-sidebar-foreground">{fullName}</p>
-            <p className="truncate text-xs text-muted-foreground">{email}</p>
-          </div>
-        </div>
+        )}
       </div>
     </aside>
   );

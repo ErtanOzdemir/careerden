@@ -9,6 +9,11 @@ vi.mock("../api/profiles.js", () => ({
   profilesApi: { me: vi.fn().mockRejectedValue(new Error("No profile")) },
 }));
 vi.mock("../api/auth.js", () => ({ authClient: { signOut: vi.fn() } }));
+vi.mock("../desktop-updates/DesktopUpdateProvider.js", () => ({
+  useDesktopUpdates: () => ({
+    state: { currentVersion: "1.4.2", required: false, status: "up-to-date" },
+  }),
+}));
 
 describe("Sidebar in the local edition", () => {
   afterEach(cleanup);
@@ -29,5 +34,16 @@ describe("Sidebar in the local edition", () => {
     expect(screen.queryByRole("link", { name: /credits & billing/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /help & support/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /log out/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the app version instead of the profile card", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Version 1.4.2")).toBeInTheDocument();
+    expect(screen.queryByText("Profile", { selector: "p" })).not.toBeInTheDocument();
   });
 });

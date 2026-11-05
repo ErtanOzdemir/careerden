@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createScrapeRateLimitedReason } from "@careerden/contracts";
 import {
   itemFromLegacyTip,
   mapApiDashboardStats,
@@ -63,6 +64,22 @@ describe("API mappers", () => {
     expect(mapApiStatusToUi("offer")).toBe("Offer");
     expect(mapApiStatusToUi("rejected")).toBe("Rejected");
     expect(mapApiStatusToUi("ghosted")).toBe("Ghosted");
+  });
+
+  it("names LinkedIn throttling instead of reporting a generic retry", () => {
+    const application = createApplicationDetail();
+    application.status = "queued";
+    application.failureReason = createScrapeRateLimitedReason(
+      "LinkedIn public fetch failed: 429 Too Many Requests",
+    );
+
+    expect(mapApiJobApplicationToUi(application).processingStatusLabel).toBe(
+      "LinkedIn is rate limiting",
+    );
+
+    application.failureReason = "LinkedIn public fetch failed: 403 Forbidden";
+
+    expect(mapApiJobApplicationToUi(application).processingStatusLabel).toBe("Retry scheduled");
   });
 
   it("preserves the active analysis attempt for queued UI state", () => {

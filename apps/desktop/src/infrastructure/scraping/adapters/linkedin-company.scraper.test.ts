@@ -1,3 +1,4 @@
+import { scrapeRateLimitedReasonCode } from "@careerden/contracts";
 import { describe, expect, it } from "vitest";
 import {
   chooseExternalCompanyWebsiteUrl,
@@ -162,6 +163,19 @@ describe("LinkedInCompanyScraper", () => {
         html,
       },
     });
+  });
+
+  it("marks a throttled guest response as rate limited", async () => {
+    const scraper = new LinkedInCompanyScraper({
+      fetch: async () => new Response("", { status: 429, statusText: "Too Many Requests" }),
+    });
+
+    await expect(
+      scraper.scrapeCompany({
+        companyName: "Acme",
+        linkedInUrl: "https://www.linkedin.com/company/acme",
+      }),
+    ).rejects.toThrow(scrapeRateLimitedReasonCode);
   });
 
   it("rejects a guest response that redirects to LinkedIn authentication", async () => {

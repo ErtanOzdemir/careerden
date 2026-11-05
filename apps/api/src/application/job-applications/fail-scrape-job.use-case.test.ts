@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createScrapeRateLimitedReason } from "@careerden/contracts";
 import { FailScrapeJobUseCase } from "./fail-scrape-job.use-case.js";
 import {
   createJobApplicationRepository,
@@ -42,6 +43,37 @@ describe("FailScrapeJobUseCase", () => {
       now,
     });
     expect(recordChanged).toHaveBeenCalledOnce();
+  });
+
+  it("waits out LinkedIn's throttling window instead of retrying within the minute", async () => {
+    const job = createTestJobApplication({
+      status: "scraping",
+      scrapeClaimedBy: "desktop-a",
+      scrapeAttemptCount: 1,
+    });
+    const retry = createTestJobApplication({ ...job, status: "queued" });
+    const repository = createJobApplicationRepository({
+      findById: vi.fn(async () => job),
+      recordScrapeFailure: vi.fn(async () => retry),
+    });
+    const now = new Date("2026-06-30T10:00:00.000Z");
+    const { unitOfWork } = createUnitOfWork(repository, createProfiles());
+    const reason = createScrapeRateLimitedReason(
+      "LinkedIn public fetch failed: 429 Too Many Requests",
+    );
+
+    await expect(
+      new FailScrapeJobUseCase(unitOfWork).execute(
+        job.id,
+        "user-1",
+        { claimedBy: "desktop-a", reason },
+        now,
+      ),
+    ).resolves.toBe("retry_scheduled");
+    expect(repository.recordScrapeFailure).toHaveBeenCalledWith(
+      job.id,
+      expect.objectContaining({ backoffMs: 15 * 60_000, reason }),
+    );
   });
 
   it("rejects a failure report from another desktop claimant", async () => {

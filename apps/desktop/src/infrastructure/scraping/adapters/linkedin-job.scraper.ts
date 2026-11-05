@@ -1,3 +1,4 @@
+import { createScrapeRateLimitedReason } from "@careerden/contracts";
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
 
@@ -350,6 +351,14 @@ async function fetchLinkedInHtml(fetchImpl: typeof fetch, url: string): Promise<
 
   if (response.status === 404) {
     throw new Error("LinkedIn job was not found");
+  }
+
+  if (response.status === 429) {
+    throw new Error(
+      createScrapeRateLimitedReason(
+        `LinkedIn public fetch failed: ${response.status} ${response.statusText}`,
+      ),
+    );
   }
 
   if (!response.ok) {

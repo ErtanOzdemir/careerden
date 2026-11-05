@@ -27,7 +27,7 @@ import type {
   ApiDocumentContent,
   ApiProfile,
 } from "../api/types.js";
-import { HTML_TEMPLATES } from "@careerden/contracts";
+import { HTML_TEMPLATES, isScrapeRateLimitedReason } from "@careerden/contracts";
 import {
   ArrowLeft,
   MapPin,
@@ -1882,6 +1882,9 @@ function getProcessingLabel(app: JobApplication): string {
 
   switch (app.processingStatus) {
     case "queued":
+      if (isScrapeRateLimitedReason(app.processingFailureReason)) {
+        return "LinkedIn is rate limiting";
+      }
       return app.processingFailureReason ? "Retry scheduled" : "Scraping waiting";
     case "scraping":
       return "Extracting LinkedIn details";

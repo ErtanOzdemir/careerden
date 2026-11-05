@@ -1,3 +1,4 @@
+import { createScrapeRateLimitedReason } from "@careerden/contracts";
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
 
@@ -167,6 +168,14 @@ async function fetchLinkedInGuestCompanyHtml(
 
   if (response.status === 404) {
     throw new Error("LinkedIn company was not found");
+  }
+
+  if (response.status === 429) {
+    throw new Error(
+      createScrapeRateLimitedReason(
+        `LinkedIn public company fetch failed: ${response.status} ${response.statusText}`,
+      ),
+    );
   }
 
   if (!response.ok) {

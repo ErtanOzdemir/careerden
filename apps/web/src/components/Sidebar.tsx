@@ -65,7 +65,7 @@ export default function Sidebar() {
   const initials = getInitials(fullName);
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+    <aside className="sidebar-surface flex w-60 shrink-0 flex-col border-r border-sidebar-border">
       <div data-testid="sidebar-brand" className="flex h-24 items-end gap-2.5 px-5 pb-4">
         <BrandLogo className="size-8 object-contain" />
         <div className="leading-tight">
@@ -95,7 +95,7 @@ export default function Sidebar() {
                 cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    ? "sidebar-nav-active text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                 )
               }
@@ -116,7 +116,7 @@ export default function Sidebar() {
                 cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    ? "sidebar-nav-active text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                 )
               }
@@ -140,7 +140,7 @@ export default function Sidebar() {
             </p>
           )
         ) : (
-          <div className="mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border bg-card px-3 py-2.5">
+          <div className="sidebar-footer-card mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border px-3 py-2.5">
             <div className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
               {initials}
             </div>

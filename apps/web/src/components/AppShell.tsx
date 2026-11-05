@@ -77,11 +77,11 @@ export default function AppShell() {
   }, [greeting, location.pathname, params.id]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="app-shell flex h-screen overflow-hidden bg-background text-foreground">
       <DesktopNotificationBridge />
       <Sidebar />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col bg-background">
         <Topbar
           title={header.title}
           subtitle={header.subtitle}

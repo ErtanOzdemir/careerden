@@ -3,9 +3,11 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 import logoUrl from "./public/handshake-logo.svg";
+import { initializeMacGlass } from "./mac-glass.js";
 import { initializeTheme } from "./theme.js";
 
 initializeTheme();
+initializeMacGlass();
 
 const favicon =
   document.querySelector<HTMLLinkElement>('link[rel="icon"]') ?? document.createElement("link");

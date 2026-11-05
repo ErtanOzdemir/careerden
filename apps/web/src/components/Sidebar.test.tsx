@@ -29,6 +29,18 @@ describe("Sidebar", () => {
     expect(screen.getByTestId("sidebar-brand")).toHaveClass("h-24", "items-end", "pb-4");
   });
 
+  it("paints the panel with the shared surface class the macOS glass styles hook into", () => {
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+
+    const panel = screen.getByRole("complementary");
+    expect(panel).toHaveClass("sidebar-surface");
+    expect(panel).not.toHaveClass("bg-sidebar");
+  });
+
   it("links to the help and support page", () => {
     render(
       <MemoryRouter>

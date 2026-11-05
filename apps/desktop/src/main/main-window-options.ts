@@ -29,6 +29,11 @@ export function getMainWindowOptions(
   if (platform === "darwin") {
     return {
       ...options,
+      // The sidebar material blurs the desktop behind the window, and the renderer keeps the
+      // sidebar strip translucent so it shows through. A transparent window background is what
+      // lets the vibrancy layer reach the screen at all.
+      backgroundColor: "#00000000",
+      vibrancy: "sidebar",
       titleBarStyle: "hiddenInset",
       trafficLightPosition: { x: 14, y: 14 },
     };

@@ -32,7 +32,10 @@ Use the Careerden cloud service, or keep everything on your device with Careerde
 
 </div>
 
-![Fictional Careerden application tracking dashboard](./docs/images/application-tracking-dashboard.png)
+![Fictional Careerden application tracking dashboard with active applications, a follow-up calendar, and the application pipeline](./docs/images/application-tracking-dashboard.png)
+
+The dashboard opens on active applications, the follow-up calendar, and the pipeline across
+every stage, with the counts and match scores updating in real time over server-sent events.
 
 ## Editions
 
@@ -56,22 +59,67 @@ with separate data, keychain entries, and update channels.
 
 ## Features
 
+Every screenshot below is the desktop workspace filled with fictional sample data.
+
+### Track every application in one place
+
+![Careerden applications list sorted by interest, with status filters and search](./docs/images/applications-list-sorting.png)
+
 - Add applications by pasting company and job details manually, with an optional company logo,
   website, location, and source URL, or import a LinkedIn job through the desktop app.
+- Filter by status, search by company or role, and sort by match, interest, salary, or date
+  added; select a column again to reverse it, once more to return to recently updated first.
+- Keep inactive roles out of the way with a reversible archive.
+
+### Keep the decision context with the role
+
+![Careerden application Overview with role summary, job details, and company details](./docs/images/application-overview.png)
+
 - Manage application stages, interest level, tags, salary range and type, work style,
-  contacts, timeline events, multiple follow-ups, and a reversible archive for inactive roles.
-- Filter, sort, search, and paginate the application log, with dashboard analytics and
-  real-time updates over server-sent events.
+  contacts, timeline events, and multiple follow-ups per application.
+- Review the captured role summary, the source, and company details next to the match score.
+- Follow-up reminders arrive in the app and as native operating-system alerts, with optional
+  email delivery through local SMTP or production Resend in the cloud edition.
+
+### Maintain one career profile
+
+![Careerden career profile with basic information, summary, skills, and experience](./docs/images/career-profile.png)
+
 - Maintain a reusable profile with experience, education, projects, certifications,
   links, and analysis/reminder preferences.
+- Everything tailored for an application is grounded in these details.
+
+### Choose the CV layout every document starts from
+
+![Careerden base resume page with an A4 preview and six CV templates](./docs/images/base-resume-templates.png)
+
+- Preview your profile as an A4 page in Classic, Editorial, Modern, Minimal, Technical, or
+  Ledger, then set one as the default.
+- Every tailored CV starts from that layout, and you can still switch it for a single
+  application.
+
+### Review the match analysis and the tailored pack
+
+![Careerden application pack with match analysis, a live CV preview, and improvement tips](./docs/images/application-pack.png)
+
 - Analyze each role against the profile with OpenAI, Gemini, DeepSeek, Anthropic, or
   OpenRouter and review matched, partial, and missing requirements.
 - Edit AI-assisted CV and cover-letter content before generating files, with a live
   on-screen HTML preview rendered from a predefined template as you edit.
 - Generate CV and cover-letter PDFs from the same predefined HTML templates, then
   download them through signed, expiring URLs.
-- Receive follow-up reminders in the app and as native operating-system alerts, with
-  optional email delivery through local SMTP or production Resend in the cloud edition.
+
+### Accept only the improvements you can back up
+
+![Careerden improvement tip opened as a suggested change with accept and discard controls](./docs/images/improvement-tips.png)
+
+- Each tip opens as a suggested change you can accept or discard; accepted edits appear in
+  the CV preview immediately, and you can undo them or save them to the profile.
+- Keyword coverage shows which job terms the CV already uses, and gap questions are answered
+  in your own words so the AI adds no fact you did not provide.
+
+### Accounts and AI keys
+
 - Cloud edition: sign in with email and password using email OTP verification.
 - Unplugged edition: no account; bring your own AI provider key, stored with the operating
   system's keychain and never sent anywhere but the provider.

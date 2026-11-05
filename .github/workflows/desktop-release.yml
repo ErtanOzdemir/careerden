@@ -19,9 +19,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # cloud is Careerden; local is Careerden Unplugged, whose data stays on the device. Both share one release
-        # with distinct artifact names and updater channels (latest*.yml and local*.yml).
-        edition: [cloud, local]
+        # cloud is Careerden; local is Careerden Unplugged, whose data stays on the device.
+        # Only Unplugged is released for now.
+        #
+        # TODO: the cloud edition is deferred, not dropped. When it ships, add `cloud` back to
+        # this list and drop the "Unplugged" suffix from the draft release title at the end of
+        # this workflow. Nothing else needs to change: every step below already handles both
+        # editions and gives them distinct artifact names and updater channels (latest*.yml
+        # and local*.yml) inside one release.
+        edition: [local]
         platform: [macos, windows-x64, linux-x64]
         include:
           - platform: macos
@@ -304,9 +310,11 @@ jobs:
           if [[ "${existing_draft}" == "true" ]]; then
             gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber
           else
+            # Only the Unplugged edition is in the build matrix, so the title names it. Drop
+            # the suffix when the cloud edition is released alongside it again.
             gh release create "${GITHUB_REF_NAME}" release-assets/* \
               --draft \
               --generate-notes \
-              --title "Careerden ${GITHUB_REF_NAME#v}" \
+              --title "Careerden Unplugged ${GITHUB_REF_NAME#v}" \
               --verify-tag
           fi

@@ -67,7 +67,11 @@ function profileWithThreeExperiences() {
     experience: [
       { company: "Acme", title: "Engineer" },
       { company: "Babbage", title: "Coordinator" },
-      { company: "Analytical Engines", title: "Backend Engineer", description: "Backend engineering work." },
+      {
+        company: "Analytical Engines",
+        title: "Backend Engineer",
+        description: "Backend engineering work.",
+      },
     ],
     education: [],
     projects: [],

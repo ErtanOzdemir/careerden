@@ -144,7 +144,12 @@ export function ApplicationPackCustomizer({
                           ariaLabel={`Edit experience ${index + 1} description`}
                           onChange={(description) =>
                             onContentChange(
-                              updateEnhancementDescription(content, "experience", index, description),
+                              updateEnhancementDescription(
+                                content,
+                                "experience",
+                                index,
+                                description,
+                              ),
                             )
                           }
                           value={enhancement?.description ?? emptyDocument}
@@ -196,7 +201,12 @@ export function ApplicationPackCustomizer({
                           ariaLabel={`Edit education ${index + 1} description`}
                           onChange={(description) =>
                             onContentChange(
-                              updateEnhancementDescription(content, "education", index, description),
+                              updateEnhancementDescription(
+                                content,
+                                "education",
+                                index,
+                                description,
+                              ),
                             )
                           }
                           value={enhancement?.description ?? emptyDocument}
@@ -271,7 +281,9 @@ export function ApplicationPackCustomizer({
               <RichTextEditor
                 ariaLabel="Edit cover letter"
                 value={content.coverLetterContent ?? emptyDocument}
-                onChange={(coverLetterContent) => onContentChange({ ...content, coverLetterContent })}
+                onChange={(coverLetterContent) =>
+                  onContentChange({ ...content, coverLetterContent })
+                }
               />
             </CustomizationSection>
           </div>

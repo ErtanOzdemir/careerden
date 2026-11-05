@@ -12,9 +12,7 @@ describe("formatOtpCooldown", () => {
 describe("getOtpRetryAfterSeconds", () => {
   it("uses the server retry delay for rate-limited responses", () => {
     expect(getOtpRetryAfterSeconds({ status: 429, retryAfterSeconds: 74.2 })).toBe(75);
-    expect(getOtpRetryAfterSeconds({ code: "OTP_RATE_LIMITED", retryAfterSeconds: 600 })).toBe(
-      600,
-    );
+    expect(getOtpRetryAfterSeconds({ code: "OTP_RATE_LIMITED", retryAfterSeconds: 600 })).toBe(600);
   });
 
   it("falls back to the default cooldown when the delay is missing", () => {

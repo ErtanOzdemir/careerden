@@ -15,3 +15,5 @@ storage/
 test-results/
 *.timestamp-*.mjs
 pnpm-lock.yaml
+# Third-party vendored bundles are served as-is.
+apps/web/public/vendor/

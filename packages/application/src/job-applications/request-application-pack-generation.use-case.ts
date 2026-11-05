@@ -1,4 +1,8 @@
-import type { ApplicationPackPreferences, DocumentContent, PersistenceUnitOfWork } from "@careerden/domain";
+import type {
+  ApplicationPackPreferences,
+  DocumentContent,
+  PersistenceUnitOfWork,
+} from "@careerden/domain";
 import { normalizeApplicationPackPreferences } from "@careerden/domain";
 import type { DocumentTemplateKind } from "@careerden/contracts";
 import { getHtmlTemplateById } from "@careerden/contracts";

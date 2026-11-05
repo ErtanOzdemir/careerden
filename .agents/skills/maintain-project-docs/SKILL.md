@@ -21,7 +21,12 @@ Keep documentation accurate in the same change that alters the behavior it descr
 
 | Change | Primary documentation |
 | --- | --- |
-| Product features, quick start, services, architecture overview, environment variables, public API, common commands | Root `README.md` |
+| Product features, editions, quick start, documentation index | Root `README.md` |
+| Running the stack locally, service addresses, common commands, migrations, test gates | `docs/development.md` |
+| Pipeline behavior, edition differences, monorepo layout, tech stack | `docs/architecture.md` |
+| Environment variables and their defaults | `docs/configuration.md` |
+| Public HTTP API routes, filters, and response conventions | `docs/api.md` |
+| Object storage and production container deployment | `docs/deployment.md` |
 | Local setup, development workflow, branch and commit rules, pull requests, coding standards, testing, extension guides | `CONTRIBUTING.md` |
 | Agent-facing stack facts, naming, architecture decisions, runtime validation, required gates | `AGENTS.md` |
 | App- or package-specific setup and behavior | The nearest maintained `README.md` |
@@ -35,7 +40,7 @@ Treat dated files under `docs/superpowers/plans` and `docs/superpowers/specs` as
 ## Impact Rules
 
 - Update docs when a user or contributor would otherwise run the wrong command, set the wrong variable, call the wrong endpoint, misunderstand current behavior, place code in the wrong layer, or miss a required step.
-- Update duplicated facts everywhere they are intentionally maintained. Common overlaps include prerequisites and setup in `README.md` and `CONTRIBUTING.md`, and quality gates or architectural conventions in `README.md`, `CONTRIBUTING.md`, and `AGENTS.md`.
+- Update duplicated facts everywhere they are intentionally maintained. Common overlaps include prerequisites and setup in `docs/development.md` and `CONTRIBUTING.md`, and quality gates or architectural conventions in `docs/development.md`, `docs/architecture.md`, `CONTRIBUTING.md`, and `AGENTS.md`.
 - Keep audience boundaries clear: explain how to use the project in `README.md`, how to change it in `CONTRIBUTING.md`, and how coding agents must operate in `AGENTS.md`.
 - Prefer links to one authoritative explanation over copying a long procedure into several files.
 - Preserve the document's existing voice, heading hierarchy, formatting, and level of detail.

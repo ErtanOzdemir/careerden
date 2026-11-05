@@ -84,7 +84,7 @@ Use `pnpm lint:fix` and `pnpm format` for mechanical cleanup. Do not hand-format
 Changes to runtime dependencies, rendering, package builds, or deployment configuration
 must also validate the affected production image from the repository root. The available
 image commands and Coolify settings are documented under
-[Production containers on Coolify](README.md#production-containers-on-coolify).
+[Production containers on Coolify](docs/deployment.md#production-containers-on-coolify).
 
 ## Branch Naming
 

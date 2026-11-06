@@ -22,6 +22,7 @@ import {
   type Theme,
 } from "../theme.js";
 import { useDesktopUpdates } from "../desktop-updates/DesktopUpdateProvider.js";
+import { LocalDataSettings } from "../settings/LocalDataSettings.js";
 import {
   Download,
   Sparkles,
@@ -89,6 +90,7 @@ export default function Settings() {
     message: string;
   } | null>(null);
   const [isUpToDateModalOpen, setIsUpToDateModalOpen] = useState(false);
+  const localDataBridge = window.electronAPI?.localData;
 
   useEffect(() => {
     let isMounted = true;
@@ -536,6 +538,8 @@ export default function Settings() {
           </div>
         </div>
       </Panel>
+
+      {isLocalEdition && localDataBridge && <LocalDataSettings bridge={localDataBridge} />}
 
       <Panel>
         <div className="flex items-center gap-2.5 px-5 py-4">

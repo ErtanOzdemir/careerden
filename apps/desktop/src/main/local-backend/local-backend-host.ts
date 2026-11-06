@@ -298,7 +298,7 @@ export function startLocalBackendHost(
         runBackup(
           command.requestId,
           () => importBackup(command),
-          "The backup could not be imported. Your existing data was not changed.",
+          "The backup could not be imported.",
         );
         return;
       case "pdf:result":

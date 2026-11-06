@@ -319,7 +319,7 @@ describe("startLocalBackendHost backups", () => {
     port.command(importCommand());
 
     await expect(port.next("backup:error")).resolves.toMatchObject({
-      message: "The backup could not be imported. Your existing data was not changed.",
+      message: "The backup could not be imported.",
     });
     expect(error).toHaveBeenCalled();
     error.mockRestore();

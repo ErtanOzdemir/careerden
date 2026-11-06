@@ -27,6 +27,10 @@ export async function writeZipArchive(
   const partialPath = `${outputPath}.${randomUUID()}.partial`;
   const output = createWriteStream(partialPath, { flags: "wx" });
   let failure: Error | undefined;
+  // A write error can surface while `build` is still running, before anything awaits the stream.
+  output.on("error", (error) => {
+    failure ??= error;
+  });
   const zip = new Zip((error, chunk, final) => {
     if (error) {
       failure = error;
@@ -68,6 +72,9 @@ export async function writeZipArchive(
   } catch (error) {
     zip.terminate();
     output.destroy();
+    // The file opens asynchronously; wait for the stream to close so the partial file exists
+    // and is released before it is removed.
+    await finished(output).catch(() => undefined);
     await rm(partialPath, { force: true });
     throw error;
   }

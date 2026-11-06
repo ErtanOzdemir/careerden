@@ -49,6 +49,9 @@ import {
   isAllowedRendererNavigation,
 } from "./renderer/renderer-security-policy.js";
 import { DesktopApiClient } from "./scraping/desktop-api-client.js";
+import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
+import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
+import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
 import { DirectoryLocalDataSnapshots } from "./startup-recovery/local-data-snapshots.js";
 import { RestartLoopGuard } from "./startup-recovery/restart-loop-guard.js";
 import { formatStartupDiagnostics, redactHomeDir } from "./startup-recovery/startup-diagnostics.js";
@@ -57,9 +60,6 @@ import {
   registerStartupRecoveryIpc,
   StartupRecovery,
 } from "./startup-recovery/startup-recovery.js";
-import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
-import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
-import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
 import { DesktopUpdateManager, type DesktopUpdater } from "./updates/desktop-update-manager.js";
 import type { DesktopUpdatePolicy } from "./updates/desktop-update-policy.js";
 import { desktopUpdateIpcChannels } from "./updates/desktop-update-types.js";

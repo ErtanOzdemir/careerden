@@ -334,6 +334,9 @@ Windows and Linux builds currently have no configured code-signing credentials.
 8. Confirm the platform `latest*.yml`, blockmap, and
    `careerden-desktop-update-policy.json` assets are present. Publish the draft manually
    in GitHub only after verification. Drafts are invisible to installed updaters.
+9. If the workflow warned about a missing database upgrade fixture, generate it from the tag
+   and commit it in a follow-up pull request, as described in
+   [Database upgrade fixtures](../../docs/development.md#database-upgrade-fixtures).
 
 The workflow builds these assets:
 

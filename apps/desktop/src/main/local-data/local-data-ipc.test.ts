@@ -36,7 +36,7 @@ function setup(overrides: Partial<LocalDataIpcOptions> = {}) {
     appVersion: "0.7.0",
     snapshotsDir: "/user-data/backups",
     chooseExportPath: vi.fn(async (name: string) => `/Users/ada/Documents/${name}`),
-    chooseImportPath: vi.fn(async () => "/Users/ada/Downloads/backup.zip"),
+    chooseImportPath: vi.fn(async () => "/Users/ada/Downloads/backup.careerden"),
     openDataFolder: vi.fn(async () => undefined),
     now: () => new Date("2026-11-06T10:15:30.123Z"),
     ...overrides,
@@ -51,14 +51,14 @@ describe("registerLocalDataIpc", () => {
 
     await expect(registry.invoke(localDataIpcChannels.export)).resolves.toEqual({
       status: "exported",
-      fileName: "careerden-unplugged-backup-2026-11-06.zip",
+      fileName: "careerden-unplugged-backup-2026-11-06.careerden",
       summary,
     });
     expect(options.chooseExportPath).toHaveBeenCalledWith(
-      "careerden-unplugged-backup-2026-11-06.zip",
+      "careerden-unplugged-backup-2026-11-06.careerden",
     );
     expect(options.backend.exportBackup).toHaveBeenCalledWith(
-      "/Users/ada/Documents/careerden-unplugged-backup-2026-11-06.zip",
+      "/Users/ada/Documents/careerden-unplugged-backup-2026-11-06.careerden",
       "0.7.0",
     );
   });
@@ -84,12 +84,12 @@ describe("registerLocalDataIpc", () => {
 
     await expect(registry.invoke(localDataIpcChannels.import)).resolves.toEqual({
       status: "imported",
-      snapshotFileName: "before-import-2026-11-06T10-15-30Z.zip",
+      snapshotFileName: "before-import-2026-11-06T10-15-30Z.careerden",
       summary,
     });
     expect(options.backend.importBackup).toHaveBeenCalledWith(
-      "/Users/ada/Downloads/backup.zip",
-      "/user-data/backups/before-import-2026-11-06T10-15-30Z.zip",
+      "/Users/ada/Downloads/backup.careerden",
+      "/user-data/backups/before-import-2026-11-06T10-15-30Z.careerden",
       "0.7.0",
     );
   });

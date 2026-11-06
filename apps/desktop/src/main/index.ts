@@ -25,7 +25,7 @@ import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
 import { ElectronPdfRenderer } from "./local-backend/electron-pdf-renderer.js";
 import { LocalBackendProcess } from "./local-backend/local-backend-process.js";
-import { registerLocalDataIpc } from "./local-data/local-data-ipc.js";
+import { backupFileExtension, registerLocalDataIpc } from "./local-data/local-data-ipc.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
 import { DesktopNotificationActivationQueue } from "./notifications/desktop-notification-activation.js";
@@ -554,7 +554,7 @@ function getLocalDataDir(): string {
 // Backups never include ai-credentials.bin: it sits beside the data folder, not inside it, and
 // its keychain-bound encryption would not open on another device anyway.
 function createLocalDataIpcOptions(backend: LocalBackendProcess) {
-  const zipFilters = [{ name: "Careerden backup", extensions: ["zip"] }];
+  const backupFilters = [{ name: "Careerden backup", extensions: [backupFileExtension] }];
   return {
     backend,
     appVersion: app.getVersion(),
@@ -563,7 +563,7 @@ function createLocalDataIpcOptions(backend: LocalBackendProcess) {
       const options: Electron.SaveDialogOptions = {
         title: "Export data",
         defaultPath: join(app.getPath("documents"), defaultFileName),
-        filters: zipFilters,
+        filters: backupFilters,
       };
       const window = getMainWindow();
       const result = window
@@ -575,7 +575,7 @@ function createLocalDataIpcOptions(backend: LocalBackendProcess) {
       const options: Electron.OpenDialogOptions = {
         title: "Import from backup",
         properties: ["openFile"],
-        filters: zipFilters,
+        filters: backupFilters,
       };
       const window = getMainWindow();
       const result = window

@@ -174,9 +174,9 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **No Chromium cookie store in Unplugged.** The local edition reaches its backend with
   Node's `fetch`, because opening the encrypted cookie store would trigger a keychain prompt on
   every launch and the edition has no cookies to keep.
-- **Backups as JSON per table, restored through migrations.** An Unplugged backup is a zip of a
-  manifest, one JSON file per table rendered by PostgreSQL's `json_agg`, and the stored files,
-  instead of a copy of the PGlite directory. The JSON is readable outside the app and stays
+- **Backups as JSON per table, restored through migrations.** An Unplugged backup is a zip
+  archive saved as `.careerden`, holding a manifest, one JSON file per table rendered by
+  PostgreSQL's `json_agg`, and the stored files, instead of a copy of the PGlite directory. The JSON is readable outside the app and stays
   importable across releases: an import recreates the archive's schema by running migrations up to
   the one it names, loads the rows with `json_populate_recordset`, and then runs the remaining
   migrations, so older backups are upgraded exactly like an installed database. Archives from a

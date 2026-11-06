@@ -14,14 +14,14 @@ function createBridge(overrides: Partial<LocalDataBridge> = {}): LocalDataBridge
     exportData: vi.fn(
       async (): Promise<LocalDataExportResult> => ({
         status: "exported",
-        fileName: "careerden-unplugged-backup-2026-11-06.zip",
+        fileName: "careerden-unplugged-backup-2026-11-06.careerden",
         summary,
       }),
     ),
     importData: vi.fn(
       async (): Promise<LocalDataImportResult> => ({
         status: "imported",
-        snapshotFileName: "before-import-2026-11-06T10-15-30Z.zip",
+        snapshotFileName: "before-import-2026-11-06T10-15-30Z.careerden",
         summary,
       }),
     ),
@@ -40,7 +40,7 @@ describe("LocalDataSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: /export data/i }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "Saved careerden-unplugged-backup-2026-11-06.zip with 12 applications.",
+      "Saved careerden-unplugged-backup-2026-11-06.careerden with 12 applications.",
     );
     expect(bridge.exportData).toHaveBeenCalledOnce();
   });
@@ -70,7 +70,7 @@ describe("LocalDataSettings", () => {
 
     expect(await screen.findByRole("heading", { name: "Backup imported" })).toBeInTheDocument();
     expect(screen.getByText(/Restored 12 applications and 1 file/)).toBeInTheDocument();
-    expect(screen.getByText("before-import-2026-11-06T10-15-30Z.zip")).toBeInTheDocument();
+    expect(screen.getByText("before-import-2026-11-06T10-15-30Z.careerden")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(reload).toHaveBeenCalledOnce();
   });

@@ -71,7 +71,7 @@ the app is closed:
 pnpm seed:local-profile
 ```
 
-**Settings → Your data** exports everything to a zip, imports one in place of the current data
+**Settings → Your data** exports everything to a `.careerden` backup (a zip archive), imports one in place of the current data
 (saving a snapshot to the `backups` folder first), and reveals the data folder.
 
 Add an AI provider key on the **AI provider** page to run match analysis. OpenRouter accepts

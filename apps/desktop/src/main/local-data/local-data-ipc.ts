@@ -7,6 +7,10 @@ export const localDataIpcChannels = {
   openFolder: "local-data-open-folder",
 } as const;
 
+// Backups are zip archives under their own extension, so a file manager doesn't offer to unpack
+// them and the import dialog lists only Careerden backups.
+export const backupFileExtension = "careerden";
+
 // Results name files but never return a full path to the renderer.
 export type LocalDataExportResult =
   | { status: "canceled" }
@@ -61,7 +65,7 @@ export function registerLocalDataIpc(registry: IpcRegistrar, options: LocalDataI
   registry.register(localDataIpcChannels.export, () =>
     exclusive(async (): Promise<LocalDataExportResult> => {
       const outputPath = await options.chooseExportPath(
-        `careerden-unplugged-backup-${fileDate(now())}.zip`,
+        `careerden-unplugged-backup-${fileDate(now())}.${backupFileExtension}`,
       );
       if (!outputPath) return { status: "canceled" };
       try {
@@ -77,7 +81,10 @@ export function registerLocalDataIpc(registry: IpcRegistrar, options: LocalDataI
     exclusive(async (): Promise<LocalDataImportResult> => {
       const archivePath = await options.chooseImportPath();
       if (!archivePath) return { status: "canceled" };
-      const snapshotPath = join(options.snapshotsDir, `before-import-${fileTimestamp(now())}.zip`);
+      const snapshotPath = join(
+        options.snapshotsDir,
+        `before-import-${fileTimestamp(now())}.${backupFileExtension}`,
+      );
       try {
         const summary = await options.backend.importBackup(
           archivePath,

@@ -104,12 +104,12 @@ the key store only when the main process opens the window with
 back. Reminders missed while the app was closed are delivered on the next start if the
 follow-up is at most seven days old.
 
-**Settings → Your data** exports a backup zip (`manifest.json`, `tables/<table>.json`, and
+**Settings → Your data** exports a `.careerden` backup, a zip archive (`manifest.json`, `tables/<table>.json`, and
 `files/`), imports one, and reveals the data folder. The preload exposes these as three
 argument-free calls; the main process opens the save and open dialogs and the backend utility
 process reads and writes the archive. An import is validated and restored into
 `userData/data.import` first, the current data is exported to `userData/backups/` as
-`before-import-<timestamp>.zip`, and only then are the folders swapped behind the same loopback
+`before-import-<timestamp>.careerden`, and only then are the folders swapped behind the same loopback
 port. `ai-credentials.bin` is never part of a backup.
 
 Run it in development without Docker services:

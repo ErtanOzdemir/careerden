@@ -125,7 +125,7 @@ review or download.
   provider is configured. Electron prints its PDFs in a hidden window without scripts or
   network access. Reminders are restored from the database on start, delivering those up
   to seven days overdue.
-- Careerden Unplugged exports its data as one zip: `manifest.json` (format version, schema
+- Careerden Unplugged exports its data as one zip archive with the `.careerden` extension: `manifest.json` (format version, schema
   version, last migration, app version, creation time), one Postgres-rendered JSON file per
   table, and the stored files. AI keys live outside the data folder and are never included.
   The backend utility process owns export and import; the main process opens every save and

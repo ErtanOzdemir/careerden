@@ -3,7 +3,11 @@ import type { AiProviderSelection } from "@careerden/infrastructure";
 
 // Mirrors localDatabaseStartupFailureReasons in @careerden/api-app/local, which the main process
 // does not import: it would load the whole API.
-export const localDataStartupFailureReasons = ["database-open", "migration", "newer-version"] as const;
+export const localDataStartupFailureReasons = [
+  "database-open",
+  "migration",
+  "newer-version",
+] as const;
 
 export type LocalDataStartupFailureReason = (typeof localDataStartupFailureReasons)[number];
 

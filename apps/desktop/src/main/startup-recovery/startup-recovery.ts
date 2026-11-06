@@ -91,7 +91,9 @@ export class StartupRecovery {
       return {
         status: "error",
         message:
-          error instanceof LocalDataRestoreError ? error.message : "The backup could not be restored.",
+          error instanceof LocalDataRestoreError
+            ? error.message
+            : "The backup could not be restored.",
       };
     } finally {
       this.restoring = false;

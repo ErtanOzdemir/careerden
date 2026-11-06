@@ -98,35 +98,39 @@ describe("DirectoryLocalDataSnapshots", () => {
     await expect(readdir(root)).resolves.not.toContain("backups");
   });
 
-  it("opens the app's data again after restoring over data that would not open", {
-    timeout: 60_000,
-  }, async () => {
-    const runtimeOptions = (directory: string) => ({
-      dataDir: directory,
-      sessionToken: "token",
-      pdfRenderer: { htmlToPdf: async () => Buffer.from("%PDF") },
-      aiProviderSelection: { current: async () => null },
-    });
-    const id = "before-migration-2026-11-05T09-15-00Z";
-    const healthy = await createLocalApiRuntime(runtimeOptions(join(backupsDir, id)));
-    await healthy.db("user").where({ id: "local-user" }).update({ name: "From the snapshot" });
-    await healthy.close();
-    const broken = await createLocalApiRuntime(runtimeOptions(dataDir));
-    await broken.close();
-    await writeFile(join(dataDir, "pglite", "PG_VERSION"), "99\n");
-    await expect(createLocalApiRuntime(runtimeOptions(dataDir))).rejects.toThrow(
-      LocalDatabaseStartupError,
-    );
-
-    await snapshots().restore(id);
-
-    const restored = await createLocalApiRuntime(runtimeOptions(dataDir));
-    try {
-      await expect(restored.db("user").where({ id: "local-user" }).first()).resolves.toMatchObject(
-        { name: "From the snapshot" },
+  it(
+    "opens the app's data again after restoring over data that would not open",
+    {
+      timeout: 60_000,
+    },
+    async () => {
+      const runtimeOptions = (directory: string) => ({
+        dataDir: directory,
+        sessionToken: "token",
+        pdfRenderer: { htmlToPdf: async () => Buffer.from("%PDF") },
+        aiProviderSelection: { current: async () => null },
+      });
+      const id = "before-migration-2026-11-05T09-15-00Z";
+      const healthy = await createLocalApiRuntime(runtimeOptions(join(backupsDir, id)));
+      await healthy.db("user").where({ id: "local-user" }).update({ name: "From the snapshot" });
+      await healthy.close();
+      const broken = await createLocalApiRuntime(runtimeOptions(dataDir));
+      await broken.close();
+      await writeFile(join(dataDir, "pglite", "PG_VERSION"), "99\n");
+      await expect(createLocalApiRuntime(runtimeOptions(dataDir))).rejects.toThrow(
+        LocalDatabaseStartupError,
       );
-    } finally {
-      await restored.close();
-    }
-  });
+
+      await snapshots().restore(id);
+
+      const restored = await createLocalApiRuntime(runtimeOptions(dataDir));
+      try {
+        await expect(
+          restored.db("user").where({ id: "local-user" }).first(),
+        ).resolves.toMatchObject({ name: "From the snapshot" });
+      } finally {
+        await restored.close();
+      }
+    },
+  );
 });

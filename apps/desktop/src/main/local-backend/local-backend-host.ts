@@ -121,7 +121,10 @@ export function startLocalBackendHost(
       parentPort.postMessage(
         failure
           ? { type: "start:data-error", failure }
-          : { type: "start:error", message: error instanceof Error ? error.message : String(error) },
+          : {
+              type: "start:error",
+              message: error instanceof Error ? error.message : String(error),
+            },
       );
     }
   }

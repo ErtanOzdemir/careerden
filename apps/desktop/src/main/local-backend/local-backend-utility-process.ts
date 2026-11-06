@@ -1,8 +1,5 @@
 import process from "node:process";
-import {
-  createLocalApiRuntime,
-  describeLocalDatabaseStartupError,
-} from "@careerden/api-app/local";
+import { createLocalApiRuntime, describeLocalDatabaseStartupError } from "@careerden/api-app/local";
 import { startLocalBackendHost } from "./local-backend-host.js";
 
 const parentPort = process.parentPort;

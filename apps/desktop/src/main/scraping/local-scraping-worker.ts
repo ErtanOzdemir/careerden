@@ -1,4 +1,5 @@
 import type { ScrapeBundle } from "@careerden/domain";
+import { toScrapeFailureReason } from "@careerden/domain";
 import { DesktopApiError, isTerminalClaimApiError } from "./desktop-api-error.js";
 
 export interface ClaimedScrapeJob {
@@ -108,7 +109,9 @@ export class LocalScrapingWorker {
       try {
         scrapeBundle = await this.dependencies.runner.scrape(claimed.sourceUrl);
       } catch (error) {
-        await this.dependencies.api.failScrapeJob(claimed.id, errorMessage(error));
+        // Every scrape failure carries a category, including runner timeouts and crashes, so the
+        // renderer can always route the user to the manual paste flow.
+        await this.dependencies.api.failScrapeJob(claimed.id, toScrapeFailureReason(error));
         return;
       }
 

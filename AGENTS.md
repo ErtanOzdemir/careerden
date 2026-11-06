@@ -113,6 +113,12 @@ review or download.
   response, so closed event streams do not exhaust the per-host connection limit.
 - Desktop LinkedIn scraping uses public guest HTTP responses in an isolated utility
   process and does not require or persist a user's LinkedIn account session.
+- Scrape failures carry a category (`blocked`, `rate_limited`, `network`, `parse`,
+  `empty_description`, `not_found`, `disabled`, `unknown`) encoded into the failure reason as
+  `scrape_<category>: <detail>`. The vocabulary and codec live in `@careerden/contracts`, the
+  classification rules and `ScrapeFailureError` in `@careerden/domain`. A LinkedIn import without
+  a scraped description offers the manual paste form, prefilled with the source URL, for every
+  category.
 - The desktop app builds as two editions selected by `CAREERDEN_EDITION` (`cloud` or
   `local`) and `VITE_CAREERDEN_EDITION` for the renderer. Careerden Unplugged
   (`com.careerden.unplugged`) sends no data to a Careerden server: a utility process runs

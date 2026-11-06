@@ -149,6 +149,13 @@ pnpm migrate:make <migration-name>
 Additional one-step controls are available as `pnpm migrate:up` and
 `pnpm migrate:down`.
 
+When Unplugged cannot open or migrate its database, or finds migrations from a newer version,
+it shows a recovery screen instead of the app. To see it in `pnpm dev:desktop:local`, quit the
+app and break the development database, for example by changing the version in
+`pglite/PG_VERSION` inside the data folder, or by deleting the newest `knex_migrations` row so
+its migration runs again and fails. Restore offers the data-folder copies in the `backups`
+folder next to `data`.
+
 ## Testing and Quality Gates
 
 ```bash

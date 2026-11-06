@@ -114,6 +114,28 @@ The launcher starts the web dev server and Electron with a fixed backend port (`
 a per-run token so the Vite proxy can reach the backend. Local data lives in
 `Careerden Unplugged` under the operating system's application data directory.
 
+### Startup recovery
+
+Migrations run on every start, against data only this device has. When they cannot, the app
+shows a recovery screen at `/recovery` instead of opening:
+
+| Failure                                                   | Detected by                            | Screen                                 |
+| --------------------------------------------------------- | -------------------------------------- | -------------------------------------- |
+| PGlite cannot open `data/pglite` (damaged, incompatible)  | The first query fails                  | Your data could not be opened          |
+| A migration fails                                         | `migrate.latest` throws                | Your data could not be updated         |
+| The data has migrations this build does not ship          | `knex_migrations` compared before Knex | Created by a newer version; install it |
+| The backend exits or times out before it is ready         | `LocalBackendProcess.start()` rejects  | Could not start                        |
+| The backend exits unexpectedly three times in two minutes | `userData/local-backend-restarts.json` | Keeps stopping                         |
+
+The first two unexpected exits after a successful start still relaunch the app with the
+"Your data is safe" notice. The screen offers to restore a snapshot, open the data folder,
+copy diagnostics (error, app and Electron version, last migration, and OS, with the home
+folder replaced by `~`), or quit. Snapshots are listed through `LocalDataSnapshotSource`.
+The current source reads data-folder copies named `backups/<kind>-<UTC time>/`, for example
+`before-migration-2026-11-05T09-15-00Z/` holding `pglite/` and `files/`. A restore copies one
+over `data/`, keeps the replaced folder as `backups/before-restore-<time>/`, and relaunches.
+The screen says so when no snapshot exists yet.
+
 ## Renderer Security Boundary
 
 The main renderer runs with context isolation and Chromium sandboxing enabled and without

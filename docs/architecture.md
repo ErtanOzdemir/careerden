@@ -174,6 +174,11 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **No Chromium cookie store in Unplugged.** The local edition reaches its backend with
   Node's `fetch`, because opening the encrypted cookie store would trigger a keychain prompt on
   every launch and the edition has no cookies to keep.
+- **A recovery screen instead of a restart loop.** A database that cannot be opened or migrated
+  fails the same way on every launch, so Unplugged shows a recovery screen for it rather than
+  restarting: restore a snapshot, open the data folder, copy diagnostics, or quit. Data from a
+  newer version is detected before migrating and asks for the latest release. Crashes after a
+  successful start still relaunch the app, but only twice within two minutes.
 - **One version for both editions.** A single `vX.Y.Z` tag builds both editions into one draft
   release. Distinct artifact names and updater channels (`latest*.yml` and `local*.yml`) keep
   each installation on its own edition.

@@ -22,6 +22,12 @@ const aiCredentialsChannels = {
   test: "ai-credentials-test",
 };
 
+const localDataChannels = {
+  export: "local-data-export",
+  import: "local-data-import",
+  openFolder: "local-data-open-folder",
+};
+
 const edition = process.argv.includes("--careerden-edition=local") ? "local" : "cloud";
 
 const electronAPI = {
@@ -55,6 +61,13 @@ if (edition === "local") {
     remove: (provider) => ipcRenderer.invoke(aiCredentialsChannels.remove, provider),
     setActive: (provider) => ipcRenderer.invoke(aiCredentialsChannels.setActive, provider),
     test: (input) => ipcRenderer.invoke(aiCredentialsChannels.test, input),
+  };
+  // Backups of the on-device data. The main process opens every file dialog, so these take no
+  // arguments and never accept a path from the renderer.
+  electronAPI.localData = {
+    exportData: () => ipcRenderer.invoke(localDataChannels.export),
+    importData: () => ipcRenderer.invoke(localDataChannels.import),
+    openDataFolder: () => ipcRenderer.invoke(localDataChannels.openFolder),
   };
 }
 

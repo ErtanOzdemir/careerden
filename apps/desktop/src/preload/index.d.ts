@@ -52,11 +52,36 @@ export interface AiCredentialsAPI {
   test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
 }
 
+export interface LocalBackupSummary {
+  createdAt: string;
+  appVersion: string;
+  applications: number;
+  files: number;
+}
+
+export type LocalDataExportResult =
+  | { status: "canceled" }
+  | { status: "exported"; fileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+
+export type LocalDataImportResult =
+  | { status: "canceled" }
+  | { status: "imported"; snapshotFileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+
+export interface LocalDataAPI {
+  exportData: () => Promise<LocalDataExportResult>;
+  importData: () => Promise<LocalDataImportResult>;
+  openDataFolder: () => Promise<void>;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   edition: DesktopEdition;
   // Present only in the local edition.
   aiCredentials?: AiCredentialsAPI;
+  // Present only in the local edition.
+  localData?: LocalDataAPI;
   openExternal: (url: string) => Promise<void>;
   notifyJobApplicationQueued: () => Promise<void>;
   setNativeThemeSource: (source: NativeThemeSource) => Promise<void>;

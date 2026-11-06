@@ -132,4 +132,56 @@ describe("LocalBackendProcess", () => {
     crashing.child.emit("exit", 9);
     expect(onUnexpectedExit).toHaveBeenCalledWith(9);
   });
+
+  it("sends backup commands and settles them from the backend's reply", async () => {
+    const { backend, child } = createProcess();
+    const started = backend.start();
+    child.reply({ type: "ready", port: 1 });
+    await started;
+    const summary = {
+      createdAt: "2026-11-01T00:00:00.000Z",
+      appVersion: "0.7.0",
+      applications: 2,
+      files: 1,
+    };
+
+    const exported = backend.exportBackup("/backups/out.zip", "0.7.0");
+    const exportCommand = child.commands.at(-1) as Extract<
+      LocalBackendCommand,
+      { type: "backup:export" }
+    >;
+    expect(exportCommand).toMatchObject({
+      type: "backup:export",
+      outputPath: "/backups/out.zip",
+      appVersion: "0.7.0",
+    });
+    child.reply({ type: "backup:result", requestId: exportCommand.requestId, summary });
+    await expect(exported).resolves.toEqual(summary);
+
+    const imported = backend.importBackup("/in.zip", "/backups/before.zip", "0.7.0");
+    const importCommand = child.commands.at(-1) as Extract<
+      LocalBackendCommand,
+      { type: "backup:import" }
+    >;
+    expect(importCommand).toMatchObject({
+      type: "backup:import",
+      archivePath: "/in.zip",
+      snapshotPath: "/backups/before.zip",
+    });
+    child.reply({ type: "backup:error", requestId: importCommand.requestId, message: "damaged" });
+    await expect(imported).rejects.toThrow("damaged");
+  });
+
+  it("rejects a pending backup when the backend exits", async () => {
+    const { backend, child } = createProcess({ onUnexpectedExit: vi.fn() });
+    const started = backend.start();
+    child.reply({ type: "ready", port: 1 });
+    await started;
+
+    const exported = backend.exportBackup("/backups/out.zip", "0.7.0");
+    child.emit("exit", 1);
+
+    await expect(exported).rejects.toThrow("stopped before the backup finished");
+    await expect(backend.exportBackup("/backups/out.zip", "0.7.0")).rejects.toThrow("not running");
+  });
 });

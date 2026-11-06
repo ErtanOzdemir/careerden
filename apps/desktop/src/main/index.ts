@@ -25,6 +25,7 @@ import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
 import { ElectronPdfRenderer } from "./local-backend/electron-pdf-renderer.js";
 import { LocalBackendProcess } from "./local-backend/local-backend-process.js";
+import { registerLocalDataIpc } from "./local-data/local-data-ipc.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
 import { DesktopNotificationActivationQueue } from "./notifications/desktop-notification-activation.js";
@@ -324,6 +325,7 @@ async function initializeDesktopRuntime(): Promise<void> {
     isTrustedMainWindowIpcSender(event, getMainWindow()),
   );
   if (aiCredentialsStore) registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore);
+  if (localBackend) registerLocalDataIpc(ipcHandlers, createLocalDataIpcOptions(localBackend));
   ipcHandlers
     .register("open-external", (_event, url: unknown) => {
       const allowedUrl = getAllowedExternalUrl(url);
@@ -525,7 +527,7 @@ async function startLocalBackend(
   });
   localBackend = new LocalBackendProcess({
     modulePath: join(__dirname, "local-backend", "local-backend-utility-process.js"),
-    dataDir: join(app.getPath("userData"), "data"),
+    dataDir: getLocalDataDir(),
     sessionToken,
     port: config.developmentBackend?.port ?? 0,
     renderPdf: (html) => pdfRenderer.htmlToPdf(html),
@@ -543,6 +545,47 @@ async function startLocalBackend(
 
   const { baseUrl } = await localBackend.start();
   return { baseUrl, headers: { [localSessionTokenHeader]: sessionToken } };
+}
+
+function getLocalDataDir(): string {
+  return join(app.getPath("userData"), "data");
+}
+
+// Backups never include ai-credentials.bin: it sits beside the data folder, not inside it, and
+// its keychain-bound encryption would not open on another device anyway.
+function createLocalDataIpcOptions(backend: LocalBackendProcess) {
+  const zipFilters = [{ name: "Careerden backup", extensions: ["zip"] }];
+  return {
+    backend,
+    appVersion: app.getVersion(),
+    snapshotsDir: join(app.getPath("userData"), "backups"),
+    chooseExportPath: async (defaultFileName: string) => {
+      const options: Electron.SaveDialogOptions = {
+        title: "Export data",
+        defaultPath: join(app.getPath("documents"), defaultFileName),
+        filters: zipFilters,
+      };
+      const window = getMainWindow();
+      const result = window
+        ? await dialog.showSaveDialog(window, options)
+        : await dialog.showSaveDialog(options);
+      return result.canceled ? undefined : result.filePath;
+    },
+    chooseImportPath: async () => {
+      const options: Electron.OpenDialogOptions = {
+        title: "Import from backup",
+        properties: ["openFile"],
+        filters: zipFilters,
+      };
+      const window = getMainWindow();
+      const result = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+      return result.canceled ? undefined : result.filePaths[0];
+    },
+    // Reveals the data folder beside the automatic pre-import snapshots in "backups".
+    openDataFolder: async () => shell.showItemInFolder(getLocalDataDir()),
+  };
 }
 
 function withHeaders(init: RequestInit | undefined, headers: Record<string, string>): RequestInit {

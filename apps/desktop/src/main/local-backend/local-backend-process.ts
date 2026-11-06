@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { UtilityProcess } from "electron";
 import { utilityProcess } from "electron";
 import type { AiProviderSelection } from "@careerden/infrastructure";
@@ -5,6 +6,7 @@ import {
   parseLocalBackendEvent,
   type LocalBackendCommand,
   type LocalBackendEvent,
+  type LocalBackupSummary,
 } from "./local-backend-messages.js";
 
 type LocalBackendChild = Pick<UtilityProcess, "kill" | "on" | "postMessage">;
@@ -27,6 +29,13 @@ export interface LocalBackendProcessOptions {
   fork?: LocalBackendFork;
   startTimeoutMs?: number;
   stopTimeoutMs?: number;
+  backupTimeoutMs?: number;
+}
+
+interface PendingBackup {
+  resolve: (summary: LocalBackupSummary) => void;
+  reject: (error: Error) => void;
+  timeout: NodeJS.Timeout;
 }
 
 // Owns the utility process that runs the local edition's API and background work.
@@ -34,6 +43,7 @@ export class LocalBackendProcess {
   private child: LocalBackendChild | undefined;
   private stopping = false;
   private readonly waiters = new Set<(event: LocalBackendEvent | { type: "exit" }) => void>();
+  private readonly pendingBackups = new Map<string, PendingBackup>();
 
   constructor(private readonly options: LocalBackendProcessOptions) {}
 
@@ -50,6 +60,7 @@ export class LocalBackendProcess {
       if (this.child !== child) return;
       this.child = undefined;
       this.notify({ type: "exit" });
+      this.failPendingBackups();
       if (!this.stopping) this.options.onUnexpectedExit?.(code);
     });
 
@@ -90,6 +101,69 @@ export class LocalBackendProcess {
     this.kill();
   }
 
+  // Writes a backup zip of the local data to `outputPath`.
+  exportBackup(outputPath: string, appVersion: string): Promise<LocalBackupSummary> {
+    return this.requestBackup((requestId) => ({
+      type: "backup:export",
+      requestId,
+      outputPath,
+      appVersion,
+    }));
+  }
+
+  // Replaces the local data with a backup after exporting the current data to `snapshotPath`.
+  importBackup(
+    archivePath: string,
+    snapshotPath: string,
+    appVersion: string,
+  ): Promise<LocalBackupSummary> {
+    return this.requestBackup((requestId) => ({
+      type: "backup:import",
+      requestId,
+      archivePath,
+      snapshotPath,
+      appVersion,
+    }));
+  }
+
+  private requestBackup(
+    command: (requestId: string) => LocalBackendCommand,
+  ): Promise<LocalBackupSummary> {
+    if (!this.child) return Promise.reject(new Error("The local backend is not running"));
+    const requestId = randomUUID();
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => {
+          this.pendingBackups.delete(requestId);
+          reject(new Error("The backup did not finish in time."));
+        },
+        this.options.backupTimeoutMs ?? 30 * 60_000,
+      );
+      this.pendingBackups.set(requestId, { resolve, reject, timeout });
+      this.send(command(requestId));
+    });
+  }
+
+  private settleBackup(
+    requestId: string,
+    outcome: { summary: LocalBackupSummary } | { error: Error },
+  ): void {
+    const pending = this.pendingBackups.get(requestId);
+    if (!pending) return;
+    this.pendingBackups.delete(requestId);
+    clearTimeout(pending.timeout);
+    if ("error" in outcome) pending.reject(outcome.error);
+    else pending.resolve(outcome.summary);
+  }
+
+  private failPendingBackups(): void {
+    for (const requestId of [...this.pendingBackups.keys()]) {
+      this.settleBackup(requestId, {
+        error: new Error("The local data service stopped before the backup finished."),
+      });
+    }
+  }
+
   private handleMessage(child: LocalBackendChild, message: unknown): void {
     const event = parseLocalBackendEvent(message);
     if (!event) return;
@@ -104,6 +178,16 @@ export class LocalBackendProcess {
             message: error instanceof Error ? error.message : "PDF rendering failed",
           }),
       );
+      return;
+    }
+
+    if (event.type === "backup:result") {
+      this.settleBackup(event.requestId, { summary: event.summary });
+      return;
+    }
+
+    if (event.type === "backup:error") {
+      this.settleBackup(event.requestId, { error: new Error(event.message) });
       return;
     }
 

@@ -7,6 +7,7 @@ import {
   parseLocalBackendCommand,
   type LocalBackendCommand,
   type LocalBackendEvent,
+  type LocalDataStartupFailure,
 } from "./local-backend-messages.js";
 
 export interface LocalBackendParentPort {
@@ -16,6 +17,7 @@ export interface LocalBackendParentPort {
 
 export interface LocalBackendRuntime {
   app: RequestListener;
+  lastMigration?: string | undefined;
   close(): Promise<void>;
 }
 
@@ -37,7 +39,12 @@ interface PendingRequest<T> {
 export function startLocalBackendHost(
   parentPort: LocalBackendParentPort,
   createRuntime: CreateLocalBackendRuntime,
-  options: { pdfTimeoutMs?: number; aiSelectionTimeoutMs?: number } = {},
+  options: {
+    pdfTimeoutMs?: number;
+    aiSelectionTimeoutMs?: number;
+    // Recognizes errors that mean the local data cannot be opened, which retrying will not fix.
+    describeStartupError?: (error: unknown) => LocalDataStartupFailure | undefined;
+  } = {},
 ): void {
   const pendingPdfs = new Map<string, PendingRequest<Buffer>>();
   const pendingSelections = new Map<string, PendingRequest<AiProviderSelection | null>>();
@@ -107,12 +114,15 @@ export function startLocalBackendHost(
       parentPort.postMessage({
         type: "ready",
         port: (listening.address() as AddressInfo).port,
+        ...(runtime.lastMigration ? { lastMigration: runtime.lastMigration } : {}),
       });
     } catch (error) {
-      parentPort.postMessage({
-        type: "start:error",
-        message: error instanceof Error ? error.message : String(error),
-      });
+      const failure = options.describeStartupError?.(error);
+      parentPort.postMessage(
+        failure
+          ? { type: "start:data-error", failure }
+          : { type: "start:error", message: error instanceof Error ? error.message : String(error) },
+      );
     }
   }
 

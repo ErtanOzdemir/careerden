@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { LocalBackendEvent } from "./local-backend-messages.js";
+import type { LocalBackendEvent, LocalDataStartupFailure } from "./local-backend-messages.js";
 import type { CreateLocalBackendRuntime, LocalBackendParentPort } from "./local-backend-host.js";
 import { startLocalBackendHost } from "./local-backend-host.js";
 
@@ -44,11 +44,15 @@ describe("startLocalBackendHost", () => {
     }
   });
 
-  function host(createRuntime: CreateLocalBackendRuntime) {
+  function host(
+    createRuntime: CreateLocalBackendRuntime,
+    describeStartupError?: (error: unknown) => LocalDataStartupFailure | undefined,
+  ) {
     const port = new FakeParentPort();
     startLocalBackendHost(port, createRuntime, {
       pdfTimeoutMs: 1_000,
       aiSelectionTimeoutMs: 1_000,
+      ...(describeStartupError ? { describeStartupError } : {}),
     });
     return port;
   }
@@ -81,6 +85,44 @@ describe("startLocalBackendHost", () => {
       type: "start:error",
       message: "database is locked",
     });
+  });
+
+  it("reports the database's newest migration once ready", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      close: async () => undefined,
+    }));
+    ports.push(port);
+
+    port.command(start);
+
+    await expect(port.next("ready")).resolves.toMatchObject({
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+    });
+  });
+
+  it("reports local data that cannot be opened as a distinct data error", async () => {
+    const failure: LocalDataStartupFailure = {
+      reason: "migration",
+      message: "A database update failed: column already exists",
+      lastMigration: "20261012000000_auth_rate_limits.cjs",
+    };
+    class DataError extends Error {}
+    const port = host(
+      async () => {
+        throw new DataError(failure.message);
+      },
+      (error) => (error instanceof DataError ? failure : undefined),
+    );
+
+    port.command(start);
+
+    await expect(port.next("start:data-error")).resolves.toEqual({
+      type: "start:data-error",
+      failure,
+    });
+    expect(port.sent.some((event) => event.type === "start:error")).toBe(false);
   });
 
   it("bridges PDF rendering and AI selection requests to the main process", async () => {

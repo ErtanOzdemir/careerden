@@ -1,0 +1,60 @@
+{
+  "version": "0.7.0",
+  "ref": "v0.7.0",
+  "commit": "f6028c29a21b7be569e93f2e1e3f9647065fbae9",
+  "pgliteVersion": "0.5.10",
+  "migrations": [
+    "20260626000000_initial_schema.cjs",
+    "20260806000000_collapse_legacy_document_content_achievements.cjs",
+    "20261012000000_auth_rate_limits.cjs"
+  ],
+  "expectations": {
+    "profileId": "a0000000-0000-4000-8000-000000000001",
+    "profileFullName": "Ada Yilmaz",
+    "activeApplications": {
+      "b0000000-0000-4000-8000-000000000001": "queued",
+      "b0000000-0000-4000-8000-000000000002": "scraped",
+      "b0000000-0000-4000-8000-000000000003": "review_ready",
+      "b0000000-0000-4000-8000-000000000004": "completed",
+      "b0000000-0000-4000-8000-000000000005": "failed",
+      "b0000000-0000-4000-8000-000000000007": "scraped"
+    },
+    "archivedApplications": { "b0000000-0000-4000-8000-000000000006": "completed" },
+    "applicationsWithDocumentContent": [
+      "b0000000-0000-4000-8000-000000000003",
+      "b0000000-0000-4000-8000-000000000004",
+      "b0000000-0000-4000-8000-000000000006"
+    ],
+    "documents": [
+      {
+        "id": "d1000000-0000-4000-8000-000000000001",
+        "jobApplicationId": "b0000000-0000-4000-8000-000000000004",
+        "kind": "cv",
+        "fileId": "job-applications/b0000000-0000-4000-8000-000000000004/document-generations/d0000000-0000-4000-8000-000000000004/cv.pdf"
+      },
+      {
+        "id": "d1000000-0000-4000-8000-000000000002",
+        "jobApplicationId": "b0000000-0000-4000-8000-000000000004",
+        "kind": "cover_letter",
+        "fileId": "job-applications/b0000000-0000-4000-8000-000000000004/document-generations/d0000000-0000-4000-8000-000000000004/cover-letter.pdf"
+      },
+      {
+        "id": "d1000000-0000-4000-8000-000000000003",
+        "jobApplicationId": "b0000000-0000-4000-8000-000000000006",
+        "kind": "cv",
+        "fileId": "job-applications/b0000000-0000-4000-8000-000000000006/document-generations/d0000000-0000-4000-8000-000000000006/cv.pdf"
+      },
+      {
+        "id": "d1000000-0000-4000-8000-000000000004",
+        "jobApplicationId": "b0000000-0000-4000-8000-000000000006",
+        "kind": "cover_letter",
+        "fileId": "job-applications/b0000000-0000-4000-8000-000000000006/document-generations/d0000000-0000-4000-8000-000000000006/cover-letter.pdf"
+      }
+    ],
+    "followUpIds": ["f1000000-0000-4000-8000-000000000001", "f1000000-0000-4000-8000-000000000002"],
+    "notificationIds": [
+      "f2000000-0000-4000-8000-000000000001",
+      "f2000000-0000-4000-8000-000000000002"
+    ]
+  }
+}

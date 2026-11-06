@@ -149,6 +149,41 @@ pnpm migrate:make <migration-name>
 Additional one-step controls are available as `pnpm migrate:up` and
 `pnpm migrate:down`.
 
+### Database Upgrade Fixtures
+
+An empty test database cannot catch a migration that only fails on real data, such as a new
+`NOT NULL` column, a unique index, or a data transform. `apps/api/test/fixtures/pglite/`
+therefore keeps one Careerden Unplugged database per released version, filled with a
+realistic sample: a profile, applications in every stable processing state plus an archived
+one, generated documents, follow-ups, notifications, and outbox events. As part of
+`pnpm test`, `apps/api/src/local/local-database-upgrade.test.ts` restores each fixture into a
+temporary data directory, starts the local runtime on it so the current migrations run as they
+do on a user's device, and reads the data back through the HTTP routes.
+
+Each fixture directory holds:
+
+- `database.sql`: a plain `pg_dump` of the embedded database. A PGlite data directory is about
+  38 MB even when empty (4.5 MB compressed) and binary, while the dump is about 60 KB of
+  reviewable text.
+- `files/`: the stored document files the database points at, in the local file storage layout.
+- `fixture.json`: the source tag and commit, the migrations it was built with, and what the
+  upgrade test expects to read back.
+
+Generate the fixture for a new release once its tag exists, then commit it in a follow-up pull
+request. The release workflow warns when the tag has no fixture:
+
+```bash
+pnpm --filter @careerden/api-app fixture:pglite --ref v0.8.0
+```
+
+`--ref` defaults to the tag for the version in `apps/desktop/package.json`. The script runs only
+the migrations committed at that ref, so the database has that release's schema even when the
+script runs from a later checkout. The sample rows live in
+`apps/api/scripts/pglite-fixture-seed.mjs`; columns that did not exist at the release are left
+out. Extend the sample when a release adds tables or data shapes worth covering. Released
+fixtures are frozen: the script refuses to overwrite one unless `--force` is passed, and an
+existing fixture should never be rebuilt to make a failing migration pass.
+
 ## Testing and Quality Gates
 
 ```bash

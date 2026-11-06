@@ -9,6 +9,7 @@ import type { AiProvider } from "@careerden/domain";
 import type { AiProviderSelection } from "@careerden/infrastructure";
 import type { LocalApiRuntime } from "./create-local-api-runtime.js";
 import { createLocalApiRuntime } from "./create-local-api-runtime.js";
+import { prepareLocalDataImport } from "../infrastructure/backup/local-data-backup.js";
 import { localSessionTokenHeader } from "./local-session.middleware.js";
 
 const sessionToken = "test-session-token";
@@ -35,10 +36,10 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     await rm(dataDir, { recursive: true, force: true });
   });
 
-  async function start(aiProvider?: AiProvider) {
+  async function start(aiProvider?: AiProvider, device = "Careerden Unplugged") {
     const runtime = await createLocalApiRuntime({
       // A fresh install has no data directory yet.
-      dataDir: join(dataDir, "Careerden Unplugged", "data"),
+      dataDir: join(dataDir, device, "data"),
       sessionToken,
       pdfRenderer: { htmlToPdf: async () => Buffer.from("%PDF-test") },
       aiProviderSelection: { current: async () => selection },
@@ -190,5 +191,26 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
         { timeout: 10_000, interval: 100 },
       )
       .toBe("failed");
+  });
+
+  it("exports a backup that a clean install on another device restores intact", async () => {
+    const first = await start(undefined, "device-a");
+    const application = (await (await createManualJob(first.request)).json()) as { id: string };
+    const archivePath = join(dataDir, "backup.zip");
+    await first.runtime.exportBackup({ outputPath: archivePath, appVersion: "0.7.0" });
+    await stop(first.runtime);
+
+    // The desktop host swaps a staged import into place before the runtime starts on it.
+    await prepareLocalDataImport({ archivePath, stagingDir: join(dataDir, "device-b", "data") });
+    const second = await start(undefined, "device-b");
+
+    const restored = (await (
+      await second.request(`/job-applications/${application.id}`)
+    ).json()) as { id: string; tracking: { companyName: string } };
+    const profile = (await (await second.request("/profiles/me")).json()) as {
+      headline: string;
+    };
+    expect(restored).toMatchObject({ id: application.id, tracking: { companyName: "Acme" } });
+    expect(profile.headline).toBe("Backend engineer");
   });
 });

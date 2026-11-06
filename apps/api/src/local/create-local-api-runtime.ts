@@ -46,6 +46,8 @@ import {
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
+import type { LocalBackupManifest } from "../contracts/backup/local-backup-manifest.schema.js";
+import { exportLocalData, localDataLayout } from "../infrastructure/backup/local-data-backup.js";
 import { HttpRemoteImageFetcher } from "../infrastructure/scraping/http-remote-image.fetcher.js";
 import { createLocalFileRouter } from "./local-files.routes.js";
 import { localSession } from "./local-session.middleware.js";
@@ -72,6 +74,11 @@ export interface LocalApiRuntimeOptions {
 export interface LocalApiRuntime {
   app: Express;
   db: Knex;
+  // Writes a backup zip of the database and stored files; see exportLocalData.
+  exportBackup: (options: {
+    outputPath: string;
+    appVersion: string;
+  }) => Promise<LocalBackupManifest>;
   close: () => Promise<void>;
 }
 
@@ -83,7 +90,7 @@ export async function createLocalApiRuntime(
 ): Promise<LocalApiRuntime> {
   // PGlite creates only its own directory, not missing parents.
   await mkdir(options.dataDir, { recursive: true });
-  const db = createPgliteDb(join(options.dataDir, "pglite"));
+  const db = createPgliteDb(join(options.dataDir, localDataLayout.database));
   await runPostgresMigrations(db);
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
@@ -100,8 +107,9 @@ export async function createLocalApiRuntime(
   const unitOfWork = new PostgresPersistenceUnitOfWork(db, changeBus, notificationChangeBus, {
     decorateCredits: (credits) => new UnmeteredCreditRepository(credits),
   });
+  const filesDir = join(options.dataDir, localDataLayout.files);
   const storage = new LocalFileStorage({
-    rootDir: join(options.dataDir, "files"),
+    rootDir: filesDir,
     signingKey: randomBytes(32).toString("base64url"),
     urlPathPrefix: "/api/files",
   });
@@ -234,6 +242,8 @@ export async function createLocalApiRuntime(
   return {
     app,
     db,
+    exportBackup: ({ outputPath, appVersion }) =>
+      exportLocalData({ db, filesDir, outputPath, appVersion }),
     close: async () => {
       for (const interval of intervals) clearInterval(interval);
       await runner.close();

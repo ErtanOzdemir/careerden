@@ -1,4 +1,5 @@
 import type { PersistenceUnitOfWork } from "@careerden/domain";
+import { parseScrapeFailureReason } from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
 import { getActiveAccessibleJobApplication } from "@careerden/application";
 
@@ -39,14 +40,18 @@ export class FailScrapeJobUseCase {
       });
       if (!updated) throw new ApplicationError("not_found", "Job application not found");
 
+      // The persisted failure reason keeps its category code for the renderer; the timeline shows
+      // the readable detail and records the category as metadata.
+      const scrapeFailure = parseScrapeFailureReason(input.reason);
       await jobApplications.addEvent({
         jobApplicationId,
         type: "processing",
         title: updated.status === "failed" ? "Scraping failed" : "Scraping retry scheduled",
-        body: input.reason,
+        body: scrapeFailure?.detail ?? input.reason,
         metadata: {
           attempt: updated.scrapeAttemptCount,
           maxAttempts: maxScrapeAttempts,
+          ...(scrapeFailure ? { scrapeFailureCategory: scrapeFailure.category } : {}),
           ...(updated.status !== "failed" && updated.nextScrapeAttemptAt
             ? { nextAttemptAt: updated.nextScrapeAttemptAt.toISOString() }
             : {}),

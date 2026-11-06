@@ -40,12 +40,11 @@ import {
   PostgresReminderOutboxDispatcher,
   PostgresUserProfileRepository,
   ResolvingAiProvider,
-  createPgliteDb,
-  runPostgresMigrations,
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
+import { openLocalDatabase } from "../infrastructure/persistence/local-database-startup.js";
 import { HttpRemoteImageFetcher } from "../infrastructure/scraping/http-remote-image.fetcher.js";
 import { createLocalFileRouter } from "./local-files.routes.js";
 import { localSession } from "./local-session.middleware.js";
@@ -72,6 +71,8 @@ export interface LocalApiRuntimeOptions {
 export interface LocalApiRuntime {
   app: Express;
   db: Knex;
+  // The newest migration the database is at, for diagnostics.
+  lastMigration: string | undefined;
   close: () => Promise<void>;
 }
 
@@ -83,8 +84,8 @@ export async function createLocalApiRuntime(
 ): Promise<LocalApiRuntime> {
   // PGlite creates only its own directory, not missing parents.
   await mkdir(options.dataDir, { recursive: true });
-  const db = createPgliteDb(join(options.dataDir, "pglite"));
-  await runPostgresMigrations(db);
+  // Throws LocalDatabaseStartupError when the database cannot be opened or migrated.
+  const { db, lastMigration } = await openLocalDatabase(join(options.dataDir, "pglite"));
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")
@@ -234,6 +235,7 @@ export async function createLocalApiRuntime(
   return {
     app,
     db,
+    lastMigration,
     close: async () => {
       for (const interval of intervals) clearInterval(interval);
       await runner.close();

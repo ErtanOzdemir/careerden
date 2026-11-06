@@ -34,7 +34,8 @@ export const packagedRendererSchemeRegistration = {
 type ProtocolFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export function createPackagedRendererProtocolHandler(options: {
-  apiBaseUrl: string;
+  // Omitted while the local edition shows its recovery screen without a running backend.
+  apiBaseUrl?: string;
   // Added to every proxied API request, such as the local edition's backend token.
   apiRequestHeaders?: Record<string, string>;
   fetchApi: ProtocolFetch;
@@ -42,7 +43,8 @@ export function createPackagedRendererProtocolHandler(options: {
   onError?: (error: unknown) => void;
   rendererDirectory: string;
 }): (request: Request) => Promise<Response> {
-  const apiBaseUrl = normalizeDesktopApiBaseUrl(options.apiBaseUrl);
+  const apiBaseUrl =
+    options.apiBaseUrl === undefined ? undefined : normalizeDesktopApiBaseUrl(options.apiBaseUrl);
   const rendererDirectory = resolve(options.rendererDirectory);
 
   return async (request) => {
@@ -53,6 +55,7 @@ export function createPackagedRendererProtocolHandler(options: {
     }
 
     if (requestUrl.pathname === "/api" || requestUrl.pathname.startsWith("/api/")) {
+      if (!apiBaseUrl) return textResponse("Careerden API is unavailable", 503);
       return proxyApiRequest(request, requestUrl, apiBaseUrl, options);
     }
 

@@ -4,7 +4,7 @@ import { Modal } from "../components/careerden/modal.js";
 import { useDesktopUpdates } from "./DesktopUpdateProvider.js";
 import { useState } from "react";
 
-const desktopReleasesUrl = "https://github.com/ErtanOzdemir/careerden/releases/latest";
+export const desktopReleasesUrl = "https://github.com/ErtanOzdemir/careerden/releases/latest";
 
 export function DesktopUpdateGate() {
   const { checkForUpdates, restartAndInstall, state } = useDesktopUpdates();

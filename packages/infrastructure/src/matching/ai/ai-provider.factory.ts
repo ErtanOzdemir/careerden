@@ -1,33 +1,64 @@
+import {
+  aiProviderNameSchema,
+  embeddedAiModelCatalog,
+  type AiProviderModels,
+  type AiProviderName,
+} from "@careerden/contracts";
 import type { AiProvider } from "@careerden/domain";
+import { ModelFallbackAiProvider } from "./model-fallback-ai.provider.js";
 import { AnthropicAiProvider } from "./providers/anthropic-ai.provider.js";
 import { DeepSeekAiProvider } from "./providers/deepseek-ai.provider.js";
 import { GeminiAiProvider } from "./providers/gemini-ai.provider.js";
 import { OpenAiAiProvider } from "./providers/openai-ai.provider.js";
 import { OpenRouterAiProvider } from "./providers/openrouter-ai.provider.js";
 
-export const aiProviderNames = ["openai", "gemini", "deepseek", "anthropic", "openrouter"] as const;
-export type AiProviderName = (typeof aiProviderNames)[number];
+export const aiProviderNames = aiProviderNameSchema.options;
+export type { AiProviderName };
 
 export interface AiProviderSelection {
   provider: AiProviderName;
   apiKey: string;
-  // Omit to use the provider's default model.
+  // The user's own model choice. Omit to use the recommended model.
   model?: string;
+  // The provider's recommended and fallback models from the remote catalog. Omit to use the
+  // defaults embedded in this release.
+  models?: AiProviderModels;
 }
 
-export function createAiProvider(selection: AiProviderSelection): AiProvider {
-  const model = selection.model?.trim() || undefined;
-  switch (selection.provider) {
+/**
+ * The models to try, in order: the user's choice, then the catalog's recommended model, then its
+ * fallbacks, without duplicates.
+ */
+export function aiModelCandidates(selection: AiProviderSelection): string[] {
+  const models = selection.models ?? embeddedAiModelCatalog.providers[selection.provider];
+  const candidates = [selection.model?.trim(), models.recommended, ...models.fallbacks].filter(
+    (model): model is string => Boolean(model),
+  );
+  return [...new Set(candidates)];
+}
+
+export function createAiProvider(selection: AiProviderSelection): ModelFallbackAiProvider {
+  return new ModelFallbackAiProvider(selection.provider, aiModelCandidates(selection), (model) =>
+    createAiProviderForModel(selection.provider, selection.apiKey, model),
+  );
+}
+
+export function createAiProviderForModel(
+  provider: AiProviderName,
+  apiKey: string,
+  model: string,
+): AiProvider {
+  switch (provider) {
     case "openai":
-      return new OpenAiAiProvider(selection.apiKey, model);
+      return new OpenAiAiProvider(apiKey, model);
     case "gemini":
-      return new GeminiAiProvider(selection.apiKey, model);
+      return new GeminiAiProvider(apiKey, model);
     case "deepseek":
-      return new DeepSeekAiProvider(selection.apiKey, model);
+      return new DeepSeekAiProvider(apiKey, model);
     case "anthropic":
-      return new AnthropicAiProvider(selection.apiKey, model);
+      return new AnthropicAiProvider(apiKey, model);
     case "openrouter":
-      return new OpenRouterAiProvider(selection.apiKey, model);
+      return new OpenRouterAiProvider(apiKey, model);
   }
 }
 

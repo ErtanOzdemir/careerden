@@ -22,6 +22,18 @@ the variable is marked required.
 | `DESKTOP_API_BASE_URL`      | API URL embedded in a production desktop build               | `http://localhost:3000`  |
 | `DESKTOP_UPDATE_REPOSITORY` | Public `owner/repository` used for desktop updates           | Unset                    |
 
+## Marketing Site
+
+`apps/marketing` reads these at build time, because Next.js inlines public variables into the
+static output. See [apps/marketing/README.md](../apps/marketing/README.md).
+
+| Variable                      | Description                                                                 | Default                         |
+| ----------------------------- | --------------------------------------------------------------------------- | ------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`        | Canonical origin for metadata, Open Graph, JSON-LD, the sitemap, and robots | `https://www.careerden.example` |
+| `NEXT_PUBLIC_CONTACT_EMAIL`   | Public footer contact                                                       | `[CONTACT EMAIL]`               |
+| `NEXT_PUBLIC_COMPANY_NAME`    | Reserved legal-company value pending approved copy                          | `[LEGAL COMPANY NAME]`          |
+| `NEXT_PUBLIC_COMPANY_ADDRESS` | Reserved legal-address value pending approved copy                          | `[REGISTERED ADDRESS]`          |
+
 ## Creem Billing
 
 | Variable               | Description                                                  | Default |

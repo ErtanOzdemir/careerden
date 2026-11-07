@@ -5,6 +5,39 @@ worker containers on Coolify. Set the variables from [configuration.md](configur
 on every service described here. Desktop installers follow a separate process — see the
 [desktop runtime and release guide](../apps/desktop/README.md).
 
+## Desktop releases contain every edition
+
+Careerden and Careerden Unplugged ship together in one GitHub release per tag. An installed
+app reads only its own edition's and platform's updater metadata from the latest release:
+`latest-mac.yml`, `latest.yml`, and `latest-linux.yml` for Careerden, and `local-mac.yml`,
+`local.yml`, and `local-linux.yml` for Unplugged. If that file is missing, the updater treats
+it as "no update" and fails open, so a release without one edition or one platform silently
+stops that edition's updates on that platform until a complete release is published.
+
+Releasing only one edition, such as a cloud-only hotfix, is therefore not supported. Every
+release must contain every edition listed in `apps/desktop/release-editions.json`. Once an
+edition has been released, it stays in that file. Before creating the draft release, the
+release workflow runs `apps/desktop/scripts/verify-desktop-release.mjs`, which fails the job
+unless the release meets all of these:
+
+- every listed edition's three metadata files are present
+- each file's `version` equals the tag
+- every installer or ZIP each file references is in the release with a matching `sha512` and
+  size
+- `careerden-desktop-update-policy.json` is a valid policy no newer than the release
+
+Only Careerden Unplugged is listed for now, so three files are required; adding `cloud` makes
+it six. Check a draft or published release the same way before or after publishing it:
+
+```bash
+pnpm verify:desktop-release v0.8.0
+# or for another repository, or both editions regardless of the file:
+pnpm verify:desktop-release v0.8.0 --repo owner/careerden --editions cloud,local
+```
+
+The command downloads the release with `gh`, so it needs an authenticated GitHub CLI and room
+for the installers. Remote checks also verify `SHA256SUMS.txt` against every asset.
+
 ## Cloudflare R2 in production
 
 Create a private R2 bucket and an API token with Object Read & Write access scoped to that

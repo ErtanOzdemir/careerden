@@ -1,0 +1,102 @@
+name: Bug report
+description: Something in Careerden or Careerden Unplugged is not working as expected.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        > [!WARNING]
+        > Issues are public. **Do not share profile information, CV content, or API keys.**
+        > Replace names, email addresses, and job details with placeholders.
+
+        Security vulnerabilities must not be reported here. Follow [SECURITY.md](https://github.com/ErtanOzdemir/careerden/blob/master/SECURITY.md) instead.
+
+        LinkedIn import failing? Use the **LinkedIn import problem** template instead.
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition
+      description: Careerden Unplugged shows an "Unplugged" badge in the sidebar.
+      options:
+        - Careerden Unplugged (local desktop app)
+        - Careerden (desktop app)
+        - Careerden (web app in a browser)
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the app is affected?
+      options:
+        - LinkedIn import
+        - AI analysis or document generation
+        - Updates
+        - Data, storage, or exports
+        - Something else
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem, including any error message shown in the app.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Applications
+        2. Click "Add job application"
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostic-info
+    attributes:
+      label: Diagnostic info
+      description: |
+        Paste the app version and anything else that identifies your setup. In the desktop app the version is shown at the bottom of **Settings** ("Careerden · Version x.y.z"); Careerden Unplugged also shows it in the sidebar footer. If it relates to AI, also name the provider and model selected under **AI provider & API Keys** (never the key itself).
+      placeholder: |
+        Version: 0.7.0
+        AI provider and model: OpenAI, gpt-5-mini
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Optional. Check them for personal data before posting.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This report contains no profile information, CV content, or API keys.
+          required: true

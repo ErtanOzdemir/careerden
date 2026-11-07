@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   extractLinkedInCompanyLogoUrlFromHtml,
   extractLinkedInJobId,
@@ -9,6 +9,16 @@ import {
   parseLinkedInGuestJobDetailHtml,
   sanitizeLinkedInJobDescriptionHtml,
 } from "./linkedin-job.scraper.js";
+
+const parseInput = {
+  finalUrl: "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/1",
+  sourceUrl: "https://www.linkedin.com/jobs/view/1",
+  strategy: "guest" as const,
+};
+
+function silentLogger() {
+  return { warn: vi.fn() };
+}
 
 describe("extractLinkedInJobDescription", () => {
   it("captures sanitized display HTML and plain text from the LinkedIn description", async () => {
@@ -110,14 +120,24 @@ describe("parseLinkedInGuestJobDetailHtml", () => {
     });
   });
 
-  it("rejects guest HTML without exposed job description text", () => {
+  it("treats a guest sign-in page as blocked", () => {
     expect(() =>
-      parseLinkedInGuestJobDetailHtml("<h1>Sign in</h1>", {
-        finalUrl: "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/1",
-        sourceUrl: "https://www.linkedin.com/jobs/view/1",
-        strategy: "guest",
-      }),
-    ).toThrow("LinkedIn public job details were not exposed");
+      parseLinkedInGuestJobDetailHtml("<h1>Sign in</h1>", parseInput, silentLogger()),
+    ).toThrow(expect.objectContaining({ name: "ScrapingFailure", category: "blocked" }));
+  });
+
+  it("reports and logs guest HTML without exposed job description text as a parse failure", () => {
+    const logger = silentLogger();
+
+    expect(() => parseLinkedInGuestJobDetailHtml("<h1>Engineer</h1>", parseInput, logger)).toThrow(
+      expect.objectContaining({ category: "parse_failed" }),
+    );
+    expect(logger.warn).toHaveBeenCalledWith("LinkedIn page did not match the expected structure", {
+      adapter: "linkedin-job",
+      missing: ["description"],
+      parserVersion: linkedInGuestParserVersion,
+      url: parseInput.finalUrl,
+    });
   });
 });
 

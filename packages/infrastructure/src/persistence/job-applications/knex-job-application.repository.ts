@@ -15,6 +15,7 @@ import type {
   JobApplicationRepository,
   ListJobApplicationsFilter,
   MatchAnalysisResult,
+  RecordScrapeFailureInput,
   ScrapeBundle,
   UpdateJobApplicationContactInput,
   UpdateJobApplicationFollowUpInput,
@@ -143,6 +144,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         .update({
           status: "scraping",
           failure_reason: null,
+          scrape_failure_category: null,
           scrape_claimed_by: input.claimedBy,
           scrape_claim_expires_at: claimExpiresAt,
           scrape_attempt_count: this.db.raw("scrape_attempt_count + 1"),
@@ -178,13 +180,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
 
   async recordScrapeFailure(
     id: string,
-    input: {
-      claimedBy: string;
-      reason: string;
-      maxAttempts: number;
-      backoffMs: number;
-      now?: Date;
-    },
+    input: RecordScrapeFailureInput,
   ): Promise<JobApplication | null> {
     const now = input.now ?? new Date();
 
@@ -206,6 +202,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         .update({
           status: isFinalFailure ? "failed" : "queued",
           failure_reason: input.reason,
+          scrape_failure_category: input.category ?? null,
           scrape_claimed_by: null,
           scrape_claim_expires_at: null,
           next_scrape_attempt_at: isFinalFailure ? null : new Date(now.getTime() + input.backoffMs),
@@ -271,6 +268,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         .update({
           status: "queued",
           failure_reason: null,
+          scrape_failure_category: null,
           scrape_claimed_by: null,
           scrape_claim_expires_at: null,
           scrape_attempt_count: 0,
@@ -301,6 +299,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         .update({
           status: "scraped",
           failure_reason: null,
+          scrape_failure_category: null,
           scrape_claimed_by: null,
           scrape_claim_expires_at: null,
           next_scrape_attempt_at: null,
@@ -336,6 +335,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     await this.db("job_applications").where({ id, analysis_attempt_id: attemptId }).update({
       status: "analyzing",
       failure_reason: null,
+      scrape_failure_category: null,
       updated_at: this.db.fn.now(),
     });
     return { accepted: true, started: true };
@@ -372,6 +372,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         document_content: JSON.stringify(content),
         status: "review_ready",
         failure_reason: null,
+        scrape_failure_category: null,
         updated_at: this.db.fn.now(),
       });
     return updated > 0;
@@ -385,6 +386,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
       .update({
         status: "failed",
         failure_reason: reason,
+        scrape_failure_category: null,
         updated_at: this.db.fn.now(),
       });
     return updated > 0;
@@ -414,6 +416,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
         status: "generating_documents",
         document_generation_attempt_id: attemptId,
         failure_reason: null,
+        scrape_failure_category: null,
         updated_at: transaction.fn.now(),
       });
       return { started: true, ...(supersededAttemptId ? { supersededAttemptId } : {}) };
@@ -424,7 +427,12 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     const updated = await this.db("job_applications")
       .where({ id, document_generation_attempt_id: attemptId, status: "generating_documents" })
       .whereNull("archived_at")
-      .update({ status: "completed", failure_reason: null, updated_at: this.db.fn.now() });
+      .update({
+        status: "completed",
+        failure_reason: null,
+        scrape_failure_category: null,
+        updated_at: this.db.fn.now(),
+      });
     return updated > 0;
   }
 
@@ -432,7 +440,12 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
     const updated = await this.db("job_applications")
       .where({ id, document_generation_attempt_id: attemptId, status: "generating_documents" })
       .whereNull("archived_at")
-      .update({ status: "failed", failure_reason: reason, updated_at: this.db.fn.now() });
+      .update({
+        status: "failed",
+        failure_reason: reason,
+        scrape_failure_category: null,
+        updated_at: this.db.fn.now(),
+      });
     return updated > 0;
   }
 
@@ -446,6 +459,7 @@ export class KnexJobApplicationRepository implements JobApplicationRepository {
       .update({
         status,
         failure_reason: failureReason ?? null,
+        scrape_failure_category: null,
         ...(status === "failed" ? { scrape_claimed_by: null, scrape_claim_expires_at: null } : {}),
         ...(status === "failed" ? { next_scrape_attempt_at: null } : {}),
         updated_at: this.db.fn.now(),

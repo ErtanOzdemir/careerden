@@ -24,7 +24,7 @@ import type {
   TimelineMilestone,
   UpcomingInterview,
 } from "../types";
-import { richDocumentFromText } from "@careerden/contracts";
+import { parseScrapingFailureCategory, richDocumentFromText } from "@careerden/contracts";
 import type { RichDocument } from "./types.js";
 
 export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
@@ -124,6 +124,7 @@ export function mapApiJobApplicationToUi(
     processingStatus: application.status,
     processingStatusLabel: formatProcessingStatus(application.status, application.failureReason),
     processingFailureReason: application.failureReason,
+    processingFailureCategory: parseScrapingFailureCategory(application.scrapeFailureCategory),
     processingLog: detail ? mapProcessingLog(detail.events) : undefined,
     profileReadiness: detail?.profileReadiness,
     sourceUrl: application.sourceUrl,

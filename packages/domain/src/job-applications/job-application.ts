@@ -1,3 +1,4 @@
+import type { ScrapingFailureCategory } from "@careerden/contracts";
 import type { JobApplicationStatus } from "./workflow-status.js";
 import type { ApplicationPackPreferences } from "./application-pack.js";
 
@@ -46,6 +47,8 @@ export interface JobApplication {
   sourceUrl?: string;
   status: JobApplicationStatus;
   failureReason?: string;
+  // Set alongside failureReason when the latest failure came from scraping the source URL.
+  scrapeFailureCategory?: ScrapingFailureCategory;
   analysisAttemptId?: string;
   documentGenerationAttemptId?: string;
   scrapeClaimedBy?: string;

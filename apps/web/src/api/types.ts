@@ -70,6 +70,7 @@ export interface ApiJobApplication {
   failureReason?: string;
   id: string;
   matchScore?: number;
+  scrapeFailureCategory?: string;
   profileId: string;
   sourceUrl?: string;
   status: string;

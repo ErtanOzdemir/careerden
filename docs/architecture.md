@@ -26,7 +26,15 @@ Authenticated API -> PostgreSQL + transactional outbox
 LinkedIn scraping runs locally in an Electron utility process through public guest HTTP
 responses and HTML parsing; it does not require a LinkedIn account. The desktop worker
 claims queued work from the API, renews the claim while scraping, and submits both
-normalized and raw results. The API persists workflow changes and outbox events transactionally.
+normalized and raw results. The LinkedIn adapters map every failure to a site-neutral category
+(`not_found`, `blocked`, `rate_limited`, `parse_failed`, `network`, `disabled`, or `unknown`,
+defined in `@careerden/contracts`), and the desktop reports the category with a user-facing
+message instead of the raw HTTP status. The API stores the category on the application and its
+timeline event and uses it to limit automatic retries: removed postings and parser mismatches
+fail at once, blocked or rate-limited scrapes get one retry after 15 minutes, and the desktop
+pauses scheduled scraping for 10 minutes after one. The web app offers pasting the job text,
+trying again, or both, depending on the category.
+The API persists workflow changes and outbox events transactionally.
 The LLM, documents, and notifications workers consume BullMQ jobs independently from
 the API.
 

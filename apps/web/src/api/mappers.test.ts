@@ -206,6 +206,17 @@ describe("API mappers", () => {
     expect(itemFromLegacyTip("Kubernetes")).toBe("Kubernetes");
   });
 
+  it("exposes a known scrape failure category and drops unknown ones", () => {
+    const application = createApplicationDetail();
+    application.status = "failed";
+    application.scrapeFailureCategory = "blocked";
+
+    expect(mapApiJobApplicationToUi(application).processingFailureCategory).toBe("blocked");
+
+    application.scrapeFailureCategory = "from_a_newer_api";
+    expect(mapApiJobApplicationToUi(application).processingFailureCategory).toBeUndefined();
+  });
+
   it("maps an unset priority to an unset interest level", () => {
     const application = createApplicationDetail();
     application.tracking.priority = undefined;

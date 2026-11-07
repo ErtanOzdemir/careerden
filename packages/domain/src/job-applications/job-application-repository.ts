@@ -1,3 +1,4 @@
+import type { ScrapingFailureCategory } from "@careerden/contracts";
 import type {
   GeneratedDocument,
   GeneratedDocumentFormat,
@@ -90,6 +91,7 @@ export interface RenewScrapeClaimInput {
 export interface RecordScrapeFailureInput {
   claimedBy: string;
   reason: string;
+  category?: ScrapingFailureCategory;
   maxAttempts: number;
   backoffMs: number;
   now?: Date;

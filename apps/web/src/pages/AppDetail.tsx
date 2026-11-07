@@ -20,6 +20,8 @@ import { formatApplicationStatus, mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
+import { ScrapeFailureNotice } from "../components/ScrapeFailureNotice.js";
+import { requestManualJobEntry } from "../components/add-job-request.js";
 import { aiProviderPath } from "../settings/AiProviderSettings.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
 import type {
@@ -27,7 +29,7 @@ import type {
   ApiDocumentContent,
   ApiProfile,
 } from "../api/types.js";
-import { HTML_TEMPLATES } from "@careerden/contracts";
+import { HTML_TEMPLATES, scrapingFailureGuidance } from "@careerden/contracts";
 import {
   ArrowLeft,
   MapPin,
@@ -730,6 +732,11 @@ export default function AppDetail() {
             <p className="text-sm font-medium text-foreground">{processingLabel}</p>
             <span className="ml-auto text-xs text-muted-foreground">Runs in the background</span>
           </div>
+          {app.processingStatus === "queued" && app.processingFailureCategory && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {scrapingFailureGuidance[app.processingFailureCategory].message}
+            </p>
+          )}
           <div className="mt-3 flex gap-1.5">
             {[0, 1, 2].map((i) => (
               <span
@@ -744,7 +751,17 @@ export default function AppDetail() {
         </div>
       )}
 
-      {app.processingStatus === "failed" && (
+      {app.processingStatus === "failed" && app.processingFailureCategory && (
+        <ScrapeFailureNotice
+          category={app.processingFailureCategory}
+          isRetrying={isRetrying}
+          onPasteText={() => requestManualJobEntry({ jobUrl: app.sourceUrl })}
+          onRetry={handleRetry}
+          readOnly={isArchived}
+        />
+      )}
+
+      {app.processingStatus === "failed" && !app.processingFailureCategory && (
         <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 flex items-center justify-between">
           <p className="text-sm text-destructive">
             {app.processingFailureReason ?? "Processing failed"}

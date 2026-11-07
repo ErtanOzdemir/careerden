@@ -1,4 +1,6 @@
+import type { ScrapingFailureCategory } from "@careerden/contracts";
 import type { ScrapeBundle } from "@careerden/domain";
+import { toScrapingFailure } from "../../domain/scraping/scraping-failure.js";
 import { DesktopApiError, isTerminalClaimApiError } from "./desktop-api-error.js";
 
 export interface ClaimedScrapeJob {
@@ -8,7 +10,11 @@ export interface ClaimedScrapeJob {
 
 export interface DesktopScrapingApiClient {
   claimNextScrapeJob(): Promise<ClaimedScrapeJob | null>;
-  failScrapeJob(jobApplicationId: string, reason: string): Promise<void>;
+  failScrapeJob(
+    jobApplicationId: string,
+    reason: string,
+    category?: ScrapingFailureCategory,
+  ): Promise<void>;
   isAuthenticated(): Promise<boolean>;
   renewScrapeClaim(jobApplicationId: string): Promise<void>;
   submitScrapeData(
@@ -21,16 +27,29 @@ export interface LinkedInScrapingRunner {
   scrape(sourceUrl: string): Promise<ScrapeBundle>;
 }
 
+// Scraping more postings while LinkedIn blocks or rate-limits guest requests extends the block.
+const throttledCategories: ReadonlySet<ScrapingFailureCategory> = new Set([
+  "blocked",
+  "rate_limited",
+]);
+const defaultThrottleCooldownMs = 10 * 60_000;
+
+type ClaimOutcome = "continue" | "throttled";
+
 export class LocalScrapingWorker {
   private interval: NodeJS.Timeout | undefined;
   private isRunning = false;
+  private pausedUntil = 0;
 
   constructor(
     private readonly dependencies: {
       api: DesktopScrapingApiClient;
       heartbeatMs?: number;
       intervalMs?: number;
+      now?: () => number;
       runner: LinkedInScrapingRunner;
+      /** How long scheduled runs pause after LinkedIn blocks or rate-limits a scrape. */
+      throttleCooldownMs?: number;
     },
   ) {}
 
@@ -40,7 +59,10 @@ export class LocalScrapingWorker {
     }
 
     this.runWithCatch();
-    this.interval = setInterval(() => this.runWithCatch(), this.dependencies.intervalMs ?? 30_000);
+    this.interval = setInterval(
+      () => this.runWithCatch({ scheduled: true }),
+      this.dependencies.intervalMs ?? 30_000,
+    );
   }
 
   stop(): void {
@@ -50,12 +72,13 @@ export class LocalScrapingWorker {
     }
   }
 
+  /** Runs now, even during a throttle pause, because a user queued or retried a scrape. */
   wake(): void {
     this.runWithCatch();
   }
 
-  async runOnce(): Promise<void> {
-    if (this.isRunning) {
+  async runOnce(options: { scheduled?: boolean } = {}): Promise<void> {
+    if (this.isRunning || (options.scheduled && this.now() < this.pausedUntil)) {
       return;
     }
 
@@ -80,12 +103,20 @@ export class LocalScrapingWorker {
         return;
       }
 
-      await this.processClaimedJob(claimed);
+      if ((await this.processClaimedJob(claimed)) === "throttled") {
+        this.pausedUntil =
+          this.now() + (this.dependencies.throttleCooldownMs ?? defaultThrottleCooldownMs);
+        return;
+      }
     }
   }
 
-  private runWithCatch(): void {
-    void this.runOnce().catch((error) => {
+  private now(): number {
+    return this.dependencies.now?.() ?? Date.now();
+  }
+
+  private runWithCatch(options: { scheduled?: boolean } = {}): void {
+    void this.runOnce(options).catch((error) => {
       if (isExpectedStartupError(error)) {
         return;
       }
@@ -94,10 +125,10 @@ export class LocalScrapingWorker {
     });
   }
 
-  private async processClaimedJob(claimed: ClaimedScrapeJob): Promise<void> {
+  private async processClaimedJob(claimed: ClaimedScrapeJob): Promise<ClaimOutcome> {
     if (!claimed.sourceUrl) {
       await this.dependencies.api.failScrapeJob(claimed.id, "Claimed job has no source URL");
-      return;
+      return "continue";
     }
 
     const heartbeat = this.startHeartbeat(claimed.id);
@@ -108,8 +139,15 @@ export class LocalScrapingWorker {
       try {
         scrapeBundle = await this.dependencies.runner.scrape(claimed.sourceUrl);
       } catch (error) {
-        await this.dependencies.api.failScrapeJob(claimed.id, errorMessage(error));
-        return;
+        const failure = toScrapingFailure(error);
+
+        console.warn("LinkedIn scrape failed", {
+          category: failure.category,
+          detail: failure.detail,
+          jobApplicationId: claimed.id,
+        });
+        await this.dependencies.api.failScrapeJob(claimed.id, failure.message, failure.category);
+        return throttledCategories.has(failure.category) ? "throttled" : "continue";
       }
 
       try {
@@ -125,11 +163,13 @@ export class LocalScrapingWorker {
             message: error.message,
             status: error.status,
           });
-          return;
+          return "continue";
         }
 
         await this.dependencies.api.failScrapeJob(claimed.id, errorMessage(error));
       }
+
+      return "continue";
     } finally {
       if (heartbeat) {
         clearInterval(heartbeat);

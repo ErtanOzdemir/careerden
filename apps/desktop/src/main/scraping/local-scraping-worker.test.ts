@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { LocalScrapingWorker } from "./local-scraping-worker.js";
 import type { DesktopScrapingApiClient, LinkedInScrapingRunner } from "./local-scraping-worker.js";
 import { DesktopApiError } from "./desktop-api-error.js";
+import { scrapingFailureGuidance } from "@careerden/contracts";
+import { ScrapingFailure } from "../../domain/scraping/scraping-failure.js";
 
 describe("LocalScrapingWorker", () => {
   it("waits without claiming scrape tasks when the desktop app is unauthenticated", async () => {
@@ -159,14 +161,108 @@ describe("LocalScrapingWorker", () => {
       }),
     });
     const worker = new LocalScrapingWorker({ api, runner });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await worker.runOnce();
 
     expect(api.failScrapeJob).toHaveBeenCalledWith(
       "job-1",
-      "LinkedIn public job details unavailable",
+      scrapingFailureGuidance.unknown.message,
+      "unknown",
     );
+    expect(warning).toHaveBeenCalledWith("LinkedIn scrape failed", {
+      category: "unknown",
+      detail: "LinkedIn public job details unavailable",
+      jobApplicationId: "job-1",
+    });
     expect(api.submitScrapeData).not.toHaveBeenCalled();
+    warning.mockRestore();
+  });
+
+  it("reports the category of a mapped scrape failure", async () => {
+    const api = createApiClient({
+      claimNextScrapeJob: vi
+        .fn()
+        .mockResolvedValueOnce({ id: "job-1", sourceUrl: "https://www.linkedin.com/jobs/view/1" })
+        .mockResolvedValueOnce(null),
+    });
+    const runner = createRunner({
+      scrape: vi.fn(async () => {
+        throw new ScrapingFailure("not_found", "LinkedIn responded 404");
+      }),
+    });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await new LocalScrapingWorker({ api, runner }).runOnce();
+
+    expect(api.failScrapeJob).toHaveBeenCalledWith(
+      "job-1",
+      "This posting is no longer live.",
+      "not_found",
+    );
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(2);
+    warning.mockRestore();
+  });
+
+  it.each(["blocked", "rate_limited"] as const)(
+    "stops draining and pauses scheduled runs after a %s scrape",
+    async (category) => {
+      let now = 0;
+      const api = createApiClient({
+        claimNextScrapeJob: vi
+          .fn()
+          .mockResolvedValueOnce({ id: "job-1", sourceUrl: "https://www.linkedin.com/jobs/view/1" })
+          .mockResolvedValue({ id: "job-2", sourceUrl: "https://www.linkedin.com/jobs/view/2" }),
+      });
+      const runner = createRunner({
+        scrape: vi.fn(async () => {
+          throw new ScrapingFailure(category);
+        }),
+      });
+      const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const worker = new LocalScrapingWorker({
+        api,
+        now: () => now,
+        runner,
+        throttleCooldownMs: 1_000,
+      });
+
+      await worker.runOnce();
+
+      expect(api.claimNextScrapeJob).toHaveBeenCalledOnce();
+      expect(api.failScrapeJob).toHaveBeenCalledWith("job-1", expect.any(String), category);
+
+      now = 999;
+      await worker.runOnce({ scheduled: true });
+      expect(api.claimNextScrapeJob).toHaveBeenCalledOnce();
+
+      now = 1_000;
+      await worker.runOnce({ scheduled: true });
+      expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(2);
+      warning.mockRestore();
+    },
+  );
+
+  it("lets an explicit wake run during a throttle pause", async () => {
+    const api = createApiClient({
+      claimNextScrapeJob: vi
+        .fn()
+        .mockResolvedValueOnce({ id: "job-1", sourceUrl: "https://www.linkedin.com/jobs/view/1" })
+        .mockResolvedValue(null),
+    });
+    const runner = createRunner({
+      scrape: vi.fn(async () => {
+        throw new ScrapingFailure("blocked");
+      }),
+    });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const worker = new LocalScrapingWorker({ api, now: () => 0, runner });
+
+    await worker.runOnce();
+    await worker.runOnce();
+
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(2);
+    warning.mockRestore();
   });
 
   it.each([

@@ -1,3 +1,4 @@
+import { parseScrapingFailureCategory } from "@careerden/contracts";
 import { normalizeApplicationPackPreferences, richDocumentFromText } from "@careerden/domain";
 import type {
   GeneratedDocument,
@@ -25,6 +26,7 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
     sourceUrl: nullableString(row.source_url),
     status: row.status as JobApplicationStatus,
     failureReason: nullableString(row.failure_reason),
+    scrapeFailureCategory: parseScrapingFailureCategory(row.scrape_failure_category),
     analysisAttemptId: nullableString(row.analysis_attempt_id),
     documentGenerationAttemptId: nullableString(row.document_generation_attempt_id),
     scrapeClaimedBy: nullableString(row.scrape_claimed_by),

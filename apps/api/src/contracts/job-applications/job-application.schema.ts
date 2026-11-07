@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { scrapingFailureCategorySchema } from "@careerden/contracts";
 import { applicationPackPreferencesSchema } from "../documents/application-pack.schema.js";
 
 export const linkedInJobUrlSchema = z
@@ -355,6 +356,8 @@ export const claimScrapeJobSchema = z.object({
 export const failScrapeJobSchema = z.object({
   claimedBy: z.string().min(1),
   reason: z.string().min(1),
+  // Optional so desktop clients released before failure categories keep working.
+  category: scrapingFailureCategorySchema.optional(),
 });
 
 export const heartbeatScrapeJobSchema = z.object({

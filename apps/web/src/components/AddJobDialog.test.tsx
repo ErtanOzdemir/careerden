@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import { AddJobDialog } from "./AddJobDialog";
+import type { ManualJobPrefill } from "./add-job-request";
 
 vi.mock("../api/profiles.js", () => ({
   profilesApi: {
@@ -24,6 +25,18 @@ describe("AddJobDialog", () => {
     cleanup();
     delete window.electronAPI;
     vi.clearAllMocks();
+  });
+
+  it("opens manual entry filled in from a failed LinkedIn import", () => {
+    renderDialog({
+      companyName: "Acme",
+      jobUrl: "https://www.linkedin.com/jobs/view/1",
+      roleTitle: "Engineer",
+    });
+
+    expect(screen.getByLabelText(/Company name/)).toHaveValue("Acme");
+    expect(screen.getByLabelText(/Job title/)).toHaveValue("Engineer");
+    expect(screen.getByLabelText(/Job description/)).toHaveValue("");
   });
 
   it("disables LinkedIn import in the browser while keeping manual entry available", () => {
@@ -129,11 +142,14 @@ describe("AddJobDialog", () => {
   });
 });
 
-function renderDialog() {
+function renderDialog(manualPrefill?: ManualJobPrefill) {
   return render(
     <MemoryRouter initialEntries={["/"]}>
       <Routes>
-        <Route path="/" element={<AddJobDialog open onClose={vi.fn()} />} />
+        <Route
+          path="/"
+          element={<AddJobDialog open manualPrefill={manualPrefill} onClose={vi.fn()} />}
+        />
         <Route path="/applications/:id" element={<ApplicationDestination />} />
       </Routes>
     </MemoryRouter>,

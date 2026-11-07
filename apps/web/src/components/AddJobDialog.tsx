@@ -14,6 +14,7 @@ import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
 import { Modal } from "./careerden/modal.js";
 import { Button, buttonVariants } from "./ui/button.js";
+import type { ManualJobPrefill } from "./add-job-request.js";
 
 const acceptedLogoTypes = ["image/jpeg", "image/png", "image/webp"];
 const maximumLogoSize = 5 * 1024 * 1024;
@@ -39,7 +40,16 @@ const emptyManualForm: ManualFormState = {
   roleTitle: "",
 };
 
-export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AddJobDialog({
+  manualPrefill,
+  open,
+  onClose,
+}: {
+  /** Opens manual entry with these fields filled in, such as a failed LinkedIn import's URL. */
+  manualPrefill?: ManualJobPrefill;
+  open: boolean;
+  onClose: () => void;
+}) {
   const navigate = useNavigate();
   const [method, setMethod] = useState<AddMethod>("manual");
   const [url, setUrl] = useState("");
@@ -52,6 +62,17 @@ export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [error, setError] = useState<string | null>(null);
   const isElectron = Boolean(window.electronAPI);
   const completedFields = completedRequiredFields(manual);
+
+  useEffect(() => {
+    if (!open || !manualPrefill) return;
+    setMethod("manual");
+    setManual({
+      ...emptyManualForm,
+      companyName: manualPrefill.companyName ?? "",
+      jobUrl: manualPrefill.jobUrl ?? "",
+      roleTitle: manualPrefill.roleTitle ?? "",
+    });
+  }, [open, manualPrefill]);
 
   useEffect(() => {
     if (!companyLogo) {

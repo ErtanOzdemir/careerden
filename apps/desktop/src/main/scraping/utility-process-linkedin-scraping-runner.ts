@@ -2,6 +2,7 @@ import type { UtilityProcess } from "electron";
 import { utilityProcess } from "electron";
 import { randomUUID } from "node:crypto";
 import type { ScrapeBundle } from "@careerden/domain";
+import { restoreScrapingFailure, ScrapingFailure } from "../../domain/scraping/scraping-failure.js";
 import type { LinkedInScrapingRunner } from "./local-scraping-worker.js";
 import type { ScrapingUtilityResponse } from "./scraping-utility-messages.js";
 
@@ -38,7 +39,8 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
       const timeout = setTimeout(() => {
         this.pending.delete(requestId);
         reject(
-          new Error(
+          new ScrapingFailure(
+            "unknown",
             `LinkedIn scraping utility process did not respond within ${scrapeTimeoutMs}ms`,
           ),
         );
@@ -98,7 +100,7 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
       return;
     }
 
-    pending.reject(new Error(message.message));
+    pending.reject(restoreScrapingFailure(message.category, message.detail));
   }
 
   private rejectPending(error: Error): void {

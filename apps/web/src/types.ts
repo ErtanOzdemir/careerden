@@ -1,3 +1,4 @@
+import type { ScrapingFailureCategory } from "@careerden/contracts";
 import type {
   ApiApplicationPackPreferences,
   ApiApplicationStatus,
@@ -131,6 +132,8 @@ export interface JobApplication {
   processingStatus?: string;
   processingStatusLabel?: string;
   processingFailureReason?: string;
+  // Why the latest LinkedIn import failed, when that is what failed.
+  processingFailureCategory?: ScrapingFailureCategory;
   processingLog?: ProcessingLogItem[];
   profileReadiness?: ApiProfileReadiness;
   sourceUrl?: string;

@@ -4,6 +4,8 @@ import Sidebar from "./Sidebar.js";
 import { Topbar } from "./Topbar.js";
 import { AddJobDialog } from "./AddJobDialog.js";
 import { DesktopNotificationBridge } from "./DesktopNotificationBridge.js";
+import { readAddJobRequest, type ManualJobPrefill } from "./add-job-request.js";
+import { openAddJobEventName } from "../onboarding/OnboardingGate.js";
 
 const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
   "/": {
@@ -46,6 +48,7 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
 
 export default function AppShell() {
   const [addJobOpen, setAddJobOpen] = useState(false);
+  const [manualPrefill, setManualPrefill] = useState<ManualJobPrefill>();
   const [greeting, setGreeting] = useState(() => getLocalGreeting());
   const location = useLocation();
   const params = useParams();
@@ -56,11 +59,12 @@ export default function AppShell() {
   }, []);
 
   useEffect(() => {
-    function handleOpenAddJob() {
+    function handleOpenAddJob(event: Event) {
+      setManualPrefill(readAddJobRequest(event).manual);
       setAddJobOpen(true);
     }
-    window.addEventListener("careerden:open-add-job", handleOpenAddJob);
-    return () => window.removeEventListener("careerden:open-add-job", handleOpenAddJob);
+    window.addEventListener(openAddJobEventName, handleOpenAddJob);
+    return () => window.removeEventListener(openAddJobEventName, handleOpenAddJob);
   }, []);
 
   const header = useMemo(() => {
@@ -85,7 +89,10 @@ export default function AppShell() {
         <Topbar
           title={header.title}
           subtitle={header.subtitle}
-          onAddJob={() => setAddJobOpen(true)}
+          onAddJob={() => {
+            setManualPrefill(undefined);
+            setAddJobOpen(true);
+          }}
         />
 
         <main className="scrollbar-soft flex-1 overflow-y-auto">
@@ -95,7 +102,11 @@ export default function AppShell() {
         </main>
       </div>
 
-      <AddJobDialog open={addJobOpen} onClose={() => setAddJobOpen(false)} />
+      <AddJobDialog
+        open={addJobOpen}
+        manualPrefill={manualPrefill}
+        onClose={() => setAddJobOpen(false)}
+      />
     </div>
   );
 }

@@ -1,8 +1,15 @@
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
+import { ScrapingFailure } from "../../../domain/scraping/scraping-failure.js";
+import {
+  fetchLinkedInGuestPage,
+  linkedInParseFailure,
+  type LinkedInScraperLogger,
+} from "./linkedin-guest-fetch.js";
 
 export interface LinkedInJobScraperOptions {
   fetch?: typeof fetch;
+  logger?: LinkedInScraperLogger;
 }
 
 export const linkedinGuestJobDetailEndpoint =
@@ -11,9 +18,11 @@ export const linkedInGuestParserVersion = "linkedin-guest-detail-v1";
 
 export class LinkedInJobScraper implements JobSiteScraper {
   private readonly fetchImpl: typeof fetch;
+  private readonly logger: LinkedInScraperLogger;
 
   constructor(options: LinkedInJobScraperOptions = {}) {
     this.fetchImpl = options.fetch ?? fetch;
+    this.logger = options.logger ?? console;
   }
 
   canHandle(url: string): boolean {
@@ -25,18 +34,25 @@ export class LinkedInJobScraper implements JobSiteScraper {
     const jobId = extractLinkedInJobId(url);
 
     if (!jobId) {
-      throw new Error("LinkedIn job id could not be extracted from the source URL");
+      throw new ScrapingFailure(
+        "unknown",
+        "LinkedIn job id could not be extracted from the source URL",
+      );
     }
 
     const endpoint = `${linkedinGuestJobDetailEndpoint}/${jobId}`;
-    const html = await fetchLinkedInHtml(this.fetchImpl, endpoint);
+    const { html } = await fetchLinkedInGuestPage(this.fetchImpl, endpoint, linkedInRequestHeaders);
 
-    return parseLinkedInGuestJobDetailHtml(html, {
-      sourceUrl: url,
-      finalUrl: endpoint,
-      strategy: "guest",
-      sourceJobId: jobId,
-    });
+    return parseLinkedInGuestJobDetailHtml(
+      html,
+      {
+        sourceUrl: url,
+        finalUrl: endpoint,
+        strategy: "guest",
+        sourceJobId: jobId,
+      },
+      this.logger,
+    );
   }
 
   async scrapeCompany(input: CompanyLookupInput): Promise<ScrapedCompany> {
@@ -61,6 +77,7 @@ export interface ParseLinkedInGuestJobDetailInput {
 export function parseLinkedInGuestJobDetailHtml(
   html: string,
   input: ParseLinkedInGuestJobDetailInput,
+  logger: LinkedInScraperLogger = console,
 ): ScrapedJob {
   const title =
     cleanHtmlText(
@@ -94,8 +111,17 @@ export function parseLinkedInGuestJobDetailHtml(
     : "";
   const companyLogoUrl = extractLinkedInCompanyLogoUrlFromHtml(html);
 
-  if (!description || title.toLowerCase().includes("sign in")) {
-    throw new Error("LinkedIn public job details were not exposed");
+  if (title.toLowerCase().includes("sign in")) {
+    throw new ScrapingFailure("blocked", "LinkedIn returned a sign-in page");
+  }
+
+  if (!description) {
+    throw linkedInParseFailure(logger, {
+      adapter: "linkedin-job",
+      missing: ["description"],
+      parserVersion: linkedInGuestParserVersion,
+      url: input.finalUrl,
+    });
   }
 
   return {
@@ -335,29 +361,14 @@ function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-async function fetchLinkedInHtml(fetchImpl: typeof fetch, url: string): Promise<string> {
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "X-Requested-With": "XMLHttpRequest",
-    },
-    redirect: "follow",
-  });
-
-  if (response.status === 404) {
-    throw new Error("LinkedIn job was not found");
-  }
-
-  if (!response.ok) {
-    throw new Error(`LinkedIn public fetch failed: ${response.status} ${response.statusText}`);
-  }
-
-  return response.text();
-}
+const linkedInRequestHeaders = {
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "X-Requested-With": "XMLHttpRequest",
+};
 
 function matchFirst(html: string, patterns: RegExp[]): string | undefined {
   for (const pattern of patterns) {

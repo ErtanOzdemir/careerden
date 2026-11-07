@@ -80,6 +80,32 @@ describe("AppDetail AI credits", () => {
     await waitFor(() => expect(billingMocks.refreshBalance).toHaveBeenCalled());
   });
 
+  it("explains a blocked LinkedIn import and opens manual entry with its URL", async () => {
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      status: "failed",
+      failureReason: "LinkedIn is limiting access right now. You can paste the job text manually.",
+      scrapeFailureCategory: "blocked",
+      sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    });
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    const openAddJob = vi.fn();
+    window.addEventListener("careerden:open-add-job", openAddJob);
+
+    renderAppDetail();
+    fireEvent.click(await screen.findByRole("button", { name: /Paste text/ }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("LinkedIn is limiting access right now.");
+    expect(screen.queryByText(/999/)).not.toBeInTheDocument();
+    expect(openAddJob).toHaveBeenCalledOnce();
+    expect((openAddJob.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({
+      manual: { jobUrl: "https://www.linkedin.com/jobs/view/1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Try again/ }));
+    await waitFor(() => expect(jobApplicationsApi.retry).toHaveBeenCalledWith("job-1"));
+    window.removeEventListener("careerden:open-add-job", openAddJob);
+  });
+
   it("sends the user to the AI provider settings when no key is configured", async () => {
     vi.mocked(jobApplicationsApi.get).mockResolvedValue({
       ...createApplicationDetail(),

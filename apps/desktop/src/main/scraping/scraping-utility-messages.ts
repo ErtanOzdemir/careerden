@@ -1,3 +1,4 @@
+import type { ScrapingFailureCategory } from "@careerden/contracts";
 import type { ScrapeBundle } from "@careerden/domain";
 
 export interface ScrapeRequestMessage {
@@ -16,6 +17,8 @@ export interface ScrapeErrorMessage {
   type: "scrape:error";
   requestId: string;
   message: string;
+  category: ScrapingFailureCategory;
+  detail?: string;
 }
 
 export type ScrapingUtilityRequest = ScrapeRequestMessage;

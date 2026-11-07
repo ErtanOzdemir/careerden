@@ -1,4 +1,5 @@
 import process from "node:process";
+import { toScrapingFailure } from "../../domain/scraping/scraping-failure.js";
 import { ScrapeLinkedInJobUseCase } from "../../application/scraping/scrape-linkedin-job.use-case.js";
 import { LinkedInCompanyScraper } from "../../infrastructure/scraping/adapters/linkedin-company.scraper.js";
 import { LinkedInJobScraper } from "../../infrastructure/scraping/adapters/linkedin-job.scraper.js";
@@ -37,10 +38,14 @@ async function handleMessage(message: unknown): Promise<void> {
       scrapeBundle,
     });
   } catch (error) {
+    const failure = toScrapingFailure(error);
+
     postMessage({
       type: "scrape:error",
       requestId: request.requestId,
-      message: error instanceof Error ? error.message : "Unknown LinkedIn scraping error",
+      message: failure.message,
+      category: failure.category,
+      ...(failure.detail ? { detail: failure.detail } : {}),
     });
   }
 }

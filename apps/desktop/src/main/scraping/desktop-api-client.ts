@@ -1,3 +1,4 @@
+import type { ScrapingFailureCategory } from "@careerden/contracts";
 import type { ScrapeBundle } from "@careerden/domain";
 import type { ClaimedScrapeJob, DesktopScrapingApiClient } from "./local-scraping-worker.js";
 import { DesktopApiError } from "./desktop-api-error.js";
@@ -66,11 +67,16 @@ export class DesktopApiClient implements DesktopScrapingApiClient {
     });
   }
 
-  async failScrapeJob(jobApplicationId: string, reason: string): Promise<void> {
+  async failScrapeJob(
+    jobApplicationId: string,
+    reason: string,
+    category?: ScrapingFailureCategory,
+  ): Promise<void> {
     await this.request(`/job-applications/${jobApplicationId}/scraping/fail`, {
       body: {
         claimedBy: this.options.claimedBy,
         reason,
+        ...(category ? { category } : {}),
       },
       method: "POST",
     });

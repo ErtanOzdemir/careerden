@@ -128,6 +128,10 @@ The desktop scraping worker additionally uses these authenticated endpoints:
 | `POST` | `/job-applications/:id/scraping/fail`      | Report a scrape failure    |
 | `POST` | `/job-applications/:id/scraping/retry`     | Retry scraping             |
 
+A scrape failure report takes `claimedBy`, a user-facing `reason`, and an optional `category`
+from `scrapingFailureCategorySchema`. The category is returned as `scrapeFailureCategory` on the
+application and decides how many automatic retries the scrape gets.
+
 ## Notifications
 
 | Method  | Path                          | Description                       |

@@ -163,6 +163,33 @@ describe("DesktopApiClient", () => {
     );
   });
 
+  it("reports a scrape failure with its category", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ status: "failed" }))),
+    );
+    const client = new DesktopApiClient({
+      apiBaseUrl: "http://127.0.0.1:3000",
+      claimedBy: "desktop-a",
+      getCookies: vi.fn(async () => []),
+    });
+
+    await client.failScrapeJob("job-1", "This posting is no longer live.", "not_found");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:3000/job-applications/job-1/scraping/fail",
+      {
+        body: JSON.stringify({
+          claimedBy: "desktop-a",
+          reason: "This posting is no longer live.",
+          category: "not_found",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    );
+  });
+
   it("throws a typed error from a coded API response", async () => {
     vi.stubGlobal(
       "fetch",

@@ -175,7 +175,7 @@ describe("LinkedInCompanyScraper", () => {
         companyName: "Acme",
         linkedInUrl: "https://www.linkedin.com/company/acme",
       }),
-    ).rejects.toThrow("linkedin_guest_company_unavailable");
+    ).rejects.toMatchObject({ name: "ScrapingFailure", category: "blocked" });
   });
 });
 

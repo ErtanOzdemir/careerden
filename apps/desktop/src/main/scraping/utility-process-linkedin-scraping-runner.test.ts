@@ -13,9 +13,10 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
     });
 
     const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
-    const rejection = expect(scrapePromise).rejects.toThrow(
-      "LinkedIn scraping utility process did not respond within 100ms",
-    );
+    const rejection = expect(scrapePromise).rejects.toMatchObject({
+      category: "unknown",
+      detail: "LinkedIn scraping utility process did not respond within 100ms",
+    });
 
     await vi.advanceTimersByTimeAsync(100);
 
@@ -68,10 +69,34 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
     child.emit("message", {
       type: "scrape:error",
       requestId: request.requestId,
-      message: "LinkedIn redirected to login",
+      message: "LinkedIn is limiting access right now.",
+      category: "rate_limited",
+      detail: "LinkedIn responded 429 Too Many Requests",
     });
 
-    await expect(scrapePromise).rejects.toThrow("LinkedIn redirected to login");
+    await expect(scrapePromise).rejects.toMatchObject({
+      name: "ScrapingFailure",
+      category: "rate_limited",
+      detail: "LinkedIn responded 429 Too Many Requests",
+    });
+  });
+
+  it("treats an uncategorized utility process error as unknown", async () => {
+    const child = createUtilityProcess();
+    const runner = new UtilityProcessLinkedInScrapingRunner({
+      fork: vi.fn(() => child),
+      modulePath: "/dist/main/scraping/scraping-utility-process.js",
+    });
+    const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
+    const request = child.messages[0] as { requestId: string };
+
+    child.emit("message", {
+      type: "scrape:error",
+      requestId: request.requestId,
+      message: "Something else",
+    });
+
+    await expect(scrapePromise).rejects.toMatchObject({ category: "unknown" });
   });
 
   it("rejects pending scrape requests when the utility process exits", async () => {

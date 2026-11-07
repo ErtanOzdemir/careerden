@@ -407,6 +407,40 @@ describe("InMemoryJobApplicationRepository", () => {
     expect(reclaimed?.scrapeAttemptCount).toBe(2);
   });
 
+  it("keeps the scrape failure category until the next claim clears it", async () => {
+    const repository = new InMemoryJobApplicationRepository();
+    const job = await repository.create({
+      profileId: "profile-1",
+      sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    });
+    await repository.claimNextScrapeJob({
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+      now: new Date("2026-06-30T10:00:00.000Z"),
+    });
+
+    const failed = await repository.recordScrapeFailure(job.id, {
+      claimedBy: "desktop-a",
+      reason: "LinkedIn received too many requests.",
+      category: "rate_limited",
+      maxAttempts: 2,
+      backoffMs: 0,
+      now: new Date("2026-06-30T10:00:10.000Z"),
+    });
+
+    expect(failed).toMatchObject({ status: "queued", scrapeFailureCategory: "rate_limited" });
+
+    const reclaimed = await repository.claimNextScrapeJob({
+      profileId: "profile-1",
+      claimedBy: "desktop-a",
+      claimDurationMs: 600_000,
+      now: new Date("2026-06-30T10:00:20.000Z"),
+    });
+
+    expect(reclaimed?.scrapeFailureCategory).toBeUndefined();
+  });
+
   it("renews a scrape claim only for the owning desktop instance", async () => {
     const repository = new InMemoryJobApplicationRepository();
     const job = await repository.create({

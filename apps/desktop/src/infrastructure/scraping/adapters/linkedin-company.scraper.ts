@@ -1,17 +1,26 @@
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
+import { ScrapingFailure } from "../../../domain/scraping/scraping-failure.js";
+import {
+  fetchLinkedInGuestPage,
+  linkedInParseFailure,
+  type LinkedInScraperLogger,
+} from "./linkedin-guest-fetch.js";
 
 export interface LinkedInCompanyScraperOptions {
   fetch?: typeof fetch;
+  logger?: LinkedInScraperLogger;
 }
 
 export const linkedInGuestCompanyParserVersion = "linkedin-guest-company-v1";
 
 export class LinkedInCompanyScraper implements JobSiteScraper {
   private readonly fetchImpl: typeof fetch;
+  private readonly logger: LinkedInScraperLogger;
 
   constructor(options: LinkedInCompanyScraperOptions = {}) {
     this.fetchImpl = options.fetch ?? fetch;
+    this.logger = options.logger ?? console;
   }
 
   canHandle(url: string): boolean {
@@ -42,14 +51,22 @@ export class LinkedInCompanyScraper implements JobSiteScraper {
       };
     }
 
-    const response = await fetchLinkedInGuestCompanyHtml(this.fetchImpl, companyUrl);
-
-    return parseLinkedInGuestCompanyHtml(response.html, {
+    const response = await fetchLinkedInGuestPage(
+      this.fetchImpl,
       companyUrl,
-      finalUrl: response.finalUrl,
-      input,
-      strategy: "guest",
-    });
+      linkedInRequestHeaders,
+    );
+
+    return parseLinkedInGuestCompanyHtml(
+      response.html,
+      {
+        companyUrl,
+        finalUrl: response.finalUrl,
+        input,
+        strategy: "guest",
+      },
+      this.logger,
+    );
   }
 }
 
@@ -63,9 +80,10 @@ export interface ParseLinkedInGuestCompanyInput {
 export function parseLinkedInGuestCompanyHtml(
   html: string,
   input: ParseLinkedInGuestCompanyInput,
+  logger: LinkedInScraperLogger = console,
 ): ScrapedCompany {
   if (isLinkedInAuthenticationPage(input.finalUrl, html)) {
-    throw new Error("linkedin_guest_company_unavailable: LinkedIn required authentication");
+    throw new ScrapingFailure("blocked", "LinkedIn required authentication");
   }
 
   const organization = extractLinkedInOrganizationData(html);
@@ -84,7 +102,12 @@ export function parseLinkedInGuestCompanyHtml(
   const logoUrl = chooseLinkedInCompanyLogoUrl([{ src: input.input.logoUrl }]);
 
   if (!organization && !description && !websiteUrl && !logoUrl) {
-    throw new Error("LinkedIn public company details were not exposed");
+    throw linkedInParseFailure(logger, {
+      adapter: "linkedin-company",
+      missing: ["organization", "description", "websiteUrl", "logoUrl"],
+      parserVersion: linkedInGuestCompanyParserVersion,
+      url: input.companyUrl,
+    });
   }
 
   return {
@@ -150,36 +173,13 @@ export function normalizeLinkedInCompanyUrl(linkedInUrl?: string): string | unde
   return `${parsed.origin}/company/${slug}/`;
 }
 
-async function fetchLinkedInGuestCompanyHtml(
-  fetchImpl: typeof fetch,
-  companyUrl: string,
-): Promise<{ finalUrl: string; html: string }> {
-  const response = await fetchImpl(companyUrl, {
-    headers: {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    },
-    redirect: "follow",
-  });
-
-  if (response.status === 404) {
-    throw new Error("LinkedIn company was not found");
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `LinkedIn public company fetch failed: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  return {
-    finalUrl: response.url || companyUrl,
-    html: await response.text(),
-  };
-}
+const linkedInRequestHeaders = {
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+};
 
 function extractLinkedInOrganizationData(html: string): Record<string, unknown> | undefined {
   const organizations: Array<Record<string, unknown>> = [];

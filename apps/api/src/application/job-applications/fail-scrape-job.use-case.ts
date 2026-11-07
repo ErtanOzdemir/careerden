@@ -1,9 +1,11 @@
+import type { ScrapingFailureCategory } from "@careerden/contracts";
 import type { PersistenceUnitOfWork } from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
 import { getActiveAccessibleJobApplication } from "@careerden/application";
-
-const maxScrapeAttempts = 3;
-const scrapeRetryBackoffMs = [60_000, 300_000];
+import {
+  scrapeRetryBackoffMs,
+  scrapeRetryPolicyFor,
+} from "../../domain/scraping/scrape-retry-policy.js";
 
 export type FailScrapeJobResult = "failed" | "retry_scheduled";
 
@@ -13,7 +15,7 @@ export class FailScrapeJobUseCase {
   async execute(
     jobApplicationId: string,
     userId: string,
-    input: { claimedBy: string; reason: string },
+    input: { claimedBy: string; reason: string; category?: ScrapingFailureCategory },
     now = new Date(),
   ): Promise<FailScrapeJobResult> {
     return this.unitOfWork.execute(async ({ jobApplications, jobApplicationChanges, profiles }) => {
@@ -30,11 +32,13 @@ export class FailScrapeJobUseCase {
         );
       }
 
+      const retryPolicy = scrapeRetryPolicyFor(input.category);
       const updated = await jobApplications.recordScrapeFailure(jobApplicationId, {
         claimedBy: input.claimedBy,
         reason: input.reason,
-        maxAttempts: maxScrapeAttempts,
-        backoffMs: scrapeRetryBackoffMs[jobApplication.scrapeAttemptCount - 1] ?? 0,
+        ...(input.category ? { category: input.category } : {}),
+        maxAttempts: retryPolicy.maxAttempts,
+        backoffMs: scrapeRetryBackoffMs(retryPolicy, jobApplication.scrapeAttemptCount),
         now,
       });
       if (!updated) throw new ApplicationError("not_found", "Job application not found");
@@ -45,8 +49,9 @@ export class FailScrapeJobUseCase {
         title: updated.status === "failed" ? "Scraping failed" : "Scraping retry scheduled",
         body: input.reason,
         metadata: {
+          ...(input.category ? { scrapeFailureCategory: input.category } : {}),
           attempt: updated.scrapeAttemptCount,
-          maxAttempts: maxScrapeAttempts,
+          maxAttempts: retryPolicy.maxAttempts,
           ...(updated.status !== "failed" && updated.nextScrapeAttemptAt
             ? { nextAttemptAt: updated.nextScrapeAttemptAt.toISOString() }
             : {}),

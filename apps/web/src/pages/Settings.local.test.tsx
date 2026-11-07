@@ -46,4 +46,13 @@ describe("Settings in the local edition", () => {
     expect(screen.queryByRole("heading", { name: "AI provider" })).not.toBeInTheDocument();
     expect(authMocks.useSession).not.toHaveBeenCalled();
   });
+
+  it("links to the GitHub bug report form", async () => {
+    render(<Settings />);
+
+    expect(await screen.findByRole("link", { name: "Report an issue" })).toHaveAttribute(
+      "href",
+      "https://github.com/ErtanOzdemir/careerden/issues/new?template=bug_report.yml",
+    );
+  });
 });

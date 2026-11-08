@@ -167,6 +167,11 @@ review or download.
   release; publishing remains the manual gate that exposes an update to clients.
 - Both editions are released from the same tag and draft release with distinct artifact names
   and updater channels: `latest*.yml` for Careerden and `local*.yml` for Careerden Unplugged.
+  `apps/desktop/release-editions.json` lists the released editions for the build matrix and for
+  `verify-desktop-release.mjs`. That script fails the workflow before the draft exists unless
+  every listed edition has all three platform files at the tag's version, each referenced file
+  is present with a matching `sha512`, and the update policy is valid. Single-edition releases
+  are not supported, and a released edition is never removed from the list.
 - Packaged desktop builds check public GitHub Releases at startup, hourly, and on demand.
   Update discovery comes from electron-builder's platform `latest*.yml`; the separately
   published policy controls only `minimumSupportedVersion`. Private or unreachable

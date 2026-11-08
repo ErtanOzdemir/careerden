@@ -109,6 +109,7 @@ The Vite proxy also exposes the health check at <http://localhost:5173/api/healt
 | `pnpm --filter @careerden/desktop package`                     | Package desktop for the current host platform            |
 | `pnpm --filter @careerden/desktop package:local`               | Package Careerden Unplugged after a local edition build  |
 | `pnpm --filter @careerden/infrastructure smoke:playwright-pdf` | Verify local Playwright PDF rendering                    |
+| `pnpm verify:desktop-release <tag>`                            | Check a desktop release has every edition's metadata     |
 | `pnpm build`                                                   | Build every workspace                                    |
 | `pnpm test`                                                    | Run all Vitest suites                                    |
 | `pnpm lint`                                                    | Run ESLint                                               |

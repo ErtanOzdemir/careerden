@@ -265,8 +265,10 @@ Before creating a tag:
   [desktop runtime and release guide](apps/desktop/README.md#draft-release-workflow).
 
 After the workflow succeeds, smoke-test both macOS architectures and every other
-installer, confirm all `latest*.yml`, blockmap, and policy assets exist, and verify
-checksums before manually publishing the draft. Drafts are not visible to installed
+installer, run `pnpm verify:desktop-release <tag>` to confirm every edition's `latest*.yml`
+or `local*.yml` metadata, referenced files, policy, and checksums, and only then manually
+publish the draft. A release must contain every edition in
+`apps/desktop/release-editions.json`; releasing only one edition is not supported. Drafts are not visible to installed
 updaters. A workflow rerun may update draft assets, but published release tags and assets
 must never be moved or reused.
 

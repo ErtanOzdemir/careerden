@@ -130,6 +130,18 @@ writes the file; utility processes post entries to it.
 The level is `info` by default. **Settings → Diagnostics → Detailed logging** in the local
 edition switches to `debug` and stores the choice in `userData/log-settings.json`.
 
+The same panel offers **Copy diagnostics**, **Open log folder**, and **Open data folder**. Copy
+diagnostics puts a Markdown summary on the clipboard, ready for a GitHub issue: app version,
+edition, Electron and Chromium versions; OS, OS version, and architecture; the PGlite engine
+version and newest applied migration, which the local backend reports over a
+`diagnostics:request` parent-port message; the selected AI provider (never its key) and, on
+Linux, the `safeStorage` backend; the updater status and last check time; and the last 50 log
+lines. The main process builds and copies the summary and opens folders with `shell.openPath`
+and `shell.showItemInFolder`; the argument-free `desktop-diagnostics-*` channels return a
+status only, never the summary or a path. Every value passes through the log file's redaction
+again, with the active AI key registered as a secret first. The startup recovery screen copies
+the same summary with the startup failure added.
+
 Run it in development without Docker services:
 
 ```bash
@@ -177,8 +189,8 @@ shows a recovery screen at `/recovery` instead of opening:
 
 The first two unexpected exits after a successful start still relaunch the app with the
 "Your data is safe" notice. The screen offers to restore a snapshot, open the data folder,
-copy diagnostics (error, app and Electron version, last migration, and OS, with the home
-folder replaced by `~`), or quit. Snapshots are listed through `LocalDataSnapshotSource`.
+copy the diagnostics summary described under [Local log file](#local-log-file) with the
+startup failure added, or quit. Snapshots are listed through `LocalDataSnapshotSource`.
 The current source reads data-folder copies named `backups/<kind>-<UTC time>/`, for example
 `before-migration-2026-11-05T09-15-00Z/` holding `pglite/` and `files/`. A restore copies one
 over `data/`, keeps the replaced folder as `backups/before-restore-<time>/`, and relaunches.

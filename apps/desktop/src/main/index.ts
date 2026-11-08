@@ -23,6 +23,8 @@ import { registerAiCredentialsIpc } from "./ai-credentials/ai-credentials-ipc.js
 import { AiCredentialsStore } from "./ai-credentials/ai-credentials-store.js";
 import { AiModelCatalogManager } from "./ai-models/ai-model-catalog-manager.js";
 import { getDesktopAppIdentity } from "./desktop-app-identity.js";
+import { DesktopDiagnostics } from "./diagnostics/desktop-diagnostics.js";
+import { registerDiagnosticsIpc } from "./diagnostics/diagnostics-ipc.js";
 import { loadDesktopRuntimeConfig, type DesktopRuntimeConfig } from "./desktop-runtime-config.js";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
@@ -60,7 +62,7 @@ import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
 import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
 import { DirectoryLocalDataSnapshots } from "./startup-recovery/local-data-snapshots.js";
 import { RestartLoopGuard } from "./startup-recovery/restart-loop-guard.js";
-import { formatStartupDiagnostics, redactHomeDir } from "./startup-recovery/startup-diagnostics.js";
+import { redactHomeDir } from "./startup-recovery/startup-diagnostics.js";
 import { toStartupFailure, type StartupFailure } from "./startup-recovery/startup-failure.js";
 import {
   registerStartupRecoveryIpc,
@@ -196,8 +198,19 @@ async function initializeDesktopRuntime(): Promise<void> {
     localRestartGuard = new RestartLoopGuard({
       statePath: join(app.getPath("userData"), "local-backend-restarts.json"),
     });
-    startupRecovery = createStartupRecovery(localRestartGuard);
+    const diagnostics = createDesktopDiagnostics(aiCredentialsStore);
+    startupRecovery = createStartupRecovery(localRestartGuard, diagnostics);
     registerStartupRecoveryIpc(ipcHandlers, startupRecovery);
+    registerDiagnosticsIpc(ipcHandlers, {
+      collect: () => diagnostics.collect(),
+      writeClipboard: (text) => clipboard.writeText(text),
+      logsDirectory: logger.directory,
+      ensureDirectory: async (path) => {
+        await mkdir(path, { recursive: true });
+      },
+      openPath: (path) => shell.openPath(path),
+      onError: (event, error) => logger.exception(event, error),
+    });
     aiModelCatalog = createAiModelCatalogManager(desktopUpdateRepository);
     await aiModelCatalog.start();
     try {
@@ -760,7 +773,46 @@ async function showStartupRecovery(failure: StartupFailure): Promise<void> {
   await activateMainWindow();
 }
 
-function createStartupRecovery(restartGuard: RestartLoopGuard): StartupRecovery {
+// Local edition only. The summary names the AI provider but never reads its key into the text.
+function createDesktopDiagnostics(aiCredentialsStore: AiCredentialsStore): DesktopDiagnostics {
+  return new DesktopDiagnostics({
+    appName: appIdentity.name,
+    appVersion: app.getVersion(),
+    edition: runtimeConfig.edition,
+    versions: {
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+      node: process.versions.node,
+    },
+    platform: process.platform,
+    osVersion: process.getSystemVersion(),
+    arch: process.arch,
+    describeDatabase: async () => localBackend?.describeDatabase(),
+    knownLastMigration: () => localLastMigration,
+    getAiProvider: async () => {
+      const selection = await aiCredentialsStore.currentSelection();
+      // Redact the key from the log lines too, even if it was not used in this launch.
+      if (selection) logger.registerSecret(selection.apiKey);
+      return selection?.provider ?? null;
+    },
+    getSafeStorageBackend: () =>
+      process.platform === "linux" ? safeStorage.getSelectedStorageBackend() : undefined,
+    getUpdate: () =>
+      desktopUpdateManager
+        ? {
+            state: desktopUpdateManager.getState(),
+            lastCheckedAt: desktopUpdateManager.getLastCheckedAt(),
+          }
+        : undefined,
+    readLogTail: (lineCount) => logger.readTail(lineCount),
+    redact: (text) => logger.redactText(text),
+  });
+}
+
+function createStartupRecovery(
+  restartGuard: RestartLoopGuard,
+  diagnostics: DesktopDiagnostics,
+): StartupRecovery {
   const userData = app.getPath("userData");
   const homeDir = app.getPath("home");
   return new StartupRecovery({
@@ -769,19 +821,7 @@ function createStartupRecovery(restartGuard: RestartLoopGuard): StartupRecovery 
       dataDir: getLocalDataDir(),
     }),
     appVersion: app.getVersion(),
-    formatDiagnostics: (failure) =>
-      formatStartupDiagnostics({
-        failure,
-        appName: appIdentity.name,
-        appVersion: app.getVersion(),
-        electronVersion: process.versions.electron ?? "unknown",
-        platform: process.platform,
-        osVersion: process.getSystemVersion(),
-        arch: process.arch,
-        lastMigration: localLastMigration,
-        homeDir,
-        now: new Date(),
-      }),
+    formatDiagnostics: (failure) => diagnostics.collect(failure),
     redact: (text) => redactHomeDir(text, homeDir),
     writeClipboard: (text) => clipboard.writeText(text),
     openDataFolder: async () => {

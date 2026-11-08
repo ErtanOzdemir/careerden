@@ -107,6 +107,16 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     expect((events[1] as { fields: { applied: number } }).fields.applied).toBeGreaterThan(0);
   });
 
+  it("describes the embedded database engine and its newest migration", async () => {
+    const { runtime } = await start();
+
+    const diagnostics = await runtime.describeDatabase();
+
+    expect(diagnostics.engineVersion).toMatch(/^PGlite \(PostgreSQL \d+(\.\d+)*\)$/);
+    expect(diagnostics.lastMigration).toBe(runtime.lastMigration);
+    expect(diagnostics.lastMigration).toMatch(/^\d{14}_[a-z0-9_]+\.cjs$/);
+  });
+
   it("requires the per-launch session token on application routes", async () => {
     const { anonymous, request } = await start();
 

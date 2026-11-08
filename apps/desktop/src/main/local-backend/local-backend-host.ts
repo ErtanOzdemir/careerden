@@ -11,6 +11,7 @@ import {
   type LocalBackendCommand,
   type LocalBackendEvent,
   type LocalBackupSummary,
+  type LocalDatabaseDiagnostics,
   type LocalDataStartupFailure,
 } from "./local-backend-messages.js";
 
@@ -34,6 +35,7 @@ export interface LocalBackendRuntime {
     appVersion: string;
   }): Promise<LocalBackendBackupManifest>;
   lastMigration?: string | undefined;
+  describeDatabase?(): Promise<LocalDatabaseDiagnostics>;
   close(): Promise<void>;
 }
 
@@ -289,6 +291,25 @@ export function startLocalBackendHost(
     );
   }
 
+  // Answers with whatever is known; a closed runtime or a failed query leaves fields out.
+  async function describeDatabase(requestId: string): Promise<void> {
+    const current = runtime;
+    let database: LocalDatabaseDiagnostics = {};
+    try {
+      database = (await current?.describeDatabase?.()) ?? {};
+    } catch (error) {
+      logger({
+        level: "warn",
+        event: "diagnostics.database_failed",
+        fields: describeErrorForLog(error),
+      });
+    }
+    if (!database.lastMigration && current?.lastMigration) {
+      database = { ...database, lastMigration: current.lastMigration };
+    }
+    parentPort.postMessage({ type: "diagnostics:result", requestId, database });
+  }
+
   async function stop(): Promise<void> {
     await backupQueue;
     const current = server;
@@ -336,6 +357,9 @@ export function startLocalBackendHost(
         return;
       case "ai-selection:result":
         settle(pendingSelections, command.requestId, { value: command.selection });
+        return;
+      case "diagnostics:request":
+        void describeDatabase(command.requestId);
         return;
     }
   });

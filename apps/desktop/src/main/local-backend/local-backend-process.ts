@@ -9,6 +9,7 @@ import {
   type LocalBackendCommand,
   type LocalBackendEvent,
   type LocalBackupSummary,
+  type LocalDatabaseDiagnostics,
 } from "./local-backend-messages.js";
 import { LocalBackendStartError } from "../startup-recovery/startup-failure.js";
 
@@ -42,6 +43,7 @@ export interface LocalBackendProcessOptions {
   startTimeoutMs?: number;
   stopTimeoutMs?: number;
   backupTimeoutMs?: number;
+  diagnosticsTimeoutMs?: number;
 }
 
 interface PendingBackup {
@@ -57,6 +59,10 @@ export class LocalBackendProcess {
   private ready = false;
   private readonly waiters = new Set<(event: LocalBackendNotice) => void>();
   private readonly pendingBackups = new Map<string, PendingBackup>();
+  private readonly pendingDiagnostics = new Map<
+    string,
+    (database: LocalDatabaseDiagnostics | undefined) => void
+  >();
 
   constructor(private readonly options: LocalBackendProcessOptions) {}
 
@@ -84,6 +90,7 @@ export class LocalBackendProcess {
         fields: { exitCode: code },
       });
       this.failPendingBackups();
+      for (const settle of [...this.pendingDiagnostics.values()]) settle(undefined);
       if (!this.stopping && this.ready) this.options.onUnexpectedExit?.(code);
     });
 
@@ -188,6 +195,25 @@ export class LocalBackendProcess {
     }));
   }
 
+  // The engine version and newest migration, or undefined when the backend is not running or does
+  // not answer in time. Never rejects, so a diagnostics summary can always be copied.
+  describeDatabase(): Promise<LocalDatabaseDiagnostics | undefined> {
+    if (!this.child || !this.ready) return Promise.resolve(undefined);
+    const requestId = randomUUID();
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        this.pendingDiagnostics.delete(requestId);
+        resolve(undefined);
+      }, this.options.diagnosticsTimeoutMs ?? 5_000);
+      this.pendingDiagnostics.set(requestId, (database) => {
+        clearTimeout(timeout);
+        this.pendingDiagnostics.delete(requestId);
+        resolve(database);
+      });
+      this.send({ type: "diagnostics:request", requestId });
+    });
+  }
+
   private requestBackup(
     command: (requestId: string) => LocalBackendCommand,
   ): Promise<LocalBackupSummary> {
@@ -255,6 +281,11 @@ export class LocalBackendProcess {
 
     if (event.type === "backup:error") {
       this.settleBackup(event.requestId, { error: new Error(event.message) });
+      return;
+    }
+
+    if (event.type === "diagnostics:result") {
+      this.pendingDiagnostics.get(event.requestId)?.(event.database);
       return;
     }
 

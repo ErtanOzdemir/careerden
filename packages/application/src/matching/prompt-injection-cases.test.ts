@@ -40,7 +40,7 @@ describe("prompt injection cases", () => {
           const { system, prompt } = await captureMatchAnalysisPrompt(testCase);
 
           expect(findInjectedCanaries(prompt, testCase.canaries)).toEqual([]);
-          expect(prompt).not.toMatch(/[​-‏⁦-⁩\u{E0000}-\u{E007F}]/u);
+          expect(prompt).not.toMatch(/[\u200B-\u200F\u2066-\u2069\u{E0000}-\u{E007F}]/u);
           expect(system).not.toMatch(/[\u{E0000}-\u{E007F}]/u);
         });
       }

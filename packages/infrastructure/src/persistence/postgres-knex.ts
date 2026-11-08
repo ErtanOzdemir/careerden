@@ -14,11 +14,23 @@ export function createPostgresDb(connectionString: string): Knex {
 }
 
 export async function runPostgresMigrations(db: Knex): Promise<void> {
-  const directory = join(fileURLToPath(new URL(".", import.meta.url)), "postgres-migrations");
+  await db.migrate.latest(migrationConfig());
+}
 
-  await db.migrate.latest({
-    directory,
+// Names of the shipped migrations the database has not applied yet, oldest first. Runs none.
+export async function listPendingPostgresMigrations(db: Knex): Promise<string[]> {
+  const [, pending] = (await db.migrate.list(migrationConfig())) as [unknown, unknown[]];
+  return pending.map((migration) =>
+    typeof migration === "object" && migration !== null && "file" in migration
+      ? String(migration.file)
+      : String(migration),
+  );
+}
+
+function migrationConfig(): Knex.MigratorConfig {
+  return {
+    directory: join(fileURLToPath(new URL(".", import.meta.url)), "postgres-migrations"),
     extension: "cjs",
     loadExtensions: [".cjs"],
-  });
+  };
 }

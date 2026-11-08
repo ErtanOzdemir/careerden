@@ -114,6 +114,28 @@ The launcher starts the web dev server and Electron with a fixed backend port (`
 a per-run token so the Vite proxy can reach the backend. Local data lives in
 `Careerden Unplugged` under the operating system's application data directory.
 
+### Pre-migration snapshots
+
+The backend migrates the database on every start, so before a start that may change existing
+data it copies `data/pglite`, `data/files`, and `data/last-opened-version.json` to
+`userData/backups/before-migration-<UTC time>/`, together with a `snapshot.json` recording the
+version the data came from and the version opening it. A snapshot is taken when the app version
+differs from the one in `data/last-opened-version.json`, or when it is unchanged but migrations
+are pending (for example after a failed upgrade). Pending migrations are listed with the
+database open, and it is closed again before anything is copied; the copy is written under a
+`.partial-` name and renamed only when complete. The version record is updated only after the
+migrations succeed. A fresh install has nothing to copy, and a relaunch of the same version takes
+no snapshot.
+
+The three newest pre-migration snapshots are kept and older ones deleted; other backups in the
+folder are left alone. Before copying, the backend checks that the disk has room for the copy
+plus 100 MB. Without it, the start fails with a message asking the user to free up space, and
+neither migrations nor the version record are touched. Snapshot creation and pruning are logged
+to `userData/logs/local-backend.log`.
+
+Copying a snapshot's contents over `data/` while the app is closed opens the app with the data
+as that version left it. Only open it with the version recorded in its `snapshot.json` or newer.
+
 ## Renderer Security Boundary
 
 The main renderer runs with context isolation and Chromium sandboxing enabled and without

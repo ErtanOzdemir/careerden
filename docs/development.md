@@ -137,7 +137,10 @@ or publishing a version.
 
 PostgreSQL migrations run automatically during API startup, and in Careerden Unplugged on
 every app start against its embedded PGlite database. Because local migrations run on users'
-devices where they cannot be rolled back, keep migrations additive. They can also be managed
+devices where they cannot be rolled back, keep migrations additive. Before a version change or
+pending migrations, Unplugged copies its data to `userData/backups/` first (see
+[pre-migration snapshots](../apps/desktop/README.md#pre-migration-snapshots)), but that is a
+recovery path, not a rollback. They can also be managed
 from the repository root:
 
 ```bash

@@ -3,7 +3,18 @@ import type { AiProviderSelection } from "@careerden/infrastructure";
 
 // Main process -> local backend utility process.
 export type LocalBackendCommand =
-  | { type: "start"; dataDir: string; sessionToken: string; port: number }
+  | {
+      type: "start";
+      dataDir: string;
+      sessionToken: string;
+      port: number;
+      // Recorded with the data after a successful launch; a change snapshots the data first.
+      appVersion: string;
+      // userData/backups, where pre-migration snapshots are kept.
+      backupsDir: string;
+      // Appended with snapshot creation and pruning.
+      logFile: string;
+    }
   | { type: "stop" }
   | { type: "pdf:result"; requestId: string; pdf: Uint8Array }
   | { type: "pdf:error"; requestId: string; message: string }
@@ -25,7 +36,10 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
     case "start":
       return isString(payload.dataDir) &&
         isString(payload.sessionToken) &&
-        Number.isInteger(payload.port)
+        Number.isInteger(payload.port) &&
+        isString(payload.appVersion) &&
+        isString(payload.backupsDir) &&
+        isString(payload.logFile)
         ? (payload as unknown as LocalBackendCommand)
         : undefined;
     case "stop":

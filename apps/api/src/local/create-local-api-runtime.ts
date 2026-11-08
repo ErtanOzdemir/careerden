@@ -40,12 +40,14 @@ import {
   PostgresReminderOutboxDispatcher,
   PostgresUserProfileRepository,
   ResolvingAiProvider,
-  createPgliteDb,
-  runPostgresMigrations,
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
+import {
+  prepareLocalDatabase,
+  type LocalDataSnapshotPolicy,
+} from "../infrastructure/persistence/prepare-local-database.js";
 import { HttpRemoteImageFetcher } from "../infrastructure/scraping/http-remote-image.fetcher.js";
 import { createLocalFileRouter } from "./local-files.routes.js";
 import { localSession } from "./local-session.middleware.js";
@@ -67,6 +69,9 @@ export interface LocalApiRuntimeOptions {
   // Test seam for the provider built from a selection.
   createAiProvider?: (selection: AiProviderSelection) => AiProvider;
   backgroundPollIntervalMs?: number;
+  // Copies the data to the backups folder before migrations may change it. The desktop app
+  // always passes it; scripts and tests that open throwaway data may leave it out.
+  dataSnapshots?: LocalDataSnapshotPolicy;
 }
 
 export interface LocalApiRuntime {
@@ -83,8 +88,7 @@ export async function createLocalApiRuntime(
 ): Promise<LocalApiRuntime> {
   // PGlite creates only its own directory, not missing parents.
   await mkdir(options.dataDir, { recursive: true });
-  const db = createPgliteDb(join(options.dataDir, "pglite"));
-  await runPostgresMigrations(db);
+  const db = await prepareLocalDatabase(options.dataDir, options.dataSnapshots);
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")

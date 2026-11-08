@@ -180,6 +180,11 @@ review or download.
   workflow derives it from the current repository so forks never default to upstream
   update metadata; packaged local builds without it keep the updater disabled.
 - PostgreSQL migrations are run through Knex during API startup.
+- Careerden Unplugged snapshots its data before migrating it. When the app version differs from
+  `userData/data/last-opened-version.json`, or migrations are pending, `prepareLocalDatabase`
+  copies `data/pglite` and `data/files` to `userData/backups/before-migration-<time>/` while
+  PGlite is closed, keeps the newest three, and refuses to migrate without free space for the
+  copy. The version record is written only after migrations succeed.
 - Every released version keeps a Careerden Unplugged upgrade fixture, a SQL dump with stored
   files under `apps/api/test/fixtures/pglite/v<version>/`, built at that release's schema by
   `pnpm --filter @careerden/api-app fixture:pglite`. `pnpm test` migrates each one. Released

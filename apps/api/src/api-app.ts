@@ -66,7 +66,7 @@ import type { AiAvailability } from "./domain/matching/ai-availability.js";
 import type { RemoteImageFetcher } from "./domain/scraping/remote-image-fetcher.js";
 import { createBillingRouter } from "./billing/billing.routes.js";
 import { createJobApplicationRouter } from "./job-applications/job-applications.routes.js";
-import { errorHandler } from "./middleware/error-handler.js";
+import { createErrorHandler, type UnexpectedApiErrorLogger } from "./middleware/error-handler.js";
 import { createSecurityHeadersMiddleware } from "./middleware/security-headers.middleware.js";
 import { traceIdMiddleware } from "./middleware/trace-id.middleware.js";
 import { createNotificationRouter } from "./notifications/notifications.routes.js";
@@ -94,6 +94,8 @@ export interface ApiAppDependencies {
     // Mounted before JSON body parsing, for handlers that consume the raw request body.
     mountRawRoutes?: (app: Express) => void;
     authenticate: RequestHandler;
+    // Absent writes unexpected errors to the console.
+    logUnexpectedError?: UnexpectedApiErrorLogger;
   };
   // Absent leaves the route group unmounted.
   billing?: Parameters<typeof createBillingRouter>[0];
@@ -279,7 +281,7 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
       }),
     );
   }
-  app.use(errorHandler);
+  app.use(createErrorHandler(dependencies.http.logUnexpectedError));
 
   return app;
 }

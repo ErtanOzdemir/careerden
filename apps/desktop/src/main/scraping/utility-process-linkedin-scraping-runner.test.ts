@@ -88,6 +88,53 @@ describe("UtilityProcessLinkedInScrapingRunner", () => {
       "LinkedIn scraping utility process exited with code 1",
     );
   });
+
+  it("forwards utility process log entries and logs unexpected exits", async () => {
+    const child = createUtilityProcess();
+    const log = vi.fn();
+    const childLog = vi.fn();
+    const runner = new UtilityProcessLinkedInScrapingRunner({
+      childLog,
+      fork: vi.fn(() => child),
+      log,
+      modulePath: "/dist/main/scraping/scraping-utility-process.js",
+    });
+    const scrapePromise = runner.scrape("https://www.linkedin.com/jobs/view/1");
+
+    child.emit("message", {
+      type: "log",
+      entry: { level: "warn", event: "scrape.failed", fields: { statusCode: 429 } },
+    });
+    child.emit("exit", 1);
+
+    await expect(scrapePromise).rejects.toThrow();
+    expect(childLog).toHaveBeenCalledWith({
+      level: "warn",
+      event: "scrape.failed",
+      fields: { statusCode: 429 },
+    });
+    expect(log).toHaveBeenCalledWith({
+      level: "warn",
+      event: "scraper.unexpected_exit",
+      fields: { exitCode: 1 },
+    });
+  });
+
+  it("does not log an exit it caused by disposing", () => {
+    const child = createUtilityProcess();
+    const log = vi.fn();
+    const runner = new UtilityProcessLinkedInScrapingRunner({
+      fork: vi.fn(() => child),
+      log,
+      modulePath: "/dist/main/scraping/scraping-utility-process.js",
+    });
+    void runner.scrape("https://www.linkedin.com/jobs/view/1").catch(() => undefined);
+
+    runner.dispose();
+    child.emit("exit", 0);
+
+    expect(log).not.toHaveBeenCalled();
+  });
 });
 
 function createUtilityProcess() {

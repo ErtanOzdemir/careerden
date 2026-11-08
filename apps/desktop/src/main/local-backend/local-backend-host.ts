@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import { dirname } from "node:path";
 import type { DocumentRenderer } from "@careerden/domain";
 import type { AiProviderSelection, AiProviderSelectionSource } from "@careerden/infrastructure";
-import { createLocalBackendLog } from "./local-backend-log.js";
+import { describeErrorForLog, type StructuredLogger } from "@careerden/infrastructure/logging";
 import {
   parseLocalBackendCommand,
   type LocalBackendCommand,
@@ -43,6 +43,7 @@ export type CreateLocalBackendRuntime = (options: {
   pdfRenderer: DocumentRenderer;
   aiProviderSelection: AiProviderSelectionSource;
   dataSnapshots: { appVersion: string; backupsDir: string; log: (message: string) => void };
+  logger: StructuredLogger;
 }) => Promise<LocalBackendRuntime>;
 
 // Validates an archive and restores it into `stagingDir`, leaving the live data untouched.
@@ -88,6 +89,8 @@ export function startLocalBackendHost(
   let runtime: LocalBackendRuntime | undefined;
   let runtimeOptions: Parameters<CreateLocalBackendRuntime>[0] | undefined;
   let server: Server | undefined;
+  // The main process owns the log file; entries travel over the parent port.
+  const logger: StructuredLogger = (entry) => parentPort.postMessage({ type: "log", entry });
   // Backups run one at a time, and an import replaces the runtime the next one uses.
   let backupQueue: Promise<unknown> = Promise.resolve();
 
@@ -147,8 +150,11 @@ export function startLocalBackendHost(
         dataSnapshots: {
           appVersion: command.appVersion,
           backupsDir: command.backupsDir,
-          log: createLocalBackendLog(command.logFile),
+          // Snapshot messages hold versions, snapshot IDs, and sizes only.
+          log: (message) =>
+            logger({ level: "info", event: "data_snapshot.updated", fields: { message } }),
         },
+        logger,
       };
       runtime = await createRuntime(runtimeOptions);
       // Requests reach whichever runtime is current, so an import can swap it on the same port.
@@ -269,7 +275,11 @@ export function startLocalBackendHost(
       (summary) => parentPort.postMessage({ type: "backup:result", requestId, summary }),
       (error: unknown) => {
         const userFacing = error instanceof Error && error.name === userFacingErrorName;
-        if (!userFacing) console.error(failureMessage, error);
+        logger({
+          level: userFacing ? "warn" : "error",
+          event: "backup.failed",
+          fields: { task: failureMessage, ...describeErrorForLog(error) },
+        });
         parentPort.postMessage({
           type: "backup:error",
           requestId,

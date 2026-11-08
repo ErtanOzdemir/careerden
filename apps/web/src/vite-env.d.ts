@@ -45,6 +45,8 @@ interface AiCredentialsInput {
 
 type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
 
+type DesktopLogLevel = "info" | "debug";
+
 interface LocalBackupSummary {
   createdAt: string;
   appVersion: string;
@@ -88,6 +90,11 @@ interface Window {
       remove: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
+    };
+    // Present only in the local desktop edition. Exposes the log level, never log contents.
+    logging?: {
+      getLevel: () => Promise<DesktopLogLevel>;
+      setLevel: (level: DesktopLogLevel) => Promise<DesktopLogLevel>;
     };
     // Present only in the local desktop edition. File dialogs open in the main process.
     localData?: {

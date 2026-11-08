@@ -1,8 +1,10 @@
 import process from "node:process";
-import { toScrapeFailureReason } from "@careerden/domain";
+import { parseScrapeFailureReason, toScrapeFailureReason } from "@careerden/domain";
+import { describeErrorForLog, type StructuredLogEntry } from "@careerden/infrastructure/logging";
 import { ScrapeLinkedInJobUseCase } from "../../application/scraping/scrape-linkedin-job.use-case.js";
 import { LinkedInCompanyScraper } from "../../infrastructure/scraping/adapters/linkedin-company.scraper.js";
 import { LinkedInJobScraper } from "../../infrastructure/scraping/adapters/linkedin-job.scraper.js";
+import { createStructuredLogMessage } from "../logging/structured-log-message.js";
 import {
   parseScrapingUtilityRequest,
   type ScrapingUtilityResponse,
@@ -25,12 +27,21 @@ async function handleMessage(message: unknown): Promise<void> {
     return;
   }
 
+  const startedAt = Date.now();
   try {
     const scrapeLinkedInJob = new ScrapeLinkedInJobUseCase(
       new LinkedInJobScraper(),
       new LinkedInCompanyScraper(),
     );
     const scrapeBundle = await scrapeLinkedInJob.execute(request.sourceUrl);
+    log({
+      level: "debug",
+      event: "scrape.succeeded",
+      fields: {
+        durationMs: Date.now() - startedAt,
+        hasLinkedInCompany: scrapeBundle.companyLinkedIn !== undefined,
+      },
+    });
 
     postMessage({
       type: "scrape:success",
@@ -38,13 +49,28 @@ async function handleMessage(message: unknown): Promise<void> {
       scrapeBundle,
     });
   } catch (error) {
+    // Only the message crosses the process boundary, so classify while the error type is known.
+    const reason = toScrapeFailureReason(error);
+    log({
+      level: "warn",
+      event: "scrape.failed",
+      fields: {
+        category: parseScrapeFailureReason(reason)?.category ?? "unknown",
+        durationMs: Date.now() - startedAt,
+        ...describeErrorForLog(error),
+      },
+    });
     postMessage({
       type: "scrape:error",
       requestId: request.requestId,
-      // Only the message crosses the process boundary, so classify while the error type is known.
-      message: toScrapeFailureReason(error),
+      message: reason,
     });
   }
+}
+
+// The main process owns the log file; entries travel over the parent port.
+function log(entry: StructuredLogEntry): void {
+  parentPort.postMessage(createStructuredLogMessage(entry));
 }
 
 function postMessage(message: ScrapingUtilityResponse): void {

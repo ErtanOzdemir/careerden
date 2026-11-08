@@ -52,6 +52,13 @@ export interface AiCredentialsAPI {
   test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
 }
 
+export type DesktopLogLevel = "info" | "debug";
+
+export interface DesktopLoggingAPI {
+  getLevel: () => Promise<DesktopLogLevel>;
+  setLevel: (level: DesktopLogLevel) => Promise<DesktopLogLevel>;
+}
+
 export interface LocalBackupSummary {
   createdAt: string;
   appVersion: string;
@@ -115,6 +122,8 @@ export interface ElectronAPI {
   edition: DesktopEdition;
   // Present only in the local edition.
   aiCredentials?: AiCredentialsAPI;
+  // Present only in the local edition.
+  logging?: DesktopLoggingAPI;
   // Present only in the local edition.
   localData?: LocalDataAPI;
   startupRecovery?: StartupRecoveryAPI;

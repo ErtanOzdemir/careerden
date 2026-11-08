@@ -1,6 +1,8 @@
 import { aiProviderModelsSchema } from "@careerden/contracts";
 import { aiProviderNames } from "@careerden/infrastructure";
 import type { AiProviderSelection } from "@careerden/infrastructure";
+import type { StructuredLogEntry } from "@careerden/infrastructure/logging";
+import { parseStructuredLogMessage } from "../logging/structured-log-message.js";
 
 // What the main process learns about a backup it exported or imported.
 export interface LocalBackupSummary {
@@ -39,8 +41,6 @@ export type LocalBackendCommand =
       appVersion: string;
       // userData/backups, where pre-migration snapshots are kept.
       backupsDir: string;
-      // Appended with snapshot creation and pruning.
-      logFile: string;
     }
   | { type: "stop" }
   | { type: "backup:export"; requestId: string; outputPath: string; appVersion: string }
@@ -64,6 +64,7 @@ export type LocalBackendEvent =
   | { type: "stopped" }
   | { type: "pdf:request"; requestId: string; html: string }
   | { type: "ai-selection:request"; requestId: string }
+  | { type: "log"; entry: StructuredLogEntry }
   | { type: "backup:result"; requestId: string; summary: LocalBackupSummary }
   | { type: "backup:error"; requestId: string; message: string };
 
@@ -77,8 +78,7 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
         isString(payload.sessionToken) &&
         Number.isInteger(payload.port) &&
         isString(payload.appVersion) &&
-        isString(payload.backupsDir) &&
-        isString(payload.logFile)
+        isString(payload.backupsDir)
         ? (payload as unknown as LocalBackendCommand)
         : undefined;
     case "stop":
@@ -138,6 +138,10 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
         : undefined;
     case "ai-selection:request":
       return isString(payload.requestId) ? (payload as unknown as LocalBackendEvent) : undefined;
+    case "log": {
+      const entry = parseStructuredLogMessage(payload);
+      return entry ? { type: "log", entry } : undefined;
+    }
     case "backup:result":
       return isString(payload.requestId) && isLocalBackupSummary(payload.summary)
         ? (payload as unknown as LocalBackendEvent)

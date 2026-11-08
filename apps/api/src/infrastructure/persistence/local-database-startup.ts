@@ -1,9 +1,11 @@
 import type { Knex } from "knex";
 import {
   createPgliteDb,
+  describeErrorForLog,
   getPostgresMigrationStatus,
   runPostgresMigrations,
 } from "@careerden/infrastructure";
+import type { StructuredLogger } from "@careerden/infrastructure";
 
 // Why the local database could not be opened. The desktop shell shows a recovery screen for each
 // instead of restarting, because none of them goes away on the next launch.
@@ -43,10 +45,12 @@ export function describeLocalDatabaseStartupError(
 
 // Opens the PGlite database in `directory` and migrates it to the latest schema, in stages, so a
 // failure says which stage broke. The database is closed again when any stage fails. A caller
-// that already opened the database to inspect it passes that connection as `db`.
+// that already opened the database to inspect it passes that connection as `db`. Migration
+// progress and failures go to `log`.
 export async function openLocalDatabase(
   directory: string,
   db: Knex = createPgliteDb(directory),
+  log: StructuredLogger = () => undefined,
 ): Promise<{ db: Knex; lastMigration: string | undefined }> {
   try {
     // PGlite opens its files on the first query.
@@ -68,7 +72,9 @@ export async function openLocalDatabase(
       });
     }
 
-    await runPostgresMigrations(db).catch(async (error: unknown) => {
+    const startedAt = Date.now();
+    log({ level: "info", event: "migration.started", fields: { pending: status.pending.length } });
+    const applied = await runPostgresMigrations(db).catch(async (error: unknown) => {
       const reached = (await getPostgresMigrationStatus(db).catch(() => status)).latestApplied;
       throw new LocalDatabaseStartupError(
         {
@@ -80,8 +86,25 @@ export async function openLocalDatabase(
       );
     });
 
+    log({
+      level: "info",
+      event: "migration.finished",
+      fields: { applied: applied.length, durationMs: Date.now() - startedAt },
+    });
+
     return { db, lastMigration: status.pending.at(-1) ?? lastMigration };
   } catch (error) {
+    if (error instanceof LocalDatabaseStartupError) {
+      log({
+        level: "error",
+        event: error.failure.reason === "migration" ? "migration.failed" : "database.open_failed",
+        fields: {
+          reason: error.failure.reason,
+          lastMigration: error.failure.lastMigration ?? null,
+          ...describeErrorForLog(error.cause ?? error),
+        },
+      });
+    }
     await db.destroy().catch(() => undefined);
     throw error;
   }

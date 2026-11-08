@@ -28,7 +28,6 @@ function createProcess(overrides: Partial<LocalBackendProcessOptions> = {}) {
     sessionToken: "token",
     appVersion: "1.2.3",
     backupsDir: "/user-data/backups",
-    logFile: "/user-data/logs/local-backend.log",
     renderPdf: vi.fn(async () => Buffer.from("%PDF")),
     getAiSelection: vi.fn(async () => null),
     fork: vi.fn(() => child as never),
@@ -57,7 +56,6 @@ describe("LocalBackendProcess", () => {
       port: 3010,
       appVersion: "1.2.3",
       backupsDir: "/user-data/backups",
-      logFile: "/user-data/logs/local-backend.log",
     });
   });
 
@@ -228,5 +226,42 @@ describe("LocalBackendProcess", () => {
 
     await expect(exported).rejects.toThrow("stopped before the backup finished");
     await expect(backend.exportBackup("/backups/out.zip", "0.7.0")).rejects.toThrow("not running");
+  });
+
+  it("logs its lifecycle and forwards the backend's own log entries", async () => {
+    const log = vi.fn();
+    const childLog = vi.fn();
+    const { backend, child } = createProcess({ log, childLog, onUnexpectedExit: vi.fn() });
+    const started = backend.start();
+    child.reply({ type: "ready", port: 1 });
+    await started;
+
+    child.reply({
+      type: "log",
+      entry: {
+        level: "info",
+        event: "migration.finished",
+        fields: { applied: 2, nested: { profile: "Ada" } },
+      },
+    });
+    child.reply({ type: "log", entry: { level: "loud", event: "ignored" } });
+    child.emit("exit", 3);
+
+    expect(childLog).toHaveBeenCalledTimes(1);
+    expect(childLog).toHaveBeenCalledWith({
+      level: "info",
+      event: "migration.finished",
+      fields: { applied: 2 },
+    });
+    expect(log.mock.calls.map(([entry]) => entry.event)).toEqual([
+      "local_backend.starting",
+      "local_backend.ready",
+      "local_backend.unexpected_exit",
+    ]);
+    expect(log).toHaveBeenLastCalledWith({
+      level: "error",
+      event: "local_backend.unexpected_exit",
+      fields: { exitCode: 3 },
+    });
   });
 });

@@ -172,7 +172,7 @@ describe("LinkedInJobScraper", () => {
 
     await expect(
       scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
-    ).rejects.toMatchObject({ category, name: "ScrapeFailureError" });
+    ).rejects.toMatchObject({ category, name: "ScrapeFailureError", statusCode: status });
   });
 
   it("classifies a request that never reached LinkedIn as a network failure", async () => {

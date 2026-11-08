@@ -131,6 +131,12 @@ review or download.
   provider is configured. Electron prints its PDFs in a hidden window without scripts or
   network access. Reminders are restored from the database on start, delivering those up
   to seven days overdue.
+- The desktop main process is the only writer of the redacted, rotating log file
+  `userData/logs/careerden.log` (5 MB per file, at most five files). The local backend and
+  scraping utility processes post structured entries to it over their parent ports. Log
+  entries carry metadata only and pass through `@careerden/infrastructure/logging` redaction;
+  never log API keys, the per-launch session token, profile content, job posting text,
+  prompts, model output, or file contents. The local edition's Settings toggles `debug` level.
 - Careerden Unplugged exports its data as one zip archive with the `.careerden` extension: `manifest.json` (format version, schema
   version, last migration, app version, creation time), one Postgres-rendered JSON file per
   table, and the stored files. AI keys live outside the data folder and are never included.

@@ -189,7 +189,10 @@ renderer. New routes and use cases belong in the shared composition, so both edi
   category, the application page offers the manual paste form, prefilled with the LinkedIn URL;
   a pasted posting is an ordinary manual application and enters the normal analysis flow. A
   LinkedIn import feature flag only has to set the add-job dialog's `linkedInImportEnabled`, or
-  fail queued imports as `disabled`, to reuse the same flow.
+  fail queued imports as `disabled`, to reuse the same flow. The category also sets the retry
+  policy: `blocked` and `rate_limited` get one retry after 15 minutes and pause Unplugged's
+  scheduled scraping for 10, failures a retry cannot fix fail at once, and the rest keep the
+  three-attempt backoff.
 - **One version for both editions.** A single `vX.Y.Z` tag builds both editions into one draft
   release. Distinct artifact names and updater channels (`latest*.yml` and `local*.yml`) keep
   each installation on its own edition.

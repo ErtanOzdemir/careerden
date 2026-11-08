@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ScrapeFailureError } from "@careerden/domain";
 import {
   extractLinkedInCompanyLogoUrlFromHtml,
@@ -179,6 +179,37 @@ describe("LinkedInJobScraper", () => {
     const scraper = new LinkedInJobScraper({
       fetch: async () => {
         throw new TypeError("fetch failed");
+      },
+    });
+
+    await expect(
+      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
+    ).rejects.toMatchObject({ category: "network" });
+  });
+
+  it("logs a page whose layout it does not recognize", async () => {
+    const warn = vi.fn();
+    const scraper = new LinkedInJobScraper({
+      fetch: async () => new Response("<html><body>New layout</body></html>", { status: 200 }),
+      logger: { warn },
+    });
+
+    await expect(
+      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
+    ).rejects.toMatchObject({ category: "parse" });
+    expect(warn).toHaveBeenCalledWith("LinkedIn page did not match the expected structure", {
+      adapter: "linkedin-job",
+      parserVersion: linkedInGuestParserVersion,
+      url: `${linkedinGuestJobDetailEndpoint}/4300011451`,
+      detail: "LinkedIn public job details were not exposed: page layout not recognized",
+    });
+  });
+
+  it("gives up on a guest request that does not answer in time", async () => {
+    const scraper = new LinkedInJobScraper({
+      fetch: async (_input, init) => {
+        expect(init?.signal).toBeInstanceOf(AbortSignal);
+        throw new DOMException("The operation timed out.", "TimeoutError");
       },
     });
 

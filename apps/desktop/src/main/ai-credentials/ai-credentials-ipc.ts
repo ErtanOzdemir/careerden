@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AiProvider } from "@careerden/domain";
 import { aiProviderNames, createAiProvider } from "@careerden/infrastructure";
 import type { AiProviderSelection } from "@careerden/infrastructure";
+import { redactKnownSecrets } from "@careerden/infrastructure/logging";
 import type { AiCredentialsStatus, AiCredentialsStore } from "./ai-credentials-store.js";
 
 export const aiCredentialsIpcChannels = {
@@ -106,10 +107,5 @@ function describeError(error: unknown): string {
 
 // Provider errors sometimes echo part of the key back; never pass it to the renderer.
 function redactKey(message: string, apiKey: string): string {
-  let redacted = message.split(apiKey).join("[redacted]");
-  for (let length = Math.min(apiKey.length - 1, 32); length >= 8; length -= 1) {
-    redacted = redacted.split(apiKey.slice(0, length)).join("[redacted]");
-    redacted = redacted.split(apiKey.slice(-length)).join("[redacted]");
-  }
-  return redacted.slice(0, 500);
+  return redactKnownSecrets(message, [apiKey]).slice(0, 500);
 }

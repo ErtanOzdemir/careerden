@@ -1,5 +1,7 @@
 import type { ScrapeBundle, ScrapeFailureCategory } from "@careerden/domain";
 import { parseScrapeFailureReason, toScrapeFailureReason } from "@careerden/domain";
+import type { LogFieldValue, StructuredLogger } from "@careerden/infrastructure/logging";
+import { consoleStructuredLogger, describeErrorForLog } from "@careerden/infrastructure/logging";
 import { DesktopApiError, isTerminalClaimApiError } from "./desktop-api-error.js";
 
 export interface ClaimedScrapeJob {
@@ -41,12 +43,17 @@ export class LocalScrapingWorker {
       api: DesktopScrapingApiClient;
       heartbeatMs?: number;
       intervalMs?: number;
+      log?: StructuredLogger;
       now?: () => number;
       runner: LinkedInScrapingRunner;
       /** How long scheduled runs pause after LinkedIn blocks or rate-limits a scrape. */
       throttleCooldownMs?: number;
     },
   ) {}
+
+  private get log(): StructuredLogger {
+    return this.dependencies.log ?? consoleStructuredLogger;
+  }
 
   start(): void {
     if (this.interval) {
@@ -116,7 +123,11 @@ export class LocalScrapingWorker {
         return;
       }
 
-      console.error("Local scraping worker failed", error);
+      this.log({
+        level: "error",
+        event: "scraping.worker_failed",
+        fields: describeApiErrorForLog(error),
+      });
     });
   }
 
@@ -149,11 +160,10 @@ export class LocalScrapingWorker {
         });
       } catch (error) {
         if (isTerminalClaimApiError(error)) {
-          console.warn("Desktop dropped scrape claim after terminal API response", {
-            code: error.code,
-            jobApplicationId: claimed.id,
-            message: error.message,
-            status: error.status,
+          this.log({
+            level: "warn",
+            event: "scraping.claim_dropped",
+            fields: { jobApplicationId: claimed.id, ...describeApiErrorForLog(error) },
           });
           return "continue";
         }
@@ -180,6 +190,16 @@ export class LocalScrapingWorker {
       void this.dependencies.api.renewScrapeClaim(jobApplicationId).catch(() => undefined);
     }, heartbeatMs);
   }
+}
+
+// Adds the trace ID the API returns with its fixed internal error response.
+function describeApiErrorForLog(error: unknown): Record<string, LogFieldValue> {
+  const fields = describeErrorForLog(error);
+  if (error instanceof DesktopApiError) {
+    if (error.code) fields.errorCode = error.code;
+    if (typeof error.details.traceId === "string") fields.traceId = error.details.traceId;
+  }
+  return fields;
 }
 
 function errorMessage(error: unknown): string {

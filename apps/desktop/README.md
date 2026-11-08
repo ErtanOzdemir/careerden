@@ -112,6 +112,24 @@ process reads and writes the archive. An import is validated and restored into
 `before-import-<timestamp>.careerden`, and only then are the folders swapped behind the same loopback
 port. `ai-credentials.bin` is never part of a backup.
 
+### Local log file
+
+Both editions write one log file for all desktop processes to `userData/logs/careerden.log`.
+On macOS the local edition's file is
+`~/Library/Application Support/Careerden Unplugged/logs/careerden.log`. Each line is a JSON
+object with `time`, `level`, `process` (`main`, `local-backend`, or `scraper`), `event`, and
+metadata fields. The file rotates at 5 MB into `careerden.1.log` through `careerden.4.log`.
+
+The log records the app version, edition, OS, and architecture at startup; database migrations;
+the local backend's start, stop, and exit codes; update checks, downloads, and errors; scraping
+and AI failures with their category, status code, and provider; and the trace IDs of the API's
+internal error responses. It never records API keys, the per-launch session token, profile
+content, job posting text, prompts, model output, or file contents. Only the main process
+writes the file; utility processes post entries to it.
+
+The level is `info` by default. **Settings → Diagnostics → Detailed logging** in the local
+edition switches to `debug` and stores the choice in `userData/log-settings.json`.
+
 Run it in development without Docker services:
 
 ```bash
@@ -139,7 +157,7 @@ The three newest pre-migration snapshots are kept and older ones deleted; other 
 folder are left alone. Before copying, the backend checks that the disk has room for the copy
 plus 100 MB. Without it, the start fails with a message asking the user to free up space, and
 neither migrations nor the version record are touched. Snapshot creation and pruning are logged
-to `userData/logs/local-backend.log`.
+to the [local log file](#local-log-file) as `data_snapshot.updated` events.
 
 Copying a snapshot's contents over `data/` while the app is closed opens the app with the data
 as that version left it. Only open it with the version recorded in its `snapshot.json` or newer.

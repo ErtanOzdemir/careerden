@@ -48,7 +48,6 @@ const start = {
   port: 0,
   appVersion: "1.2.3",
   backupsDir: "/backups",
-  logFile: "/logs/local-backend.log",
 };
 
 describe("startLocalBackendHost", () => {
@@ -371,8 +370,7 @@ describe("startLocalBackendHost backups", () => {
     await expect(get()).resolves.toBe("current");
   });
 
-  it("reports unexpected failures with a generic message", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("reports unexpected failures with a generic message and logs them redacted", async () => {
     const { createRuntime } = runtimeFactory();
     const { port } = await host(createRuntime, async () => {
       throw new Error("EACCES: permission denied, open '/secret/path'");
@@ -383,7 +381,13 @@ describe("startLocalBackendHost backups", () => {
     await expect(port.next("backup:error")).resolves.toMatchObject({
       message: "The backup could not be imported.",
     });
-    expect(error).toHaveBeenCalled();
-    error.mockRestore();
+    const logged = port.sent.find(
+      (message): message is Extract<LocalBackendEvent, { type: "log" }> =>
+        message.type === "log" && message.entry.event === "backup.failed",
+    );
+    expect(logged?.entry).toMatchObject({
+      level: "error",
+      fields: { task: "The backup could not be imported.", errorName: "Error" },
+    });
   });
 });

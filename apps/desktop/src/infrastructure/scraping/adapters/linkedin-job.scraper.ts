@@ -426,6 +426,7 @@ async function fetchLinkedInHtml(fetchImpl: typeof fetch, url: string): Promise<
       response.status === 404
         ? "LinkedIn job was not found"
         : `LinkedIn public fetch failed: ${response.status} ${response.statusText}`,
+      response.status,
     );
   }
 

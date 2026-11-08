@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   ClipboardPaste,
+  ExternalLink,
   FileText,
   Monitor,
   Sparkles,
@@ -12,6 +13,11 @@ import {
 } from "lucide-react";
 import { jobApplicationsApi } from "../api/jobApplications.js";
 import { profilesApi } from "../api/profiles.js";
+import {
+  manualPastePrefillFromUrl,
+  type ManualPastePrefill,
+  type OpenAddJobRequest,
+} from "../lib/linkedin-import-fallback.js";
 import { Modal } from "./careerden/modal.js";
 import { Button, buttonVariants } from "./ui/button.js";
 
@@ -39,7 +45,20 @@ const emptyManualForm: ManualFormState = {
   roleTitle: "",
 };
 
-export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AddJobDialog({
+  linkedInImportEnabled = true,
+  open,
+  onClose,
+  request,
+}: {
+  // When false, the LinkedIn tab routes to the manual paste flow instead of importing. A feature
+  // flag for LinkedIn import only has to set this.
+  linkedInImportEnabled?: boolean;
+  open: boolean;
+  onClose: () => void;
+  // Opens the dialog on a prefilled form, for example after a failed LinkedIn import.
+  request?: OpenAddJobRequest;
+}) {
   const navigate = useNavigate();
   const [method, setMethod] = useState<AddMethod>("manual");
   const [url, setUrl] = useState("");
@@ -50,6 +69,8 @@ export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [tone, setTone] = useState<"concise" | "creative" | "professional">("professional");
   const [savingMethod, setSavingMethod] = useState<AddMethod | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The LinkedIn posting the pasted details come from, when LinkedIn import could not be used.
+  const [pasteSourceUrl, setPasteSourceUrl] = useState<string>();
   const isElectron = Boolean(window.electronAPI);
   const completedFields = completedRequiredFields(manual);
 
@@ -63,8 +84,39 @@ export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => 
     return () => URL.revokeObjectURL(preview);
   }, [companyLogo]);
 
+  useEffect(() => {
+    if (open && request) {
+      openPasteForm(request.prefill, true);
+    }
+  }, [open, request]);
+
+  function openPasteForm(prefill: ManualPastePrefill, replaceForm = false) {
+    setMethod("manual");
+    setError(null);
+    setPasteSourceUrl(prefill.jobUrl);
+    setManual((current) => {
+      const base = replaceForm ? emptyManualForm : current;
+      return {
+        ...base,
+        jobUrl: prefill.jobUrl,
+        companyName: base.companyName || (prefill.companyName ?? ""),
+        roleTitle: base.roleTitle || (prefill.roleTitle ?? ""),
+      };
+    });
+  }
+
+  function switchToPaste() {
+    if (url.trim()) {
+      openPasteForm(manualPastePrefillFromUrl(url));
+    } else {
+      setMethod("manual");
+      setError(null);
+    }
+  }
+
   function reset() {
     setMethod("manual");
+    setPasteSourceUrl(undefined);
     setUrl("");
     setManual(emptyManualForm);
     setCompanyLogo(undefined);
@@ -196,6 +248,12 @@ export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => 
             className="mx-5 mt-5 rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-3 text-sm text-destructive sm:mx-6"
           >
             {error}
+            {method === "linkedin" && url.trim() && (
+              <Button className="mt-2.5 flex" variant="outline" size="sm" onClick={switchToPaste}>
+                <ClipboardPaste className="size-3.5" />
+                Paste the description instead
+              </Button>
+            )}
           </div>
         )}
         {method === "manual" ? (
@@ -206,11 +264,13 @@ export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => 
             manual={manual}
             onLogoChange={updateLogo}
             onManualChange={updateManual}
+            pasteSourceUrl={pasteSourceUrl}
             saving={savingMethod !== null}
           />
         ) : (
           <LinkedInEntry
             disabled={!isElectron || savingMethod !== null}
+            importEnabled={linkedInImportEnabled}
             isElectron={isElectron}
             onUrlChange={setUrl}
             url={url}
@@ -242,22 +302,29 @@ export function AddJobDialog({ open, onClose }: { open: boolean; onClose: () => 
           <Button variant="ghost" onClick={close} disabled={savingMethod !== null}>
             Cancel
           </Button>
-          <Button
-            size="lg"
-            onClick={() => void (method === "manual" ? submitManual() : submitLinkedIn())}
-            disabled={
-              savingMethod !== null ||
-              (method === "manual" ? !isManualFormComplete(manual) : !isElectron || !url.trim())
-            }
-          >
-            {savingMethod
-              ? method === "manual"
-                ? "Adding application..."
-                : "Importing..."
-              : method === "manual"
-                ? "Add application"
-                : "Import from LinkedIn"}
-          </Button>
+          {method === "linkedin" && !linkedInImportEnabled ? (
+            <Button size="lg" onClick={switchToPaste} disabled={savingMethod !== null}>
+              <ClipboardPaste className="size-3.5" />
+              Paste the description instead
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              onClick={() => void (method === "manual" ? submitManual() : submitLinkedIn())}
+              disabled={
+                savingMethod !== null ||
+                (method === "manual" ? !isManualFormComplete(manual) : !isElectron || !url.trim())
+              }
+            >
+              {savingMethod
+                ? method === "manual"
+                  ? "Adding application..."
+                  : "Importing..."
+                : method === "manual"
+                  ? "Add application"
+                  : "Import from LinkedIn"}
+            </Button>
+          )}
         </div>
       </footer>
     </Modal>
@@ -321,6 +388,7 @@ function ManualEntry({
   manual,
   onLogoChange,
   onManualChange,
+  pasteSourceUrl,
   saving,
 }: {
   companyLogo?: File;
@@ -329,10 +397,12 @@ function ManualEntry({
   manual: ManualFormState;
   onLogoChange: (file?: File) => void;
   onManualChange: (field: keyof ManualFormState, value: string) => void;
+  pasteSourceUrl?: string;
   saving: boolean;
 }) {
   return (
     <div className="px-5 py-5 sm:px-6 sm:py-6">
+      {pasteSourceUrl && <PasteFromLinkedInHint sourceUrl={pasteSourceUrl} />}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-base font-semibold text-foreground">Paste the job details</h3>
@@ -389,6 +459,35 @@ function ManualEntry({
         onManualChange={onManualChange}
         saving={saving}
       />
+    </div>
+  );
+}
+
+function PasteFromLinkedInHint({ sourceUrl }: { sourceUrl: string }) {
+  return (
+    <div
+      role="note"
+      className="mb-5 flex items-start gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3.5"
+    >
+      <LinkedInIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">
+          Open the posting on LinkedIn, copy the description, paste it here.
+        </p>
+        <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+          <span className="shrink-0">Source link kept:</span>
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={sourceUrl}
+            className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
+          >
+            <span className="truncate">{sourceUrl}</span>
+            <ExternalLink className="size-3 shrink-0" />
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
@@ -524,11 +623,13 @@ function LogoPicker({
 
 function LinkedInEntry({
   disabled,
+  importEnabled,
   isElectron,
   onUrlChange,
   url,
 }: {
   disabled: boolean;
+  importEnabled: boolean;
   isElectron: boolean;
   onUrlChange: (value: string) => void;
   url: string;
@@ -546,7 +647,23 @@ function LinkedInEntry({
         </p>
       </div>
 
-      {!isElectron && (
+      {!importEnabled && (
+        <div
+          role="note"
+          className="mx-auto mt-5 flex max-w-xl items-start gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3.5"
+        >
+          <ClipboardPaste className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <div>
+            <p className="text-sm font-medium text-foreground">LinkedIn import is turned off</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              Add the link and paste the job description instead. Careerden keeps the link with the
+              application.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {importEnabled && !isElectron && (
         <div className="mx-auto mt-5 flex max-w-xl items-start gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3.5">
           <Monitor className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <div>
@@ -567,7 +684,7 @@ function LinkedInEntry({
             id="job-url"
             value={url}
             onChange={(event) => onUrlChange(event.target.value)}
-            disabled={disabled}
+            disabled={importEnabled && disabled}
             placeholder="https://www.linkedin.com/jobs/view/..."
             className="h-11 w-full rounded-lg border border-input bg-background pr-3 pl-10 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20 disabled:cursor-not-allowed disabled:bg-muted/50 disabled:opacity-70"
           />

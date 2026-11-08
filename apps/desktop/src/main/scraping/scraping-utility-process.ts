@@ -1,4 +1,5 @@
 import process from "node:process";
+import { toScrapeFailureReason } from "@careerden/domain";
 import { ScrapeLinkedInJobUseCase } from "../../application/scraping/scrape-linkedin-job.use-case.js";
 import { LinkedInCompanyScraper } from "../../infrastructure/scraping/adapters/linkedin-company.scraper.js";
 import { LinkedInJobScraper } from "../../infrastructure/scraping/adapters/linkedin-job.scraper.js";
@@ -40,7 +41,8 @@ async function handleMessage(message: unknown): Promise<void> {
     postMessage({
       type: "scrape:error",
       requestId: request.requestId,
-      message: error instanceof Error ? error.message : "Unknown LinkedIn scraping error",
+      // Only the message crosses the process boundary, so classify while the error type is known.
+      message: toScrapeFailureReason(error),
     });
   }
 }

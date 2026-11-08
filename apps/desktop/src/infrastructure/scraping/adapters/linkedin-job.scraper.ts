@@ -1,4 +1,5 @@
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
+import { ScrapeFailureError, scrapeFailureCategoryForHttpStatus } from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
 
 export interface LinkedInJobScraperOptions {
@@ -25,7 +26,10 @@ export class LinkedInJobScraper implements JobSiteScraper {
     const jobId = extractLinkedInJobId(url);
 
     if (!jobId) {
-      throw new Error("LinkedIn job id could not be extracted from the source URL");
+      throw new ScrapeFailureError(
+        "parse",
+        "LinkedIn job id could not be extracted from the source URL",
+      );
     }
 
     const endpoint = `${linkedinGuestJobDetailEndpoint}/${jobId}`;
@@ -62,13 +66,13 @@ export function parseLinkedInGuestJobDetailHtml(
   html: string,
   input: ParseLinkedInGuestJobDetailInput,
 ): ScrapedJob {
-  const title =
-    cleanHtmlText(
-      matchFirst(html, [
-        /class="(?:top-card-layout__title|topcard__title)[^"]*"[^>]*>([\s\S]*?)<\/h[12]>/i,
-        /<h1[^>]*>([\s\S]*?)<\/h1>/i,
-      ]),
-    ) || "Untitled LinkedIn job";
+  const parsedTitle = cleanHtmlText(
+    matchFirst(html, [
+      /class="(?:top-card-layout__title|topcard__title)[^"]*"[^>]*>([\s\S]*?)<\/h[12]>/i,
+      /<h1[^>]*>([\s\S]*?)<\/h1>/i,
+    ]),
+  );
+  const title = parsedTitle || "Untitled LinkedIn job";
   const companyMatch = html.match(
     /class="topcard__org-name-link[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i,
   );
@@ -94,8 +98,27 @@ export function parseLinkedInGuestJobDetailHtml(
     : "";
   const companyLogoUrl = extractLinkedInCompanyLogoUrlFromHtml(html);
 
-  if (!description || title.toLowerCase().includes("sign in")) {
-    throw new Error("LinkedIn public job details were not exposed");
+  if (title.toLowerCase().includes("sign in")) {
+    throw new ScrapeFailureError(
+      "blocked",
+      "LinkedIn public job details were not exposed: authentication required",
+    );
+  }
+
+  // Neither a title nor a description means LinkedIn changed the page layout; a recognized page
+  // without description text is a posting LinkedIn no longer exposes to guests.
+  if (!parsedTitle && !rawDescriptionHtml) {
+    throw new ScrapeFailureError(
+      "parse",
+      "LinkedIn public job details were not exposed: page layout not recognized",
+    );
+  }
+
+  if (!description) {
+    throw new ScrapeFailureError(
+      "empty_description",
+      "LinkedIn public job details were not exposed: empty description",
+    );
   }
 
   return {
@@ -336,27 +359,48 @@ function normalizeWhitespace(value: string): string {
 }
 
 async function fetchLinkedInHtml(fetchImpl: typeof fetch, url: string): Promise<string> {
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "X-Requested-With": "XMLHttpRequest",
-    },
-    redirect: "follow",
-  });
+  let response: Response;
 
-  if (response.status === 404) {
-    throw new Error("LinkedIn job was not found");
+  try {
+    response = await fetchImpl(url, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      redirect: "follow",
+    });
+  } catch (error) {
+    throw new ScrapeFailureError(
+      "network",
+      `LinkedIn could not be reached: ${errorMessage(error)}`,
+    );
   }
 
   if (!response.ok) {
-    throw new Error(`LinkedIn public fetch failed: ${response.status} ${response.statusText}`);
+    throw new ScrapeFailureError(
+      scrapeFailureCategoryForHttpStatus(response.status),
+      response.status === 404
+        ? "LinkedIn job was not found"
+        : `LinkedIn public fetch failed: ${response.status} ${response.statusText}`,
+    );
   }
 
-  return response.text();
+  try {
+    return await response.text();
+  } catch (error) {
+    throw new ScrapeFailureError(
+      "network",
+      `LinkedIn response could not be read: ${errorMessage(error)}`,
+    );
+  }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function matchFirst(html: string, patterns: RegExp[]): string | undefined {

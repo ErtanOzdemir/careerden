@@ -35,7 +35,10 @@ vi.mock("../api/profiles.js", () => ({
 }));
 
 describe("Settings in the local edition", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    delete window.electronAPI;
+  });
 
   it("omits account and security settings and never reads an account session", async () => {
     render(<Settings />);
@@ -45,6 +48,31 @@ describe("Settings in the local edition", () => {
     expect(screen.queryByRole("heading", { name: "Security" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "AI provider" })).not.toBeInTheDocument();
     expect(authMocks.useSession).not.toHaveBeenCalled();
+  });
+
+  it("offers data export, import, and the data folder when the desktop bridge is present", async () => {
+    window.electronAPI = {
+      notifyJobApplicationQueued: vi.fn(),
+      localData: {
+        exportData: vi.fn(async () => ({ status: "canceled" as const })),
+        importData: vi.fn(async () => ({ status: "canceled" as const })),
+        openDataFolder: vi.fn(async () => undefined),
+      },
+    };
+
+    render(<Settings />);
+
+    expect(await screen.findByRole("heading", { name: "Your data" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /export data/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /import from backup/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /open data folder/i })).toBeInTheDocument();
+  });
+
+  it("hides the data panel without the desktop bridge", async () => {
+    render(<Settings />);
+
+    expect(await screen.findByText("Processing preferences")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Your data" })).not.toBeInTheDocument();
   });
 
   it("links to the GitHub bug report form", async () => {

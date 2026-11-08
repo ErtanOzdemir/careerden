@@ -45,3 +45,4 @@ export * from "./notifications/resend-email.sender.js";
 export * from "./notifications/smtp-email.sender.js";
 export * from "./storage/local-file.storage.js";
 export * from "./storage/s3-compatible.storage.js";
+export * from "./logging/index.js";

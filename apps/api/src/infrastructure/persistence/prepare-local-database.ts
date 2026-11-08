@@ -2,6 +2,7 @@ import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { Knex } from "knex";
 import { createPgliteDb, getPostgresMigrationStatus } from "@careerden/infrastructure";
+import type { StructuredLogger } from "@careerden/infrastructure";
 import { readLastOpenedVersion, writeLastOpenedVersion } from "./last-opened-version.js";
 import { openLocalDatabase } from "./local-database-startup.js";
 import { createLocalDataSnapshot, pruneLocalDataSnapshots } from "./local-data-snapshots.js";
@@ -30,9 +31,10 @@ export interface LocalDataSnapshotPolicy {
 export async function prepareLocalDatabase(
   dataDir: string,
   snapshots?: LocalDataSnapshotPolicy,
+  logger?: StructuredLogger,
 ): Promise<{ db: Knex; lastMigration: string | undefined }> {
   const pgliteDir = join(dataDir, "pglite");
-  if (!snapshots) return openLocalDatabase(pgliteDir);
+  if (!snapshots) return openLocalDatabase(pgliteDir, undefined, logger);
 
   const log = snapshots.log ?? (() => undefined);
   const previous = await readLastOpenedVersion(dataDir);
@@ -82,7 +84,7 @@ export async function prepareLocalDatabase(
     }
   }
 
-  const opened = await openLocalDatabase(pgliteDir, db);
+  const opened = await openLocalDatabase(pgliteDir, db, logger);
   if (previous?.version !== snapshots.appVersion) {
     try {
       await writeLastOpenedVersion(dataDir, snapshots.appVersion, snapshots.now?.());

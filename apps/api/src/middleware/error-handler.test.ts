@@ -116,6 +116,7 @@ describe("errorHandler", () => {
         },
         traceId: "0af7651916cd43dd8448eb211c80319c",
       }),
+      expect.any(Error),
     );
   });
 
@@ -168,7 +169,7 @@ describe("errorHandler", () => {
     );
 
     const publicPayload = JSON.stringify(response.json.mock.calls);
-    const loggedPayload = JSON.stringify(logger.mock.calls);
+    const loggedPayload = JSON.stringify(logger.mock.calls.map(([entry]) => entry));
 
     expect(publicPayload).toContain("Internal server error");
     expect(publicPayload).not.toContain("database failed");

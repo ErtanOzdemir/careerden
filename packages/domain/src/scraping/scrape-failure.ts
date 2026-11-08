@@ -21,6 +21,8 @@ export class ScrapeFailureError extends Error {
   constructor(
     public readonly category: ScrapeFailureCategory,
     public readonly detail: string,
+    // The job site's HTTP status, when the failure came from an unsuccessful response.
+    public readonly statusCode?: number,
   ) {
     super(formatScrapeFailureReason(category, detail));
     this.name = "ScrapeFailureError";

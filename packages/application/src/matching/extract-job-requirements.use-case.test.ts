@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AiGenerateParams, AiProvider, ScrapedJob } from "@careerden/domain";
+import { parsePromptWithJobPostingData } from "./job-posting-data.js";
 import { ExtractJobRequirementsUseCase } from "./extract-job-requirements.use-case.js";
 
 describe("ExtractJobRequirementsUseCase", () => {
@@ -34,8 +35,9 @@ describe("ExtractJobRequirementsUseCase", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.system).toContain("Use only requirements that are directly supported");
-    expect(JSON.parse(calls[0]?.prompt ?? "{}")).toMatchObject({
-      jobApplicationId: "job-application-1",
+    const prompt = parsePromptWithJobPostingData(calls[0]?.prompt ?? "");
+    expect(prompt.instructions).toMatchObject({ jobApplicationId: "job-application-1" });
+    expect(prompt.jobPostingData).toMatchObject({
       title: "Backend Engineer",
       companyName: "Example Inc",
       location: "Remote",

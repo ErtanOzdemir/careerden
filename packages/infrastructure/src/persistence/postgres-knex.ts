@@ -24,8 +24,10 @@ export function createPostgresDb(connectionString: string): Knex {
   });
 }
 
-export async function runPostgresMigrations(db: Knex): Promise<void> {
-  await db.migrate.latest(migrationConfig);
+// Resolves with the names of the migrations this call applied.
+export async function runPostgresMigrations(db: Knex): Promise<string[]> {
+  const [, applied] = (await db.migrate.latest(migrationConfig)) as [unknown, string[]];
+  return applied;
 }
 
 // Every migration this build ships, oldest first. Names start with a timestamp, so they sort in

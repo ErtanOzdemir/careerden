@@ -48,7 +48,6 @@ const start = {
   port: 0,
   appVersion: "1.2.3",
   backupsDir: "/backups",
-  logFile: "/logs/local-backend.log",
 };
 
 describe("startLocalBackendHost", () => {
@@ -56,20 +55,23 @@ describe("startLocalBackendHost", () => {
 
   afterEach(async () => {
     for (const port of ports.splice(0)) {
-      port.command({ type: "stop" });
-      await port.next("stopped");
+      port.command({ type: "shutdown" });
+      await port.next("shutdown:complete");
     }
   });
 
   function host(
     createRuntime: CreateLocalBackendRuntime,
     describeStartupError?: (error: unknown) => LocalDataStartupFailure | undefined,
+    exit?: (code: number) => void,
   ) {
     const port = new FakeParentPort();
     startLocalBackendHost(port, createRuntime, {
       pdfTimeoutMs: 1_000,
       aiSelectionTimeoutMs: 1_000,
+      requestDrainTimeoutMs: 200,
       ...(describeStartupError ? { describeStartupError } : {}),
+      ...(exit ? { exit } : {}),
     });
     return port;
   }
@@ -120,6 +122,54 @@ describe("startLocalBackendHost", () => {
 
     await expect(port.next("ready")).resolves.toMatchObject({
       lastMigration: "20261031000000_profile_onboarding_state.cjs",
+    });
+  });
+
+  it("describes the open database for diagnostics", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      describeDatabase: async () => ({
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261101000000_newer.cjs",
+      }),
+      close: async () => undefined,
+    }));
+    ports.push(port);
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "diagnostics:request", requestId: "diagnostics-1" });
+
+    await expect(port.next("diagnostics:result")).resolves.toEqual({
+      type: "diagnostics:result",
+      requestId: "diagnostics-1",
+      database: {
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261101000000_newer.cjs",
+      },
+    });
+  });
+
+  it("falls back to the startup migration when the database cannot be described", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      describeDatabase: async () => {
+        throw new Error("database is busy");
+      },
+      close: async () => undefined,
+    }));
+    ports.push(port);
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "diagnostics:request", requestId: "diagnostics-2" });
+
+    await expect(port.next("diagnostics:result")).resolves.toEqual({
+      type: "diagnostics:result",
+      requestId: "diagnostics-2",
+      database: { lastMigration: "20261031000000_profile_onboarding_state.cjs" },
     });
   });
 
@@ -193,22 +243,147 @@ describe("startLocalBackendHost", () => {
     await expect(pdf).rejects.toThrow("print failed");
   });
 
-  it("closes open connections and the runtime on stop", async () => {
+  it("closes the server, then the runtime, and exits with code 0 on shutdown", async () => {
+    const order: string[] = [];
+    const exit = vi.fn((code: number) => order.push(`exit ${code}`));
+    const port = host(
+      async () => ({
+        app: (_request, response) => response.end("ok"),
+        close: async () => {
+          order.push("runtime closed");
+        },
+      }),
+      undefined,
+      exit,
+    );
+    port.on("sent", (message: LocalBackendEvent) => order.push(message.type));
+    port.command(start);
+    const ready = await port.next("ready");
+
+    port.command({ type: "shutdown" });
+    port.command({ type: "shutdown" });
+    await vi.waitFor(() => expect(exit).toHaveBeenCalled());
+
+    expect(order).toEqual(["ready", "runtime closed", "shutdown:complete", "exit 0"]);
+    await expect(fetch(`http://127.0.0.1:${ready.port}/`)).rejects.toThrow();
+  });
+
+  it("drops event streams at once and lets other requests in flight finish", async () => {
     const close = vi.fn(async () => undefined);
+    let finishSave!: () => void;
+    const saveArrived = new Promise<void>((resolve) => {
+      finishSave = resolve;
+    });
+    let respondToSave: (() => void) | undefined;
     const port = host(async () => ({
-      // Never ends the response, like a server-sent event stream.
-      app: (_request, response) => response.write("data: open\n\n"),
+      app: (request, response) => {
+        if (request.url === "/events") {
+          response.setHeader("content-type", "text/event-stream");
+          response.write("data: open\n\n");
+          return;
+        }
+        respondToSave = () => response.end("saved");
+        finishSave();
+      },
       close,
     }));
     port.command(start);
     const ready = await port.next("ready");
-    const stream = await fetch(`http://127.0.0.1:${ready.port}/stream`);
+    const stream = await fetch(`http://127.0.0.1:${ready.port}/events`);
+    const save = fetch(`http://127.0.0.1:${ready.port}/save`, { method: "POST" });
+    await saveArrived;
 
-    port.command({ type: "stop" });
-    await port.next("stopped");
+    port.command({ type: "shutdown" });
+    await expect(stream.text()).rejects.toThrow();
+    expect(close).not.toHaveBeenCalled();
+    respondToSave?.();
+
+    await expect((await save).text()).resolves.toBe("saved");
+    await port.next("shutdown:complete");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("drops requests still running after the drain timeout", async () => {
+    const close = vi.fn(async () => undefined);
+    const port = host(async () => ({
+      // Never ends the response.
+      app: (_request, response) => response.write("partial"),
+      close,
+    }));
+    port.command(start);
+    const ready = await port.next("ready");
+    const stream = await fetch(`http://127.0.0.1:${ready.port}/slow`);
+
+    port.command({ type: "shutdown" });
+    await port.next("shutdown:complete");
 
     expect(stream.status).toBe(200);
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("finishes a start in progress before shutting down, and ignores later starts", async () => {
+    let finishStart!: () => void;
+    const close = vi.fn(async () => undefined);
+    const createRuntime = vi.fn<CreateLocalBackendRuntime>(
+      () =>
+        new Promise((resolve) => {
+          finishStart = () => resolve({ app: (_request, response) => response.end(), close });
+        }),
+    );
+    const port = host(createRuntime);
+    port.command(start);
+    await vi.waitFor(() => expect(createRuntime).toHaveBeenCalled());
+
+    port.command({ type: "shutdown" });
+    port.command(start);
+    finishStart();
+    await port.next("shutdown:complete");
+
+    expect(createRuntime).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("refuses backups once shutdown has begun", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      close: async () => undefined,
+    }));
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "shutdown" });
+    port.command({
+      type: "backup:export",
+      requestId: "backup-1",
+      outputPath: "/backups/export.zip",
+      appVersion: "1.2.3",
+    });
+
+    await expect(port.next("backup:error")).resolves.toMatchObject({ requestId: "backup-1" });
+    await port.next("shutdown:complete");
+  });
+
+  it("exits with code 1 without reporting completion when closing the runtime fails", async () => {
+    const exit = vi.fn();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const port = host(
+      async () => ({
+        app: (_request, response) => response.end(),
+        close: async () => {
+          throw new Error("database is busy");
+        },
+      }),
+      undefined,
+      exit,
+    );
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "shutdown" });
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1));
+
+    expect(port.sent.some((event) => event.type === "shutdown:complete")).toBe(false);
+    error.mockRestore();
   });
 });
 
@@ -235,8 +410,8 @@ describe("startLocalBackendHost backups", () => {
 
   afterEach(async () => {
     for (const port of ports.splice(0)) {
-      port.command({ type: "stop" });
-      await port.next("stopped");
+      port.command({ type: "shutdown" });
+      await port.next("shutdown:complete");
     }
     await rm(root, { recursive: true, force: true });
   });
@@ -371,8 +546,7 @@ describe("startLocalBackendHost backups", () => {
     await expect(get()).resolves.toBe("current");
   });
 
-  it("reports unexpected failures with a generic message", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("reports unexpected failures with a generic message and logs them redacted", async () => {
     const { createRuntime } = runtimeFactory();
     const { port } = await host(createRuntime, async () => {
       throw new Error("EACCES: permission denied, open '/secret/path'");
@@ -383,7 +557,13 @@ describe("startLocalBackendHost backups", () => {
     await expect(port.next("backup:error")).resolves.toMatchObject({
       message: "The backup could not be imported.",
     });
-    expect(error).toHaveBeenCalled();
-    error.mockRestore();
+    const logged = port.sent.find(
+      (message): message is Extract<LocalBackendEvent, { type: "log" }> =>
+        message.type === "log" && message.entry.event === "backup.failed",
+    );
+    expect(logged?.entry).toMatchObject({
+      level: "error",
+      fields: { task: "The backup could not be imported.", errorName: "Error" },
+    });
   });
 });

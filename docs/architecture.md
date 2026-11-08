@@ -174,6 +174,12 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **A utility process behind a loopback token.** The backend runs outside Electron's main
   process so database and AI work never block the window. It listens only on `127.0.0.1`, and
   only requests carrying the token that Electron generates for each launch are accepted.
+- **A clean shutdown before quitting.** PGlite writes to disk, and killing it mid-write can leave
+  the data folder inconsistent. On quit, the main process sends `shutdown` and waits up to five
+  seconds: the backend stops accepting requests, drops event streams, lets other requests finish
+  for a second, gives background work in flight 2.5 seconds, closes Knex and PGlite, reports
+  `shutdown:complete`, and exits with code 0. Only then is it killed, and no exit during shutdown
+  counts as a crash.
 - **Keys in the operating system's keychain.** AI keys are encrypted with Electron
   `safeStorage` and decrypted only in the main process, which hands the active key to the backend
   for each AI call; the renderer can save, test, switch, and remove keys but never read one
@@ -211,6 +217,16 @@ renderer. New routes and use cases belong in the shared composition, so both edi
   policy: `blocked` and `rate_limited` get one retry after 15 minutes and pause Unplugged's
   scheduled scraping for 10, failures a retry cannot fix fail at once, and the rest keep the
   three-attempt backoff.
+  fail queued imports as `disabled`, to reuse the same flow.
+- **A local log file instead of telemetry.** The main process is the only writer of
+  `userData/logs/careerden.log`, which rotates at 5 MB and keeps at most five files. The local
+  backend and scraping utility processes post structured entries to it over their parent ports,
+  so rotation never races between processes. Every entry carries metadata only, such as event
+  names, status codes, provider names, and trace IDs, and passes through the same redaction rules
+  as the API's error logs plus the session token and API keys the main process holds.
+  Settings and the recovery screen copy a Markdown diagnostics summary with versions, the
+  database migration, the AI provider's name, update status, and the last 50 log lines, built
+  and copied in the main process so the renderer never receives log contents or paths.
 - **One version for both editions.** A single `vX.Y.Z` tag builds both editions into one draft
   release. Distinct artifact names and updater channels (`latest*.yml` and `local*.yml`) keep
   each installation on its own edition.

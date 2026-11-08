@@ -1,16 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, stat } from "node:fs/promises";
-import { createServer, type RequestListener, type Server } from "node:http";
+import { createServer, type RequestListener, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname } from "node:path";
 import type { DocumentRenderer } from "@careerden/domain";
 import type { AiProviderSelection, AiProviderSelectionSource } from "@careerden/infrastructure";
-import { createLocalBackendLog } from "./local-backend-log.js";
+import { describeErrorForLog, type StructuredLogger } from "@careerden/infrastructure/logging";
 import {
   parseLocalBackendCommand,
   type LocalBackendCommand,
   type LocalBackendEvent,
   type LocalBackupSummary,
+  type LocalDatabaseDiagnostics,
   type LocalDataStartupFailure,
 } from "./local-backend-messages.js";
 
@@ -34,6 +35,7 @@ export interface LocalBackendRuntime {
     appVersion: string;
   }): Promise<LocalBackendBackupManifest>;
   lastMigration?: string | undefined;
+  describeDatabase?(): Promise<LocalDatabaseDiagnostics>;
   close(): Promise<void>;
 }
 
@@ -43,6 +45,7 @@ export type CreateLocalBackendRuntime = (options: {
   pdfRenderer: DocumentRenderer;
   aiProviderSelection: AiProviderSelectionSource;
   dataSnapshots: { appVersion: string; backupsDir: string; log: (message: string) => void };
+  logger: StructuredLogger;
 }) => Promise<LocalBackendRuntime>;
 
 // Validates an archive and restores it into `stagingDir`, leaving the live data untouched.
@@ -57,6 +60,10 @@ export interface LocalBackendHostOptions {
   prepareImport?: PrepareLocalBackupImport;
   // Recognizes errors that mean the local data cannot be opened, which retrying will not fix.
   describeStartupError?: (error: unknown) => LocalDataStartupFailure | undefined;
+  // How long requests in flight at shutdown may take before their connections are dropped.
+  requestDrainTimeoutMs?: number;
+  // Ends the process once shutdown is over; the utility process passes process.exit.
+  exit?: (code: number) => void;
 }
 
 interface PendingRequest<T> {
@@ -88,8 +95,13 @@ export function startLocalBackendHost(
   let runtime: LocalBackendRuntime | undefined;
   let runtimeOptions: Parameters<CreateLocalBackendRuntime>[0] | undefined;
   let server: Server | undefined;
+  // The main process owns the log file; entries travel over the parent port.
+  const logger: StructuredLogger = (entry) => parentPort.postMessage({ type: "log", entry });
   // Backups run one at a time, and an import replaces the runtime the next one uses.
   let backupQueue: Promise<unknown> = Promise.resolve();
+  let starting: Promise<void> | undefined;
+  let shuttingDown: Promise<void> | undefined;
+  const openResponses = new Set<ServerResponse>();
 
   function request<T>(
     pending: Map<string, PendingRequest<T>>,
@@ -147,8 +159,11 @@ export function startLocalBackendHost(
         dataSnapshots: {
           appVersion: command.appVersion,
           backupsDir: command.backupsDir,
-          log: createLocalBackendLog(command.logFile),
+          // Snapshot messages hold versions, snapshot IDs, and sizes only.
+          log: (message) =>
+            logger({ level: "info", event: "data_snapshot.updated", fields: { message } }),
         },
+        logger,
       };
       runtime = await createRuntime(runtimeOptions);
       // Requests reach whichever runtime is current, so an import can swap it on the same port.
@@ -159,6 +174,10 @@ export function startLocalBackendHost(
         }
         response.statusCode = 503;
         response.end();
+      });
+      listening.on("request", (_request, response: ServerResponse) => {
+        openResponses.add(response);
+        response.once("close", () => openResponses.delete(response));
       });
       server = listening;
       await new Promise<void>((resolve, reject) => {
@@ -265,11 +284,19 @@ export function startLocalBackendHost(
     work: () => Promise<LocalBackupSummary>,
     failureMessage: string,
   ): void {
+    if (shuttingDown) {
+      parentPort.postMessage({ type: "backup:error", requestId, message: failureMessage });
+      return;
+    }
     backupQueue = backupQueue.then(work).then(
       (summary) => parentPort.postMessage({ type: "backup:result", requestId, summary }),
       (error: unknown) => {
         const userFacing = error instanceof Error && error.name === userFacingErrorName;
-        if (!userFacing) console.error(failureMessage, error);
+        logger({
+          level: userFacing ? "warn" : "error",
+          event: "backup.failed",
+          fields: { task: failureMessage, ...describeErrorForLog(error) },
+        });
         parentPort.postMessage({
           type: "backup:error",
           requestId,
@@ -279,18 +306,61 @@ export function startLocalBackendHost(
     );
   }
 
-  async function stop(): Promise<void> {
-    await backupQueue;
+  // Answers with whatever is known; a closed runtime or a failed query leaves fields out.
+  async function describeDatabase(requestId: string): Promise<void> {
+    const current = runtime;
+    let database: LocalDatabaseDiagnostics = {};
+    try {
+      database = (await current?.describeDatabase?.()) ?? {};
+    } catch (error) {
+      logger({
+        level: "warn",
+        event: "diagnostics.database_failed",
+        fields: describeErrorForLog(error),
+      });
+    }
+    if (!database.lastMigration && current?.lastMigration) {
+      database = { ...database, lastMigration: current.lastMigration };
+    }
+    parentPort.postMessage({ type: "diagnostics:result", requestId, database });
+  }
+
+  // Stops accepting connections, drops event streams, which never end on their own, and gives
+  // other requests in flight a moment to finish before their connections are dropped too.
+  async function closeServer(): Promise<void> {
     const current = server;
     server = undefined;
-    if (current) {
-      // Event streams stay open indefinitely; drop them so close() can finish.
-      current.closeAllConnections();
-      await new Promise<void>((resolve) => current.close(() => resolve()));
+    if (!current) return;
+    const closed = new Promise<void>((resolve) => current.close(() => resolve()));
+    for (const response of openResponses) {
+      if (String(response.getHeader("content-type") ?? "").startsWith("text/event-stream")) {
+        response.destroy();
+      }
     }
+    current.closeIdleConnections();
+    let timeout: NodeJS.Timeout | undefined;
+    const drained = await Promise.race([
+      closed.then(() => true),
+      new Promise<boolean>((resolve) => {
+        timeout = setTimeout(() => resolve(false), options.requestDrainTimeoutMs ?? 1_000);
+      }),
+    ]);
+    clearTimeout(timeout);
+    if (!drained) {
+      current.closeAllConnections();
+      await closed;
+    }
+  }
+
+  // Closing the runtime stops its background work and closes the database, so PGlite never exits
+  // with an open client or mid-write.
+  async function shutdown(): Promise<void> {
+    await starting;
+    // A backup import swaps the data folder; let it finish rather than interrupt it.
+    await backupQueue;
+    await closeServer();
     await runtime?.close();
     runtime = undefined;
-    parentPort.postMessage({ type: "stopped" });
   }
 
   parentPort.on("message", (message) => {
@@ -299,10 +369,23 @@ export function startLocalBackendHost(
 
     switch (command.type) {
       case "start":
-        void start(command);
+        if (!shuttingDown) starting ??= start(command);
         return;
-      case "stop":
-        void stop();
+      case "shutdown":
+        shuttingDown ??= shutdown().then(
+          () => {
+            parentPort.postMessage({ type: "shutdown:complete" });
+            options.exit?.(0);
+          },
+          (error: unknown) => {
+            logger({
+              level: "error",
+              event: "local_backend.shutdown_failed",
+              fields: describeErrorForLog(error),
+            });
+            options.exit?.(1);
+          },
+        );
         return;
       case "backup:export":
         runBackup(
@@ -326,6 +409,9 @@ export function startLocalBackendHost(
         return;
       case "ai-selection:result":
         settle(pendingSelections, command.requestId, { value: command.selection });
+        return;
+      case "diagnostics:request":
+        void describeDatabase(command.requestId);
         return;
     }
   });

@@ -28,7 +28,6 @@ function createProcess(overrides: Partial<LocalBackendProcessOptions> = {}) {
     sessionToken: "token",
     appVersion: "1.2.3",
     backupsDir: "/user-data/backups",
-    logFile: "/user-data/logs/local-backend.log",
     renderPdf: vi.fn(async () => Buffer.from("%PDF")),
     getAiSelection: vi.fn(async () => null),
     fork: vi.fn(() => child as never),
@@ -57,7 +56,6 @@ describe("LocalBackendProcess", () => {
       port: 3010,
       appVersion: "1.2.3",
       backupsDir: "/user-data/backups",
-      logFile: "/user-data/logs/local-backend.log",
     });
   });
 
@@ -155,26 +153,78 @@ describe("LocalBackendProcess", () => {
     );
   });
 
-  it("stops gracefully and only reports unexpected exits", async () => {
+  async function started(overrides: Partial<LocalBackendProcessOptions> = {}) {
+    const created = createProcess(overrides);
+    const starting = created.backend.start();
+    created.child.reply({ type: "ready", port: 1 });
+    await starting;
+    return created;
+  }
+
+  it("shuts down cleanly when the backend exits on its own after closing its data", async () => {
     const onUnexpectedExit = vi.fn();
-    const { backend, child } = createProcess({ onUnexpectedExit });
-    const started = backend.start();
-    child.reply({ type: "ready", port: 1 });
-    await started;
+    const { backend, child } = await started({ onUnexpectedExit });
 
     const stopped = backend.stop();
-    expect(child.commands.at(-1)).toEqual({ type: "stop" });
-    child.reply({ type: "stopped" });
+    expect(child.commands.at(-1)).toEqual({ type: "shutdown" });
+    child.reply({ type: "shutdown:complete" });
+    child.emit("exit", 0);
     await stopped;
 
-    expect(child.kill).toHaveBeenCalled();
+    expect(child.kill).not.toHaveBeenCalled();
     expect(onUnexpectedExit).not.toHaveBeenCalled();
+  });
 
-    const crashing = createProcess({ onUnexpectedExit });
-    const crashingStart = crashing.backend.start();
-    crashing.child.reply({ type: "ready", port: 1 });
-    await crashingStart;
-    crashing.child.emit("exit", 9);
+  it("sends one shutdown when quit is requested again while shutting down", async () => {
+    const { backend, child } = await started();
+
+    const first = backend.stop();
+    const second = backend.stop();
+    child.reply({ type: "shutdown:complete" });
+    child.emit("exit", 0);
+    await Promise.all([first, second]);
+
+    expect(child.commands.filter((command) => command.type === "shutdown")).toHaveLength(1);
+  });
+
+  it("kills a backend that reports a completed shutdown but does not exit", async () => {
+    const { backend, child } = await started({ exitTimeoutMs: 10 });
+
+    const stopped = backend.stop();
+    child.reply({ type: "shutdown:complete" });
+    await stopped;
+
+    expect(child.kill).toHaveBeenCalledOnce();
+  });
+
+  it("kills a backend that does not shut down in time", async () => {
+    const onUnexpectedExit = vi.fn();
+    const { backend, child } = await started({ onUnexpectedExit, stopTimeoutMs: 10 });
+
+    await backend.stop();
+
+    expect(child.kill).toHaveBeenCalledOnce();
+    expect(onUnexpectedExit).not.toHaveBeenCalled();
+  });
+
+  it("does not report an exit during shutdown as unexpected, whatever its code", async () => {
+    // PGlite exits with code 99 when the process ends with its client still open.
+    const onUnexpectedExit = vi.fn();
+    const { backend, child } = await started({ onUnexpectedExit });
+
+    const stopped = backend.stop();
+    child.emit("exit", 99);
+    await stopped;
+
+    expect(onUnexpectedExit).not.toHaveBeenCalled();
+  });
+
+  it("reports an exit after a successful start as unexpected", async () => {
+    const onUnexpectedExit = vi.fn();
+    const { child } = await started({ onUnexpectedExit });
+
+    child.emit("exit", 9);
+
     expect(onUnexpectedExit).toHaveBeenCalledWith(9);
   });
 
@@ -228,5 +278,72 @@ describe("LocalBackendProcess", () => {
 
     await expect(exported).rejects.toThrow("stopped before the backup finished");
     await expect(backend.exportBackup("/backups/out.zip", "0.7.0")).rejects.toThrow("not running");
+  });
+
+  it("asks the backend to describe its database for diagnostics", async () => {
+    const { backend, child } = createProcess({ diagnosticsTimeoutMs: 50 });
+    await expect(backend.describeDatabase()).resolves.toBeUndefined();
+    const started = backend.start();
+    child.reply({ type: "ready", port: 1 });
+    await started;
+
+    const described = backend.describeDatabase();
+    const command = child.commands.at(-1) as Extract<
+      LocalBackendCommand,
+      { type: "diagnostics:request" }
+    >;
+    expect(command.type).toBe("diagnostics:request");
+    child.reply({
+      type: "diagnostics:result",
+      requestId: command.requestId,
+      database: {
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261031000000_x.cjs",
+      },
+    });
+    await expect(described).resolves.toEqual({
+      engineVersion: "PGlite (PostgreSQL 17.5)",
+      lastMigration: "20261031000000_x.cjs",
+    });
+
+    // A backend that does not answer in time leaves the database fields out.
+    await expect(backend.describeDatabase()).resolves.toBeUndefined();
+  });
+
+  it("logs its lifecycle and forwards the backend's own log entries", async () => {
+    const log = vi.fn();
+    const childLog = vi.fn();
+    const { backend, child } = createProcess({ log, childLog, onUnexpectedExit: vi.fn() });
+    const started = backend.start();
+    child.reply({ type: "ready", port: 1 });
+    await started;
+
+    child.reply({
+      type: "log",
+      entry: {
+        level: "info",
+        event: "migration.finished",
+        fields: { applied: 2, nested: { profile: "Ada" } },
+      },
+    });
+    child.reply({ type: "log", entry: { level: "loud", event: "ignored" } });
+    child.emit("exit", 3);
+
+    expect(childLog).toHaveBeenCalledTimes(1);
+    expect(childLog).toHaveBeenCalledWith({
+      level: "info",
+      event: "migration.finished",
+      fields: { applied: 2 },
+    });
+    expect(log.mock.calls.map(([entry]) => entry.event)).toEqual([
+      "local_backend.starting",
+      "local_backend.ready",
+      "local_backend.unexpected_exit",
+    ]);
+    expect(log).toHaveBeenLastCalledWith({
+      level: "error",
+      event: "local_backend.unexpected_exit",
+      fields: { exitCode: 3 },
+    });
   });
 });

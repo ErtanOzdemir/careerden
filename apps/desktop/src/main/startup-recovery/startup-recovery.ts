@@ -29,7 +29,8 @@ export type StartupRecoveryRestoreResult =
 export interface StartupRecoveryOptions {
   snapshots: LocalDataSnapshotSource;
   appVersion: string;
-  formatDiagnostics: (failure: StartupFailure) => string;
+  // The same Markdown summary Settings copies, with the startup failure added.
+  formatDiagnostics: (failure: StartupFailure) => Promise<string>;
   // Strips local paths from what the renderer sees.
   redact: (text: string) => string;
   writeClipboard: (text: string) => void;
@@ -107,12 +108,11 @@ export class StartupRecovery {
     await this.options.openDataFolder();
   }
 
-  // Copies the diagnostics in the main process and returns them so the screen can show them.
-  copyDiagnostics(): string {
+  // Copies the diagnostics in the main process. The summary includes log lines, so it goes to the
+  // clipboard only and is not returned to the renderer.
+  async copyDiagnostics(): Promise<void> {
     const failure = this.requireActive();
-    const text = this.options.formatDiagnostics(failure);
-    this.options.writeClipboard(text);
-    return text;
+    this.options.writeClipboard(await this.options.formatDiagnostics(failure));
   }
 
   quit(): void {

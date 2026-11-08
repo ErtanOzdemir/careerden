@@ -2,6 +2,8 @@ import type { UtilityProcess } from "electron";
 import { utilityProcess } from "electron";
 import { randomUUID } from "node:crypto";
 import type { ScrapeBundle } from "@careerden/domain";
+import type { StructuredLogger } from "@careerden/infrastructure/logging";
+import { parseStructuredLogMessage } from "../logging/structured-log-message.js";
 import type { LinkedInScrapingRunner } from "./local-scraping-worker.js";
 import type { ScrapingUtilityResponse } from "./scraping-utility-messages.js";
 
@@ -24,6 +26,10 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
   constructor(
     private readonly options: {
       fork?: UtilityProcessFork;
+      // Lifecycle events observed by the main process.
+      log?: StructuredLogger;
+      // Entries the utility process posts about its own work.
+      childLog?: StructuredLogger;
       modulePath: string;
       scrapeTimeoutMs?: number;
     },
@@ -71,6 +77,13 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
 
     child.on("message", (message: unknown) => this.handleMessage(message));
     child.on("exit", (code: number) => {
+      if (this.process === child) {
+        this.options.log?.({
+          level: "warn",
+          event: "scraper.unexpected_exit",
+          fields: { exitCode: code },
+        });
+      }
       this.process = undefined;
       this.rejectPending(new Error(`LinkedIn scraping utility process exited with code ${code}`));
     });
@@ -80,6 +93,12 @@ export class UtilityProcessLinkedInScrapingRunner implements LinkedInScrapingRun
   }
 
   private handleMessage(message: unknown): void {
+    const logEntry = parseStructuredLogMessage(message);
+    if (logEntry) {
+      this.options.childLog?.(logEntry);
+      return;
+    }
+
     if (!isUtilityResponse(message)) {
       return;
     }

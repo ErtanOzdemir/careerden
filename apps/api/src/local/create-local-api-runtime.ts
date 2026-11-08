@@ -24,6 +24,7 @@ import type {
   AiProviderSelectionSource,
   ClaimedOutboxEvent,
   InProcessOutboxHandler,
+  StructuredLogger,
 } from "@careerden/infrastructure";
 import {
   AiProviderNotConfiguredError,
@@ -41,11 +42,16 @@ import {
   PostgresReminderOutboxDispatcher,
   PostgresUserProfileRepository,
   ResolvingAiProvider,
+  consoleStructuredLogger,
+  createAiProvider,
   defaultRetryDelayMs,
+  describeErrorForLog,
+  getLatestAppliedPostgresMigration,
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
+import { LoggingAiProvider } from "../infrastructure/matching/logging-ai.provider.js";
 import type { LocalBackupManifest } from "../contracts/backup/local-backup-manifest.schema.js";
 import { exportLocalData, localDataLayout } from "../infrastructure/backup/local-data-backup.js";
 import {
@@ -73,9 +79,19 @@ export interface LocalApiRuntimeOptions {
   // Test seam for the provider built from a selection.
   createAiProvider?: (selection: AiProviderSelection) => AiProvider;
   backgroundPollIntervalMs?: number;
+  // How long close() waits for background work in flight before closing the database anyway.
+  // Unfinished outbox events are claimed again on the next start.
+  shutdownGraceMs?: number;
   // Copies the data to the backups folder before migrations may change it. The desktop app
   // always passes it; scripts and tests that open throwaway data may leave it out.
   dataSnapshots?: LocalDataSnapshotPolicy;
+  // Receives redacted operational events; the desktop shell writes them to its log file.
+  logger?: StructuredLogger;
+}
+
+export interface LocalDatabaseDiagnostics {
+  engineVersion?: string;
+  lastMigration?: string;
 }
 
 export interface LocalApiRuntime {
@@ -88,6 +104,8 @@ export interface LocalApiRuntime {
   }) => Promise<LocalBackupManifest>;
   // The newest migration the database is at, for diagnostics.
   lastMigration: string | undefined;
+  // The embedded engine's version and the newest applied migration, read now, for diagnostics.
+  describeDatabase: () => Promise<LocalDatabaseDiagnostics>;
   close: () => Promise<void>;
 }
 
@@ -97,10 +115,15 @@ export interface LocalApiRuntime {
 export async function createLocalApiRuntime(
   options: LocalApiRuntimeOptions,
 ): Promise<LocalApiRuntime> {
+  const log = options.logger ?? consoleStructuredLogger;
   // PGlite creates only its own directory, not missing parents.
   await mkdir(options.dataDir, { recursive: true });
   // Throws LocalDatabaseStartupError when the database cannot be opened or migrated.
-  const { db, lastMigration } = await prepareLocalDatabase(options.dataDir, options.dataSnapshots);
+  const { db, lastMigration } = await prepareLocalDatabase(
+    options.dataDir,
+    options.dataSnapshots,
+    log,
+  );
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")
@@ -122,9 +145,10 @@ export async function createLocalApiRuntime(
     signingKey: randomBytes(32).toString("base64url"),
     urlPathPrefix: "/api/files",
   });
+  const createProvider = options.createAiProvider ?? createAiProvider;
   const aiProvider = new ResolvingAiProvider(
     options.aiProviderSelection,
-    ...(options.createAiProvider ? [options.createAiProvider] : []),
+    (selection) => new LoggingAiProvider(createProvider(selection), selection.provider, log),
   );
   const pdfRenderer = options.pdfRenderer;
 
@@ -146,6 +170,18 @@ export async function createLocalApiRuntime(
         rawApp.use("/files", createLocalFileRouter(storage));
       },
       authenticate: localSession(options.sessionToken, localUser),
+      logUnexpectedError: (entry, error) => {
+        log({
+          level: "error",
+          event: "api.unexpected_error",
+          fields: {
+            traceId: entry.traceId ?? null,
+            method: entry.request.method ?? null,
+            path: entry.request.path ?? null,
+            ...describeErrorForLog(error),
+          },
+        });
+      },
     },
   });
 
@@ -231,6 +267,7 @@ export async function createLocalApiRuntime(
     },
   ];
   const runner = new InProcessOutboxRunner(outbox, handlers, {
+    onError: (message, error) => logBackgroundFailure(log, message, error),
     ...(options.backgroundPollIntervalMs
       ? { pollIntervalMs: options.backgroundPollIntervalMs }
       : {}),
@@ -240,7 +277,9 @@ export async function createLocalApiRuntime(
   const reminderQueue = new InProcessFollowUpReminderQueue({
     deliver: (payload) => deliverReminder.execute(payload),
     onFailed: (payload, error) => {
-      console.error(`Local runtime failed follow-up reminder ${payload.followUpId}`, error);
+      logBackgroundFailure(log, "Local runtime failed a follow-up reminder", error, {
+        followUpId: payload.followUpId,
+      });
     },
   });
   const reminderOutbox = new PostgresReminderOutboxDispatcher(outbox, reminders, reminderQueue);
@@ -248,10 +287,10 @@ export async function createLocalApiRuntime(
 
   await runner.start();
   await restoreFollowUpReminders(reminders, reminderQueue);
-  const reminderOutboxTask = createSerialTask("follow-up reminder outbox", () =>
+  const reminderOutboxTask = createSerialTask(log, "follow-up reminder outbox", () =>
     reminderOutbox.dispatchPending(),
   );
-  const expireReservationsTask = createSerialTask("stale analysis recovery", () =>
+  const expireReservationsTask = createSerialTask(log, "stale analysis recovery", () =>
     expireStaleReservations.execute(),
   );
   await reminderOutboxTask();
@@ -267,13 +306,41 @@ export async function createLocalApiRuntime(
     exportBackup: ({ outputPath, appVersion }) =>
       exportLocalData({ db, filesDir, outputPath, appVersion }),
     lastMigration,
+    describeDatabase: () => describeLocalDatabase(db),
+    // Starts no new background work, waits a bounded time for work in flight, then closes the
+    // database. Knex lets the query in progress finish, then closes PGlite.
     close: async () => {
       for (const interval of intervals) clearInterval(interval);
-      await runner.close();
-      await reminderQueue.close();
-      await Promise.all([changeBus.close(), notificationChangeBus.close()]);
-      await db.destroy();
+      try {
+        await settleWithin(
+          Promise.all([
+            runner.close(),
+            reminderQueue.close(),
+            reminderOutboxTask.idle(),
+            expireReservationsTask.idle(),
+          ]),
+          options.shutdownGraceMs ?? 2_500,
+        );
+        await Promise.all([changeBus.close(), notificationChangeBus.close()]);
+      } finally {
+        await db.destroy();
+      }
     },
+  };
+}
+
+// PGlite embeds PostgreSQL, so the server version names the engine the data files belong to.
+async function describeLocalDatabase(db: Knex): Promise<LocalDatabaseDiagnostics> {
+  const [result, lastMigration] = await Promise.all([
+    db.raw<{ rows: Array<{ server_version?: unknown }> }>("show server_version"),
+    getLatestAppliedPostgresMigration(db),
+  ]);
+  const serverVersion = result.rows[0]?.server_version;
+  return {
+    ...(typeof serverVersion === "string"
+      ? { engineVersion: `PGlite (PostgreSQL ${serverVersion})` }
+      : {}),
+    ...(lastMigration ? { lastMigration } : {}),
   };
 }
 
@@ -336,17 +403,50 @@ function applicationPackPayload(event: ClaimedOutboxEvent) {
   };
 }
 
-function createSerialTask(name: string, run: () => Promise<unknown>) {
-  let running = false;
-  return async () => {
-    if (running) return;
-    running = true;
-    try {
-      await run();
-    } catch (error) {
-      console.error(`Local runtime failed ${name}`, error);
-    } finally {
-      running = false;
-    }
+function logBackgroundFailure(
+  log: StructuredLogger,
+  message: string,
+  error: unknown,
+  fields: Record<string, string> = {},
+): void {
+  log({
+    level: "error",
+    event: "background.failed",
+    fields: { task: message, ...fields, ...describeErrorForLog(error) },
+  });
+}
+
+// Runs one at a time; a call while a run is in progress joins it.
+function createSerialTask(log: StructuredLogger, name: string, run: () => Promise<unknown>) {
+  let running: Promise<void> | undefined;
+  const task = (): Promise<void> => {
+    running ??= run()
+      .then(
+        () => undefined,
+        (error: unknown) => {
+          logBackgroundFailure(log, `Local runtime failed ${name}`, error);
+        },
+      )
+      .finally(() => {
+        running = undefined;
+      });
+    return running;
   };
+  return Object.assign(task, { idle: () => running ?? Promise.resolve() });
+}
+
+async function settleWithin(work: Promise<unknown>, timeoutMs: number): Promise<void> {
+  let timeout: NodeJS.Timeout | undefined;
+  await Promise.race([
+    work.then(
+      () => undefined,
+      (error: unknown) => {
+        console.error("Local runtime background work failed while shutting down", error);
+      },
+    ),
+    new Promise<void>((resolve) => {
+      timeout = setTimeout(resolve, timeoutMs);
+    }),
+  ]);
+  clearTimeout(timeout);
 }

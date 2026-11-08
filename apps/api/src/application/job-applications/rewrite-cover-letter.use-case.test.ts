@@ -1,6 +1,7 @@
 import type { AiProvider, DocumentContent, ScrapeBundle } from "@careerden/domain";
 import { richDocumentFromText } from "@careerden/domain";
 import { describe, expect, it, vi } from "vitest";
+import { parsePromptWithJobPostingData } from "@careerden/application";
 import {
   createJobApplicationRepository,
   createProfiles,
@@ -38,7 +39,9 @@ describe("RewriteCoverLetterUseCase", () => {
         },
       ],
     });
-    const prompt = JSON.parse(vi.mocked(aiProvider.generate).mock.calls[0]![0].prompt) as {
+    const prompt = parsePromptWithJobPostingData(
+      vi.mocked(aiProvider.generate).mock.calls[0]![0].prompt,
+    ).instructions as {
       tailoredCv: { summary: string; skills: string[]; experience: Array<{ description: string }> };
       currentCoverLetter: string;
     };

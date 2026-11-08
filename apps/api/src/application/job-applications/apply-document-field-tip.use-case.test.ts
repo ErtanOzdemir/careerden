@@ -1,5 +1,6 @@
 import type { AiProvider, RichDocument, ScrapeBundle } from "@careerden/domain";
 import { describe, expect, it, vi } from "vitest";
+import { parsePromptWithJobPostingData } from "@careerden/application";
 import { ApplyDocumentFieldTipUseCase } from "./apply-document-field-tip.use-case.js";
 import {
   createJobApplicationRepository,
@@ -52,7 +53,9 @@ describe("ApplyDocumentFieldTipUseCase", () => {
         },
       ],
     });
-    const prompt = JSON.parse(vi.mocked(aiProvider.generate).mock.calls[0]![0].prompt) as {
+    const prompt = parsePromptWithJobPostingData(
+      vi.mocked(aiProvider.generate).mock.calls[0]![0].prompt,
+    ).instructions as {
       currentContent: unknown;
     };
     expect(prompt.currentContent).toEqual([
@@ -82,7 +85,10 @@ describe("ApplyDocumentFieldTipUseCase", () => {
 
     const [verified, unverified] = vi
       .mocked(aiProvider.generate)
-      .mock.calls.map(([params]) => JSON.parse(params.prompt) as Record<string, unknown>);
+      .mock.calls.map(
+        ([params]) =>
+          parsePromptWithJobPostingData(params.prompt).instructions as Record<string, unknown>,
+      );
     expect(verified).toMatchObject({
       suggestions: [
         {
@@ -111,10 +117,9 @@ describe("ApplyDocumentFieldTipUseCase", () => {
       candidateAnswer: "Yes, I ran our staging cluster on EKS.",
     });
 
-    const prompt = JSON.parse(vi.mocked(aiProvider.generate).mock.calls[0]![0].prompt) as Record<
-      string,
-      unknown
-    >;
+    const prompt = parsePromptWithJobPostingData(
+      vi.mocked(aiProvider.generate).mock.calls[0]![0].prompt,
+    ).instructions as Record<string, unknown>;
     expect(prompt.suggestions).toEqual([
       { tip: "Did you operate these services on Kubernetes?" },
       { tip: "Lead with the TypeScript work.", profileEvidence: "Software Engineer" },

@@ -1,6 +1,8 @@
 import { aiProviderModelsSchema } from "@careerden/contracts";
 import { aiProviderNames } from "@careerden/infrastructure";
 import type { AiProviderSelection } from "@careerden/infrastructure";
+import type { StructuredLogEntry } from "@careerden/infrastructure/logging";
+import { parseStructuredLogMessage } from "../logging/structured-log-message.js";
 
 // What the main process learns about a backup it exported or imported.
 export interface LocalBackupSummary {
@@ -8,6 +10,13 @@ export interface LocalBackupSummary {
   appVersion: string;
   applications: number;
   files: number;
+}
+
+// What the backend reports about its database for the diagnostics summary. Versions and a
+// migration name only, never data.
+export interface LocalDatabaseDiagnostics {
+  engineVersion?: string;
+  lastMigration?: string;
 }
 
 // Mirrors localDatabaseStartupFailureReasons in @careerden/api-app/local, which the main process
@@ -39,10 +48,9 @@ export type LocalBackendCommand =
       appVersion: string;
       // userData/backups, where pre-migration snapshots are kept.
       backupsDir: string;
-      // Appended with snapshot creation and pruning.
-      logFile: string;
     }
-  | { type: "stop" }
+  // Stop serving, finish in-flight work, close the database, and exit with code 0.
+  | { type: "shutdown" }
   | { type: "backup:export"; requestId: string; outputPath: string; appVersion: string }
   | {
       type: "backup:import";
@@ -54,18 +62,22 @@ export type LocalBackendCommand =
     }
   | { type: "pdf:result"; requestId: string; pdf: Uint8Array }
   | { type: "pdf:error"; requestId: string; message: string }
-  | { type: "ai-selection:result"; requestId: string; selection: AiProviderSelection | null };
+  | { type: "ai-selection:result"; requestId: string; selection: AiProviderSelection | null }
+  | { type: "diagnostics:request"; requestId: string };
 
 // Local backend utility process -> main process.
 export type LocalBackendEvent =
   | { type: "ready"; port: number; lastMigration?: string }
   | { type: "start:error"; message: string }
   | { type: "start:data-error"; failure: LocalDataStartupFailure }
-  | { type: "stopped" }
+  // The database is closed; the process exits right after sending it.
+  | { type: "shutdown:complete" }
   | { type: "pdf:request"; requestId: string; html: string }
   | { type: "ai-selection:request"; requestId: string }
+  | { type: "log"; entry: StructuredLogEntry }
   | { type: "backup:result"; requestId: string; summary: LocalBackupSummary }
-  | { type: "backup:error"; requestId: string; message: string };
+  | { type: "backup:error"; requestId: string; message: string }
+  | { type: "diagnostics:result"; requestId: string; database: LocalDatabaseDiagnostics };
 
 export function parseLocalBackendCommand(message: unknown): LocalBackendCommand | undefined {
   const payload = asRecord(unwrapMessageEvent(message));
@@ -77,12 +89,11 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
         isString(payload.sessionToken) &&
         Number.isInteger(payload.port) &&
         isString(payload.appVersion) &&
-        isString(payload.backupsDir) &&
-        isString(payload.logFile)
+        isString(payload.backupsDir)
         ? (payload as unknown as LocalBackendCommand)
         : undefined;
-    case "stop":
-      return { type: "stop" };
+    case "shutdown":
+      return { type: "shutdown" };
     case "backup:export":
       return isString(payload.requestId) &&
         isString(payload.outputPath) &&
@@ -109,6 +120,10 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
         (payload.selection === null || isAiProviderSelection(payload.selection))
         ? (payload as unknown as LocalBackendCommand)
         : undefined;
+    case "diagnostics:request":
+      return isString(payload.requestId)
+        ? { type: "diagnostics:request", requestId: payload.requestId }
+        : undefined;
     default:
       return undefined;
   }
@@ -130,14 +145,18 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
       return isLocalDataStartupFailure(payload.failure)
         ? (payload as unknown as LocalBackendEvent)
         : undefined;
-    case "stopped":
-      return { type: "stopped" };
+    case "shutdown:complete":
+      return { type: "shutdown:complete" };
     case "pdf:request":
       return isString(payload.requestId) && isString(payload.html)
         ? (payload as unknown as LocalBackendEvent)
         : undefined;
     case "ai-selection:request":
       return isString(payload.requestId) ? (payload as unknown as LocalBackendEvent) : undefined;
+    case "log": {
+      const entry = parseStructuredLogMessage(payload);
+      return entry ? { type: "log", entry } : undefined;
+    }
     case "backup:result":
       return isString(payload.requestId) && isLocalBackupSummary(payload.summary)
         ? (payload as unknown as LocalBackendEvent)
@@ -146,6 +165,19 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
       return isString(payload.requestId) && isString(payload.message)
         ? (payload as unknown as LocalBackendEvent)
         : undefined;
+    case "diagnostics:result": {
+      const database = asRecord(payload.database);
+      if (!isString(payload.requestId) || !database) return undefined;
+      // Rebuilt field by field so nothing else the payload carries reaches the summary.
+      return {
+        type: "diagnostics:result",
+        requestId: payload.requestId,
+        database: {
+          ...(isString(database.engineVersion) ? { engineVersion: database.engineVersion } : {}),
+          ...(isString(database.lastMigration) ? { lastMigration: database.lastMigration } : {}),
+        },
+      };
+    }
     default:
       return undefined;
   }

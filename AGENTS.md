@@ -142,6 +142,14 @@ review or download.
   recovery. Restores pick a snapshot by the id the main process listed through
   `LocalDataSnapshotSource`, never by path, move the current data folder to
   `userData/backups/before-restore-<time>`, and relaunch.
+- AI clients translate every provider failure into the domain `AiProviderError` with one of
+  `invalid_api_key`, `insufficient_quota`, `rate_limited`, `model_unavailable`,
+  `provider_unavailable`, or `invalid_output`. It carries only the category, provider, and
+  status code, never the SDK error, key, prompt, or response body, so it is safe to log. Only
+  `rate_limited` and `provider_unavailable` are retried by the outbox runner and BullMQ; the
+  category is persisted as `job_applications.ai_failure` so the web app shows an edition-aware
+  message with Settings and retry actions. Saving a local provider key first sends one small
+  validation request and refuses a key or model the provider rejects.
 - First-run onboarding is shared by both editions. `OnboardingGate` shows the setup wizard in
   place of the app shell until `user_profiles.onboarding_completed_at` is set, and fails open
   when the profile cannot be read. The server stamps onboarding timestamps through

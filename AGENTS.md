@@ -181,6 +181,10 @@ review or download.
   workflow derives it from the current repository so forks never default to upstream
   update metadata; packaged local builds without it keep the updater disabled.
 - PostgreSQL migrations are run through Knex during API startup.
+- Every released version keeps a Careerden Unplugged upgrade fixture, a SQL dump with stored
+  files under `apps/api/test/fixtures/pglite/v<version>/`, built at that release's schema by
+  `pnpm --filter @careerden/api-app fixture:pglite`. `pnpm test` migrates each one. Released
+  fixtures are frozen; fix a migration that fails on one instead of regenerating it.
 - Better Auth rate limits are stored in PostgreSQL and resolve client IPs through
   `AUTH_TRUSTED_PROXIES`. Email OTPs additionally use per-email counters keyed by an email
   hash: at most 5 codes per hour at least 90 seconds apart, and 10 verification attempts per

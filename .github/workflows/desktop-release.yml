@@ -13,6 +13,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Careerden Unplugged migrates the user's own database on every update, so each released
+  # version needs an upgrade fixture that `pnpm test` migrates. A missing one only warns: the
+  # fixture is generated from this tag and lands in a follow-up pull request.
+  upgrade-fixture:
+    name: Check database upgrade fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Warn when this version has no upgrade fixture
+        shell: bash
+        run: |
+          fixture="apps/api/test/fixtures/pglite/${GITHUB_REF_NAME}/fixture.json"
+          if [[ ! -f "${fixture}" ]]; then
+            echo "::warning title=Missing database upgrade fixture::No ${fixture}. Run 'pnpm --filter @careerden/api-app fixture:pglite --ref ${GITHUB_REF_NAME}' and commit the result so later migrations are tested against ${GITHUB_REF_NAME} databases."
+          fi
+
   build:
     name: Build ${{ matrix.edition }} ${{ matrix.name }}
     runs-on: ${{ matrix.os }}

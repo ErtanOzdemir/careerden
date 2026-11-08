@@ -42,7 +42,8 @@ export type LocalBackendCommand =
       // Appended with snapshot creation and pruning.
       logFile: string;
     }
-  | { type: "stop" }
+  // Stop serving, finish in-flight work, close the database, and exit with code 0.
+  | { type: "shutdown" }
   | { type: "backup:export"; requestId: string; outputPath: string; appVersion: string }
   | {
       type: "backup:import";
@@ -61,7 +62,8 @@ export type LocalBackendEvent =
   | { type: "ready"; port: number; lastMigration?: string }
   | { type: "start:error"; message: string }
   | { type: "start:data-error"; failure: LocalDataStartupFailure }
-  | { type: "stopped" }
+  // The database is closed; the process exits right after sending it.
+  | { type: "shutdown:complete" }
   | { type: "pdf:request"; requestId: string; html: string }
   | { type: "ai-selection:request"; requestId: string }
   | { type: "backup:result"; requestId: string; summary: LocalBackupSummary }
@@ -81,8 +83,8 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
         isString(payload.logFile)
         ? (payload as unknown as LocalBackendCommand)
         : undefined;
-    case "stop":
-      return { type: "stop" };
+    case "shutdown":
+      return { type: "shutdown" };
     case "backup:export":
       return isString(payload.requestId) &&
         isString(payload.outputPath) &&
@@ -130,8 +132,8 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
       return isLocalDataStartupFailure(payload.failure)
         ? (payload as unknown as LocalBackendEvent)
         : undefined;
-    case "stopped":
-      return { type: "stopped" };
+    case "shutdown:complete":
+      return { type: "shutdown:complete" };
     case "pdf:request":
       return isString(payload.requestId) && isString(payload.html)
         ? (payload as unknown as LocalBackendEvent)

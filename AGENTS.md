@@ -151,6 +151,12 @@ review or download.
   recovery. Restores pick a snapshot by the id the main process listed through
   `LocalDataSnapshotSource`, never by path, move the current data folder to
   `userData/backups/before-restore-<time>`, and relaunch.
+- Careerden Unplugged closes its database before quitting. `before-quit` defers the quit until
+  `LocalBackendProcess.stop()` resolves; it sends `shutdown`, and the utility process stops
+  accepting HTTP requests, stops its outbox runner, reminder timers, and polling tasks, waits a
+  bounded time for work in flight, destroys Knex (which closes PGlite), reports
+  `shutdown:complete`, and exits with code 0. The main process kills it only after five seconds,
+  and never treats an exit during shutdown as unexpected.
 - First-run onboarding is shared by both editions. `OnboardingGate` shows the setup wizard in
   place of the app shell until `user_profiles.onboarding_completed_at` is set, and fails open
   when the profile cannot be read. The server stamps onboarding timestamps through

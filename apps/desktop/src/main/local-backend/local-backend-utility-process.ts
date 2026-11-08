@@ -15,4 +15,6 @@ if (!parentPort) {
 startLocalBackendHost(parentPort, createLocalApiRuntime, {
   prepareImport: prepareLocalDataImport,
   describeStartupError: describeLocalDatabaseStartupError,
+  // Leaves a turn for the shutdown message to reach the main process before exiting.
+  exit: (code) => setImmediate(() => process.exit(code)),
 });

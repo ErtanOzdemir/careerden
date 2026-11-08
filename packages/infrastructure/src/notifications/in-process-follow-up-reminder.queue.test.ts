@@ -101,4 +101,29 @@ describe("InProcessFollowUpReminderQueue", () => {
 
     expect(deliver).not.toHaveBeenCalled();
   });
+
+  it("waits on close for a delivery already under way", async () => {
+    let finishDelivery!: () => void;
+    const deliver = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishDelivery = resolve;
+        }),
+    );
+    const queue = new InProcessFollowUpReminderQueue({ deliver });
+    await queue.enqueue(reminder(start));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(deliver).toHaveBeenCalledOnce();
+
+    let closed = false;
+    const closing = queue.close().then(() => {
+      closed = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(closed).toBe(false);
+
+    finishDelivery();
+    await closing;
+    expect(closed).toBe(true);
+  });
 });

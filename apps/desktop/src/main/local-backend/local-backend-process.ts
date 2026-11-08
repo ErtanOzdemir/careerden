@@ -35,8 +35,11 @@ export interface LocalBackendProcessOptions {
   onUnexpectedExit?: (code: number) => void;
   fork?: LocalBackendFork;
   startTimeoutMs?: number;
+  // How long a shutdown may take before the process is killed.
   stopTimeoutMs?: number;
   backupTimeoutMs?: number;
+  // How long to wait for the exit after the backend reports a completed shutdown.
+  exitTimeoutMs?: number;
 }
 
 interface PendingBackup {
@@ -50,6 +53,7 @@ export class LocalBackendProcess {
   private child: LocalBackendChild | undefined;
   private stopping = false;
   private ready = false;
+  private stopped: Promise<void> | undefined;
   private readonly waiters = new Set<(event: LocalBackendNotice) => void>();
   private readonly pendingBackups = new Map<string, PendingBackup>();
 
@@ -120,16 +124,33 @@ export class LocalBackendProcess {
     });
   }
 
-  async stop(): Promise<void> {
-    if (!this.child) return;
+  // Asks the backend to finish its work, close the database, and exit on its own, which it does
+  // with code 0. Killing it is the fallback when it does not within the timeout. Exits from here
+  // on are never reported as unexpected.
+  stop(): Promise<void> {
+    if (!this.child) return Promise.resolve();
+    this.stopped ??= this.shutDown().finally(() => {
+      this.stopped = undefined;
+    });
+    return this.stopped;
+  }
+
+  private async shutDown(): Promise<void> {
     this.stopping = true;
-    const stopped = this.waitFor(
-      (event) => event.type === "stopped" || event.type === "exit",
-      this.options.stopTimeoutMs ?? 10_000,
+    const completed = this.waitFor(
+      (event) => event.type === "shutdown:complete" || event.type === "exit",
+      this.options.stopTimeoutMs ?? 5_000,
     );
-    this.send({ type: "stop" });
-    await stopped.catch(() => undefined);
+    this.send({ type: "shutdown" });
+    const event = await completed.catch(() => undefined);
+    if (event?.type === "shutdown:complete" && this.child) {
+      await this.waitFor(
+        (notice) => notice.type === "exit",
+        this.options.exitTimeoutMs ?? 1_000,
+      ).catch(() => undefined);
+    }
     this.kill();
+    this.failPendingBackups();
   }
 
   // Writes a backup zip of the local data to `outputPath`.

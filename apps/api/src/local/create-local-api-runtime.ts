@@ -71,6 +71,9 @@ export interface LocalApiRuntimeOptions {
   // Test seam for the provider built from a selection.
   createAiProvider?: (selection: AiProviderSelection) => AiProvider;
   backgroundPollIntervalMs?: number;
+  // How long close() waits for background work in flight before closing the database anyway.
+  // Unfinished outbox events are claimed again on the next start.
+  shutdownGraceMs?: number;
   // Copies the data to the backups folder before migrations may change it. The desktop app
   // always passes it; scripts and tests that open throwaway data may leave it out.
   dataSnapshots?: LocalDataSnapshotPolicy;
@@ -252,12 +255,24 @@ export async function createLocalApiRuntime(
     exportBackup: ({ outputPath, appVersion }) =>
       exportLocalData({ db, filesDir, outputPath, appVersion }),
     lastMigration,
+    // Starts no new background work, waits a bounded time for work in flight, then closes the
+    // database. Knex lets the query in progress finish, then closes PGlite.
     close: async () => {
       for (const interval of intervals) clearInterval(interval);
-      await runner.close();
-      await reminderQueue.close();
-      await Promise.all([changeBus.close(), notificationChangeBus.close()]);
-      await db.destroy();
+      try {
+        await settleWithin(
+          Promise.all([
+            runner.close(),
+            reminderQueue.close(),
+            reminderOutboxTask.idle(),
+            expireReservationsTask.idle(),
+          ]),
+          options.shutdownGraceMs ?? 2_500,
+        );
+        await Promise.all([changeBus.close(), notificationChangeBus.close()]);
+      } finally {
+        await db.destroy();
+      }
     },
   };
 }
@@ -305,17 +320,37 @@ function applicationPackPayload(event: ClaimedOutboxEvent) {
   };
 }
 
+// Runs one at a time; a call while a run is in progress joins it.
 function createSerialTask(name: string, run: () => Promise<unknown>) {
-  let running = false;
-  return async () => {
-    if (running) return;
-    running = true;
-    try {
-      await run();
-    } catch (error) {
-      console.error(`Local runtime failed ${name}`, error);
-    } finally {
-      running = false;
-    }
+  let running: Promise<void> | undefined;
+  const task = (): Promise<void> => {
+    running ??= run()
+      .then(
+        () => undefined,
+        (error: unknown) => {
+          console.error(`Local runtime failed ${name}`, error);
+        },
+      )
+      .finally(() => {
+        running = undefined;
+      });
+    return running;
   };
+  return Object.assign(task, { idle: () => running ?? Promise.resolve() });
+}
+
+async function settleWithin(work: Promise<unknown>, timeoutMs: number): Promise<void> {
+  let timeout: NodeJS.Timeout | undefined;
+  await Promise.race([
+    work.then(
+      () => undefined,
+      (error: unknown) => {
+        console.error("Local runtime background work failed while shutting down", error);
+      },
+    ),
+    new Promise<void>((resolve) => {
+      timeout = setTimeout(resolve, timeoutMs);
+    }),
+  ]);
+  clearTimeout(timeout);
 }

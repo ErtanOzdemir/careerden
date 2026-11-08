@@ -174,6 +174,12 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **A utility process behind a loopback token.** The backend runs outside Electron's main
   process so database and AI work never block the window. It listens only on `127.0.0.1`, and
   only requests carrying the token that Electron generates for each launch are accepted.
+- **A clean shutdown before quitting.** PGlite writes to disk, and killing it mid-write can leave
+  the data folder inconsistent. On quit, the main process sends `shutdown` and waits up to five
+  seconds: the backend stops accepting requests, drops event streams, lets other requests finish
+  for a second, gives background work in flight 2.5 seconds, closes Knex and PGlite, reports
+  `shutdown:complete`, and exits with code 0. Only then is it killed, and no exit during shutdown
+  counts as a crash.
 - **Keys in the operating system's keychain.** AI keys are encrypted with Electron
   `safeStorage` and decrypted only in the main process, which hands the active key to the backend
   for each AI call; the renderer can save, test, switch, and remove keys but never read one

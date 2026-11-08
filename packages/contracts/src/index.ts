@@ -5,4 +5,5 @@ export * from "./matching/ai-match-result.schema.js";
 export * from "./matching/ai-job-requirements.schema.js";
 export * from "./matching/ai-provider-failure.schema.js";
 export * from "./notifications/notification.schema.js";
+export * from "./matching/ai-model-catalog.schema.js";
 export * from "./scraping/scrape-failure-reason.js";

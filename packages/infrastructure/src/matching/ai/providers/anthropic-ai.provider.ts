@@ -5,7 +5,7 @@ import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 export class AnthropicAiProvider implements AiProvider {
   constructor(
     private readonly apiKey: string,
-    private readonly model = "claude-haiku-5-5",
+    readonly model: string,
   ) {}
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {

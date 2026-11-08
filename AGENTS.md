@@ -131,6 +131,15 @@ review or download.
   provider is configured. Electron prints its PDFs in a hidden window without scripts or
   network access. Reminders are restored from the database on start, delivering those up
   to seven days overdue.
+- Careerden Unplugged exports its data as one zip archive with the `.careerden` extension: `manifest.json` (format version, schema
+  version, last migration, app version, creation time), one Postgres-rendered JSON file per
+  table, and the stored files. AI keys live outside the data folder and are never included.
+  The backend utility process owns export and import; the main process opens every save and
+  open dialog, so the argument-free backup IPC never accepts a path from the renderer. Imports
+  are validated and restored into a staging directory, migrated to the archive's schema, loaded,
+  and migrated to the latest one; archives from newer versions are rejected. The current data
+  is exported to `userData/backups` before the directories are swapped, and the previous
+  directory is moved back if the imported data cannot be opened.
 - Careerden Unplugged never restarts into a failure that will repeat. The backend classifies a
   database PGlite cannot open, a failing migration, and data with migrations this build does
   not ship (a downgrade) as `LocalDatabaseStartupError` and reports them as `start:data-error`;

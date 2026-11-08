@@ -24,7 +24,11 @@ import type {
   TimelineMilestone,
   UpcomingInterview,
 } from "../types";
-import { aiProviderFailureSchema, richDocumentFromText } from "@careerden/contracts";
+import {
+  aiProviderFailureSchema,
+  parseScrapeFailureReason,
+  richDocumentFromText,
+} from "@careerden/contracts";
 import type { RichDocument } from "./types.js";
 
 export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
@@ -607,6 +611,9 @@ function formatShortDate(value: string): string {
 
 function formatProcessingStatus(status: string, failureReason?: string): string {
   if (status === "queued") {
+    if (parseScrapeFailureReason(failureReason)?.category === "rate_limited") {
+      return "LinkedIn is rate limiting";
+    }
     return failureReason ? "Retry scheduled" : "Scraping waiting";
   }
 

@@ -3,13 +3,16 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { APICallError } from "ai";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ApplicationError } from "@careerden/application";
 import { AiProviderError } from "@careerden/domain";
 import type { AiProvider } from "@careerden/domain";
 import type { AiProviderSelection } from "@careerden/infrastructure";
+import { aiModelCandidates, ModelFallbackAiProvider } from "@careerden/infrastructure";
 import type { LocalApiRuntime } from "./create-local-api-runtime.js";
 import { createLocalApiRuntime } from "./create-local-api-runtime.js";
+import { prepareLocalDataImport } from "../infrastructure/backup/local-data-backup.js";
 import { localSessionTokenHeader } from "./local-session.middleware.js";
 
 const sessionToken = "test-session-token";
@@ -36,14 +39,21 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     await rm(dataDir, { recursive: true, force: true });
   });
 
-  async function start(aiProvider?: AiProvider) {
+  function start(aiProvider?: AiProvider, device = "Careerden Unplugged") {
+    return startWithModelProvider(aiProvider ? () => aiProvider : undefined, device);
+  }
+
+  async function startWithModelProvider(
+    createAiProvider?: (selection: AiProviderSelection) => AiProvider,
+    device = "Careerden Unplugged",
+  ) {
     const runtime = await createLocalApiRuntime({
       // A fresh install has no data directory yet.
-      dataDir: join(dataDir, "Careerden Unplugged", "data"),
+      dataDir: join(dataDir, device, "data"),
       sessionToken,
       pdfRenderer: { htmlToPdf: async () => Buffer.from("%PDF-test") },
       aiProviderSelection: { current: async () => selection },
-      ...(aiProvider ? { createAiProvider: () => aiProvider } : {}),
+      ...(createAiProvider ? { createAiProvider } : {}),
       backgroundPollIntervalMs: 50,
     });
     runtimes.push(runtime);
@@ -170,6 +180,60 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     await expect(analysis.json()).resolves.toMatchObject({ code: "ai_provider_not_configured" });
   });
 
+  it("completes analysis on the fallback model when the configured model is retired", async () => {
+    selection = {
+      provider: "openai",
+      apiKey: "user-key",
+      models: { recommended: "gpt-retired", fallbacks: ["gpt-live"] },
+    };
+    const modelsUsed: string[] = [];
+    const runtime = await startWithModelProvider((selected) =>
+      createAiProviderWithModels(selected, (model) => ({
+        generate: async (params) => {
+          modelsUsed.push(model);
+          if (model === "gpt-retired") {
+            throw new APICallError({
+              message: "The model `gpt-retired` has been deprecated",
+              url: "https://api.openai.com/v1/chat/completions",
+              requestBodyValues: {},
+              statusCode: 404,
+            });
+          }
+          return params.outputSchema.parse(analysisResponse());
+        },
+      })),
+    );
+
+    const application = (await (await createManualJob(runtime.request)).json()) as { id: string };
+
+    await expect
+      .poll(
+        async () =>
+          (
+            (await (await runtime.request(`/job-applications/${application.id}`)).json()) as {
+              status: string;
+            }
+          ).status,
+        { timeout: 10_000, interval: 100 },
+      )
+      .toBe("completed");
+    const detail = (await (
+      await runtime.request(`/job-applications/${application.id}`)
+    ).json()) as { matchAnalysis?: { generatedBy?: unknown } };
+    const events = (await (
+      await runtime.request(`/job-applications/${application.id}/events`)
+    ).json()) as Array<{ title: string; metadata?: Record<string, unknown> }>;
+
+    expect(modelsUsed).toContain("gpt-live");
+    expect(detail.matchAnalysis?.generatedBy).toEqual({ provider: "openai", model: "gpt-live" });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        title: "AI analysis completed",
+        metadata: expect.objectContaining({ aiProvider: "openai", aiModel: "gpt-live" }),
+      }),
+    );
+  });
+
   it("runs queued AI analysis in process and records a terminal failure", async () => {
     selection = { provider: "anthropic", apiKey: "user-key" };
     const { request } = await start({
@@ -227,4 +291,54 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     // Not retried: a bad key fails the same way every time.
     expect(calls).toBe(1);
   });
+
+  it("exports a backup that a clean install on another device restores intact", async () => {
+    const first = await start(undefined, "device-a");
+    const application = (await (await createManualJob(first.request)).json()) as { id: string };
+    const archivePath = join(dataDir, "backup.zip");
+    await first.runtime.exportBackup({ outputPath: archivePath, appVersion: "0.7.0" });
+    await stop(first.runtime);
+
+    // The desktop host swaps a staged import into place before the runtime starts on it.
+    await prepareLocalDataImport({ archivePath, stagingDir: join(dataDir, "device-b", "data") });
+    const second = await start(undefined, "device-b");
+
+    const restored = (await (
+      await second.request(`/job-applications/${application.id}`)
+    ).json()) as { id: string; tracking: { companyName: string } };
+    const profile = (await (await second.request("/profiles/me")).json()) as {
+      headline: string;
+    };
+    expect(restored).toMatchObject({ id: application.id, tracking: { companyName: "Acme" } });
+    expect(profile.headline).toBe("Backend engineer");
+  });
 });
+
+// The real model fallback over fake single-model providers, so no request leaves the test.
+function createAiProviderWithModels(
+  selection: AiProviderSelection,
+  forModel: (model: string) => AiProvider,
+): AiProvider {
+  return new ModelFallbackAiProvider(selection.provider, aiModelCandidates(selection), forModel);
+}
+
+// Satisfies both the requirement extraction and the match analysis output schemas.
+function analysisResponse(): Record<string, unknown> {
+  return {
+    requirements: ["Build reliable TypeScript services"],
+    matchScore: 80,
+    requirementEvaluations: [
+      {
+        requirement: "Build reliable TypeScript services",
+        status: "matched",
+        evidence: ["TypeScript"],
+      },
+    ],
+    missingSkills: [],
+    strongSkills: ["TypeScript"],
+    summaryTips: [],
+    coverLetterContent: "I am applying for the Engineer role at Acme.",
+    interviewTips: ["Prepare TypeScript examples."],
+    experienceTips: [{ experienceIndex: 0, tips: [] }],
+  };
+}

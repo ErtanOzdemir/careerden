@@ -5,7 +5,7 @@ import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 export class GeminiAiProvider implements AiProvider {
   constructor(
     private readonly apiKey: string,
-    private readonly model = "gemini-2.5-flash",
+    readonly model: string,
   ) {}
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {

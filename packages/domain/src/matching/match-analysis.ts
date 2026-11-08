@@ -1,3 +1,4 @@
+import type { AiModelUsage } from "./ai-provider.js";
 import type { UserProfile } from "../profiles/user-profile.js";
 import type { ScrapeBundle } from "../scraping/scraped-data.js";
 
@@ -22,6 +23,8 @@ export interface MatchAnalysisResult {
   projectTips?: ProjectTips[];
   certificationsTips?: CvListTip[];
   gapQuestions?: GapQuestion[];
+  /** The model that produced the analysis. Absent on analyses stored before it was recorded. */
+  generatedBy?: AiModelUsage;
 }
 
 /** The CV field a gap question's answer belongs in. */

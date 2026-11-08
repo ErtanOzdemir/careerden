@@ -1,5 +1,6 @@
 import { aiMatchResultCandidateSchema, aiMatchResultSchema } from "@careerden/contracts";
 import type {
+  AiModelUsage,
   AiProvider,
   ApplicationPackPreferences,
   MatchAnalysisResult,
@@ -21,10 +22,14 @@ export class RunMatchAnalysisUseCase {
     applicationPackPreferences?: ApplicationPackPreferences;
   }): Promise<MatchAnalysisResult> {
     const { profile } = input;
+    let generatedBy: AiModelUsage | undefined;
     const candidate = await this.aiProvider.generate({
       system: matchAnalysisSystemPrompt(),
       prompt: matchAnalysisPrompt(input),
       outputSchema: aiMatchResultCandidateSchema,
+      onModelUsed: (model) => {
+        generatedBy = model;
+      },
     });
 
     const result = sanitizeMatchAnalysisDurationClaims(
@@ -36,7 +41,11 @@ export class RunMatchAnalysisUseCase {
 
     aiMatchResultSchema.parse(analysis);
 
-    return { ...analysis, matchScore: calculateMatchScore(analysis) };
+    return {
+      ...analysis,
+      matchScore: calculateMatchScore(analysis),
+      ...(generatedBy ? { generatedBy } : {}),
+    };
   }
 }
 

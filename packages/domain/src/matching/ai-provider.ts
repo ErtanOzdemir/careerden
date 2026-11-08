@@ -9,6 +9,17 @@ export interface AiGenerateParams<T> {
    * interactive requests the user is actively waiting on. Omit to keep the provider's default.
    */
   thinking?: boolean;
+  /**
+   * Called with the model that produced the output, which can differ from the configured one
+   * after a fallback.
+   */
+  onModelUsed?: (model: AiModelUsage) => void;
+}
+
+/** Identifies the provider and model that produced an AI output. */
+export interface AiModelUsage {
+  provider: string;
+  model: string;
 }
 
 export interface AiProvider {

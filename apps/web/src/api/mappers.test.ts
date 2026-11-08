@@ -101,6 +101,21 @@ describe("API mappers", () => {
     expect(mapApiStatusToUi("ghosted")).toBe("Ghosted");
   });
 
+  it("names LinkedIn throttling instead of reporting a generic retry", () => {
+    const application = createApplicationDetail();
+    application.status = "queued";
+    application.failureReason =
+      "scrape_rate_limited: LinkedIn public fetch failed: 429 Too Many Requests";
+
+    expect(mapApiJobApplicationToUi(application).processingStatusLabel).toBe(
+      "LinkedIn is rate limiting",
+    );
+
+    application.failureReason = "scrape_blocked: LinkedIn public fetch failed: 403 Forbidden";
+
+    expect(mapApiJobApplicationToUi(application).processingStatusLabel).toBe("Retry scheduled");
+  });
+
   it("preserves the active analysis attempt for queued UI state", () => {
     const application = createApplicationDetail();
     application.analysisAttemptId = "attempt-1";

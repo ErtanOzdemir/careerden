@@ -5,7 +5,7 @@ import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 export class OpenAiAiProvider implements AiProvider {
   constructor(
     private readonly apiKey: string,
-    private readonly model = "gpt-4.1-mini",
+    readonly model: string,
   ) {}
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {

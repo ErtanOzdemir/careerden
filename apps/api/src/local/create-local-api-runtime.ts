@@ -23,6 +23,7 @@ import type {
   AiProviderSelectionSource,
   ClaimedOutboxEvent,
   InProcessOutboxHandler,
+  StructuredLogger,
 } from "@careerden/infrastructure";
 import {
   AiProviderNotConfiguredError,
@@ -40,12 +41,16 @@ import {
   PostgresReminderOutboxDispatcher,
   PostgresUserProfileRepository,
   ResolvingAiProvider,
+  consoleStructuredLogger,
+  createAiProvider,
   createPgliteDb,
+  describeErrorForLog,
   runPostgresMigrations,
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
+import { LoggingAiProvider } from "../infrastructure/matching/logging-ai.provider.js";
 import { HttpRemoteImageFetcher } from "../infrastructure/scraping/http-remote-image.fetcher.js";
 import { createLocalFileRouter } from "./local-files.routes.js";
 import { localSession } from "./local-session.middleware.js";
@@ -67,6 +72,8 @@ export interface LocalApiRuntimeOptions {
   // Test seam for the provider built from a selection.
   createAiProvider?: (selection: AiProviderSelection) => AiProvider;
   backgroundPollIntervalMs?: number;
+  // Receives redacted operational events; the desktop shell writes them to its log file.
+  logger?: StructuredLogger;
 }
 
 export interface LocalApiRuntime {
@@ -82,9 +89,10 @@ export async function createLocalApiRuntime(
   options: LocalApiRuntimeOptions,
 ): Promise<LocalApiRuntime> {
   // PGlite creates only its own directory, not missing parents.
+  const log = options.logger ?? consoleStructuredLogger;
   await mkdir(options.dataDir, { recursive: true });
   const db = createPgliteDb(join(options.dataDir, "pglite"));
-  await runPostgresMigrations(db);
+  await migrate(db, log);
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")
@@ -105,9 +113,10 @@ export async function createLocalApiRuntime(
     signingKey: randomBytes(32).toString("base64url"),
     urlPathPrefix: "/api/files",
   });
+  const createProvider = options.createAiProvider ?? createAiProvider;
   const aiProvider = new ResolvingAiProvider(
     options.aiProviderSelection,
-    ...(options.createAiProvider ? [options.createAiProvider] : []),
+    (selection) => new LoggingAiProvider(createProvider(selection), selection.provider, log),
   );
   const pdfRenderer = options.pdfRenderer;
 
@@ -129,6 +138,18 @@ export async function createLocalApiRuntime(
         rawApp.use("/files", createLocalFileRouter(storage));
       },
       authenticate: localSession(options.sessionToken, localUser),
+      logUnexpectedError: (entry, error) => {
+        log({
+          level: "error",
+          event: "api.unexpected_error",
+          fields: {
+            traceId: entry.traceId ?? null,
+            method: entry.request.method ?? null,
+            path: entry.request.path ?? null,
+            ...describeErrorForLog(error),
+          },
+        });
+      },
     },
   });
 
@@ -201,6 +222,7 @@ export async function createLocalApiRuntime(
     },
   ];
   const runner = new InProcessOutboxRunner(outbox, handlers, {
+    onError: (message, error) => logBackgroundFailure(log, message, error),
     ...(options.backgroundPollIntervalMs
       ? { pollIntervalMs: options.backgroundPollIntervalMs }
       : {}),
@@ -210,7 +232,9 @@ export async function createLocalApiRuntime(
   const reminderQueue = new InProcessFollowUpReminderQueue({
     deliver: (payload) => deliverReminder.execute(payload),
     onFailed: (payload, error) => {
-      console.error(`Local runtime failed follow-up reminder ${payload.followUpId}`, error);
+      logBackgroundFailure(log, "Local runtime failed a follow-up reminder", error, {
+        followUpId: payload.followUpId,
+      });
     },
   });
   const reminderOutbox = new PostgresReminderOutboxDispatcher(outbox, reminders, reminderQueue);
@@ -218,10 +242,10 @@ export async function createLocalApiRuntime(
 
   await runner.start();
   await restoreFollowUpReminders(reminders, reminderQueue);
-  const reminderOutboxTask = createSerialTask("follow-up reminder outbox", () =>
+  const reminderOutboxTask = createSerialTask(log, "follow-up reminder outbox", () =>
     reminderOutbox.dispatchPending(),
   );
-  const expireReservationsTask = createSerialTask("stale analysis recovery", () =>
+  const expireReservationsTask = createSerialTask(log, "stale analysis recovery", () =>
     expireStaleReservations.execute(),
   );
   await reminderOutboxTask();
@@ -287,7 +311,36 @@ function applicationPackPayload(event: ClaimedOutboxEvent) {
   };
 }
 
-function createSerialTask(name: string, run: () => Promise<unknown>) {
+async function migrate(db: Knex, log: StructuredLogger): Promise<void> {
+  const startedAt = Date.now();
+  log({ level: "info", event: "migration.started" });
+  try {
+    const applied = await runPostgresMigrations(db);
+    log({
+      level: "info",
+      event: "migration.finished",
+      fields: { applied: applied.length, durationMs: Date.now() - startedAt },
+    });
+  } catch (error) {
+    log({ level: "error", event: "migration.failed", fields: describeErrorForLog(error) });
+    throw error;
+  }
+}
+
+function logBackgroundFailure(
+  log: StructuredLogger,
+  message: string,
+  error: unknown,
+  fields: Record<string, string> = {},
+): void {
+  log({
+    level: "error",
+    event: "background.failed",
+    fields: { task: message, ...fields, ...describeErrorForLog(error) },
+  });
+}
+
+function createSerialTask(log: StructuredLogger, name: string, run: () => Promise<unknown>) {
   let running = false;
   return async () => {
     if (running) return;
@@ -295,7 +348,7 @@ function createSerialTask(name: string, run: () => Promise<unknown>) {
     try {
       await run();
     } catch (error) {
-      console.error(`Local runtime failed ${name}`, error);
+      logBackgroundFailure(log, `Local runtime failed ${name}`, error);
     } finally {
       running = false;
     }

@@ -1,5 +1,7 @@
 import { aiProviderNames } from "@careerden/infrastructure";
 import type { AiProviderSelection } from "@careerden/infrastructure";
+import type { StructuredLogEntry } from "@careerden/infrastructure/logging";
+import { parseStructuredLogMessage } from "../logging/structured-log-message.js";
 
 // Main process -> local backend utility process.
 export type LocalBackendCommand =
@@ -15,7 +17,8 @@ export type LocalBackendEvent =
   | { type: "start:error"; message: string }
   | { type: "stopped" }
   | { type: "pdf:request"; requestId: string; html: string }
-  | { type: "ai-selection:request"; requestId: string };
+  | { type: "ai-selection:request"; requestId: string }
+  | { type: "log"; entry: StructuredLogEntry };
 
 export function parseLocalBackendCommand(message: unknown): LocalBackendCommand | undefined {
   const payload = asRecord(unwrapMessageEvent(message));
@@ -65,6 +68,10 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
         : undefined;
     case "ai-selection:request":
       return isString(payload.requestId) ? (payload as unknown as LocalBackendEvent) : undefined;
+    case "log": {
+      const entry = parseStructuredLogMessage(payload);
+      return entry ? { type: "log", entry } : undefined;
+    }
     default:
       return undefined;
   }

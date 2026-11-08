@@ -13,12 +13,14 @@ export function createPostgresDb(connectionString: string): Knex {
   });
 }
 
-export async function runPostgresMigrations(db: Knex): Promise<void> {
+// Resolves with the names of the migrations this call applied.
+export async function runPostgresMigrations(db: Knex): Promise<string[]> {
   const directory = join(fileURLToPath(new URL(".", import.meta.url)), "postgres-migrations");
 
-  await db.migrate.latest({
+  const [, applied] = (await db.migrate.latest({
     directory,
     extension: "cjs",
     loadExtensions: [".cjs"],
-  });
+  })) as [number, string[]];
+  return applied;
 }

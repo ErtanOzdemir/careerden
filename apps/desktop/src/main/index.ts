@@ -25,6 +25,9 @@ import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
 import { ElectronPdfRenderer } from "./local-backend/electron-pdf-renderer.js";
 import { LocalBackendProcess } from "./local-backend/local-backend-process.js";
+import { DesktopLogger, resolveDesktopLogsDirectory } from "./logging/desktop-logger.js";
+import { registerLogSettingsIpc } from "./logging/log-settings-ipc.js";
+import { LogSettingsStore } from "./logging/log-settings-store.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
 import { DesktopNotificationActivationQueue } from "./notifications/desktop-notification-activation.js";
@@ -53,7 +56,10 @@ import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
 import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
 import { DesktopUpdateManager, type DesktopUpdater } from "./updates/desktop-update-manager.js";
 import type { DesktopUpdatePolicy } from "./updates/desktop-update-policy.js";
-import { desktopUpdateIpcChannels } from "./updates/desktop-update-types.js";
+import {
+  desktopUpdateIpcChannels,
+  type DesktopUpdateStatus,
+} from "./updates/desktop-update-types.js";
 import { applyWindowControl, type WindowControlAction } from "./window-controls.js";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -94,9 +100,25 @@ if (process.platform === "win32") {
   app.setAppUserModelId(appIdentity.id);
 }
 
+// Every desktop process logs here: userData/logs/careerden.log, redacted and rotated.
+const logger = new DesktopLogger({
+  directory: resolveDesktopLogsDirectory(app.getPath("userData")),
+  mirrorToConsole: !app.isPackaged,
+});
+const logSettings = new LogSettingsStore(join(app.getPath("userData"), "log-settings.json"));
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  logger.info("app.started", {
+    version: app.getVersion(),
+    edition: runtimeConfig.edition,
+    os: process.platform,
+    osVersion: process.getSystemVersion(),
+    arch: process.arch,
+    electron: process.versions.electron ?? null,
+    packaged: app.isPackaged,
+  });
   registerDesktopLifecycle();
 }
 
@@ -123,6 +145,7 @@ function registerDesktopLifecycle(): void {
     }
 
     event.preventDefault();
+    logger.info("app.quitting");
     void shutdownDesktopRuntime().finally(() => {
       isQuittingAfterCookieFlush = true;
       app.quit();
@@ -135,6 +158,7 @@ async function initializeDesktopRuntime(): Promise<void> {
     app.dock.setIcon(join(__dirname, "..", "..", "build", "icon-dev.png"));
   }
 
+  logger.setLevel(await logSettings.readLevel());
   const { desktopUpdateRepository } = runtimeConfig;
   let aiCredentialsStore: AiCredentialsStore | undefined;
   let apiBaseUrl: string;
@@ -150,7 +174,7 @@ async function initializeDesktopRuntime(): Promise<void> {
       apiBaseUrl = backend.baseUrl;
       apiRequestHeaders = backend.headers;
     } catch (error) {
-      console.error("Failed to start the local backend", error);
+      logger.exception("local_backend.start_failed", error);
       dialog.showErrorBox(
         `${appIdentity.name} could not start`,
         `Your local data could not be opened. ${error instanceof Error ? error.message : ""}`.trim(),
@@ -181,7 +205,7 @@ async function initializeDesktopRuntime(): Promise<void> {
         fetchApi,
         fetchFile: (input, init) => net.fetch(input, init),
         onError: (error) => {
-          console.error("Packaged renderer protocol error", error);
+          logger.exception("renderer_protocol.failed", error);
         },
         rendererDirectory: join(__dirname, "..", "..", "renderer"),
       }),
@@ -193,6 +217,8 @@ async function initializeDesktopRuntime(): Promise<void> {
 
   const claimedBy = getDesktopScrapingClaimOwner();
   utilityScrapingRunner = new UtilityProcessLinkedInScrapingRunner({
+    childLog: logger.forSource("scraper"),
+    log: logger.forSource("main"),
     modulePath: join(__dirname, "scraping", "scraping-utility-process.js"),
   });
 
@@ -204,6 +230,7 @@ async function initializeDesktopRuntime(): Promise<void> {
         ? { headers: apiRequestHeaders }
         : { getCookies: () => session.defaultSession.cookies.get({ url: apiBaseUrl }) }),
     }),
+    log: logger.forSource("main"),
     runner: utilityScrapingRunner,
   });
   localScrapingWorker.start();
@@ -217,11 +244,11 @@ async function initializeDesktopRuntime(): Promise<void> {
           window.webContents.send(desktopNotificationIpcChannels.activationAvailable);
         })
         .catch((error: unknown) => {
-          console.error("Failed to activate Careerden from a native notification", error);
+          logger.exception("notification.activation_failed", error);
         });
     },
     onError: (error) => {
-      console.error("Native notification error", error);
+      logger.exception("notification.native_failed", error);
     },
   });
 
@@ -229,7 +256,7 @@ async function initializeDesktopRuntime(): Promise<void> {
     initialize: () => new Notification(),
     isSupported: () => Notification.isSupported(),
     onError: (error) => {
-      console.error("Failed to request native notification permission", error);
+      logger.exception("notification.permission_failed", error);
     },
     platform: process.platform,
   });
@@ -255,7 +282,7 @@ async function initializeDesktopRuntime(): Promise<void> {
     fetch: fetchApi,
     onChange: (change) => notificationCoordinator.received(change),
     onError: (error) => {
-      console.error("Desktop notification stream error", error);
+      logger.exception("notification.stream_failed", error);
     },
   });
 
@@ -266,6 +293,7 @@ async function initializeDesktopRuntime(): Promise<void> {
     // Setting a channel enables downgrades in electron-updater; keep stable-only behavior.
     updater.allowDowngrade = false;
   }
+  let lastUpdateStatus: DesktopUpdateStatus | undefined;
   const updatePolicyCachePath = join(app.getPath("userData"), "desktop-update-policy-cache.json");
   desktopUpdateManager = new DesktopUpdateManager({
     beforeInstall: async () => {
@@ -303,6 +331,21 @@ async function initializeDesktopRuntime(): Promise<void> {
     },
     isPackaged: app.isPackaged && desktopUpdateRepository !== undefined,
     onStateChange: (state) => {
+      // Progress updates repeat the same status; log only transitions.
+      if (state.status !== lastUpdateStatus) {
+        lastUpdateStatus = state.status;
+        const fields = {
+          status: state.status,
+          currentVersion: state.currentVersion,
+          availableVersion: state.availableVersion ?? null,
+          required: state.required,
+        };
+        if (state.status === "error") {
+          logger.warn("update.failed", { ...fields, errorMessage: state.errorMessage ?? null });
+        } else {
+          logger.info("update.status", fields);
+        }
+      }
       getMainWindow()?.webContents.send(desktopUpdateIpcChannels.stateChanged, state);
     },
     readCachedPolicy: async () => {
@@ -324,6 +367,8 @@ async function initializeDesktopRuntime(): Promise<void> {
     isTrustedMainWindowIpcSender(event, getMainWindow()),
   );
   if (aiCredentialsStore) registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore);
+  // Only the local edition offers the debug logging setting.
+  if (runtimeConfig.edition === "local") registerLogSettingsIpc(ipcHandlers, logSettings, logger);
   ipcHandlers
     .register("open-external", (_event, url: unknown) => {
       const allowedUrl = getAllowedExternalUrl(url);
@@ -519,6 +564,7 @@ async function startLocalBackend(
 ): Promise<{ baseUrl: string; headers: Record<string, string> }> {
   const sessionToken =
     config.developmentBackend?.sessionToken ?? randomBytes(32).toString("base64url");
+  logger.registerSecret(sessionToken);
   const pdfRenderer = new ElectronPdfRenderer({
     createWindow: (options) => new BrowserWindow(options),
     getSession: (partition) => session.fromPartition(partition),
@@ -528,10 +574,20 @@ async function startLocalBackend(
     dataDir: join(app.getPath("userData"), "data"),
     sessionToken,
     port: config.developmentBackend?.port ?? 0,
-    renderPdf: (html) => pdfRenderer.htmlToPdf(html),
-    getAiSelection: () => aiCredentialsStore.currentSelection(),
-    onUnexpectedExit: (code) => {
-      console.error(`The local backend exited unexpectedly with code ${code}`);
+    renderPdf: (html) =>
+      pdfRenderer.htmlToPdf(html).catch((error: unknown) => {
+        logger.exception("pdf.render_failed", error);
+        throw error;
+      }),
+    getAiSelection: async () => {
+      const selection = await aiCredentialsStore.currentSelection();
+      // Provider errors can echo the key; keep it out of every log line.
+      if (selection) logger.registerSecret(selection.apiKey);
+      return selection;
+    },
+    log: logger.forSource("main"),
+    childLog: logger.forSource("local-backend"),
+    onUnexpectedExit: () => {
       dialog.showErrorBox(
         `${appIdentity.name} needs to restart`,
         "The local data service stopped unexpectedly. Your data is safe; the app will restart.",

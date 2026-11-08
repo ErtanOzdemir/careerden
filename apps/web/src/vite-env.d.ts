@@ -45,6 +45,8 @@ interface AiCredentialsInput {
 
 type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
 
+type DesktopLogLevel = "info" | "debug";
+
 interface Window {
   electronAPI?: {
     platform?: string;
@@ -56,6 +58,11 @@ interface Window {
       remove: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
+    };
+    // Present only in the local desktop edition. Exposes the log level, never log contents.
+    logging?: {
+      getLevel: () => Promise<DesktopLogLevel>;
+      setLevel: (level: DesktopLogLevel) => Promise<DesktopLogLevel>;
     };
     openExternal?: (url: string) => Promise<void>;
     notifyJobApplicationQueued: () => Promise<void>;

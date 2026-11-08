@@ -1,5 +1,6 @@
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
+import { LinkedInHttpError } from "./linkedin-http.error.js";
 
 export interface LinkedInJobScraperOptions {
   fetch?: typeof fetch;
@@ -349,11 +350,14 @@ async function fetchLinkedInHtml(fetchImpl: typeof fetch, url: string): Promise<
   });
 
   if (response.status === 404) {
-    throw new Error("LinkedIn job was not found");
+    throw new LinkedInHttpError("LinkedIn job was not found", response.status);
   }
 
   if (!response.ok) {
-    throw new Error(`LinkedIn public fetch failed: ${response.status} ${response.statusText}`);
+    throw new LinkedInHttpError(
+      `LinkedIn public fetch failed: ${response.status} ${response.statusText}`,
+      response.status,
+    );
   }
 
   return response.text();

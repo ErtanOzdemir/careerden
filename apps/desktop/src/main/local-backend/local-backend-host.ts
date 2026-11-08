@@ -3,6 +3,7 @@ import { createServer, type RequestListener, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { DocumentRenderer } from "@careerden/domain";
 import type { AiProviderSelection, AiProviderSelectionSource } from "@careerden/infrastructure";
+import type { StructuredLogger } from "@careerden/infrastructure/logging";
 import {
   parseLocalBackendCommand,
   type LocalBackendCommand,
@@ -24,6 +25,7 @@ export type CreateLocalBackendRuntime = (options: {
   sessionToken: string;
   pdfRenderer: DocumentRenderer;
   aiProviderSelection: AiProviderSelectionSource;
+  logger: StructuredLogger;
 }) => Promise<LocalBackendRuntime>;
 
 interface PendingRequest<T> {
@@ -43,6 +45,8 @@ export function startLocalBackendHost(
   const pendingSelections = new Map<string, PendingRequest<AiProviderSelection | null>>();
   let runtime: LocalBackendRuntime | undefined;
   let server: Server | undefined;
+  // The main process owns the log file; entries travel over the parent port.
+  const logger: StructuredLogger = (entry) => parentPort.postMessage({ type: "log", entry });
 
   function request<T>(
     pending: Map<string, PendingRequest<T>>,
@@ -97,6 +101,7 @@ export function startLocalBackendHost(
               (requestId) => ({ type: "ai-selection:request", requestId }),
             ),
         },
+        logger,
       });
       const listening = createServer(runtime.app);
       server = listening;

@@ -22,6 +22,11 @@ const aiCredentialsChannels = {
   test: "ai-credentials-test",
 };
 
+const logSettingsChannels = {
+  getLevel: "desktop-log-get-level",
+  setLevel: "desktop-log-set-level",
+};
+
 const edition = process.argv.includes("--careerden-edition=local") ? "local" : "cloud";
 
 const electronAPI = {
@@ -55,6 +60,11 @@ if (edition === "local") {
     remove: (provider) => ipcRenderer.invoke(aiCredentialsChannels.remove, provider),
     setActive: (provider) => ipcRenderer.invoke(aiCredentialsChannels.setActive, provider),
     test: (input) => ipcRenderer.invoke(aiCredentialsChannels.test, input),
+  };
+  // Only the level is exposed; log contents and paths stay in the main process.
+  electronAPI.logging = {
+    getLevel: () => ipcRenderer.invoke(logSettingsChannels.getLevel),
+    setLevel: (level) => ipcRenderer.invoke(logSettingsChannels.setLevel, level),
   };
 }
 

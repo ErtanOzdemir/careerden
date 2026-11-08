@@ -176,7 +176,7 @@ describe("LocalScrapingWorker", () => {
   ] as const)(
     "drops a terminal %s submission response without reporting another failure",
     async (status, code) => {
-      const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const log = vi.fn();
       const api = createApiClient({
         claimNextScrapeJob: vi
           .fn()
@@ -191,6 +191,7 @@ describe("LocalScrapingWorker", () => {
       });
       const worker = new LocalScrapingWorker({
         api,
+        log,
         runner: createRunner({
           scrape: vi.fn(async () => ({
             job: {
@@ -207,11 +208,15 @@ describe("LocalScrapingWorker", () => {
       await worker.runOnce();
 
       expect(api.failScrapeJob).not.toHaveBeenCalled();
-      expect(warning).toHaveBeenCalledWith(
-        "Desktop dropped scrape claim after terminal API response",
-        expect.objectContaining({ code, jobApplicationId: "job-1", status }),
-      );
-      warning.mockRestore();
+      expect(log).toHaveBeenCalledWith({
+        level: "warn",
+        event: "scraping.claim_dropped",
+        fields: expect.objectContaining({
+          errorCode: code,
+          jobApplicationId: "job-1",
+          statusCode: status,
+        }),
+      });
     },
   );
 
@@ -304,21 +309,28 @@ describe("LocalScrapingWorker", () => {
     consoleError.mockRestore();
   });
 
-  it("logs claim failures instead of rejecting from the scheduler", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("logs claim failures with the API trace ID instead of rejecting from the scheduler", async () => {
+    const log = vi.fn();
     const api = createApiClient({
       claimNextScrapeJob: vi.fn(async () => {
-        throw new DesktopApiError(500, "Unexpected server error", "internal");
+        throw new DesktopApiError(500, "Internal server error", "internal", { traceId: "trace-1" });
       }),
     });
-    const worker = new LocalScrapingWorker({ api, runner: createRunner(), intervalMs: 1 });
+    const worker = new LocalScrapingWorker({ api, log, runner: createRunner(), intervalMs: 1 });
 
     worker.start();
     await delay(5);
     worker.stop();
 
-    expect(consoleError).toHaveBeenCalledWith("Local scraping worker failed", expect.any(Error));
-    consoleError.mockRestore();
+    expect(log).toHaveBeenCalledWith({
+      level: "error",
+      event: "scraping.worker_failed",
+      fields: expect.objectContaining({
+        errorCode: "internal",
+        statusCode: 500,
+        traceId: "trace-1",
+      }),
+    });
   });
 });
 

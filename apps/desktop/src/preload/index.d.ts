@@ -52,11 +52,20 @@ export interface AiCredentialsAPI {
   test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
 }
 
+export type DesktopLogLevel = "info" | "debug";
+
+export interface DesktopLoggingAPI {
+  getLevel: () => Promise<DesktopLogLevel>;
+  setLevel: (level: DesktopLogLevel) => Promise<DesktopLogLevel>;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   edition: DesktopEdition;
   // Present only in the local edition.
   aiCredentials?: AiCredentialsAPI;
+  // Present only in the local edition.
+  logging?: DesktopLoggingAPI;
   openExternal: (url: string) => Promise<void>;
   notifyJobApplicationQueued: () => Promise<void>;
   setNativeThemeSource: (source: NativeThemeSource) => Promise<void>;

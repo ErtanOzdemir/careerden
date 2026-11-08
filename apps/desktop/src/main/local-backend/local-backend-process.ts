@@ -1,6 +1,8 @@
 import type { UtilityProcess } from "electron";
 import { utilityProcess } from "electron";
 import type { AiProviderSelection } from "@careerden/infrastructure";
+import type { StructuredLogger } from "@careerden/infrastructure/logging";
+import { describeErrorForLog } from "@careerden/infrastructure/logging";
 import {
   parseLocalBackendEvent,
   type LocalBackendCommand,
@@ -24,6 +26,10 @@ export interface LocalBackendProcessOptions {
   renderPdf: (html: string) => Promise<Buffer>;
   getAiSelection: () => Promise<AiProviderSelection | null>;
   onUnexpectedExit?: (code: number) => void;
+  // Lifecycle events observed by the main process.
+  log?: StructuredLogger;
+  // Entries the utility process posts about its own work.
+  childLog?: StructuredLogger;
   fork?: LocalBackendFork;
   startTimeoutMs?: number;
   stopTimeoutMs?: number;
@@ -40,6 +46,8 @@ export class LocalBackendProcess {
   async start(): Promise<{ baseUrl: string }> {
     if (this.child) throw new Error("The local backend is already running");
 
+    const startedAt = Date.now();
+    this.log({ level: "info", event: "local_backend.starting" });
     const fork = this.options.fork ?? utilityProcess.fork;
     const child = fork(this.options.modulePath, [], { serviceName: "careerden-local-backend" });
     this.child = child;
@@ -50,6 +58,11 @@ export class LocalBackendProcess {
       if (this.child !== child) return;
       this.child = undefined;
       this.notify({ type: "exit" });
+      this.log({
+        level: this.stopping ? "info" : "error",
+        event: this.stopping ? "local_backend.exited" : "local_backend.unexpected_exit",
+        fields: { exitCode: code },
+      });
       if (!this.stopping) this.options.onUnexpectedExit?.(code);
     });
 
@@ -65,22 +78,41 @@ export class LocalBackendProcess {
     });
 
     const event = await result.catch((error: unknown) => {
+      this.log({
+        level: "error",
+        event: "local_backend.start_failed",
+        fields: describeErrorForLog(error),
+      });
       this.kill();
       throw error;
     });
-    if (event.type === "ready") return { baseUrl: `http://127.0.0.1:${event.port}` };
+    if (event.type === "ready") {
+      this.log({
+        level: "info",
+        event: "local_backend.ready",
+        fields: { durationMs: Date.now() - startedAt },
+      });
+      return { baseUrl: `http://127.0.0.1:${event.port}` };
+    }
 
     this.kill();
-    throw new Error(
+    const failure = new Error(
       event.type === "start:error"
         ? `The local backend failed to start: ${event.message}`
         : "The local backend exited before it was ready",
     );
+    this.log({
+      level: "error",
+      event: "local_backend.start_failed",
+      fields: describeErrorForLog(failure),
+    });
+    throw failure;
   }
 
   async stop(): Promise<void> {
     if (!this.child) return;
     this.stopping = true;
+    this.log({ level: "info", event: "local_backend.stopping" });
     const stopped = this.waitFor(
       (event) => event.type === "stopped" || event.type === "exit",
       this.options.stopTimeoutMs ?? 10_000,
@@ -93,6 +125,11 @@ export class LocalBackendProcess {
   private handleMessage(child: LocalBackendChild, message: unknown): void {
     const event = parseLocalBackendEvent(message);
     if (!event) return;
+
+    if (event.type === "log") {
+      this.options.childLog?.(event.entry);
+      return;
+    }
 
     if (event.type === "pdf:request") {
       void this.options.renderPdf(event.html).then(
@@ -141,6 +178,10 @@ export class LocalBackendProcess {
       };
       this.waiters.add(waiter);
     });
+  }
+
+  private log(entry: Parameters<StructuredLogger>[0]): void {
+    this.options.log?.(entry);
   }
 
   private notify(event: LocalBackendEvent | { type: "exit" }): void {

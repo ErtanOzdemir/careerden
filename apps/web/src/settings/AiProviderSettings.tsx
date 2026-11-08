@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, KeyRound, ShieldCheck, TriangleAlert } from "lucide-react";
+import { embeddedAiModelCatalog } from "@careerden/contracts";
 import { Button } from "../components/ui/button.js";
 import { Panel } from "../components/careerden/panel.js";
 import { cn } from "../lib/utils.js";
@@ -19,31 +20,31 @@ const providers: Array<{
   {
     id: "openai",
     label: "OpenAI",
-    defaultModel: "gpt-4.1-mini",
+    defaultModel: embeddedAiModelCatalog.providers.openai.recommended,
     keysUrl: "https://platform.openai.com/api-keys",
   },
   {
     id: "anthropic",
     label: "Anthropic",
-    defaultModel: "claude-haiku-5-5",
+    defaultModel: embeddedAiModelCatalog.providers.anthropic.recommended,
     keysUrl: "https://console.anthropic.com/settings/keys",
   },
   {
     id: "gemini",
     label: "Google Gemini",
-    defaultModel: "gemini-2.5-flash",
+    defaultModel: embeddedAiModelCatalog.providers.gemini.recommended,
     keysUrl: "https://aistudio.google.com/apikey",
   },
   {
     id: "deepseek",
     label: "DeepSeek",
-    defaultModel: "deepseek-chat",
+    defaultModel: embeddedAiModelCatalog.providers.deepseek.recommended,
     keysUrl: "https://platform.deepseek.com/api_keys",
   },
   {
     id: "openrouter",
     label: "OpenRouter",
-    defaultModel: "openrouter/auto",
+    defaultModel: embeddedAiModelCatalog.providers.openrouter.recommended,
     keysUrl: "https://openrouter.ai/keys",
     modelHint: {
       text: "Enter any OpenRouter model id, such as one ending in :free. Choose a model that supports structured outputs, and note that some free models only work in approved apps.",

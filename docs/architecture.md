@@ -87,6 +87,14 @@ while no provider key is configured, and the job shows an **Add API key** prompt
 Reminders that fell due while the app was closed are delivered on the next start when the
 follow-up is at most seven days old.
 
+Model ids come from a remotely updatable catalog rather than code: the main process fetches
+`apps/desktop/ai-models.json` from the repository's default branch, falls back to the last
+valid cached copy and then to defaults embedded in the build, and passes the provider's
+recommended and fallback models with the selection. Every edition retries once with the next
+model when a provider reports the model as not found or retired, and stores the model that
+produced each analysis. See the
+[desktop guide](../apps/desktop/README.md#ai-model-catalog) for the file format.
+
 Job processing uses explicit states:
 
 ```text

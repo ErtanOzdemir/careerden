@@ -17,14 +17,14 @@ describe("GeminiAiProvider", () => {
   });
 
   it("keeps the model's default thinking when not disabled", async () => {
-    await new GeminiAiProvider("key").generate(params);
+    await new GeminiAiProvider("key", "gemini-2.5-flash").generate(params);
 
     expect(vi.mocked(generateText).mock.calls[0]![0]).not.toHaveProperty("providerOptions");
   });
 
   it("sets a zero thinking budget when thinking is disabled", async () => {
     await expect(
-      new GeminiAiProvider("key").generate({ ...params, thinking: false }),
+      new GeminiAiProvider("key", "gemini-2.5-flash").generate({ ...params, thinking: false }),
     ).resolves.toEqual({ ok: true });
 
     expect(vi.mocked(generateText).mock.calls[0]![0].providerOptions).toEqual({

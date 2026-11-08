@@ -1,29 +1,61 @@
 import { describe, expect, it } from "vitest";
-import { AiProviderFactory, createAiProvider } from "./ai-provider.factory.js";
+import { embeddedAiModelCatalog } from "@careerden/contracts";
+import {
+  aiModelCandidates,
+  AiProviderFactory,
+  createAiProvider,
+  createAiProviderForModel,
+} from "./ai-provider.factory.js";
 import { AnthropicAiProvider } from "./providers/anthropic-ai.provider.js";
 import { DeepSeekAiProvider } from "./providers/deepseek-ai.provider.js";
 import { GeminiAiProvider } from "./providers/gemini-ai.provider.js";
 import { OpenAiAiProvider } from "./providers/openai-ai.provider.js";
 import { OpenRouterAiProvider } from "./providers/openrouter-ai.provider.js";
 
-describe("createAiProvider", () => {
+describe("createAiProviderForModel", () => {
   it.each([
     ["openai", OpenAiAiProvider],
     ["gemini", GeminiAiProvider],
     ["deepseek", DeepSeekAiProvider],
     ["anthropic", AnthropicAiProvider],
     ["openrouter", OpenRouterAiProvider],
-  ] as const)("creates the %s provider", (provider, expected) => {
-    expect(createAiProvider({ provider, apiKey: "key" })).toBeInstanceOf(expected);
+  ] as const)("creates the %s provider for one model", (provider, expected) => {
+    const created = createAiProviderForModel(provider, "key", "model-1");
+
+    expect(created).toBeInstanceOf(expected);
+    expect(created).toMatchObject({ model: "model-1" });
+  });
+});
+
+describe("createAiProvider", () => {
+  it("tries the embedded recommended model, then its fallbacks", () => {
+    expect(createAiProvider({ provider: "anthropic", apiKey: "key" })).toMatchObject({
+      provider: "anthropic",
+      models: [
+        embeddedAiModelCatalog.providers.anthropic.recommended,
+        ...embeddedAiModelCatalog.providers.anthropic.fallbacks,
+      ],
+    });
   });
 
-  it("uses an explicit model and falls back to the default for a blank one", () => {
+  it("puts an explicit model first and ignores a blank one", () => {
     expect(
-      createAiProvider({ provider: "anthropic", apiKey: "key", model: "claude-sonnet-5-5" }),
-    ).toMatchObject({ model: "claude-sonnet-5-5" });
-    expect(createAiProvider({ provider: "anthropic", apiKey: "key", model: "  " })).toMatchObject({
-      model: "claude-haiku-5-5",
-    });
+      createAiProvider({ provider: "anthropic", apiKey: "key", model: "claude-sonnet-5-5" }).model,
+    ).toBe("claude-sonnet-5-5");
+    expect(createAiProvider({ provider: "anthropic", apiKey: "key", model: "  " }).model).toBe(
+      embeddedAiModelCatalog.providers.anthropic.recommended,
+    );
+  });
+
+  it("uses the catalog models from the selection instead of the embedded ones", () => {
+    expect(
+      aiModelCandidates({
+        provider: "openai",
+        apiKey: "key",
+        model: "gpt-5",
+        models: { recommended: "gpt-5", fallbacks: ["gpt-5-mini", "gpt-5"] },
+      }),
+    ).toEqual(["gpt-5", "gpt-5-mini"]);
   });
 });
 
@@ -31,7 +63,7 @@ describe("AiProviderFactory", () => {
   it("creates the configured provider when its key is present", () => {
     expect(
       new AiProviderFactory({ aiProvider: "anthropic", anthropicApiKey: "key" }).create(),
-    ).toBeInstanceOf(AnthropicAiProvider);
+    ).toMatchObject({ provider: "anthropic" });
   });
 
   it("rejects a provider without a key or an unknown provider", () => {
@@ -52,9 +84,9 @@ describe("OpenRouterAiProvider", () => {
         apiKey: "key",
         model: "thinkingmachines/inkling-small:free",
       }),
-    ).toMatchObject({ model: "thinkingmachines/inkling-small:free" });
+    ).toMatchObject({ models: ["thinkingmachines/inkling-small:free", "openrouter/auto"] });
     expect(createAiProvider({ provider: "openrouter", apiKey: "key" })).toMatchObject({
-      model: "openrouter/auto",
+      models: ["openrouter/auto"],
     });
   });
 });

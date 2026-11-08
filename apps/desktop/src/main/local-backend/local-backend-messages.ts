@@ -1,3 +1,4 @@
+import { aiProviderModelsSchema } from "@careerden/contracts";
 import { aiProviderNames } from "@careerden/infrastructure";
 import type { AiProviderSelection } from "@careerden/infrastructure";
 import type { StructuredLogEntry } from "@careerden/infrastructure/logging";
@@ -160,7 +161,8 @@ function isAiProviderSelection(value: unknown): value is AiProviderSelection {
     selection !== undefined &&
     aiProviderNames.some((name) => name === selection.provider) &&
     isString(selection.apiKey) &&
-    (selection.model === undefined || isString(selection.model))
+    (selection.model === undefined || isString(selection.model)) &&
+    (selection.models === undefined || aiProviderModelsSchema.safeParse(selection.models).success)
   );
 }
 

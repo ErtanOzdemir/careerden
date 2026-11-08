@@ -67,7 +67,7 @@ account, and the user's data never leaves the device.
 The local edition runs the API and its background work inside the app, for the single
 person using the device. Nothing is sent to a Careerden server. The only network traffic is
 public LinkedIn guest pages for imports, the AI provider the user configures with their own
-key, and GitHub Releases for update checks.
+key, GitHub Releases for update checks, and the AI model catalog on GitHub.
 
 ```text
 React renderer at careerden://app
@@ -183,6 +183,30 @@ The current source reads data-folder copies named `backups/<kind>-<UTC time>/`, 
 `before-migration-2026-11-05T09-15-00Z/` holding `pglite/` and `files/`. A restore copies one
 over `data/`, keeps the replaced folder as `backups/before-restore-<time>/`, and relaunches.
 The screen says so when no snapshot exists yet.
+
+### AI model catalog
+
+Provider model ids are not fixed in a release. [`ai-models.json`](ai-models.json) lists, per
+provider, the recommended model and an ordered fallback list (`schemaVersion` 1, validated by
+`aiModelCatalogSchema` in `@careerden/contracts`). Packaged local builds with
+`DESKTOP_UPDATE_REPOSITORY` read it from the repository's default branch, so a change merged
+there takes effect without a release:
+
+```text
+https://raw.githubusercontent.com/<owner/repository>/HEAD/apps/desktop/ai-models.json
+```
+
+The main process fetches it at startup and every hour, caches the last valid copy as
+`userData/ai-models-cache.json`, and otherwise uses the defaults embedded in the build
+(`embeddedAiModelCatalog`). An unreachable or invalid file never replaces a valid catalog, and
+providers missing from the file keep their embedded defaults. A test keeps `ai-models.json`
+equal to the embedded defaults, so edit both in the same change and the next release embeds
+what installed apps already fetch.
+
+Each analysis tries the model the user entered on the **AI provider** page, then the
+recommended model, then the fallbacks. When a provider reports that model as not found or
+retired, it retries once with the next model. The model that produced an analysis is stored on
+it as `generatedBy` and appears in the **AI analysis completed** timeline event.
 
 ## Renderer Security Boundary
 

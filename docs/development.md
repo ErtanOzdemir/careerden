@@ -71,6 +71,9 @@ the app is closed:
 pnpm seed:local-profile
 ```
 
+**Settings → Your data** exports everything to a `.careerden` backup (a zip archive), imports one in place of the current data
+(saving a snapshot to the `backups` folder first), and reveals the data folder.
+
 Add an AI provider key on the **AI provider** page to run match analysis. OpenRouter accepts
 any model id, but choose one that supports structured outputs; some free models only work in
 approved apps.
@@ -109,6 +112,7 @@ The Vite proxy also exposes the health check at <http://localhost:5173/api/healt
 | `pnpm --filter @careerden/desktop package`                     | Package desktop for the current host platform            |
 | `pnpm --filter @careerden/desktop package:local`               | Package Careerden Unplugged after a local edition build  |
 | `pnpm --filter @careerden/infrastructure smoke:playwright-pdf` | Verify local Playwright PDF rendering                    |
+| `pnpm verify:desktop-release <tag>`                            | Check a desktop release has every edition's metadata     |
 | `pnpm build`                                                   | Build every workspace                                    |
 | `pnpm test`                                                    | Run all Vitest suites                                    |
 | `pnpm lint`                                                    | Run ESLint                                               |
@@ -136,7 +140,10 @@ or publishing a version.
 
 PostgreSQL migrations run automatically during API startup, and in Careerden Unplugged on
 every app start against its embedded PGlite database. Because local migrations run on users'
-devices where they cannot be rolled back, keep migrations additive. They can also be managed
+devices where they cannot be rolled back, keep migrations additive. Before a version change or
+pending migrations, Unplugged copies its data to `userData/backups/` first (see
+[pre-migration snapshots](../apps/desktop/README.md#pre-migration-snapshots)), but that is a
+recovery path, not a rollback. They can also be managed
 from the repository root:
 
 ```bash
@@ -148,6 +155,13 @@ pnpm migrate:make <migration-name>
 
 Additional one-step controls are available as `pnpm migrate:up` and
 `pnpm migrate:down`.
+
+When Unplugged cannot open or migrate its database, or finds migrations from a newer version,
+it shows a recovery screen instead of the app. To see it in `pnpm dev:desktop:local`, quit the
+app and break the development database, for example by changing the version in
+`pglite/PG_VERSION` inside the data folder, or by deleting the newest `knex_migrations` row so
+its migration runs again and fails. Restore offers the data-folder copies in the `backups`
+folder next to `data`.
 
 ### Database Upgrade Fixtures
 

@@ -4,7 +4,12 @@ import { join } from "node:path";
 import type { Knex } from "knex";
 import { afterEach, describe, expect, it } from "vitest";
 import { createPgliteDb } from "./pglite-knex.js";
-import { runPostgresMigrations } from "./postgres-knex.js";
+import {
+  getLatestAppliedPostgresMigration,
+  listPostgresMigrations,
+  runPostgresMigrations,
+  runPostgresMigrationsThrough,
+} from "./postgres-knex.js";
 import { PostgresJobApplicationRepository } from "./job-applications/postgres-job-application.repository.js";
 import { PostgresNotificationRepository } from "./notifications/postgres-notification.repository.js";
 import { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
@@ -242,5 +247,23 @@ describe("createPgliteDb", { timeout: 30_000 }, () => {
     const restarted = await profiles.update(profile.id, { onboardingCompletedAt: null });
     expect(restarted?.onboardingCompletedAt).toBeUndefined();
     expect(restarted?.onboardingChecklistDismissedAt?.toISOString()).toBe(now.toISOString());
+  });
+
+  it("migrates through a named migration and reports the latest applied one", async () => {
+    const db = createPgliteDb();
+    databases.push(db);
+    const migrations = listPostgresMigrations();
+    const [first, second] = migrations;
+
+    await expect(getLatestAppliedPostgresMigration(db)).resolves.toBeUndefined();
+    await runPostgresMigrationsThrough(db, second!);
+    await expect(getLatestAppliedPostgresMigration(db)).resolves.toBe(second);
+    await runPostgresMigrationsThrough(db, first!);
+    await expect(getLatestAppliedPostgresMigration(db)).resolves.toBe(second);
+    await runPostgresMigrations(db);
+    await expect(getLatestAppliedPostgresMigration(db)).resolves.toBe(migrations.at(-1));
+    await expect(runPostgresMigrationsThrough(db, "29990101000000_unknown.cjs")).rejects.toThrow(
+      "Unknown migration",
+    );
   });
 });

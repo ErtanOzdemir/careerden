@@ -164,9 +164,70 @@ describe("LocalScrapingWorker", () => {
 
     expect(api.failScrapeJob).toHaveBeenCalledWith(
       "job-1",
-      "LinkedIn public job details unavailable",
+      "scrape_unknown: LinkedIn public job details unavailable",
     );
     expect(api.submitScrapeData).not.toHaveBeenCalled();
+  });
+
+  it("keeps the category of a classified scrape failure", async () => {
+    const api = createApiClient({
+      claimNextScrapeJob: vi
+        .fn()
+        .mockResolvedValueOnce({
+          id: "job-1",
+          sourceUrl: "https://www.linkedin.com/jobs/view/1",
+        })
+        .mockResolvedValueOnce(null),
+    });
+    const runner = createRunner({
+      scrape: vi.fn(async () => {
+        // The utility process forwards only the encoded message.
+        throw new Error("scrape_rate_limited: LinkedIn public fetch failed: 429 Too Many Requests");
+      }),
+    });
+
+    await new LocalScrapingWorker({ api, runner }).runOnce();
+
+    expect(api.failScrapeJob).toHaveBeenCalledWith(
+      "job-1",
+      "scrape_rate_limited: LinkedIn public fetch failed: 429 Too Many Requests",
+    );
+  });
+
+  it("stops draining and pauses scheduled runs after LinkedIn blocks a scrape", async () => {
+    let now = 1_000;
+    const api = createApiClient({
+      claimNextScrapeJob: vi.fn(async () => ({
+        id: "job-1",
+        sourceUrl: "https://www.linkedin.com/jobs/view/1",
+      })),
+    });
+    const runner = createRunner({
+      scrape: vi.fn(async () => {
+        throw new Error("scrape_blocked: LinkedIn public fetch failed: 999 Request denied");
+      }),
+    });
+    const worker = new LocalScrapingWorker({
+      api,
+      now: () => now,
+      runner,
+      throttleCooldownMs: 60_000,
+    });
+
+    await worker.runOnce({ scheduled: true });
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(1);
+
+    now += 30_000;
+    await worker.runOnce({ scheduled: true });
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(1);
+
+    // A user action still runs during the pause.
+    await worker.runOnce();
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(2);
+
+    now += 120_000;
+    await worker.runOnce({ scheduled: true });
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(3);
   });
 
   it.each([

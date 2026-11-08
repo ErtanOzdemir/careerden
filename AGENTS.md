@@ -113,6 +113,12 @@ review or download.
   response, so closed event streams do not exhaust the per-host connection limit.
 - Desktop LinkedIn scraping uses public guest HTTP responses in an isolated utility
   process and does not require or persist a user's LinkedIn account session.
+- Scrape failures carry a category (`blocked`, `rate_limited`, `network`, `parse`,
+  `empty_description`, `not_found`, `disabled`, `unknown`) encoded into the failure reason as
+  `scrape_<category>: <detail>`. The vocabulary and codec live in `@careerden/contracts`, the
+  classification rules and `ScrapeFailureError` in `@careerden/domain`. A LinkedIn import without
+  a scraped description offers the manual paste form, prefilled with the source URL, for every
+  category.
 - The desktop app builds as two editions selected by `CAREERDEN_EDITION` (`cloud` or
   `local`) and `VITE_CAREERDEN_EDITION` for the renderer. Careerden Unplugged
   (`com.careerden.unplugged`) sends no data to a Careerden server: a utility process runs
@@ -125,6 +131,26 @@ review or download.
   provider is configured. Electron prints its PDFs in a hidden window without scripts or
   network access. Reminders are restored from the database on start, delivering those up
   to seven days overdue.
+- Careerden Unplugged exports its data as one zip archive with the `.careerden` extension: `manifest.json` (format version, schema
+  version, last migration, app version, creation time), one Postgres-rendered JSON file per
+  table, and the stored files. AI keys live outside the data folder and are never included.
+  The backend utility process owns export and import; the main process opens every save and
+  open dialog, so the argument-free backup IPC never accepts a path from the renderer. Imports
+  are validated and restored into a staging directory, migrated to the archive's schema, loaded,
+  and migrated to the latest one; archives from newer versions are rejected. The current data
+  is exported to `userData/backups` before the directories are swapped, and the previous
+  directory is moved back if the imported data cannot be opened.
+- Careerden Unplugged never restarts into a failure that will repeat. The backend classifies a
+  database PGlite cannot open, a failing migration, and data with migrations this build does
+  not ship (a downgrade) as `LocalDatabaseStartupError` and reports them as `start:data-error`;
+  any failure before `ready` rejects `LocalBackendProcess.start()` and never reaches
+  `onUnexpectedExit`. Startup failures show the `/recovery` route in the main window, outside
+  the local layout, with only the narrow `startupRecovery` preload bridge behind the main-window
+  sender policy. Unexpected exits after a successful start relaunch the app until the third
+  within two minutes, counted in `userData/local-backend-restarts.json`, which also shows
+  recovery. Restores pick a snapshot by the id the main process listed through
+  `LocalDataSnapshotSource`, never by path, move the current data folder to
+  `userData/backups/before-restore-<time>`, and relaunch.
 - First-run onboarding is shared by both editions. `OnboardingGate` shows the setup wizard in
   place of the app shell until `user_profiles.onboarding_completed_at` is set, and fails open
   when the profile cannot be read. The server stamps onboarding timestamps through
@@ -167,6 +193,11 @@ review or download.
   release; publishing remains the manual gate that exposes an update to clients.
 - Both editions are released from the same tag and draft release with distinct artifact names
   and updater channels: `latest*.yml` for Careerden and `local*.yml` for Careerden Unplugged.
+  `apps/desktop/release-editions.json` lists the released editions for the build matrix and for
+  `verify-desktop-release.mjs`. That script fails the workflow before the draft exists unless
+  every listed edition has all three platform files at the tag's version, each referenced file
+  is present with a matching `sha512`, and the update policy is valid. Single-edition releases
+  are not supported, and a released edition is never removed from the list.
 - Packaged desktop builds check public GitHub Releases at startup, hourly, and on demand.
   Update discovery comes from electron-builder's platform `latest*.yml`; the separately
   published policy controls only `minimumSupportedVersion`. Private or unreachable
@@ -175,6 +206,11 @@ review or download.
   workflow derives it from the current repository so forks never default to upstream
   update metadata; packaged local builds without it keep the updater disabled.
 - PostgreSQL migrations are run through Knex during API startup.
+- Careerden Unplugged snapshots its data before migrating it. When the app version differs from
+  `userData/data/last-opened-version.json`, or migrations are pending, `prepareLocalDatabase`
+  copies `data/pglite` and `data/files` to `userData/backups/before-migration-<time>/` while
+  PGlite is closed, keeps the newest three, and refuses to migrate without free space for the
+  copy. The version record is written only after migrations succeed.
 - Every released version keeps a Careerden Unplugged upgrade fixture, a SQL dump with stored
   files under `apps/api/test/fixtures/pglite/v<version>/`, built at that release's schema by
   `pnpm --filter @careerden/api-app fixture:pglite`. `pnpm test` migrates each one. Released

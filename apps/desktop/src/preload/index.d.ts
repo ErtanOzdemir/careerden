@@ -52,11 +52,72 @@ export interface AiCredentialsAPI {
   test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
 }
 
+export interface LocalBackupSummary {
+  createdAt: string;
+  appVersion: string;
+  applications: number;
+  files: number;
+}
+
+export type LocalDataExportResult =
+  | { status: "canceled" }
+  | { status: "exported"; fileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+
+export type LocalDataImportResult =
+  | { status: "canceled" }
+  | { status: "imported"; snapshotFileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+
+export interface LocalDataAPI {
+  exportData: () => Promise<LocalDataExportResult>;
+  importData: () => Promise<LocalDataImportResult>;
+  openDataFolder: () => Promise<void>;
+}
+
+export type StartupRecoveryReason =
+  | "database-open"
+  | "migration"
+  | "newer-version"
+  | "start-failed"
+  | "crash-loop";
+
+export interface LocalDataSnapshot {
+  id: string;
+  kind: string;
+  createdAt: string;
+}
+
+export interface StartupRecoveryState {
+  reason: StartupRecoveryReason;
+  message: string;
+  appVersion: string;
+  snapshots: LocalDataSnapshot[];
+}
+
+export type StartupRecoveryRestoreResult =
+  | { status: "restored" }
+  | { status: "error"; message: string };
+
+export interface StartupRecoveryAPI {
+  // Null unless the local data failed to open in this launch.
+  getState: () => Promise<StartupRecoveryState | null>;
+  // Relaunches the app on success.
+  restore: (snapshotId: string) => Promise<StartupRecoveryRestoreResult>;
+  openDataFolder: () => Promise<void>;
+  // Copies the diagnostics to the clipboard and returns them.
+  copyDiagnostics: () => Promise<string>;
+  quit: () => Promise<void>;
+}
+
 export interface ElectronAPI {
   platform: NodeJS.Platform;
   edition: DesktopEdition;
   // Present only in the local edition.
   aiCredentials?: AiCredentialsAPI;
+  // Present only in the local edition.
+  localData?: LocalDataAPI;
+  startupRecovery?: StartupRecoveryAPI;
   openExternal: (url: string) => Promise<void>;
   notifyJobApplicationQueued: () => Promise<void>;
   setNativeThemeSource: (source: NativeThemeSource) => Promise<void>;

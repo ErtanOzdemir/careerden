@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   nativeTheme,
@@ -27,6 +28,7 @@ import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
 import { ElectronPdfRenderer } from "./local-backend/electron-pdf-renderer.js";
 import { LocalBackendProcess } from "./local-backend/local-backend-process.js";
+import { backupFileExtension, registerLocalDataIpc } from "./local-data/local-data-ipc.js";
 import { getMainWindowOptions } from "./main-window-options.js";
 import { setNativeThemeSource } from "./native-theme-source.js";
 import { DesktopNotificationActivationQueue } from "./notifications/desktop-notification-activation.js";
@@ -53,6 +55,14 @@ import { DesktopApiClient } from "./scraping/desktop-api-client.js";
 import { getDesktopScrapingClaimOwner } from "./scraping/desktop-scraping-identity.js";
 import { LocalScrapingWorker } from "./scraping/local-scraping-worker.js";
 import { UtilityProcessLinkedInScrapingRunner } from "./scraping/utility-process-linkedin-scraping-runner.js";
+import { DirectoryLocalDataSnapshots } from "./startup-recovery/local-data-snapshots.js";
+import { RestartLoopGuard } from "./startup-recovery/restart-loop-guard.js";
+import { formatStartupDiagnostics, redactHomeDir } from "./startup-recovery/startup-diagnostics.js";
+import { toStartupFailure, type StartupFailure } from "./startup-recovery/startup-failure.js";
+import {
+  registerStartupRecoveryIpc,
+  StartupRecovery,
+} from "./startup-recovery/startup-recovery.js";
 import { DesktopUpdateManager, type DesktopUpdater } from "./updates/desktop-update-manager.js";
 import type { DesktopUpdatePolicy } from "./updates/desktop-update-policy.js";
 import { desktopUpdateIpcChannels } from "./updates/desktop-update-types.js";
@@ -72,6 +82,7 @@ const runtimeConfig = loadDesktopRuntimeConfig({
 });
 const appIdentity = getDesktopAppIdentity(runtimeConfig.edition);
 const localSessionTokenHeader = "x-careerden-local-token";
+const startupRecoveryRoute = "/recovery";
 
 let mainWindow: BrowserWindow | null = null;
 let mainWindowReady: Promise<BrowserWindow> | null = null;
@@ -81,6 +92,10 @@ let notificationStream: DesktopNotificationStream | null = null;
 let nativeNotificationPresenter: NativeNotificationPresenter | null = null;
 let desktopUpdateManager: DesktopUpdateManager | null = null;
 let localBackend: LocalBackendProcess | null = null;
+let localRestartGuard: RestartLoopGuard | null = null;
+let startupRecovery: StartupRecovery | null = null;
+// The newest migration the running local backend reported, for diagnostics after a crash.
+let localLastMigration: string | undefined;
 let flushCookiesTimeout: NodeJS.Timeout | undefined;
 let isQuittingAfterCookieFlush = false;
 const notificationActivations = new DesktopNotificationActivationQueue();
@@ -142,12 +157,22 @@ async function initializeDesktopRuntime(): Promise<void> {
   let aiModelCatalog: AiModelCatalogManager | undefined;
   let apiBaseUrl: string;
   let apiRequestHeaders: Record<string, string> = {};
+  // Registered before the local backend starts, so the recovery screen can use them too.
+  const ipcHandlers = new IpcHandlerRegistry(ipcMain, (event) =>
+    isTrustedMainWindowIpcSender(event, getMainWindow()),
+  );
+  registerWindowIpc(ipcHandlers);
 
   if (runtimeConfig.edition === "local") {
     aiCredentialsStore = new AiCredentialsStore(
       join(app.getPath("userData"), "ai-credentials.bin"),
       safeStorage,
     );
+    localRestartGuard = new RestartLoopGuard({
+      statePath: join(app.getPath("userData"), "local-backend-restarts.json"),
+    });
+    startupRecovery = createStartupRecovery(localRestartGuard);
+    registerStartupRecoveryIpc(ipcHandlers, startupRecovery);
     aiModelCatalog = createAiModelCatalogManager(desktopUpdateRepository);
     await aiModelCatalog.start();
     try {
@@ -155,12 +180,10 @@ async function initializeDesktopRuntime(): Promise<void> {
       apiBaseUrl = backend.baseUrl;
       apiRequestHeaders = backend.headers;
     } catch (error) {
+      // Data that cannot be opened stays that way on the next launch, so recover instead of
+      // restarting.
       console.error("Failed to start the local backend", error);
-      dialog.showErrorBox(
-        `${appIdentity.name} could not start`,
-        `Your local data could not be opened. ${error instanceof Error ? error.message : ""}`.trim(),
-      );
-      app.exit(1);
+      await showStartupRecovery(toStartupFailure(error));
       return;
     }
   } else {
@@ -325,9 +348,6 @@ async function initializeDesktopRuntime(): Promise<void> {
     },
   });
 
-  const ipcHandlers = new IpcHandlerRegistry(ipcMain, (event) =>
-    isTrustedMainWindowIpcSender(event, getMainWindow()),
-  );
   if (aiCredentialsStore) {
     const catalog = aiModelCatalog;
     registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore, {
@@ -335,14 +355,8 @@ async function initializeDesktopRuntime(): Promise<void> {
         createAiProvider(catalog ? catalog.withModels(selection) : selection),
     });
   }
+  if (localBackend) registerLocalDataIpc(ipcHandlers, createLocalDataIpcOptions(localBackend));
   ipcHandlers
-    .register("open-external", (_event, url: unknown) => {
-      const allowedUrl = getAllowedExternalUrl(url);
-      if (!allowedUrl) {
-        return;
-      }
-      void shell.openExternal(allowedUrl);
-    })
     .register("job-application-queued", () => localScrapingWorker?.wake())
     .register(desktopNotificationIpcChannels.consumeActivations, () =>
       notificationActivations.takeAll(),
@@ -360,7 +374,23 @@ async function initializeDesktopRuntime(): Promise<void> {
     })
     .register(desktopUpdateIpcChannels.restartAndInstall, () =>
       desktopUpdateManager?.restartAndInstall(),
-    )
+    );
+
+  await createWindow();
+  notificationStream.start();
+  await desktopUpdateManager.start();
+}
+
+// Window, theme, and link handling that every screen needs, including startup recovery.
+function registerWindowIpc(ipcHandlers: IpcHandlerRegistry): void {
+  ipcHandlers
+    .register("open-external", (_event, url: unknown) => {
+      const allowedUrl = getAllowedExternalUrl(url);
+      if (!allowedUrl) {
+        return;
+      }
+      void shell.openExternal(allowedUrl);
+    })
     .register("set-native-theme-source", (_event, source: unknown) => {
       setNativeThemeSource(nativeTheme, source);
     })
@@ -371,10 +401,6 @@ async function initializeDesktopRuntime(): Promise<void> {
       }
       applyWindowControl(window, action);
     });
-
-  await createWindow();
-  notificationStream.start();
-  await desktopUpdateManager.start();
 }
 
 async function createWindow(): Promise<BrowserWindow> {
@@ -408,6 +434,8 @@ async function createWindow(): Promise<BrowserWindow> {
   const isDev = process.env.NODE_ENV === "development";
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   const localRendererPath = join(__dirname, "..", "..", "renderer", "index.html");
+  // Reopening the window while recovering, for example from the macOS dock, shows recovery again.
+  const route = startupRecovery?.current ? startupRecoveryRoute : undefined;
   const trustedRendererUrl =
     isDev && devServerUrl
       ? devServerUrl
@@ -424,9 +452,11 @@ async function createWindow(): Promise<BrowserWindow> {
   let loadWindow: Promise<void>;
 
   if (isDev && devServerUrl) {
-    loadWindow = window.loadURL(devServerUrl);
+    loadWindow = window.loadURL(route ? new URL(route, devServerUrl).toString() : devServerUrl);
   } else if (app.isPackaged) {
-    loadWindow = window.loadURL(packagedRendererUrl);
+    loadWindow = window.loadURL(
+      route ? new URL(route, packagedRendererUrl).toString() : packagedRendererUrl,
+    );
   } else {
     loadWindow = window.loadFile(localRendererPath);
   }
@@ -576,8 +606,11 @@ async function startLocalBackend(
   });
   localBackend = new LocalBackendProcess({
     modulePath: join(__dirname, "local-backend", "local-backend-utility-process.js"),
-    dataDir: join(app.getPath("userData"), "data"),
+    dataDir: getLocalDataDir(),
     sessionToken,
+    appVersion: app.getVersion(),
+    backupsDir: join(app.getPath("userData"), "backups"),
+    logFile: join(app.getPath("userData"), "logs", "local-backend.log"),
     port: config.developmentBackend?.port ?? 0,
     renderPdf: (html) => pdfRenderer.htmlToPdf(html),
     getAiSelection: async () => {
@@ -585,18 +618,163 @@ async function startLocalBackend(
       return selection ? aiModelCatalog.withModels(selection) : null;
     },
     onUnexpectedExit: (code) => {
-      console.error(`The local backend exited unexpectedly with code ${code}`);
-      dialog.showErrorBox(
-        `${appIdentity.name} needs to restart`,
-        "The local data service stopped unexpectedly. Your data is safe; the app will restart.",
-      );
-      app.relaunch();
-      app.exit(1);
+      void handleUnexpectedLocalBackendExit(code);
     },
   });
 
-  const { baseUrl } = await localBackend.start();
+  const { baseUrl, lastMigration } = await localBackend.start();
+  localLastMigration = lastMigration;
   return { baseUrl, headers: { [localSessionTokenHeader]: sessionToken } };
+}
+
+// A crash after a successful start usually goes away with a restart. One that keeps happening
+// does not, so the third within two minutes shows the recovery screen instead.
+async function handleUnexpectedLocalBackendExit(code: number): Promise<void> {
+  console.error(`The local backend exited unexpectedly with code ${code}`);
+  const { restart, recentExits } = (await localRestartGuard?.recordUnexpectedExit()) ?? {
+    restart: false,
+    recentExits: 1,
+  };
+  if (restart) {
+    dialog.showErrorBox(
+      `${appIdentity.name} needs to restart`,
+      "The local data service stopped unexpectedly. Your data is safe; the app will restart.",
+    );
+    app.relaunch();
+    app.exit(1);
+    return;
+  }
+
+  localScrapingWorker?.stop();
+  await notificationStream?.stop();
+  await showStartupRecovery({
+    reason: "crash-loop",
+    message: `The local data service stopped unexpectedly ${recentExits} times in a row (exit code ${code}).`,
+    ...(localLastMigration ? { lastMigration: localLastMigration } : {}),
+  });
+}
+
+// Shows the recovery route in the main window. The backend is not running, so the packaged
+// protocol serves the renderer without proxying any API request.
+async function showStartupRecovery(failure: StartupFailure): Promise<void> {
+  const canRoute =
+    app.isPackaged ||
+    (process.env.NODE_ENV === "development" && Boolean(process.env.VITE_DEV_SERVER_URL));
+  if (!startupRecovery || !canRoute) {
+    // An unpackaged production renderer loads from a file and has no recovery route.
+    dialog.showErrorBox(
+      `${appIdentity.name} could not start`,
+      `Your local data could not be opened. ${failure.message}`,
+    );
+    app.exit(1);
+    return;
+  }
+
+  startupRecovery.enter(failure);
+  if (
+    app.isPackaged &&
+    !session.defaultSession.protocol.isProtocolHandled(packagedRendererScheme)
+  ) {
+    session.defaultSession.protocol.handle(
+      packagedRendererScheme,
+      createPackagedRendererProtocolHandler({
+        fetchApi: (input, init) => fetch(input, init),
+        fetchFile: (input, init) => net.fetch(input, init),
+        onError: (error) => {
+          console.error("Packaged renderer protocol error", error);
+        },
+        rendererDirectory: join(__dirname, "..", "..", "renderer"),
+      }),
+    );
+  }
+  configureRendererPermissionPolicy(session.defaultSession);
+
+  const existingWindow = getMainWindow();
+  if (existingWindow) {
+    const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+    const base = app.isPackaged || !devServerUrl ? packagedRendererUrl : devServerUrl;
+    await existingWindow.loadURL(new URL(startupRecoveryRoute, base).toString());
+  }
+  await activateMainWindow();
+}
+
+function createStartupRecovery(restartGuard: RestartLoopGuard): StartupRecovery {
+  const userData = app.getPath("userData");
+  const homeDir = app.getPath("home");
+  return new StartupRecovery({
+    snapshots: new DirectoryLocalDataSnapshots({
+      backupsDir: join(userData, "backups"),
+      dataDir: getLocalDataDir(),
+    }),
+    appVersion: app.getVersion(),
+    formatDiagnostics: (failure) =>
+      formatStartupDiagnostics({
+        failure,
+        appName: appIdentity.name,
+        appVersion: app.getVersion(),
+        electronVersion: process.versions.electron ?? "unknown",
+        platform: process.platform,
+        osVersion: process.getSystemVersion(),
+        arch: process.arch,
+        lastMigration: localLastMigration,
+        homeDir,
+        now: new Date(),
+      }),
+    redact: (text) => redactHomeDir(text, homeDir),
+    writeClipboard: (text) => clipboard.writeText(text),
+    openDataFolder: async () => {
+      const dataDir = getLocalDataDir();
+      if (existsSync(dataDir)) shell.showItemInFolder(dataDir);
+      else await shell.openPath(userData);
+    },
+    restart: async () => {
+      await restartGuard.reset();
+      app.relaunch();
+      app.exit(0);
+    },
+    quit: () => app.quit(),
+  });
+}
+
+function getLocalDataDir(): string {
+  return join(app.getPath("userData"), "data");
+}
+
+// Backups never include ai-credentials.bin: it sits beside the data folder, not inside it, and
+// its keychain-bound encryption would not open on another device anyway.
+function createLocalDataIpcOptions(backend: LocalBackendProcess) {
+  const backupFilters = [{ name: "Careerden backup", extensions: [backupFileExtension] }];
+  return {
+    backend,
+    appVersion: app.getVersion(),
+    snapshotsDir: join(app.getPath("userData"), "backups"),
+    chooseExportPath: async (defaultFileName: string) => {
+      const options: Electron.SaveDialogOptions = {
+        title: "Export data",
+        defaultPath: join(app.getPath("documents"), defaultFileName),
+        filters: backupFilters,
+      };
+      const window = getMainWindow();
+      const result = window
+        ? await dialog.showSaveDialog(window, options)
+        : await dialog.showSaveDialog(options);
+      return result.canceled ? undefined : result.filePath;
+    },
+    chooseImportPath: async () => {
+      const options: Electron.OpenDialogOptions = {
+        title: "Import from backup",
+        properties: ["openFile"],
+        filters: backupFilters,
+      };
+      const window = getMainWindow();
+      const result = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+      return result.canceled ? undefined : result.filePaths[0];
+    },
+    // Reveals the data folder beside the automatic pre-import snapshots in "backups".
+    openDataFolder: async () => shell.showItemInFolder(getLocalDataDir()),
+  };
 }
 
 function withHeaders(init: RequestInit | undefined, headers: Record<string, string>): RequestInit {

@@ -45,6 +45,38 @@ interface AiCredentialsInput {
 
 type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
 
+interface LocalBackupSummary {
+  createdAt: string;
+  appVersion: string;
+  applications: number;
+  files: number;
+}
+
+type LocalDataExportResult =
+  | { status: "canceled" }
+  | { status: "exported"; fileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+
+type LocalDataImportResult =
+  | { status: "canceled" }
+  | { status: "imported"; snapshotFileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+type StartupRecoveryReason =
+  | "database-open"
+  | "migration"
+  | "newer-version"
+  | "start-failed"
+  | "crash-loop";
+
+interface StartupRecoveryState {
+  reason: StartupRecoveryReason;
+  message: string;
+  appVersion: string;
+  snapshots: Array<{ id: string; kind: string; createdAt: string }>;
+}
+
+type StartupRecoveryRestoreResult = { status: "restored" } | { status: "error"; message: string };
+
 interface Window {
   electronAPI?: {
     platform?: string;
@@ -56,6 +88,22 @@ interface Window {
       remove: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
+    };
+    // Present only in the local desktop edition. File dialogs open in the main process.
+    localData?: {
+      exportData: () => Promise<LocalDataExportResult>;
+      importData: () => Promise<LocalDataImportResult>;
+      openDataFolder: () => Promise<void>;
+    };
+
+    // Present only in the local desktop edition. State is null unless the local data failed to
+    // open in this launch.
+    startupRecovery?: {
+      getState: () => Promise<StartupRecoveryState | null>;
+      restore: (snapshotId: string) => Promise<StartupRecoveryRestoreResult>;
+      openDataFolder: () => Promise<void>;
+      copyDiagnostics: () => Promise<string>;
+      quit: () => Promise<void>;
     };
     openExternal?: (url: string) => Promise<void>;
     notifyJobApplicationQueued: () => Promise<void>;

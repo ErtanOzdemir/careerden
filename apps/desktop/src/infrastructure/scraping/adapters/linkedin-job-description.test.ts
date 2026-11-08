@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { ScrapeFailureError } from "@careerden/domain";
 import {
   extractLinkedInCompanyLogoUrlFromHtml,
   extractLinkedInJobId,
@@ -155,5 +156,105 @@ describe("LinkedInJobScraper", () => {
     expect(fetchCalls).toEqual([`${linkedinGuestJobDetailEndpoint}/4300011451`]);
     expect(job.title).toBe("Frontend Engineer");
     expect(job.companyName).toBe("Acme");
+  });
+
+  it.each([
+    [999, "blocked"],
+    [403, "blocked"],
+    [429, "rate_limited"],
+    [404, "not_found"],
+    [503, "network"],
+  ] as const)("classifies a guest %i response as %s", async (status, category) => {
+    const scraper = new LinkedInJobScraper({
+      // The Response constructor rejects LinkedIn's non-standard 999, which real fetch delivers.
+      fetch: async () => ({ ok: false, status, statusText: "Refused" }) as Response,
+    });
+
+    await expect(
+      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
+    ).rejects.toMatchObject({ category, name: "ScrapeFailureError" });
+  });
+
+  it("classifies a request that never reached LinkedIn as a network failure", async () => {
+    const scraper = new LinkedInJobScraper({
+      fetch: async () => {
+        throw new TypeError("fetch failed");
+      },
+    });
+
+    await expect(
+      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
+    ).rejects.toMatchObject({ category: "network" });
+  });
+
+  it("logs a page whose layout it does not recognize", async () => {
+    const warn = vi.fn();
+    const scraper = new LinkedInJobScraper({
+      fetch: async () => new Response("<html><body>New layout</body></html>", { status: 200 }),
+      logger: { warn },
+    });
+
+    await expect(
+      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
+    ).rejects.toMatchObject({ category: "parse" });
+    expect(warn).toHaveBeenCalledWith("LinkedIn page did not match the expected structure", {
+      adapter: "linkedin-job",
+      parserVersion: linkedInGuestParserVersion,
+      url: `${linkedinGuestJobDetailEndpoint}/4300011451`,
+      detail: "LinkedIn public job details were not exposed: page layout not recognized",
+    });
+  });
+
+  it("gives up on a guest request that does not answer in time", async () => {
+    const scraper = new LinkedInJobScraper({
+      fetch: async (_input, init) => {
+        expect(init?.signal).toBeInstanceOf(AbortSignal);
+        throw new DOMException("The operation timed out.", "TimeoutError");
+      },
+    });
+
+    await expect(
+      scraper.scrapeJob("https://www.linkedin.com/jobs/view/4300011451"),
+    ).rejects.toMatchObject({ category: "network" });
+  });
+
+  it("classifies a URL without a job id as a parse failure", async () => {
+    await expect(
+      new LinkedInJobScraper().scrapeJob("https://www.linkedin.com/jobs/collections/"),
+    ).rejects.toMatchObject({ category: "parse" });
+  });
+});
+
+describe("parseLinkedInGuestJobDetailHtml failures", () => {
+  const input = {
+    finalUrl: "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/1",
+    sourceUrl: "https://www.linkedin.com/jobs/view/1",
+    strategy: "guest",
+  } as const;
+
+  function parseFailure(html: string): ScrapeFailureError {
+    try {
+      parseLinkedInGuestJobDetailHtml(html, input);
+    } catch (error) {
+      if (error instanceof ScrapeFailureError) return error;
+      throw error;
+    }
+    throw new Error("Expected the parser to reject the HTML");
+  }
+
+  it("classifies an authentication wall as blocked", () => {
+    expect(parseFailure("<h1>Sign in to view this job</h1>").category).toBe("blocked");
+  });
+
+  it("classifies an unrecognized page layout as a parse failure", () => {
+    expect(parseFailure("<main><p>Something new</p></main>").category).toBe("parse");
+  });
+
+  it("classifies a recognized posting without description text as empty", () => {
+    expect(
+      parseFailure(
+        '<h1 class="top-card-layout__title">Backend Engineer</h1><div class="show-more-less-html__markup"> </div>',
+      ).category,
+    ).toBe("empty_description");
   });
 });

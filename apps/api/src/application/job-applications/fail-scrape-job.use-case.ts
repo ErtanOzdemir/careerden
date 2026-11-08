@@ -1,9 +1,11 @@
 import type { PersistenceUnitOfWork } from "@careerden/domain";
+import { parseScrapeFailureReason } from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
 import { getActiveAccessibleJobApplication } from "@careerden/application";
-
-const maxScrapeAttempts = 3;
-const scrapeRetryBackoffMs = [60_000, 300_000];
+import {
+  scrapeRetryBackoffMs,
+  scrapeRetryPolicyFor,
+} from "../../domain/scraping/scrape-retry-policy.js";
 
 export type FailScrapeJobResult = "failed" | "retry_scheduled";
 
@@ -30,11 +32,15 @@ export class FailScrapeJobUseCase {
         );
       }
 
+      // The persisted failure reason keeps its category code for the renderer; the timeline shows
+      // the readable detail and records the category as metadata.
+      const scrapeFailure = parseScrapeFailureReason(input.reason);
+      const retryPolicy = scrapeRetryPolicyFor(scrapeFailure?.category);
       const updated = await jobApplications.recordScrapeFailure(jobApplicationId, {
         claimedBy: input.claimedBy,
         reason: input.reason,
-        maxAttempts: maxScrapeAttempts,
-        backoffMs: scrapeRetryBackoffMs[jobApplication.scrapeAttemptCount - 1] ?? 0,
+        maxAttempts: retryPolicy.maxAttempts,
+        backoffMs: scrapeRetryBackoffMs(retryPolicy, jobApplication.scrapeAttemptCount),
         now,
       });
       if (!updated) throw new ApplicationError("not_found", "Job application not found");
@@ -43,10 +49,11 @@ export class FailScrapeJobUseCase {
         jobApplicationId,
         type: "processing",
         title: updated.status === "failed" ? "Scraping failed" : "Scraping retry scheduled",
-        body: input.reason,
+        body: scrapeFailure?.detail ?? input.reason,
         metadata: {
           attempt: updated.scrapeAttemptCount,
-          maxAttempts: maxScrapeAttempts,
+          maxAttempts: retryPolicy.maxAttempts,
+          ...(scrapeFailure ? { scrapeFailureCategory: scrapeFailure.category } : {}),
           ...(updated.status !== "failed" && updated.nextScrapeAttemptAt
             ? { nextAttemptAt: updated.nextScrapeAttemptAt.toISOString() }
             : {}),

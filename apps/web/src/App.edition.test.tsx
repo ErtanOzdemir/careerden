@@ -41,6 +41,10 @@ vi.mock("./pages/Billing", () => ({ default: () => <p>Billing page</p> }));
 vi.mock("./pages/Support", () => ({ default: () => <p>Support page</p> }));
 vi.mock("./pages/ForgotPassword", () => ({ default: () => <p>ForgotPassword page</p> }));
 vi.mock("./pages/ResetPassword", () => ({ default: () => <p>ResetPassword page</p> }));
+vi.mock("./startup-recovery/StartupRecovery.js", () => ({
+  startupRecoveryPath: "/recovery",
+  StartupRecovery: () => <p>Startup recovery page</p>,
+}));
 vi.mock("./settings/AiProviderSettings.js", () => ({
   aiProviderPath: "/ai-provider",
   AiProviderSettings: () => <p>AI provider page</p>,
@@ -93,6 +97,18 @@ describe("App routes by edition", () => {
     }
     renderAt("/settings");
     expect(screen.getByText("Settings page")).toBeInTheDocument();
+  });
+
+  it("serves startup recovery outside the app shell in the local edition only", () => {
+    edition.local = true;
+    renderAt("/recovery");
+    expect(screen.getByText("Startup recovery page")).toBeInTheDocument();
+    expect(screen.queryByTestId("app-shell")).not.toBeInTheDocument();
+    cleanup();
+
+    edition.local = false;
+    renderAt("/recovery");
+    expect(screen.queryByText("Startup recovery page")).not.toBeInTheDocument();
   });
 
   it("serves the AI provider page only in the local edition", () => {

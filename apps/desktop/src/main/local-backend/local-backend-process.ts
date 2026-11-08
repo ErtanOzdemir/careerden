@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { UtilityProcess } from "electron";
 import { utilityProcess } from "electron";
 import type { AiProviderSelection } from "@careerden/infrastructure";
@@ -5,9 +6,12 @@ import {
   parseLocalBackendEvent,
   type LocalBackendCommand,
   type LocalBackendEvent,
+  type LocalBackupSummary,
 } from "./local-backend-messages.js";
+import { LocalBackendStartError } from "../startup-recovery/startup-failure.js";
 
 type LocalBackendChild = Pick<UtilityProcess, "kill" | "on" | "postMessage">;
+type LocalBackendNotice = LocalBackendEvent | { type: "exit"; code: number };
 
 export type LocalBackendFork = (
   modulePath: string,
@@ -19,42 +23,63 @@ export interface LocalBackendProcessOptions {
   modulePath: string;
   dataDir: string;
   sessionToken: string;
+  appVersion: string;
+  backupsDir: string;
+  logFile: string;
   // 0 picks a free loopback port.
   port?: number;
   renderPdf: (html: string) => Promise<Buffer>;
   getAiSelection: () => Promise<AiProviderSelection | null>;
+  // Only after the backend was ready. An exit during start rejects start() instead, so a failure
+  // that repeats on every launch never turns into a restart loop.
   onUnexpectedExit?: (code: number) => void;
   fork?: LocalBackendFork;
   startTimeoutMs?: number;
   stopTimeoutMs?: number;
+  backupTimeoutMs?: number;
+}
+
+interface PendingBackup {
+  resolve: (summary: LocalBackupSummary) => void;
+  reject: (error: Error) => void;
+  timeout: NodeJS.Timeout;
 }
 
 // Owns the utility process that runs the local edition's API and background work.
 export class LocalBackendProcess {
   private child: LocalBackendChild | undefined;
   private stopping = false;
-  private readonly waiters = new Set<(event: LocalBackendEvent | { type: "exit" }) => void>();
+  private ready = false;
+  private readonly waiters = new Set<(event: LocalBackendNotice) => void>();
+  private readonly pendingBackups = new Map<string, PendingBackup>();
 
   constructor(private readonly options: LocalBackendProcessOptions) {}
 
-  async start(): Promise<{ baseUrl: string }> {
+  // Rejects with a LocalBackendStartError that says why the backend could not start.
+  async start(): Promise<{ baseUrl: string; lastMigration?: string }> {
     if (this.child) throw new Error("The local backend is already running");
 
     const fork = this.options.fork ?? utilityProcess.fork;
     const child = fork(this.options.modulePath, [], { serviceName: "careerden-local-backend" });
     this.child = child;
     this.stopping = false;
+    this.ready = false;
 
     child.on("message", (message: unknown) => this.handleMessage(child, message));
     child.on("exit", (code: number) => {
       if (this.child !== child) return;
       this.child = undefined;
-      this.notify({ type: "exit" });
-      if (!this.stopping) this.options.onUnexpectedExit?.(code);
+      this.notify({ type: "exit", code });
+      this.failPendingBackups();
+      if (!this.stopping && this.ready) this.options.onUnexpectedExit?.(code);
     });
 
     const result = this.waitFor(
-      (event) => event.type === "ready" || event.type === "start:error" || event.type === "exit",
+      (event) =>
+        event.type === "ready" ||
+        event.type === "start:error" ||
+        event.type === "start:data-error" ||
+        event.type === "exit",
       this.options.startTimeoutMs ?? 60_000,
     );
     this.send({
@@ -62,20 +87,37 @@ export class LocalBackendProcess {
       dataDir: this.options.dataDir,
       sessionToken: this.options.sessionToken,
       port: this.options.port ?? 0,
+      appVersion: this.options.appVersion,
+      backupsDir: this.options.backupsDir,
+      logFile: this.options.logFile,
     });
 
     const event = await result.catch((error: unknown) => {
       this.kill();
-      throw error;
+      throw new LocalBackendStartError({
+        reason: "start-failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
     });
-    if (event.type === "ready") return { baseUrl: `http://127.0.0.1:${event.port}` };
+    if (event.type === "ready") {
+      this.ready = true;
+      return {
+        baseUrl: `http://127.0.0.1:${event.port}`,
+        ...(event.lastMigration ? { lastMigration: event.lastMigration } : {}),
+      };
+    }
 
     this.kill();
-    throw new Error(
-      event.type === "start:error"
-        ? `The local backend failed to start: ${event.message}`
-        : "The local backend exited before it was ready",
-    );
+    if (event.type === "start:data-error") throw new LocalBackendStartError(event.failure);
+    throw new LocalBackendStartError({
+      reason: "start-failed",
+      message:
+        event.type === "start:error"
+          ? event.message
+          : event.type === "exit"
+            ? `The local backend exited before it was ready (code ${event.code})`
+            : "The local backend exited before it was ready",
+    });
   }
 
   async stop(): Promise<void> {
@@ -88,6 +130,69 @@ export class LocalBackendProcess {
     this.send({ type: "stop" });
     await stopped.catch(() => undefined);
     this.kill();
+  }
+
+  // Writes a backup zip of the local data to `outputPath`.
+  exportBackup(outputPath: string, appVersion: string): Promise<LocalBackupSummary> {
+    return this.requestBackup((requestId) => ({
+      type: "backup:export",
+      requestId,
+      outputPath,
+      appVersion,
+    }));
+  }
+
+  // Replaces the local data with a backup after exporting the current data to `snapshotPath`.
+  importBackup(
+    archivePath: string,
+    snapshotPath: string,
+    appVersion: string,
+  ): Promise<LocalBackupSummary> {
+    return this.requestBackup((requestId) => ({
+      type: "backup:import",
+      requestId,
+      archivePath,
+      snapshotPath,
+      appVersion,
+    }));
+  }
+
+  private requestBackup(
+    command: (requestId: string) => LocalBackendCommand,
+  ): Promise<LocalBackupSummary> {
+    if (!this.child) return Promise.reject(new Error("The local backend is not running"));
+    const requestId = randomUUID();
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => {
+          this.pendingBackups.delete(requestId);
+          reject(new Error("The backup did not finish in time."));
+        },
+        this.options.backupTimeoutMs ?? 30 * 60_000,
+      );
+      this.pendingBackups.set(requestId, { resolve, reject, timeout });
+      this.send(command(requestId));
+    });
+  }
+
+  private settleBackup(
+    requestId: string,
+    outcome: { summary: LocalBackupSummary } | { error: Error },
+  ): void {
+    const pending = this.pendingBackups.get(requestId);
+    if (!pending) return;
+    this.pendingBackups.delete(requestId);
+    clearTimeout(pending.timeout);
+    if ("error" in outcome) pending.reject(outcome.error);
+    else pending.resolve(outcome.summary);
+  }
+
+  private failPendingBackups(): void {
+    for (const requestId of [...this.pendingBackups.keys()]) {
+      this.settleBackup(requestId, {
+        error: new Error("The local data service stopped before the backup finished."),
+      });
+    }
   }
 
   private handleMessage(child: LocalBackendChild, message: unknown): void {
@@ -104,6 +209,16 @@ export class LocalBackendProcess {
             message: error instanceof Error ? error.message : "PDF rendering failed",
           }),
       );
+      return;
+    }
+
+    if (event.type === "backup:result") {
+      this.settleBackup(event.requestId, { summary: event.summary });
+      return;
+    }
+
+    if (event.type === "backup:error") {
+      this.settleBackup(event.requestId, { error: new Error(event.message) });
       return;
     }
 
@@ -125,15 +240,15 @@ export class LocalBackendProcess {
   }
 
   private waitFor(
-    matches: (event: LocalBackendEvent | { type: "exit" }) => boolean,
+    matches: (event: LocalBackendNotice) => boolean,
     timeoutMs: number,
-  ): Promise<LocalBackendEvent | { type: "exit" }> {
+  ): Promise<LocalBackendNotice> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.waiters.delete(waiter);
         reject(new Error(`The local backend did not respond within ${timeoutMs}ms`));
       }, timeoutMs);
-      const waiter = (event: LocalBackendEvent | { type: "exit" }) => {
+      const waiter = (event: LocalBackendNotice) => {
         if (!matches(event)) return;
         clearTimeout(timeout);
         this.waiters.delete(waiter);
@@ -143,7 +258,7 @@ export class LocalBackendProcess {
     });
   }
 
-  private notify(event: LocalBackendEvent | { type: "exit" }): void {
+  private notify(event: LocalBackendNotice): void {
     for (const waiter of [...this.waiters]) waiter(event);
   }
 

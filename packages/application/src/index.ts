@@ -8,6 +8,7 @@ export * from "./job-applications/job-application-access.js";
 export * from "./job-applications/enqueue-application-pack-generation.js";
 export * from "./storage/enqueue-storage-deletions.js";
 export * from "./matching/tip-grounding.js";
+export * from "./matching/job-posting-data.js";
 export * from "./documents/resolve-document-content.js";
 export * from "./application-error.js";
 export * from "./job-applications/analyze-scraped-job.use-case.js";

@@ -14,6 +14,7 @@ import type { GeneratedApplicationDocument, JobApplication } from "../types.js";
 import { cn } from "../lib/utils.js";
 import { buildPreviewTemplateData } from "../lib/document-preview.js";
 import { renderPagedPreview } from "../lib/paged-preview.js";
+import { AiOutputNotice } from "./AiOutputNotice.js";
 import { ApplicationPackCustomizer } from "./ApplicationPackCustomizer.js";
 import { TipsPanel, type ProfileSavableField, type RevealTarget } from "./TipsPanel.js";
 import { Button, buttonVariants } from "./ui/button.js";
@@ -544,6 +545,7 @@ function DocumentPreviewCard({
           </button>
         </div>
       </div>
+      {(html || hasDocument) && <AiOutputNotice className="border-b px-5 py-2.5" />}
       <div
         className="scrollbar-soft h-[42rem] overflow-auto bg-muted/50 p-8"
         data-testid="preview-scroll-area"

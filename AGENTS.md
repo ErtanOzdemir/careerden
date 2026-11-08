@@ -71,6 +71,12 @@ review or download.
 - Keep AI providers, storage, template rendering, PDF rendering, and persistence behind
   interfaces/adapters so implementations can be swapped.
 - Validate external inputs and AI output with schemas before persisting or rendering.
+- Job posting text is untrusted input. Scrapers strip hidden HTML elements (`stripHiddenHtmlElements`)
+  before normalizing, and every scrape bundle passes `sanitizeScrapeBundleText`, which removes
+  invisible characters, before it is persisted; `raw` keeps the original. Prompts put posting
+  content, never `raw` or display HTML, in one `<job_posting_data>` block built by
+  `promptWithJobPostingData` after the trusted instructions, and their system prompts include
+  `jobPostingDataRules`. The web app labels every generated document as AI output.
 - Use explicit workflow status transitions for job applications.
 - Job application archiving is orthogonal to tracker and processing status. Only stable
   `scraped` applications without queued analysis, `review_ready`, `completed`, or `failed`

@@ -13,7 +13,12 @@ import {
 } from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
 import { resolveDocumentContent } from "@careerden/application";
-import { durationClaimRules, factualityRules } from "@careerden/application";
+import {
+  durationClaimRules,
+  factualityRules,
+  jobPostingDataRules,
+  promptWithJobPostingData,
+} from "@careerden/application";
 import { getAccessibleJobApplication } from "@careerden/application";
 
 /**
@@ -59,44 +64,50 @@ export class RewriteCoverLetterUseCase {
 
     const output = await this.aiProvider.generate({
       system: rewriteCoverLetterSystemPrompt(),
-      prompt: JSON.stringify({
-        outputPreferences: { language: preferences.language, tone: preferences.tone },
-        job: {
-          title: scrape.job.title,
-          companyName: jobApplication.tracking.companyName ?? scrape.job.companyName,
-          requirements: scrape.job.requirements,
+      prompt: promptWithJobPostingData(
+        {
+          outputPreferences: { language: preferences.language, tone: preferences.tone },
+          jobPostingLocation:
+            "job (title, companyName, requirements) is in the job_posting_data block at the end of this message.",
+          candidate: { fullName: profile.fullName },
+          tailoredCv: {
+            summary: richDocumentToPlainText(content.summary),
+            skills: content.skills,
+            certifications: content.certifications,
+            experience: content.experiences.map((experience) => ({
+              title: experience.title,
+              company: experience.company,
+              description: experience.description
+                ? richDocumentToPlainText(experience.description)
+                : "",
+            })),
+            projects: content.projects.map((project) => ({
+              name: project.name,
+              skills: project.skills,
+              description: project.description ? richDocumentToPlainText(project.description) : "",
+            })),
+            education: content.education.map((education) => ({
+              institution: education.institution,
+              degree: education.degree ?? "",
+              field: education.field ?? "",
+            })),
+          },
+          ...(currentCoverLetter && richDocumentToPlainText(currentCoverLetter)
+            ? { currentCoverLetter: richDocumentToPlainText(currentCoverLetter) }
+            : {}),
+          requiredOutput: {
+            paragraphs:
+              "The complete cover letter body as an ordered list of paragraphs, one paragraph per entry, without markdown. Must never be empty.",
+          },
         },
-        candidate: { fullName: profile.fullName },
-        tailoredCv: {
-          summary: richDocumentToPlainText(content.summary),
-          skills: content.skills,
-          certifications: content.certifications,
-          experience: content.experiences.map((experience) => ({
-            title: experience.title,
-            company: experience.company,
-            description: experience.description
-              ? richDocumentToPlainText(experience.description)
-              : "",
-          })),
-          projects: content.projects.map((project) => ({
-            name: project.name,
-            skills: project.skills,
-            description: project.description ? richDocumentToPlainText(project.description) : "",
-          })),
-          education: content.education.map((education) => ({
-            institution: education.institution,
-            degree: education.degree ?? "",
-            field: education.field ?? "",
-          })),
+        {
+          job: {
+            title: scrape.job.title,
+            companyName: jobApplication.tracking.companyName ?? scrape.job.companyName,
+            requirements: scrape.job.requirements,
+          },
         },
-        ...(currentCoverLetter && richDocumentToPlainText(currentCoverLetter)
-          ? { currentCoverLetter: richDocumentToPlainText(currentCoverLetter) }
-          : {}),
-        requiredOutput: {
-          paragraphs:
-            "The complete cover letter body as an ordered list of paragraphs, one paragraph per entry, without markdown. Must never be empty.",
-        },
-      }),
+      ),
       outputSchema: aiCoverLetterRewriteSchema,
     });
 
@@ -123,6 +134,7 @@ function rewriteCoverLetterSystemPrompt(): string {
   return [
     "You write a concise, professional cover letter body for a specific job, based on the candidate's tailored CV.",
     "tailoredCv is the exact CV the candidate will send and the only source of facts about them. Mention only experience, skills, projects, and education it contains, and prefer the items most relevant to job.requirements.",
+    ...jobPostingDataRules,
     ...factualityRules,
     ...durationClaimRules,
     "When currentCoverLetter is provided, keep its opening and closing style and any sentences that are still accurate, and update the rest so the letter matches tailoredCv. The candidate may have edited it by hand; preserve their voice.",

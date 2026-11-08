@@ -5,7 +5,7 @@ import type {
   PersistenceUnitOfWork,
   ScrapeBundle,
 } from "@careerden/domain";
-import { assessProfileReadiness } from "@careerden/domain";
+import { assessProfileReadiness, sanitizeScrapeBundleText } from "@careerden/domain";
 import type { GetOrCreateCurrentProfileUseCase } from "../profiles/get-or-create-current-profile.use-case.js";
 import type { AuthenticatedProfileUser } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
@@ -35,7 +35,7 @@ export class CreateJobApplicationFromScrapeUseCase {
     const profile = await this.getCurrentProfile.execute(user);
     return this.unitOfWork.execute(
       async ({ credits, jobApplications, jobApplicationChanges, outbox }) => {
-        const scrape = input.scrapeBundle;
+        const scrape = sanitizeScrapeBundleText(input.scrapeBundle);
         const jobApplication = await jobApplications.create({
           profileId: profile.id,
           sourceUrl: input.sourceUrl,

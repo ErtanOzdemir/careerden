@@ -110,6 +110,25 @@ describe("ApplicationPackWorkspace", () => {
     );
   });
 
+  it("warns that every generated document is AI output on both preview tabs", () => {
+    renderPagedPreview.mockImplementation(() => pagedPreviewHandle(1));
+    renderWorkspace();
+
+    const notice = "This document was generated with AI. Check every line before sending it.";
+    expect(screen.getByRole("note")).toHaveTextContent(notice);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cover letter" }));
+    expect(screen.getByRole("note")).toHaveTextContent(notice);
+  });
+
+  it("shows no AI warning before anything has been generated", () => {
+    renderWorkspace({
+      app: { ...createApplication(), documentContent: undefined, generatedDocuments: [] },
+    });
+
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
   it("offers a prominent AI analysis action when analysis has not run", () => {
     const onStartAnalysis = vi.fn();
 

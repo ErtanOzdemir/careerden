@@ -36,6 +36,7 @@ The public legal copy is a working product draft, not legal advice or a complian
 
 - Accepted-use details, suspension/termination policy, notice and appeal process.
 - Counsel-approved user-content license, generated-output ownership, warranty disclaimer, liability cap, indemnity, and mandatory consumer-law carve-outs.
+- Counsel review of the "AI-generated output" terms section (accuracy disclaimer, third-party posting content, and user responsibility for documents sent in their name), kept consistent with the in-app notice on generated documents.
 - Governing law, venue, dispute resolution, service of notice, and language priority.
 - LinkedIn and other third-party terms review for the production scraping workflow.
 

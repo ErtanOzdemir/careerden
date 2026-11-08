@@ -70,6 +70,26 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: "ai-output",
+    title: "AI-generated output",
+    content: (
+      <>
+        <p>
+          Careerden uses artificial intelligence to analyze job postings and to draft CVs, cover
+          letters, and suggestions. AI output can contain mistakes, omit relevant information, or
+          state experience, qualifications, certifications, or figures that are not in your profile.
+          Job postings come from third parties and may contain text designed to influence the AI;
+          Careerden takes steps to limit this but cannot guarantee that output is unaffected.
+        </p>
+        <p>
+          Every generated document is a draft. You must check every line before you send, submit, or
+          rely on it, and you are solely responsible for the accuracy of anything you send in your
+          name. Do not submit claims you cannot support.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "third-parties",
     title: "Third-party services",
     content: (

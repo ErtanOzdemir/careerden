@@ -1,5 +1,10 @@
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
-import { ScrapeFailureError, scrapeFailureCategoryForHttpStatus } from "@careerden/domain";
+import {
+  ScrapeFailureError,
+  scrapeFailureCategoryForHttpStatus,
+  stripHiddenHtmlElements,
+  stripInvisibleCharacters,
+} from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
 
 export interface LinkedInJobScraperOptions {
@@ -209,8 +214,13 @@ const allowedBlockTags = new Set(["p", "h1", "h2", "h3", "ul", "ol", "li"]);
 const allowedInlineTags = new Set(["strong", "b", "em", "i", "u", "br", "a"]);
 const ignoredContentTags = new Set(["script", "style", "button", "form", "svg", "noscript"]);
 
+/**
+ * Keeps only the visible, allowlisted markup of a posting. Hidden elements and invisible characters
+ * are removed first: they are where instructions aimed at the AI model rather than the reader hide.
+ */
 export function sanitizeLinkedInJobDescriptionHtml(html: string): string {
-  const tokens = html.match(/<!--[\s\S]*?-->|<![^>]*>|<\/?[^>]+>|[^<]+/g) ?? [];
+  const tokens =
+    stripHiddenHtmlElements(html).match(/<!--[\s\S]*?-->|<![^>]*>|<\/?[^>]+>|[^<]+/g) ?? [];
   const output: string[] = [];
   const openTags: string[] = [];
   let ignoredDepth = 0;
@@ -222,7 +232,7 @@ export function sanitizeLinkedInJobDescriptionHtml(html: string): string {
 
     if (!token.startsWith("<")) {
       if (ignoredDepth === 0) {
-        output.push(escapeHtml(decodeHtml(token)));
+        output.push(escapeHtml(stripInvisibleCharacters(decodeHtml(token))));
       }
       continue;
     }
@@ -355,6 +365,10 @@ function removeEmptyBlocks(html: string): string {
 
 function decodeHtml(value: string): string {
   return value
+    .replaceAll(/&#(\d+);/g, (entity, code: string) => decodeCodePoint(entity, Number(code)))
+    .replaceAll(/&#x([0-9a-f]+);/gi, (entity, code: string) =>
+      decodeCodePoint(entity, Number.parseInt(code, 16)),
+    )
     .replaceAll("&nbsp;", " ")
     .replaceAll("&amp;", "&")
     .replaceAll("&lt;", "<")
@@ -362,6 +376,12 @@ function decodeHtml(value: string): string {
     .replaceAll("&quot;", '"')
     .replaceAll("&#039;", "'")
     .replaceAll("&#39;", "'");
+}
+
+function decodeCodePoint(entity: string, value: number): string {
+  return Number.isInteger(value) && value > 0 && value <= 0x10ffff
+    ? String.fromCodePoint(value)
+    : entity;
 }
 
 function escapeHtml(value: string): string {
@@ -437,7 +457,9 @@ function matchFirst(html: string, patterns: RegExp[]): string | undefined {
 }
 
 function cleanHtmlText(value: string | undefined): string {
-  return normalizeWhitespace(decodeHtml((value ?? "").replace(/<[^>]+>/g, " ")));
+  return normalizeWhitespace(
+    stripInvisibleCharacters(decodeHtml((value ?? "").replace(/<[^>]+>/g, " "))),
+  );
 }
 
 function normalizeLinkedInHref(value: string | undefined): string | undefined {

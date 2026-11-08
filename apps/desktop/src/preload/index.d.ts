@@ -42,11 +42,24 @@ export interface AiCredentialsInput {
   model?: string;
 }
 
-export type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
+export type AiProviderErrorCategory =
+  | "invalid_api_key"
+  | "insufficient_quota"
+  | "rate_limited"
+  | "model_unavailable"
+  | "provider_unavailable"
+  | "invalid_output";
+
+export type AiCredentialsTestResult =
+  | { ok: true }
+  | { ok: false; message: string; category?: AiProviderErrorCategory };
+
+// Present when the key was saved although the provider could not confirm it.
+export type AiCredentialsSaveResult = AiCredentialsStatus & { warning?: string };
 
 export interface AiCredentialsAPI {
   getStatus: () => Promise<AiCredentialsStatus>;
-  save: (input: AiCredentialsInput) => Promise<AiCredentialsStatus>;
+  save: (input: AiCredentialsInput) => Promise<AiCredentialsSaveResult>;
   remove: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
   setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
   test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;

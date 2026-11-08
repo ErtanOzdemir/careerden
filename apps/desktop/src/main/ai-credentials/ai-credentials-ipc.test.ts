@@ -2,7 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AiProvider } from "@careerden/domain";
+import { AiProviderError } from "@careerden/domain";
+import type { AiProvider, AiProviderErrorCategory } from "@careerden/domain";
 import { aiCredentialsIpcChannels, registerAiCredentialsIpc } from "./ai-credentials-ipc.js";
 import { AiCredentialsStore } from "./ai-credentials-store.js";
 
@@ -82,7 +83,7 @@ describe("registerAiCredentialsIpc", () => {
 
   it("tests a typed key, or the stored key for the same provider", async () => {
     const { invoke, createProvider } = register();
-    await invoke(aiCredentialsIpcChannels.save, { provider: "openai", apiKey: "sk-stored-1111" });
+    await store.save({ provider: "openai", apiKey: "sk-stored-1111" });
 
     await expect(
       invoke(aiCredentialsIpcChannels.test, { provider: "gemini", apiKey: "gemini-typed" }),
@@ -118,5 +119,67 @@ describe("registerAiCredentialsIpc", () => {
     expect(result.message).toContain("Incorrect API key provided");
     expect(result.message).not.toContain("sk-proj-abcd");
     expect(result.message).not.toContain(apiKey);
+  });
+
+  function failingProvider(category: AiProviderErrorCategory): AiProvider {
+    return {
+      generate: async () => {
+        throw new AiProviderError({ category, provider: "openai", statusCode: 401 });
+      },
+    };
+  }
+
+  it("refuses to save a key the provider rejects", async () => {
+    const { invoke, onChanged } = register(failingProvider("invalid_api_key"));
+
+    await expect(
+      invoke(aiCredentialsIpcChannels.save, { provider: "openai", apiKey: "sk-revoked-0000" }),
+    ).rejects.toThrow("Your API key is invalid or revoked. Update it in Settings.");
+
+    expect((await store.getStatus()).providers).toEqual([]);
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it("checks a model change against the stored key before saving it", async () => {
+    await store.save({ provider: "openai", apiKey: "sk-stored-1111" });
+    const { invoke, createProvider } = register(failingProvider("model_unavailable"));
+
+    await expect(
+      invoke(aiCredentialsIpcChannels.save, { provider: "openai", model: "gpt-removed" }),
+    ).rejects.toThrow("The selected model is no longer available.");
+
+    expect(createProvider).toHaveBeenCalledWith({
+      provider: "openai",
+      apiKey: "sk-stored-1111",
+      model: "gpt-removed",
+    });
+    expect((await store.getStatus()).providers).toEqual([{ provider: "openai", keyHint: "1111" }]);
+  });
+
+  it.each(["insufficient_quota", "rate_limited", "provider_unavailable"] as const)(
+    "saves the key with a warning when the check fails with %s",
+    async (category) => {
+      const { invoke } = register(failingProvider(category));
+
+      const result = (await invoke(aiCredentialsIpcChannels.save, {
+        provider: "openai",
+        apiKey: "sk-maybe-2222",
+      })) as { activeProvider: string; warning?: string };
+
+      expect(result.activeProvider).toBe("openai");
+      expect(result.warning).toMatch(/^Saved, but the provider check failed: /);
+    },
+  );
+
+  it("reports the error category from a connection test", async () => {
+    const { invoke } = register(failingProvider("insufficient_quota"));
+
+    await expect(
+      invoke(aiCredentialsIpcChannels.test, { provider: "openai", apiKey: "sk-empty-3333" }),
+    ).resolves.toEqual({
+      ok: false,
+      message: "Your provider account has no balance or quota left.",
+      category: "insufficient_quota",
+    });
   });
 });

@@ -174,6 +174,12 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **No Chromium cookie store in Unplugged.** The local edition reaches its backend with
   Node's `fetch`, because opening the encrypted cookie store would trigger a keychain prompt on
   every launch and the edition has no cookies to keep.
+- **A local log file instead of telemetry.** The main process is the only writer of
+  `userData/logs/careerden.log`, which rotates at 5 MB and keeps at most five files. The local
+  backend and scraping utility processes post structured entries to it over their parent ports,
+  so rotation never races between processes. Every entry carries metadata only, such as event
+  names, status codes, provider names, and trace IDs, and passes through the same redaction rules
+  as the API's error logs plus the session token and API keys the main process holds.
 - **One version for both editions.** A single `vX.Y.Z` tag builds both editions into one draft
   release. Distinct artifact names and updater channels (`latest*.yml` and `local*.yml`) keep
   each installation on its own edition.

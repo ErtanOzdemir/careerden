@@ -125,6 +125,12 @@ review or download.
   provider is configured. Electron prints its PDFs in a hidden window without scripts or
   network access. Reminders are restored from the database on start, delivering those up
   to seven days overdue.
+- The desktop main process is the only writer of the redacted, rotating log file
+  `userData/logs/careerden.log` (5 MB per file, at most five files). The local backend and
+  scraping utility processes post structured entries to it over their parent ports. Log
+  entries carry metadata only and pass through `@careerden/infrastructure/logging` redaction;
+  never log API keys, the per-launch session token, profile content, job posting text,
+  prompts, model output, or file contents. The local edition's Settings toggles `debug` level.
 - First-run onboarding is shared by both editions. `OnboardingGate` shows the setup wizard in
   place of the app shell until `user_profiles.onboarding_completed_at` is set, and fails open
   when the profile cannot be read. The server stamps onboarding timestamps through

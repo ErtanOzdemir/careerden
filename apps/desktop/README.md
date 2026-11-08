@@ -104,6 +104,24 @@ the key store only when the main process opens the window with
 back. Reminders missed while the app was closed are delivered on the next start if the
 follow-up is at most seven days old.
 
+### Local log file
+
+Both editions write one log file for all desktop processes to `userData/logs/careerden.log`.
+On macOS the local edition's file is
+`~/Library/Application Support/Careerden Unplugged/logs/careerden.log`. Each line is a JSON
+object with `time`, `level`, `process` (`main`, `local-backend`, or `scraper`), `event`, and
+metadata fields. The file rotates at 5 MB into `careerden.1.log` through `careerden.4.log`.
+
+The log records the app version, edition, OS, and architecture at startup; database migrations;
+the local backend's start, stop, and exit codes; update checks, downloads, and errors; scraping
+and AI failures with their category, status code, and provider; and the trace IDs of the API's
+internal error responses. It never records API keys, the per-launch session token, profile
+content, job posting text, prompts, model output, or file contents. Only the main process
+writes the file; utility processes post entries to it.
+
+The level is `info` by default. **Settings → Diagnostics → Detailed logging** in the local
+edition switches to `debug` and stores the choice in `userData/log-settings.json`.
+
 Run it in development without Docker services:
 
 ```bash

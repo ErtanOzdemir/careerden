@@ -12,6 +12,13 @@ export interface LocalBackupSummary {
   files: number;
 }
 
+// What the backend reports about its database for the diagnostics summary. Versions and a
+// migration name only, never data.
+export interface LocalDatabaseDiagnostics {
+  engineVersion?: string;
+  lastMigration?: string;
+}
+
 // Mirrors localDatabaseStartupFailureReasons in @careerden/api-app/local, which the main process
 // does not import: it would load the whole API.
 export const localDataStartupFailureReasons = [
@@ -54,7 +61,8 @@ export type LocalBackendCommand =
     }
   | { type: "pdf:result"; requestId: string; pdf: Uint8Array }
   | { type: "pdf:error"; requestId: string; message: string }
-  | { type: "ai-selection:result"; requestId: string; selection: AiProviderSelection | null };
+  | { type: "ai-selection:result"; requestId: string; selection: AiProviderSelection | null }
+  | { type: "diagnostics:request"; requestId: string };
 
 // Local backend utility process -> main process.
 export type LocalBackendEvent =
@@ -66,7 +74,8 @@ export type LocalBackendEvent =
   | { type: "ai-selection:request"; requestId: string }
   | { type: "log"; entry: StructuredLogEntry }
   | { type: "backup:result"; requestId: string; summary: LocalBackupSummary }
-  | { type: "backup:error"; requestId: string; message: string };
+  | { type: "backup:error"; requestId: string; message: string }
+  | { type: "diagnostics:result"; requestId: string; database: LocalDatabaseDiagnostics };
 
 export function parseLocalBackendCommand(message: unknown): LocalBackendCommand | undefined {
   const payload = asRecord(unwrapMessageEvent(message));
@@ -109,6 +118,10 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
         (payload.selection === null || isAiProviderSelection(payload.selection))
         ? (payload as unknown as LocalBackendCommand)
         : undefined;
+    case "diagnostics:request":
+      return isString(payload.requestId)
+        ? { type: "diagnostics:request", requestId: payload.requestId }
+        : undefined;
     default:
       return undefined;
   }
@@ -150,6 +163,19 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
       return isString(payload.requestId) && isString(payload.message)
         ? (payload as unknown as LocalBackendEvent)
         : undefined;
+    case "diagnostics:result": {
+      const database = asRecord(payload.database);
+      if (!isString(payload.requestId) || !database) return undefined;
+      // Rebuilt field by field so nothing else the payload carries reaches the summary.
+      return {
+        type: "diagnostics:result",
+        requestId: payload.requestId,
+        database: {
+          ...(isString(database.engineVersion) ? { engineVersion: database.engineVersion } : {}),
+          ...(isString(database.lastMigration) ? { lastMigration: database.lastMigration } : {}),
+        },
+      };
+    }
     default:
       return undefined;
   }

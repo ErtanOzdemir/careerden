@@ -44,6 +44,7 @@ import {
   consoleStructuredLogger,
   createAiProvider,
   describeErrorForLog,
+  getLatestAppliedPostgresMigration,
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
@@ -83,6 +84,11 @@ export interface LocalApiRuntimeOptions {
   logger?: StructuredLogger;
 }
 
+export interface LocalDatabaseDiagnostics {
+  engineVersion?: string;
+  lastMigration?: string;
+}
+
 export interface LocalApiRuntime {
   app: Express;
   db: Knex;
@@ -93,6 +99,8 @@ export interface LocalApiRuntime {
   }) => Promise<LocalBackupManifest>;
   // The newest migration the database is at, for diagnostics.
   lastMigration: string | undefined;
+  // The embedded engine's version and the newest applied migration, read now, for diagnostics.
+  describeDatabase: () => Promise<LocalDatabaseDiagnostics>;
   close: () => Promise<void>;
 }
 
@@ -280,6 +288,7 @@ export async function createLocalApiRuntime(
     exportBackup: ({ outputPath, appVersion }) =>
       exportLocalData({ db, filesDir, outputPath, appVersion }),
     lastMigration,
+    describeDatabase: () => describeLocalDatabase(db),
     close: async () => {
       for (const interval of intervals) clearInterval(interval);
       await runner.close();
@@ -287,6 +296,21 @@ export async function createLocalApiRuntime(
       await Promise.all([changeBus.close(), notificationChangeBus.close()]);
       await db.destroy();
     },
+  };
+}
+
+// PGlite embeds PostgreSQL, so the server version names the engine the data files belong to.
+async function describeLocalDatabase(db: Knex): Promise<LocalDatabaseDiagnostics> {
+  const [result, lastMigration] = await Promise.all([
+    db.raw<{ rows: Array<{ server_version?: unknown }> }>("show server_version"),
+    getLatestAppliedPostgresMigration(db),
+  ]);
+  const serverVersion = result.rows[0]?.server_version;
+  return {
+    ...(typeof serverVersion === "string"
+      ? { engineVersion: `PGlite (PostgreSQL ${serverVersion})` }
+      : {}),
+    ...(lastMigration ? { lastMigration } : {}),
   };
 }
 

@@ -122,6 +122,54 @@ describe("startLocalBackendHost", () => {
     });
   });
 
+  it("describes the open database for diagnostics", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      describeDatabase: async () => ({
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261101000000_newer.cjs",
+      }),
+      close: async () => undefined,
+    }));
+    ports.push(port);
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "diagnostics:request", requestId: "diagnostics-1" });
+
+    await expect(port.next("diagnostics:result")).resolves.toEqual({
+      type: "diagnostics:result",
+      requestId: "diagnostics-1",
+      database: {
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261101000000_newer.cjs",
+      },
+    });
+  });
+
+  it("falls back to the startup migration when the database cannot be described", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      describeDatabase: async () => {
+        throw new Error("database is busy");
+      },
+      close: async () => undefined,
+    }));
+    ports.push(port);
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "diagnostics:request", requestId: "diagnostics-2" });
+
+    await expect(port.next("diagnostics:result")).resolves.toEqual({
+      type: "diagnostics:result",
+      requestId: "diagnostics-2",
+      database: { lastMigration: "20261031000000_profile_onboarding_state.cjs" },
+    });
+  });
+
   it("reports local data that cannot be opened as a distinct data error", async () => {
     const failure: LocalDataStartupFailure = {
       reason: "migration",

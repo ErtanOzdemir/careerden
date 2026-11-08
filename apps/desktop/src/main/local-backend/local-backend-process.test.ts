@@ -228,6 +228,36 @@ describe("LocalBackendProcess", () => {
     await expect(backend.exportBackup("/backups/out.zip", "0.7.0")).rejects.toThrow("not running");
   });
 
+  it("asks the backend to describe its database for diagnostics", async () => {
+    const { backend, child } = createProcess({ diagnosticsTimeoutMs: 50 });
+    await expect(backend.describeDatabase()).resolves.toBeUndefined();
+    const started = backend.start();
+    child.reply({ type: "ready", port: 1 });
+    await started;
+
+    const described = backend.describeDatabase();
+    const command = child.commands.at(-1) as Extract<
+      LocalBackendCommand,
+      { type: "diagnostics:request" }
+    >;
+    expect(command.type).toBe("diagnostics:request");
+    child.reply({
+      type: "diagnostics:result",
+      requestId: command.requestId,
+      database: {
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261031000000_x.cjs",
+      },
+    });
+    await expect(described).resolves.toEqual({
+      engineVersion: "PGlite (PostgreSQL 17.5)",
+      lastMigration: "20261031000000_x.cjs",
+    });
+
+    // A backend that does not answer in time leaves the database fields out.
+    await expect(backend.describeDatabase()).resolves.toBeUndefined();
+  });
+
   it("logs its lifecycle and forwards the backend's own log entries", async () => {
     const log = vi.fn();
     const childLog = vi.fn();

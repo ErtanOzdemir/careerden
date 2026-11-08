@@ -142,6 +142,29 @@ describe("DesktopUpdateManager", () => {
     expect(manager.getState().status).toBe("disabled");
     expect(fetchPolicy).not.toHaveBeenCalled();
     expect(updater.checkForUpdates).not.toHaveBeenCalled();
+    expect(manager.getLastCheckedAt()).toBeUndefined();
+  });
+
+  it("records when the last check finished, even when it failed", async () => {
+    const updater = createUpdater();
+    updater.checkForUpdates.mockRejectedValue(new Error("offline"));
+    const checkedAt = new Date("2026-11-08T09:30:00.000Z");
+    const manager = new DesktopUpdateManager({
+      beforeInstall: vi.fn(),
+      currentVersion: "0.1.6",
+      fetchPolicy: vi.fn().mockRejectedValue(new Error("offline")),
+      isPackaged: true,
+      now: () => checkedAt,
+      readCachedPolicy: vi.fn().mockResolvedValue(undefined),
+      setInterval: vi.fn() as never,
+      updater,
+      writeCachedPolicy: vi.fn(),
+    });
+
+    expect(manager.getLastCheckedAt()).toBeUndefined();
+    await manager.checkForUpdates();
+
+    expect(manager.getLastCheckedAt()).toEqual(checkedAt);
   });
 });
 

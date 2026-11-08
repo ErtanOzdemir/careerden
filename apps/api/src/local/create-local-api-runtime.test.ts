@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { APICallError } from "ai";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApplicationError } from "@careerden/application";
 import type { AiProvider } from "@careerden/domain";
 import type { AiProviderSelection } from "@careerden/infrastructure";
@@ -91,6 +91,37 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     runtimes.splice(runtimes.indexOf(runtime), 1);
     await runtime.close();
   }
+
+  it("logs migration progress through the injected logger", async () => {
+    const logger = vi.fn();
+    const runtime = await createLocalApiRuntime({
+      dataDir: join(dataDir, "data"),
+      sessionToken,
+      pdfRenderer: { htmlToPdf: async () => Buffer.from("%PDF-test") },
+      aiProviderSelection: { current: async () => null },
+      logger,
+    });
+    runtimes.push(runtime);
+
+    const events = logger.mock.calls.map(([entry]) => entry);
+    expect(events[0]).toMatchObject({ level: "info", event: "migration.started" });
+    expect(events[1]).toMatchObject({
+      level: "info",
+      event: "migration.finished",
+      fields: { applied: expect.any(Number), durationMs: expect.any(Number) },
+    });
+    expect((events[1] as { fields: { applied: number } }).fields.applied).toBeGreaterThan(0);
+  });
+
+  it("describes the embedded database engine and its newest migration", async () => {
+    const { runtime } = await start();
+
+    const diagnostics = await runtime.describeDatabase();
+
+    expect(diagnostics.engineVersion).toMatch(/^PGlite \(PostgreSQL \d+(\.\d+)*\)$/);
+    expect(diagnostics.lastMigration).toBe(runtime.lastMigration);
+    expect(diagnostics.lastMigration).toMatch(/^\d{14}_[a-z0-9_]+\.cjs$/);
+  });
 
   it("requires the per-launch session token on application routes", async () => {
     const { anonymous, request } = await start();

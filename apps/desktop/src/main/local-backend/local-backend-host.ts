@@ -5,12 +5,13 @@ import type { AddressInfo } from "node:net";
 import { dirname } from "node:path";
 import type { DocumentRenderer } from "@careerden/domain";
 import type { AiProviderSelection, AiProviderSelectionSource } from "@careerden/infrastructure";
-import { createLocalBackendLog } from "./local-backend-log.js";
+import { describeErrorForLog, type StructuredLogger } from "@careerden/infrastructure/logging";
 import {
   parseLocalBackendCommand,
   type LocalBackendCommand,
   type LocalBackendEvent,
   type LocalBackupSummary,
+  type LocalDatabaseDiagnostics,
   type LocalDataStartupFailure,
 } from "./local-backend-messages.js";
 
@@ -34,6 +35,7 @@ export interface LocalBackendRuntime {
     appVersion: string;
   }): Promise<LocalBackendBackupManifest>;
   lastMigration?: string | undefined;
+  describeDatabase?(): Promise<LocalDatabaseDiagnostics>;
   close(): Promise<void>;
 }
 
@@ -43,6 +45,7 @@ export type CreateLocalBackendRuntime = (options: {
   pdfRenderer: DocumentRenderer;
   aiProviderSelection: AiProviderSelectionSource;
   dataSnapshots: { appVersion: string; backupsDir: string; log: (message: string) => void };
+  logger: StructuredLogger;
 }) => Promise<LocalBackendRuntime>;
 
 // Validates an archive and restores it into `stagingDir`, leaving the live data untouched.
@@ -92,6 +95,8 @@ export function startLocalBackendHost(
   let runtime: LocalBackendRuntime | undefined;
   let runtimeOptions: Parameters<CreateLocalBackendRuntime>[0] | undefined;
   let server: Server | undefined;
+  // The main process owns the log file; entries travel over the parent port.
+  const logger: StructuredLogger = (entry) => parentPort.postMessage({ type: "log", entry });
   // Backups run one at a time, and an import replaces the runtime the next one uses.
   let backupQueue: Promise<unknown> = Promise.resolve();
   let starting: Promise<void> | undefined;
@@ -154,8 +159,11 @@ export function startLocalBackendHost(
         dataSnapshots: {
           appVersion: command.appVersion,
           backupsDir: command.backupsDir,
-          log: createLocalBackendLog(command.logFile),
+          // Snapshot messages hold versions, snapshot IDs, and sizes only.
+          log: (message) =>
+            logger({ level: "info", event: "data_snapshot.updated", fields: { message } }),
         },
+        logger,
       };
       runtime = await createRuntime(runtimeOptions);
       // Requests reach whichever runtime is current, so an import can swap it on the same port.
@@ -284,7 +292,11 @@ export function startLocalBackendHost(
       (summary) => parentPort.postMessage({ type: "backup:result", requestId, summary }),
       (error: unknown) => {
         const userFacing = error instanceof Error && error.name === userFacingErrorName;
-        if (!userFacing) console.error(failureMessage, error);
+        logger({
+          level: userFacing ? "warn" : "error",
+          event: "backup.failed",
+          fields: { task: failureMessage, ...describeErrorForLog(error) },
+        });
         parentPort.postMessage({
           type: "backup:error",
           requestId,
@@ -292,6 +304,25 @@ export function startLocalBackendHost(
         });
       },
     );
+  }
+
+  // Answers with whatever is known; a closed runtime or a failed query leaves fields out.
+  async function describeDatabase(requestId: string): Promise<void> {
+    const current = runtime;
+    let database: LocalDatabaseDiagnostics = {};
+    try {
+      database = (await current?.describeDatabase?.()) ?? {};
+    } catch (error) {
+      logger({
+        level: "warn",
+        event: "diagnostics.database_failed",
+        fields: describeErrorForLog(error),
+      });
+    }
+    if (!database.lastMigration && current?.lastMigration) {
+      database = { ...database, lastMigration: current.lastMigration };
+    }
+    parentPort.postMessage({ type: "diagnostics:result", requestId, database });
   }
 
   // Stops accepting connections, drops event streams, which never end on their own, and gives
@@ -347,7 +378,11 @@ export function startLocalBackendHost(
             options.exit?.(0);
           },
           (error: unknown) => {
-            console.error("The local backend did not shut down cleanly", error);
+            logger({
+              level: "error",
+              event: "local_backend.shutdown_failed",
+              fields: describeErrorForLog(error),
+            });
             options.exit?.(1);
           },
         );
@@ -374,6 +409,9 @@ export function startLocalBackendHost(
         return;
       case "ai-selection:result":
         settle(pendingSelections, command.requestId, { value: command.selection });
+        return;
+      case "diagnostics:request":
+        void describeDatabase(command.requestId);
         return;
     }
   });

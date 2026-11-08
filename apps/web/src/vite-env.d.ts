@@ -45,6 +45,8 @@ interface AiCredentialsInput {
 
 type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
 
+type DesktopLogLevel = "info" | "debug";
+
 interface LocalBackupSummary {
   createdAt: string;
   appVersion: string;
@@ -89,6 +91,17 @@ interface Window {
       setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;
     };
+    // Present only in the local desktop edition. Exposes the log level, never log contents.
+    logging?: {
+      getLevel: () => Promise<DesktopLogLevel>;
+      setLevel: (level: DesktopLogLevel) => Promise<DesktopLogLevel>;
+    };
+    // Present only in the local desktop edition. Returns statuses only: the summary goes to the
+    // clipboard and the log folder path stays in the main process.
+    diagnostics?: {
+      copyDiagnostics: () => Promise<{ status: "copied" } | { status: "error" }>;
+      openLogFolder: () => Promise<{ status: "opened" } | { status: "error" }>;
+    };
     // Present only in the local desktop edition. File dialogs open in the main process.
     localData?: {
       exportData: () => Promise<LocalDataExportResult>;
@@ -102,7 +115,7 @@ interface Window {
       getState: () => Promise<StartupRecoveryState | null>;
       restore: (snapshotId: string) => Promise<StartupRecoveryRestoreResult>;
       openDataFolder: () => Promise<void>;
-      copyDiagnostics: () => Promise<string>;
+      copyDiagnostics: () => Promise<void>;
       quit: () => Promise<void>;
     };
     openExternal?: (url: string) => Promise<void>;

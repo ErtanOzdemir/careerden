@@ -79,7 +79,7 @@ body:
     attributes:
       label: Diagnostic info
       description: |
-        Paste the app version and anything else that identifies your setup. In the desktop app the version is shown at the bottom of **Settings** ("Careerden · Version x.y.z"); Careerden Unplugged also shows it in the sidebar footer. If it relates to AI, also name the provider and model selected under **AI provider & API Keys** (never the key itself).
+        In Careerden Unplugged, click **Settings → Diagnostics → Copy diagnostics** and paste the result here; it never includes API keys or profile content. Otherwise, paste the app version and anything else that identifies your setup. In the desktop app the version is shown at the bottom of **Settings** ("Careerden · Version x.y.z"); Careerden Unplugged also shows it in the sidebar footer. If it relates to AI, also name the provider and model selected under **AI provider & API Keys** (never the key itself).
       placeholder: |
         Version: 0.7.0
         AI provider and model: OpenAI, gpt-5-mini

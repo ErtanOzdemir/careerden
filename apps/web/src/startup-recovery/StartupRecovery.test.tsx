@@ -23,7 +23,7 @@ function installBridge(state: StartupRecoveryState | null) {
       status: "restored",
     })),
     openDataFolder: vi.fn(async () => undefined),
-    copyDiagnostics: vi.fn(async () => "diagnostics"),
+    copyDiagnostics: vi.fn(async () => undefined),
     quit: vi.fn(async () => undefined),
   };
   const openExternal = vi.fn(async () => undefined);

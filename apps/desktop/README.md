@@ -112,6 +112,36 @@ process reads and writes the archive. An import is validated and restored into
 `before-import-<timestamp>.careerden`, and only then are the folders swapped behind the same loopback
 port. `ai-credentials.bin` is never part of a backup.
 
+### Local log file
+
+Both editions write one log file for all desktop processes to `userData/logs/careerden.log`.
+On macOS the local edition's file is
+`~/Library/Application Support/Careerden Unplugged/logs/careerden.log`. Each line is a JSON
+object with `time`, `level`, `process` (`main`, `local-backend`, or `scraper`), `event`, and
+metadata fields. The file rotates at 5 MB into `careerden.1.log` through `careerden.4.log`.
+
+The log records the app version, edition, OS, and architecture at startup; database migrations;
+the local backend's start, stop, and exit codes; update checks, downloads, and errors; scraping
+and AI failures with their category, status code, and provider; and the trace IDs of the API's
+internal error responses. It never records API keys, the per-launch session token, profile
+content, job posting text, prompts, model output, or file contents. Only the main process
+writes the file; utility processes post entries to it.
+
+The level is `info` by default. **Settings → Diagnostics → Detailed logging** in the local
+edition switches to `debug` and stores the choice in `userData/log-settings.json`.
+
+The same panel offers **Copy diagnostics**, **Open log folder**, and **Open data folder**. Copy
+diagnostics puts a Markdown summary on the clipboard, ready for a GitHub issue: app version,
+edition, Electron and Chromium versions; OS, OS version, and architecture; the PGlite engine
+version and newest applied migration, which the local backend reports over a
+`diagnostics:request` parent-port message; the selected AI provider (never its key) and, on
+Linux, the `safeStorage` backend; the updater status and last check time; and the last 50 log
+lines. The main process builds and copies the summary and opens folders with `shell.openPath`
+and `shell.showItemInFolder`; the argument-free `desktop-diagnostics-*` channels return a
+status only, never the summary or a path. Every value passes through the log file's redaction
+again, with the active AI key registered as a secret first. The startup recovery screen copies
+the same summary with the startup failure added.
+
 Run it in development without Docker services:
 
 ```bash
@@ -139,7 +169,7 @@ The three newest pre-migration snapshots are kept and older ones deleted; other 
 folder are left alone. Before copying, the backend checks that the disk has room for the copy
 plus 100 MB. Without it, the start fails with a message asking the user to free up space, and
 neither migrations nor the version record are touched. Snapshot creation and pruning are logged
-to `userData/logs/local-backend.log`.
+to the [local log file](#local-log-file) as `data_snapshot.updated` events.
 
 Copying a snapshot's contents over `data/` while the app is closed opens the app with the data
 as that version left it. Only open it with the version recorded in its `snapshot.json` or newer.
@@ -159,8 +189,8 @@ shows a recovery screen at `/recovery` instead of opening:
 
 The first two unexpected exits after a successful start still relaunch the app with the
 "Your data is safe" notice. The screen offers to restore a snapshot, open the data folder,
-copy diagnostics (error, app and Electron version, last migration, and OS, with the home
-folder replaced by `~`), or quit. Snapshots are listed through `LocalDataSnapshotSource`.
+copy the diagnostics summary described under [Local log file](#local-log-file) with the
+startup failure added, or quit. Snapshots are listed through `LocalDataSnapshotSource`.
 The current source reads data-folder copies named `backups/<kind>-<UTC time>/`, for example
 `before-migration-2026-11-05T09-15-00Z/` holding `pglite/` and `files/`. A restore copies one
 over `data/`, keeps the replaced folder as `backups/before-restore-<time>/`, and relaunches.

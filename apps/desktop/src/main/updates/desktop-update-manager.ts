@@ -29,6 +29,7 @@ export interface DesktopUpdateManagerDependencies {
   currentVersion: string;
   fetchPolicy: () => Promise<unknown>;
   isPackaged: boolean;
+  now?: () => Date;
   onStateChange?: (state: DesktopUpdateState) => void;
   readCachedPolicy: () => Promise<unknown | undefined>;
   setInterval?: (callback: () => void, delayMs: number) => ReturnType<typeof setInterval>;
@@ -41,6 +42,7 @@ export class DesktopUpdateManager {
   private readonly currentVersion: string;
   private readonly fetchPolicy: () => Promise<unknown>;
   private readonly isPackaged: boolean;
+  private readonly now: () => Date;
   private readonly onStateChange: (state: DesktopUpdateState) => void;
   private readonly readCachedPolicy: () => Promise<unknown | undefined>;
   private readonly scheduleInterval: NonNullable<DesktopUpdateManagerDependencies["setInterval"]>;
@@ -49,12 +51,14 @@ export class DesktopUpdateManager {
   private policy: DesktopUpdatePolicy | undefined;
   private checkPromise: Promise<void> | undefined;
   private state: DesktopUpdateState;
+  private lastCheckedAt: Date | undefined;
 
   constructor(dependencies: DesktopUpdateManagerDependencies) {
     this.beforeInstall = dependencies.beforeInstall;
     this.currentVersion = dependencies.currentVersion;
     this.fetchPolicy = dependencies.fetchPolicy;
     this.isPackaged = dependencies.isPackaged;
+    this.now = dependencies.now ?? (() => new Date());
     this.onStateChange = dependencies.onStateChange ?? (() => undefined);
     this.readCachedPolicy = dependencies.readCachedPolicy;
     this.scheduleInterval = dependencies.setInterval ?? setInterval;
@@ -88,6 +92,11 @@ export class DesktopUpdateManager {
     return { ...this.state };
   }
 
+  // When the last update check finished, successfully or not; undefined before the first one.
+  getLastCheckedAt(): Date | undefined {
+    return this.lastCheckedAt;
+  }
+
   checkForUpdates(): Promise<void> {
     if (!this.isPackaged) return Promise.resolve();
     if (this.checkPromise) return this.checkPromise;
@@ -95,6 +104,7 @@ export class DesktopUpdateManager {
     this.setState({ errorMessage: undefined, status: "checking" });
     this.checkPromise = Promise.allSettled([this.refreshPolicy(), this.updater.checkForUpdates()])
       .then((results) => {
+        this.lastCheckedAt = this.now();
         const updaterResult = results[1];
         if (updaterResult.status === "rejected") {
           this.handleUpdaterError(updaterResult.reason);

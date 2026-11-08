@@ -71,6 +71,12 @@ review or download.
 - Keep AI providers, storage, template rendering, PDF rendering, and persistence behind
   interfaces/adapters so implementations can be swapped.
 - Validate external inputs and AI output with schemas before persisting or rendering.
+- Job posting text is untrusted input. Scrapers strip hidden HTML elements (`stripHiddenHtmlElements`)
+  before normalizing, and every scrape bundle passes `sanitizeScrapeBundleText`, which removes
+  invisible characters, before it is persisted; `raw` keeps the original. Prompts put posting
+  content, never `raw` or display HTML, in one `<job_posting_data>` block built by
+  `promptWithJobPostingData` after the trusted instructions, and their system prompts include
+  `jobPostingDataRules`. The web app labels every generated document as AI output.
 - Use explicit workflow status transitions for job applications.
 - Job application archiving is orthogonal to tracker and processing status. Only stable
   `scraped` applications without queued analysis, `review_ready`, `completed`, or `failed`
@@ -131,6 +137,16 @@ review or download.
   provider is configured. Electron prints its PDFs in a hidden window without scripts or
   network access. Reminders are restored from the database on start, delivering those up
   to seven days overdue.
+- The desktop main process is the only writer of the redacted, rotating log file
+  `userData/logs/careerden.log` (5 MB per file, at most five files). The local backend and
+  scraping utility processes post structured entries to it over their parent ports. Log
+  entries carry metadata only and pass through `@careerden/infrastructure/logging` redaction;
+  never log API keys, the per-launch session token, profile content, job posting text,
+  prompts, model output, or file contents. The local edition's Settings toggles `debug` level.
+  Its **Copy diagnostics** builds a Markdown summary (versions, OS, PGlite engine and last
+  migration, AI provider name, Linux `safeStorage` backend, update status, last 50 log lines) in
+  the main process, re-redacts it, and writes it to the clipboard; the recovery screen copies the
+  same summary. Diagnostics and open-log-folder IPC take no arguments and return only a status.
 - Careerden Unplugged exports its data as one zip archive with the `.careerden` extension: `manifest.json` (format version, schema
   version, last migration, app version, creation time), one Postgres-rendered JSON file per
   table, and the stored files. AI keys live outside the data folder and are never included.

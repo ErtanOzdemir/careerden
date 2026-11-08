@@ -22,6 +22,7 @@ import {
   type Theme,
 } from "../theme.js";
 import { useDesktopUpdates } from "../desktop-updates/DesktopUpdateProvider.js";
+import { DiagnosticsPanel } from "../settings/DiagnosticsPanel.js";
 import { LocalDataSettings } from "../settings/LocalDataSettings.js";
 import { ReportIssuePanel } from "../settings/ReportIssuePanel.js";
 import {
@@ -566,6 +567,8 @@ export default function Settings() {
           </p>
         )}
       </Panel>
+
+      <DiagnosticsPanel />
 
       <ReportIssuePanel />
 

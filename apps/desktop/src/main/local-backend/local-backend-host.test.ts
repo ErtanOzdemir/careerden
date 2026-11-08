@@ -48,7 +48,6 @@ const start = {
   port: 0,
   appVersion: "1.2.3",
   backupsDir: "/backups",
-  logFile: "/logs/local-backend.log",
 };
 
 describe("startLocalBackendHost", () => {
@@ -123,6 +122,54 @@ describe("startLocalBackendHost", () => {
 
     await expect(port.next("ready")).resolves.toMatchObject({
       lastMigration: "20261031000000_profile_onboarding_state.cjs",
+    });
+  });
+
+  it("describes the open database for diagnostics", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      describeDatabase: async () => ({
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261101000000_newer.cjs",
+      }),
+      close: async () => undefined,
+    }));
+    ports.push(port);
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "diagnostics:request", requestId: "diagnostics-1" });
+
+    await expect(port.next("diagnostics:result")).resolves.toEqual({
+      type: "diagnostics:result",
+      requestId: "diagnostics-1",
+      database: {
+        engineVersion: "PGlite (PostgreSQL 17.5)",
+        lastMigration: "20261101000000_newer.cjs",
+      },
+    });
+  });
+
+  it("falls back to the startup migration when the database cannot be described", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      describeDatabase: async () => {
+        throw new Error("database is busy");
+      },
+      close: async () => undefined,
+    }));
+    ports.push(port);
+    port.command(start);
+    await port.next("ready");
+
+    port.command({ type: "diagnostics:request", requestId: "diagnostics-2" });
+
+    await expect(port.next("diagnostics:result")).resolves.toEqual({
+      type: "diagnostics:result",
+      requestId: "diagnostics-2",
+      database: { lastMigration: "20261031000000_profile_onboarding_state.cjs" },
     });
   });
 
@@ -499,8 +546,7 @@ describe("startLocalBackendHost backups", () => {
     await expect(get()).resolves.toBe("current");
   });
 
-  it("reports unexpected failures with a generic message", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("reports unexpected failures with a generic message and logs them redacted", async () => {
     const { createRuntime } = runtimeFactory();
     const { port } = await host(createRuntime, async () => {
       throw new Error("EACCES: permission denied, open '/secret/path'");
@@ -511,7 +557,13 @@ describe("startLocalBackendHost backups", () => {
     await expect(port.next("backup:error")).resolves.toMatchObject({
       message: "The backup could not be imported.",
     });
-    expect(error).toHaveBeenCalled();
-    error.mockRestore();
+    const logged = port.sent.find(
+      (message): message is Extract<LocalBackendEvent, { type: "log" }> =>
+        message.type === "log" && message.entry.event === "backup.failed",
+    );
+    expect(logged?.entry).toMatchObject({
+      level: "error",
+      fields: { task: "The backup could not be imported.", errorName: "Error" },
+    });
   });
 });

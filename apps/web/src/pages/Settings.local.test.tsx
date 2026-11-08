@@ -74,4 +74,13 @@ describe("Settings in the local edition", () => {
     expect(await screen.findByText("Processing preferences")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Your data" })).not.toBeInTheDocument();
   });
+
+  it("links to the GitHub bug report form", async () => {
+    render(<Settings />);
+
+    expect(await screen.findByRole("link", { name: "Report an issue" })).toHaveAttribute(
+      "href",
+      "https://github.com/ErtanOzdemir/careerden/issues/new?template=bug_report.yml",
+    );
+  });
 });

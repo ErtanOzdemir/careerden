@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { LocalBackendEvent } from "./local-backend-messages.js";
+import type { LocalBackendEvent, LocalDataStartupFailure } from "./local-backend-messages.js";
 import type {
   CreateLocalBackendRuntime,
   LocalBackendBackupManifest,
@@ -41,7 +41,15 @@ class FakeParentPort extends EventEmitter implements LocalBackendParentPort {
   }
 }
 
-const start = { type: "start", dataDir: "/data", sessionToken: "token", port: 0 };
+const start = {
+  type: "start",
+  dataDir: "/data",
+  sessionToken: "token",
+  port: 0,
+  appVersion: "1.2.3",
+  backupsDir: "/backups",
+  logFile: "/logs/local-backend.log",
+};
 
 describe("startLocalBackendHost", () => {
   const ports: FakeParentPort[] = [];
@@ -53,11 +61,15 @@ describe("startLocalBackendHost", () => {
     }
   });
 
-  function host(createRuntime: CreateLocalBackendRuntime) {
+  function host(
+    createRuntime: CreateLocalBackendRuntime,
+    describeStartupError?: (error: unknown) => LocalDataStartupFailure | undefined,
+  ) {
     const port = new FakeParentPort();
     startLocalBackendHost(port, createRuntime, {
       pdfTimeoutMs: 1_000,
       aiSelectionTimeoutMs: 1_000,
+      ...(describeStartupError ? { describeStartupError } : {}),
     });
     return port;
   }
@@ -74,7 +86,11 @@ describe("startLocalBackendHost", () => {
     const ready = await port.next("ready");
 
     expect(createRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ dataDir: "/data", sessionToken: "token" }),
+      expect.objectContaining({
+        dataDir: "/data",
+        sessionToken: "token",
+        dataSnapshots: expect.objectContaining({ appVersion: "1.2.3", backupsDir: "/backups" }),
+      }),
     );
     await expect((await fetch(`http://127.0.0.1:${ready.port}/`)).text()).resolves.toBe("ok");
   });
@@ -90,6 +106,44 @@ describe("startLocalBackendHost", () => {
       type: "start:error",
       message: "database is locked",
     });
+  });
+
+  it("reports the database's newest migration once ready", async () => {
+    const port = host(async () => ({
+      app: (_request, response) => response.end(),
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+      close: async () => undefined,
+    }));
+    ports.push(port);
+
+    port.command(start);
+
+    await expect(port.next("ready")).resolves.toMatchObject({
+      lastMigration: "20261031000000_profile_onboarding_state.cjs",
+    });
+  });
+
+  it("reports local data that cannot be opened as a distinct data error", async () => {
+    const failure: LocalDataStartupFailure = {
+      reason: "migration",
+      message: "A database update failed: column already exists",
+      lastMigration: "20261012000000_auth_rate_limits.cjs",
+    };
+    class DataError extends Error {}
+    const port = host(
+      async () => {
+        throw new DataError(failure.message);
+      },
+      (error) => (error instanceof DataError ? failure : undefined),
+    );
+
+    port.command(start);
+
+    await expect(port.next("start:data-error")).resolves.toEqual({
+      type: "start:data-error",
+      failure,
+    });
+    expect(port.sent.some((event) => event.type === "start:error")).toBe(false);
   });
 
   it("bridges PDF rendering and AI selection requests to the main process", async () => {
@@ -215,7 +269,15 @@ describe("startLocalBackendHost backups", () => {
     const port = new FakeParentPort();
     startLocalBackendHost(port, createRuntime, prepareImport ? { prepareImport } : {});
     ports.push(port);
-    port.command({ type: "start", dataDir, sessionToken: "token", port: 0 });
+    port.command({
+      type: "start",
+      dataDir,
+      sessionToken: "token",
+      port: 0,
+      appVersion: "1.2.3",
+      backupsDir: join(root, "backups"),
+      logFile: join(root, "logs", "local-backend.log"),
+    });
     const ready = await port.next("ready");
     return { port, get: async () => (await fetch(`http://127.0.0.1:${ready.port}/`)).text() };
   }

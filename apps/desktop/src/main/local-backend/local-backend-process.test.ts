@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import type { LocalBackendCommand } from "./local-backend-messages.js";
 import { LocalBackendProcess, type LocalBackendProcessOptions } from "./local-backend-process.js";
+import { LocalBackendStartError } from "../startup-recovery/startup-failure.js";
 
 class FakeChild extends EventEmitter {
   readonly commands: LocalBackendCommand[] = [];
@@ -25,6 +26,9 @@ function createProcess(overrides: Partial<LocalBackendProcessOptions> = {}) {
     modulePath: "/dist/main/local-backend/local-backend-utility-process.js",
     dataDir: "/user-data/data",
     sessionToken: "token",
+    appVersion: "1.2.3",
+    backupsDir: "/user-data/backups",
+    logFile: "/user-data/logs/local-backend.log",
     renderPdf: vi.fn(async () => Buffer.from("%PDF")),
     getAiSelection: vi.fn(async () => null),
     fork: vi.fn(() => child as never),
@@ -40,14 +44,20 @@ describe("LocalBackendProcess", () => {
     const { backend, child } = createProcess({ port: 3010 });
 
     const started = backend.start();
-    child.reply({ type: "ready", port: 3010 });
+    child.reply({ type: "ready", port: 3010, lastMigration: "20261031000000_x.cjs" });
 
-    await expect(started).resolves.toEqual({ baseUrl: "http://127.0.0.1:3010" });
+    await expect(started).resolves.toEqual({
+      baseUrl: "http://127.0.0.1:3010",
+      lastMigration: "20261031000000_x.cjs",
+    });
     expect(child.commands[0]).toEqual({
       type: "start",
       dataDir: "/user-data/data",
       sessionToken: "token",
       port: 3010,
+      appVersion: "1.2.3",
+      backupsDir: "/user-data/backups",
+      logFile: "/user-data/logs/local-backend.log",
     });
   });
 
@@ -61,7 +71,42 @@ describe("LocalBackendProcess", () => {
     const exiting = createProcess();
     const exited = exiting.backend.start();
     exiting.child.emit("exit", 1);
-    await expect(exited).rejects.toThrow("The local backend exited before it was ready");
+    await expect(exited).rejects.toThrow("The local backend exited before it was ready (code 1)");
+  });
+
+  it("rejects with the data failure the backend reports, never as an unexpected exit", async () => {
+    const onUnexpectedExit = vi.fn();
+    const { backend, child } = createProcess({ onUnexpectedExit });
+    const failure = {
+      reason: "newer-version" as const,
+      message: "This data was created by a newer version of Careerden.",
+      unknownMigrations: ["29990101000000_future.cjs"],
+    };
+
+    const started = backend.start();
+    child.reply({ type: "start:data-error", failure });
+
+    const error = await started.catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(LocalBackendStartError);
+    expect((error as LocalBackendStartError).failure).toEqual(failure);
+    expect(child.kill).toHaveBeenCalled();
+    expect(onUnexpectedExit).not.toHaveBeenCalled();
+  });
+
+  it("does not report a crash during start as an unexpected exit", async () => {
+    // Reporting it restarted the app, which crashed again on the next launch, forever.
+    const onUnexpectedExit = vi.fn();
+    const { backend, child } = createProcess({ onUnexpectedExit });
+
+    const started = backend.start();
+    child.emit("exit", 134);
+
+    const error = await started.catch((caught: unknown) => caught);
+    expect((error as LocalBackendStartError).failure).toEqual({
+      reason: "start-failed",
+      message: "The local backend exited before it was ready (code 134)",
+    });
+    expect(onUnexpectedExit).not.toHaveBeenCalled();
   });
 
   it("answers PDF and AI selection requests from the backend", async () => {

@@ -3,6 +3,7 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import Sidebar from "./Sidebar.js";
 import { Topbar } from "./Topbar.js";
 import { AddJobDialog } from "./AddJobDialog.js";
+import { readOpenAddJobRequest, type OpenAddJobRequest } from "../lib/linkedin-import-fallback.js";
 import { DesktopNotificationBridge } from "./DesktopNotificationBridge.js";
 
 const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
@@ -46,6 +47,7 @@ const routeHeaders: Record<string, { title: string; subtitle?: string }> = {
 
 export default function AppShell() {
   const [addJobOpen, setAddJobOpen] = useState(false);
+  const [addJobRequest, setAddJobRequest] = useState<OpenAddJobRequest>();
   const [greeting, setGreeting] = useState(() => getLocalGreeting());
   const location = useLocation();
   const params = useParams();
@@ -56,7 +58,8 @@ export default function AppShell() {
   }, []);
 
   useEffect(() => {
-    function handleOpenAddJob() {
+    function handleOpenAddJob(event: Event) {
+      setAddJobRequest(readOpenAddJobRequest(event));
       setAddJobOpen(true);
     }
     window.addEventListener("careerden:open-add-job", handleOpenAddJob);
@@ -85,7 +88,10 @@ export default function AppShell() {
         <Topbar
           title={header.title}
           subtitle={header.subtitle}
-          onAddJob={() => setAddJobOpen(true)}
+          onAddJob={() => {
+            setAddJobRequest(undefined);
+            setAddJobOpen(true);
+          }}
         />
 
         <main className="scrollbar-soft flex-1 overflow-y-auto">
@@ -95,7 +101,14 @@ export default function AppShell() {
         </main>
       </div>
 
-      <AddJobDialog open={addJobOpen} onClose={() => setAddJobOpen(false)} />
+      <AddJobDialog
+        open={addJobOpen}
+        onClose={() => {
+          setAddJobOpen(false);
+          setAddJobRequest(undefined);
+        }}
+        request={addJobRequest}
+      />
     </div>
   );
 }

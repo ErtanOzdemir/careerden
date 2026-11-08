@@ -61,6 +61,21 @@ type LocalDataImportResult =
   | { status: "canceled" }
   | { status: "imported"; snapshotFileName: string; summary: LocalBackupSummary }
   | { status: "error"; message: string };
+type StartupRecoveryReason =
+  | "database-open"
+  | "migration"
+  | "newer-version"
+  | "start-failed"
+  | "crash-loop";
+
+interface StartupRecoveryState {
+  reason: StartupRecoveryReason;
+  message: string;
+  appVersion: string;
+  snapshots: Array<{ id: string; kind: string; createdAt: string }>;
+}
+
+type StartupRecoveryRestoreResult = { status: "restored" } | { status: "error"; message: string };
 
 interface Window {
   electronAPI?: {
@@ -79,6 +94,16 @@ interface Window {
       exportData: () => Promise<LocalDataExportResult>;
       importData: () => Promise<LocalDataImportResult>;
       openDataFolder: () => Promise<void>;
+    };
+
+    // Present only in the local desktop edition. State is null unless the local data failed to
+    // open in this launch.
+    startupRecovery?: {
+      getState: () => Promise<StartupRecoveryState | null>;
+      restore: (snapshotId: string) => Promise<StartupRecoveryRestoreResult>;
+      openDataFolder: () => Promise<void>;
+      copyDiagnostics: () => Promise<string>;
+      quit: () => Promise<void>;
     };
     openExternal?: (url: string) => Promise<void>;
     notifyJobApplicationQueued: () => Promise<void>;

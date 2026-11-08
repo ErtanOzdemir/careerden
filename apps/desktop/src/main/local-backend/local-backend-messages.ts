@@ -9,9 +9,38 @@ export interface LocalBackupSummary {
   files: number;
 }
 
+// Mirrors localDatabaseStartupFailureReasons in @careerden/api-app/local, which the main process
+// does not import: it would load the whole API.
+export const localDataStartupFailureReasons = [
+  "database-open",
+  "migration",
+  "newer-version",
+] as const;
+
+export type LocalDataStartupFailureReason = (typeof localDataStartupFailureReasons)[number];
+
+// The local data could not be opened. Unlike a crash, retrying will not help.
+export interface LocalDataStartupFailure {
+  reason: LocalDataStartupFailureReason;
+  message: string;
+  lastMigration?: string;
+  unknownMigrations?: string[];
+}
+
 // Main process -> local backend utility process.
 export type LocalBackendCommand =
-  | { type: "start"; dataDir: string; sessionToken: string; port: number }
+  | {
+      type: "start";
+      dataDir: string;
+      sessionToken: string;
+      port: number;
+      // Recorded with the data after a successful launch; a change snapshots the data first.
+      appVersion: string;
+      // userData/backups, where pre-migration snapshots are kept.
+      backupsDir: string;
+      // Appended with snapshot creation and pruning.
+      logFile: string;
+    }
   | { type: "stop" }
   | { type: "backup:export"; requestId: string; outputPath: string; appVersion: string }
   | {
@@ -28,8 +57,9 @@ export type LocalBackendCommand =
 
 // Local backend utility process -> main process.
 export type LocalBackendEvent =
-  | { type: "ready"; port: number }
+  | { type: "ready"; port: number; lastMigration?: string }
   | { type: "start:error"; message: string }
+  | { type: "start:data-error"; failure: LocalDataStartupFailure }
   | { type: "stopped" }
   | { type: "pdf:request"; requestId: string; html: string }
   | { type: "ai-selection:request"; requestId: string }
@@ -44,7 +74,10 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
     case "start":
       return isString(payload.dataDir) &&
         isString(payload.sessionToken) &&
-        Number.isInteger(payload.port)
+        Number.isInteger(payload.port) &&
+        isString(payload.appVersion) &&
+        isString(payload.backupsDir) &&
+        isString(payload.logFile)
         ? (payload as unknown as LocalBackendCommand)
         : undefined;
     case "stop":
@@ -86,9 +119,16 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
 
   switch (payload.type) {
     case "ready":
-      return Number.isInteger(payload.port) ? (payload as unknown as LocalBackendEvent) : undefined;
+      return Number.isInteger(payload.port) &&
+        (payload.lastMigration === undefined || isString(payload.lastMigration))
+        ? (payload as unknown as LocalBackendEvent)
+        : undefined;
     case "start:error":
       return isString(payload.message) ? (payload as unknown as LocalBackendEvent) : undefined;
+    case "start:data-error":
+      return isLocalDataStartupFailure(payload.failure)
+        ? (payload as unknown as LocalBackendEvent)
+        : undefined;
     case "stopped":
       return { type: "stopped" };
     case "pdf:request":
@@ -128,6 +168,18 @@ function isLocalBackupSummary(value: unknown): value is LocalBackupSummary {
     isString(summary.appVersion) &&
     Number.isInteger(summary.applications) &&
     Number.isInteger(summary.files)
+  );
+}
+
+function isLocalDataStartupFailure(value: unknown): value is LocalDataStartupFailure {
+  const failure = asRecord(value);
+  return (
+    failure !== undefined &&
+    localDataStartupFailureReasons.some((reason) => reason === failure.reason) &&
+    isString(failure.message) &&
+    (failure.lastMigration === undefined || isString(failure.lastMigration)) &&
+    (failure.unknownMigrations === undefined ||
+      (Array.isArray(failure.unknownMigrations) && failure.unknownMigrations.every(isString)))
   );
 }
 

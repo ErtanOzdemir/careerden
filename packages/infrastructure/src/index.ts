@@ -21,6 +21,7 @@ export * from "./persistence/billing/knex-billing-subscription.repository.js";
 export * from "./persistence/billing/postgres-billing-subscription.repository.js";
 export * from "./persistence/postgres-knex.js";
 export * from "./persistence/pglite-knex.js";
+export * from "./persistence/postgres-migration-status.js";
 export * from "./persistence/postgres-outbox.repository.js";
 export * from "./persistence/in-process-outbox-runner.js";
 export * from "./persistence/postgres-storage-outbox.dispatcher.js";

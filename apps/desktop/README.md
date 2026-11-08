@@ -122,6 +122,50 @@ The launcher starts the web dev server and Electron with a fixed backend port (`
 a per-run token so the Vite proxy can reach the backend. Local data lives in
 `Careerden Unplugged` under the operating system's application data directory.
 
+### Pre-migration snapshots
+
+The backend migrates the database on every start, so before a start that may change existing
+data it copies `data/pglite`, `data/files`, and `data/last-opened-version.json` to
+`userData/backups/before-migration-<UTC time>/`, together with a `snapshot.json` recording the
+version the data came from and the version opening it. A snapshot is taken when the app version
+differs from the one in `data/last-opened-version.json`, or when it is unchanged but migrations
+are pending (for example after a failed upgrade). Pending migrations are listed with the
+database open, and it is closed again before anything is copied; the copy is written under a
+`.partial-` name and renamed only when complete. The version record is updated only after the
+migrations succeed. A fresh install has nothing to copy, and a relaunch of the same version takes
+no snapshot.
+
+The three newest pre-migration snapshots are kept and older ones deleted; other backups in the
+folder are left alone. Before copying, the backend checks that the disk has room for the copy
+plus 100 MB. Without it, the start fails with a message asking the user to free up space, and
+neither migrations nor the version record are touched. Snapshot creation and pruning are logged
+to `userData/logs/local-backend.log`.
+
+Copying a snapshot's contents over `data/` while the app is closed opens the app with the data
+as that version left it. Only open it with the version recorded in its `snapshot.json` or newer.
+
+### Startup recovery
+
+Migrations run on every start, against data only this device has. When they cannot, the app
+shows a recovery screen at `/recovery` instead of opening:
+
+| Failure                                                   | Detected by                            | Screen                                 |
+| --------------------------------------------------------- | -------------------------------------- | -------------------------------------- |
+| PGlite cannot open `data/pglite` (damaged, incompatible)  | The first query fails                  | Your data could not be opened          |
+| A migration fails                                         | `migrate.latest` throws                | Your data could not be updated         |
+| The data has migrations this build does not ship          | `knex_migrations` compared before Knex | Created by a newer version; install it |
+| The backend exits or times out before it is ready         | `LocalBackendProcess.start()` rejects  | Could not start                        |
+| The backend exits unexpectedly three times in two minutes | `userData/local-backend-restarts.json` | Keeps stopping                         |
+
+The first two unexpected exits after a successful start still relaunch the app with the
+"Your data is safe" notice. The screen offers to restore a snapshot, open the data folder,
+copy diagnostics (error, app and Electron version, last migration, and OS, with the home
+folder replaced by `~`), or quit. Snapshots are listed through `LocalDataSnapshotSource`.
+The current source reads data-folder copies named `backups/<kind>-<UTC time>/`, for example
+`before-migration-2026-11-05T09-15-00Z/` holding `pglite/` and `files/`. A restore copies one
+over `data/`, keeps the replaced folder as `backups/before-restore-<time>/`, and relaunches.
+The screen says so when no snapshot exists yet.
+
 ## Renderer Security Boundary
 
 The main renderer runs with context isolation and Chromium sandboxing enabled and without
@@ -241,10 +285,12 @@ packaging produces separate x64 and arm64 DMGs and updater ZIPs so each installa
 contains only the Electron binary for its architecture.
 
 Only Careerden Unplugged is released for now. The cloud edition is deferred rather than
-dropped: releasing it again means adding `cloud` back to the `edition` matrix in
-[`desktop-release.yml`](../../.github/workflows/desktop-release.yml) and dropping the
-"Unplugged" suffix from the draft release title, both marked with a TODO there. The cloud
-edition can still be packaged locally with `pnpm --filter @careerden/desktop package`.
+dropped: releasing it again means adding `cloud` to
+[`release-editions.json`](release-editions.json), which sets both the build matrix of
+[`desktop-release.yml`](../../.github/workflows/desktop-release.yml) and the editions the
+release verification requires, and drops the "Unplugged" suffix from the draft release
+title. The cloud edition can still be packaged locally with
+`pnpm --filter @careerden/desktop package`.
 
 ## Automatic Updates
 
@@ -339,16 +385,25 @@ Windows and Linux builds currently have no configured code-signing credentials.
 7. Download and smoke-test both macOS architecture installers and every other platform
    installer, review the generated release notes, and compare installer hashes with
    `SHA256SUMS.txt`.
-8. Confirm the platform `latest*.yml`, blockmap, and
-   `careerden-desktop-update-policy.json` assets are present. Publish the draft manually
-   in GitHub only after verification. Drafts are invisible to installed updaters.
+8. Run `pnpm verify:desktop-release <tag>` against the draft. It checks that every edition in
+   `release-editions.json` has its `latest*.yml` or `local*.yml` metadata for all three
+   platforms at the tag's version, that every referenced file is present with a matching
+   `sha512`, and that `careerden-desktop-update-policy.json` and `SHA256SUMS.txt` are valid.
+   The workflow already ran the same check before creating the draft. Publish the draft
+   manually in GitHub only after verification. Drafts are invisible to installed updaters.
+   Releasing only one edition is not supported; see
+   [Desktop releases contain every edition](../../docs/deployment.md#desktop-releases-contain-every-edition).
+9. If the workflow warned about a missing database upgrade fixture, generate it from the tag
+   and commit it in a follow-up pull request, as described in
+   [Database upgrade fixtures](../../docs/development.md#database-upgrade-fixtures).
 
 The workflow builds these assets:
 
 - macOS x64 and arm64 DMGs and updater ZIPs, signed and notarized.
 - Windows x64 NSIS installer.
 - Linux x64 AppImage.
-- Platform `latest*.yml` metadata and update blockmaps generated by electron-builder.
+- Platform `latest*.yml` (Careerden) and `local*.yml` (Unplugged) metadata and update
+  blockmaps generated by electron-builder, for every edition in `release-editions.json`.
 - `careerden-desktop-update-policy.json`, validated from the tracked policy source.
 - `SHA256SUMS.txt` containing a SHA-256 checksum for every release asset.
 

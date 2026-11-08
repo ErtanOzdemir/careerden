@@ -31,6 +31,23 @@ referrer and permissions policies, and production HSTS to every route. Keep the 
 limited to resources used by this public service; authenticated web or Electron resource
 requirements belong to their own policies.
 
+## Search metadata
+
+- The root layout sets `metadataBase` from `NEXT_PUBLIC_SITE_URL`, a `%s | Careerden` title
+  template, and site-wide Open Graph and Twitter card defaults. Pages build their own title,
+  description, canonical URL, robots directives, and social metadata through `pageMetadata` in
+  `lib/metadata.ts`; pass `index: false` for routes that must stay out of search results.
+- `app/opengraph-image.tsx` renders the shared social image. Next.js attaches it only to the
+  root segment, so `pageMetadata` references it explicitly for nested pages. `app/icon.svg` is
+  the favicon.
+- `lib/structured-data.ts` builds schema.org JSON-LD: `Organization` and `WebSite` on every
+  page, `SoftwareApplication` on `/` and `/download`, and `FAQPage` from the landing-page FAQ.
+  Render it through `components/json-ld.tsx`, which escapes HTML-significant characters. JSON-LD
+  is a data block, so it needs no CSP change. Keep legal entity details out of it until the
+  placeholders below are confirmed.
+- New public routes belong in `publicRoutes` in `lib/site.ts`, which feeds both the sitemap and
+  the robots allow list.
+
 ## Routes
 
 - / — public landing page, including the five-step product workflow at /#how-it-works and current

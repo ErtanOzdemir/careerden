@@ -5,11 +5,13 @@ import type { AddressInfo } from "node:net";
 import { dirname } from "node:path";
 import type { DocumentRenderer } from "@careerden/domain";
 import type { AiProviderSelection, AiProviderSelectionSource } from "@careerden/infrastructure";
+import { createLocalBackendLog } from "./local-backend-log.js";
 import {
   parseLocalBackendCommand,
   type LocalBackendCommand,
   type LocalBackendEvent,
   type LocalBackupSummary,
+  type LocalDataStartupFailure,
 } from "./local-backend-messages.js";
 
 export interface LocalBackendParentPort {
@@ -31,6 +33,7 @@ export interface LocalBackendRuntime {
     outputPath: string;
     appVersion: string;
   }): Promise<LocalBackendBackupManifest>;
+  lastMigration?: string | undefined;
   close(): Promise<void>;
 }
 
@@ -39,6 +42,7 @@ export type CreateLocalBackendRuntime = (options: {
   sessionToken: string;
   pdfRenderer: DocumentRenderer;
   aiProviderSelection: AiProviderSelectionSource;
+  dataSnapshots: { appVersion: string; backupsDir: string; log: (message: string) => void };
 }) => Promise<LocalBackendRuntime>;
 
 // Validates an archive and restores it into `stagingDir`, leaving the live data untouched.
@@ -51,6 +55,8 @@ export interface LocalBackendHostOptions {
   pdfTimeoutMs?: number;
   aiSelectionTimeoutMs?: number;
   prepareImport?: PrepareLocalBackupImport;
+  // Recognizes errors that mean the local data cannot be opened, which retrying will not fix.
+  describeStartupError?: (error: unknown) => LocalDataStartupFailure | undefined;
 }
 
 interface PendingRequest<T> {
@@ -138,6 +144,11 @@ export function startLocalBackendHost(
               (requestId) => ({ type: "ai-selection:request", requestId }),
             ),
         },
+        dataSnapshots: {
+          appVersion: command.appVersion,
+          backupsDir: command.backupsDir,
+          log: createLocalBackendLog(command.logFile),
+        },
       };
       runtime = await createRuntime(runtimeOptions);
       // Requests reach whichever runtime is current, so an import can swap it on the same port.
@@ -157,12 +168,18 @@ export function startLocalBackendHost(
       parentPort.postMessage({
         type: "ready",
         port: (listening.address() as AddressInfo).port,
+        ...(runtime.lastMigration ? { lastMigration: runtime.lastMigration } : {}),
       });
     } catch (error) {
-      parentPort.postMessage({
-        type: "start:error",
-        message: error instanceof Error ? error.message : String(error),
-      });
+      const failure = options.describeStartupError?.(error);
+      parentPort.postMessage(
+        failure
+          ? { type: "start:data-error", failure }
+          : {
+              type: "start:error",
+              message: error instanceof Error ? error.message : String(error),
+            },
+      );
     }
   }
 

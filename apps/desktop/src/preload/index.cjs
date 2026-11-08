@@ -28,6 +28,14 @@ const localDataChannels = {
   openFolder: "local-data-open-folder",
 };
 
+const startupRecoveryChannels = {
+  copyDiagnostics: "startup-recovery-copy-diagnostics",
+  getState: "startup-recovery-get-state",
+  openDataFolder: "startup-recovery-open-data-folder",
+  quit: "startup-recovery-quit",
+  restore: "startup-recovery-restore",
+};
+
 const edition = process.argv.includes("--careerden-edition=local") ? "local" : "cloud";
 
 const electronAPI = {
@@ -68,6 +76,16 @@ if (edition === "local") {
     exportData: () => ipcRenderer.invoke(localDataChannels.export),
     importData: () => ipcRenderer.invoke(localDataChannels.import),
     openDataFolder: () => ipcRenderer.invoke(localDataChannels.openFolder),
+  };
+
+  // The recovery screen shown when the local data cannot be opened. Snapshots are chosen by the
+  // id the main process listed, never by path.
+  electronAPI.startupRecovery = {
+    getState: () => ipcRenderer.invoke(startupRecoveryChannels.getState),
+    restore: (snapshotId) => ipcRenderer.invoke(startupRecoveryChannels.restore, snapshotId),
+    openDataFolder: () => ipcRenderer.invoke(startupRecoveryChannels.openDataFolder),
+    copyDiagnostics: () => ipcRenderer.invoke(startupRecoveryChannels.copyDiagnostics),
+    quit: () => ipcRenderer.invoke(startupRecoveryChannels.quit),
   };
 }
 

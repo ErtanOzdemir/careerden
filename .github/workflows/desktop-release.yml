@@ -13,21 +13,64 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Careerden Unplugged migrates the user's own database on every update, so each released
+  # version needs an upgrade fixture that `pnpm test` migrates. A missing one only warns: the
+  # fixture is generated from this tag and lands in a follow-up pull request.
+  upgrade-fixture:
+    name: Check database upgrade fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Warn when this version has no upgrade fixture
+        shell: bash
+        run: |
+          fixture="apps/api/test/fixtures/pglite/${GITHUB_REF_NAME}/fixture.json"
+          if [[ ! -f "${fixture}" ]]; then
+            echo "::warning title=Missing database upgrade fixture::No ${fixture}. Run 'pnpm --filter @careerden/api-app fixture:pglite --ref ${GITHUB_REF_NAME}' and commit the result so later migrations are tested against ${GITHUB_REF_NAME} databases."
+          fi
+
+  # The editions every release contains come from apps/desktop/release-editions.json, which the
+  # build matrix and the release verification both read. cloud is Careerden; local is Careerden
+  # Unplugged, whose data stays on the device. Only Unplugged is released for now.
+  #
+  # TODO: the cloud edition is deferred, not dropped. When it ships, add `cloud` to that file.
+  # Nothing else needs to change: every step below already handles both editions and gives them
+  # distinct artifact names and updater channels (latest*.yml and local*.yml) inside one
+  # release, and the verification then requires all six metadata files.
+  plan:
+    name: Read released editions
+    runs-on: ubuntu-latest
+    outputs:
+      editions: ${{ steps.editions.outputs.editions }}
+      title: ${{ steps.editions.outputs.title }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: editions
+        name: Read release-editions.json
+        shell: bash
+        run: |
+          node --input-type=module >> "${GITHUB_OUTPUT}" <<'NODE'
+          import { readFile } from "node:fs/promises";
+          import { parseReleaseEditions } from "./apps/desktop/scripts/desktop-release-verification.mjs";
+
+          const editions = parseReleaseEditions(
+            JSON.parse(await readFile("./apps/desktop/release-editions.json", "utf8")),
+          );
+          console.log(`editions=${JSON.stringify(editions)}`);
+          // A release of Unplugged alone is titled after it; with both editions it is Careerden's.
+          console.log(`title=${editions.includes("cloud") ? "Careerden" : "Careerden Unplugged"}`);
+          NODE
+
   build:
     name: Build ${{ matrix.edition }} ${{ matrix.name }}
+    needs: plan
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # cloud is Careerden; local is Careerden Unplugged, whose data stays on the device.
-        # Only Unplugged is released for now.
-        #
-        # TODO: the cloud edition is deferred, not dropped. When it ships, add `cloud` back to
-        # this list and drop the "Unplugged" suffix from the draft release title at the end of
-        # this workflow. Nothing else needs to change: every step below already handles both
-        # editions and gives them distinct artifact names and updater channels (latest*.yml
-        # and local*.yml) inside one release.
-        edition: [local]
+        edition: ${{ fromJSON(needs.plan.outputs.editions) }}
         platform: [macos, windows-x64, linux-x64]
         include:
           - platform: macos
@@ -275,7 +318,7 @@ jobs:
 
   release:
     name: Create draft release
-    needs: build
+    needs: [plan, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -289,8 +332,19 @@ jobs:
           merge-multiple: true
           path: release-assets
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Validate and prepare update policy
         run: node apps/desktop/scripts/prepare-release-policy.mjs release-assets/careerden-desktop-update-policy.json
+
+      # Each build job checked only its own metadata. An installed app reads only its own
+      # edition's and platform's file and treats a missing one as "no update", so check the
+      # release as a whole before it exists: every edition's three metadata files at this tag's
+      # version, every file they reference present with a matching sha512, and a valid policy.
+      - name: Verify release completeness
+        run: node apps/desktop/scripts/verify-desktop-release.mjs "${GITHUB_REF_NAME}" --dir release-assets
 
       - name: Generate checksums
         run: |
@@ -301,6 +355,7 @@ jobs:
         env:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TITLE: ${{ needs.plan.outputs.title }}
         run: |
           existing_draft="$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft 2>/dev/null || true)"
           if [[ "${existing_draft}" == "false" ]]; then
@@ -310,11 +365,9 @@ jobs:
           if [[ "${existing_draft}" == "true" ]]; then
             gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber
           else
-            # Only the Unplugged edition is in the build matrix, so the title names it. Drop
-            # the suffix when the cloud edition is released alongside it again.
             gh release create "${GITHUB_REF_NAME}" release-assets/* \
               --draft \
               --generate-notes \
-              --title "Careerden Unplugged ${GITHUB_REF_NAME#v}" \
+              --title "${RELEASE_TITLE} ${GITHUB_REF_NAME#v}" \
               --verify-tag
           fi

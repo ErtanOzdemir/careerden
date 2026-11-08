@@ -20,7 +20,8 @@
     "dev": "tsx watch --conditions=development --import ./src/tracing.register.ts src/server.ts",
     "start": "node --import ./dist/tracing.register.js dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "fixture:pglite": "node scripts/generate-pglite-fixture.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.932.0",
@@ -53,10 +54,13 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@electric-sql/pglite-tools": "0.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/multer": "^2.1.0",
     "@types/pg": "^8.15.6",
+    "knex-pglite": "0.14.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

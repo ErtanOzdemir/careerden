@@ -49,7 +49,9 @@ describe("marketing workflow story", () => {
     const structuredData = container.querySelector(
       'script[type="application/ld+json"]',
     )?.textContent;
-    expect(structuredData).toContain('"operatingSystem":"Desktop"');
+    expect(structuredData).toContain('"operatingSystem":"macOS, Windows, Linux"');
+    expect(structuredData).toContain('"@type":"FAQPage"');
+    expect(structuredData).toContain('"name":"What is Careerden Unplugged?"');
     expect(structuredData).toContain(
       '"codeRepository":"https://github.com/ErtanOzdemir/careerden"',
     );
@@ -108,7 +110,9 @@ describe("marketing workflow story", () => {
   });
 
   it("uses tracking-first search and social metadata", () => {
-    expect(metadata.title).toBe("Desktop Job Application Tracker & CV Creator | Careerden");
+    expect(metadata.title).toEqual({
+      absolute: "Desktop Job Application Tracker & CV Creator | Careerden",
+    });
     expect(metadata.description).toMatch(/open-source desktop job application tracker/);
     expect(metadata.openGraph).toMatchObject({
       description: expect.stringMatching(/open-source desktop job application tracker/),

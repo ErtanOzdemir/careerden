@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/ErtanOzdemir/careerden/blob/master/SECURITY.md
+    about: Please do not open a public issue for security vulnerabilities. Follow the security policy instead.
+  - name: Ask a question
+    url: https://github.com/ErtanOzdemir/careerden/discussions
+    about: Ask usage questions and get help in GitHub Discussions.

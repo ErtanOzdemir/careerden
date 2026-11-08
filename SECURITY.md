@@ -2,9 +2,34 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+Careerden ships as two desktop editions built from the same release tag: **Careerden**
+(the cloud edition, which talks to the hosted Careerden API) and **Careerden Unplugged**
+(the local edition, which sends no data to a Careerden server). Both editions share one
+version number and one support policy.
+
+Only the latest minor release line receives security fixes. Fixes ship as a new patch or
+minor release; older release lines are not patched.
+
+| Version | Careerden          | Careerden Unplugged |
+| ------- | ------------------ | ------------------- |
+| 0.7.x   | :white_check_mark: | :white_check_mark:  |
+| < 0.7   | :x:                | :x:                 |
+
+When the next minor release is published (the first public beta will be 0.8.0), it
+becomes the only supported line and the table moves with it.
+
+Installed desktop apps check public GitHub Releases for updates at startup, hourly, and on
+demand, and download new versions automatically. When a fix must reach every user, the
+maintainer raises `minimumSupportedVersion` in
+[`apps/desktop/release-policy.json`](apps/desktop/release-policy.json), which is published
+with each release. Any installed app older than that version, in either edition, shows a
+blocking "required update" screen in place of the app until it has updated. If the policy
+cannot be fetched, the app falls back to the last policy it cached, so an update that was
+already required stays required. The minimum is currently `0.6.0`; versions between it and
+the latest release still run but no longer receive fixes.
+
+For the cloud edition, the hosted API and web app are always the currently deployed
+version, and only that deployment is supported.
 
 ## Reporting a Vulnerability
 
@@ -14,15 +39,23 @@ If you discover a security vulnerability in Careerden, please report it responsi
 
 ### How to Report
 
-1. Email **mail@ozdemirertan.com** with:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested fix (if any)
+Use either private channel:
 
-2. You should receive an acknowledgment within **48 hours**.
+- **Email**: send your report to **mail@ozdemirertan.com**.
+- **GitHub private vulnerability reporting**: when the repository's **Security** tab shows
+  a **Report a vulnerability** button, you can submit a private advisory there. If the
+  button is not available, use email.
 
-3. We will work with you to understand and address the issue before any public disclosure.
+Include:
+
+- Description of the vulnerability
+- Affected edition (Careerden, Careerden Unplugged, or both) and version
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
+
+You should receive an acknowledgment within **48 hours**. We will work with you to
+understand and address the issue before any public disclosure.
 
 ### What to Expect
 
@@ -36,8 +69,25 @@ If you discover a security vulnerability in Careerden, please report it responsi
 
 This security policy applies to:
 
-- The latest release of Careerden
-- The main branch of this repository
+- The supported releases of both desktop editions listed above: Careerden and Careerden
+  Unplugged
+- The hosted Careerden API and web app used by the cloud edition
+- The `master` branch of this repository
+
+#### Careerden Unplugged
+
+Careerden Unplugged runs its backend on your own machine instead of a Careerden server.
+Reports about these local protections are in scope:
+
+- **Local loopback API**: the app starts its API in an Electron utility process that listens
+  only on `127.0.0.1`, on a port chosen by the operating system at launch.
+- **Per-launch token**: every launch generates a random 256-bit session token. The app adds
+  it to each request it proxies to the local API, and the API rejects requests without it,
+  so other local processes cannot call the API.
+- **AI provider keys**: the API keys you enter for your own AI provider are encrypted with
+  Electron `safeStorage` (the macOS Keychain, Windows DPAPI, or the Linux secret service)
+  and stored by the main process. They are never returned to the renderer, and the app
+  refuses to save a key when operating-system encryption is unavailable.
 
 ### Safe Harbor
 

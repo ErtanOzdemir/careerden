@@ -14,10 +14,12 @@ import {
   DetectedDownloadButton,
 } from "@/components/desktop-download-selector";
 import { GitHubMark } from "@/components/GitHubMark";
+import { JsonLd } from "@/components/json-ld";
 import { UnpluggedWordmark } from "@/components/unplugged-badge";
 import { unpluggedRelease } from "@/lib/desktop-release";
 import { pageMetadata } from "@/lib/metadata";
 import { githubUrl } from "@/lib/site";
+import { softwareApplicationJsonLd } from "@/lib/structured-data";
 
 export const metadata: Metadata = pageMetadata({
   title: "Download Careerden Unplugged for Desktop",
@@ -48,9 +50,10 @@ const highlights = [
 export default function DownloadPage() {
   return (
     <main className="download-main" id="main-content">
+      <JsonLd data={softwareApplicationJsonLd()} />
       <section className="download-hero">
-        <div className="download-hero-orb download-hero-orb-left" />
-        <div className="download-hero-orb download-hero-orb-right" />
+        <div className="download-hero-orb download-hero-orb-left" aria-hidden="true" />
+        <div className="download-hero-orb download-hero-orb-right" aria-hidden="true" />
         <div className="container download-hero-inner">
           <UnpluggedWordmark size="large" />
           <h1>
@@ -138,7 +141,7 @@ export default function DownloadPage() {
               </a>
               <a href={githubUrl} rel="noreferrer" target="_blank">
                 <GitHubMark />
-                View source
+                View source on GitHub
               </a>
             </div>
           </div>

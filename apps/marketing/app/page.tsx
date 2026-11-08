@@ -21,8 +21,10 @@ import {
   ProfileWorkflowPreview,
   TailoringTipsWorkflowPreview,
 } from "@/components/workflow-preview";
+import { JsonLd } from "@/components/json-ld";
 import { pageMetadata } from "@/lib/metadata";
-import { absoluteUrl, githubUrl } from "@/lib/site";
+import { githubUrl } from "@/lib/site";
+import { faqPageJsonLd, softwareApplicationJsonLd, type FaqEntry } from "@/lib/structured-data";
 
 export const metadata: Metadata = pageMetadata({
   title: "Desktop Job Application Tracker & CV Creator",
@@ -31,7 +33,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/",
 });
 
-const faqs = [
+const faqs: readonly FaqEntry[] = [
   [
     "Does Careerden apply to jobs for me?",
     "No. Careerden helps you track opportunities and prepare application materials. You review the content and decide when and where to apply.",
@@ -75,24 +77,9 @@ const faqs = [
 ];
 
 export default function HomePage() {
-  const softwareJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Careerden",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Desktop",
-    url: absoluteUrl("/"),
-    codeRepository: githubUrl,
-    description:
-      "An open-source desktop job application tracker with a profile-aware CV creator and cover letter creator for managing statuses, follow-ups, job context, match insights, and tailored documents.",
-  };
-
   return (
     <main id="main-content">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
-      />
+      <JsonLd data={[softwareApplicationJsonLd(), faqPageJsonLd(faqs)]} />
       <section className="hero section-pad">
         <div className="hero-orb hero-orb-one" aria-hidden="true" />
         <div className="hero-orb hero-orb-two" aria-hidden="true" />

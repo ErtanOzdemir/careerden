@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, stat } from "node:fs/promises";
-import { createServer, type RequestListener, type Server } from "node:http";
+import { createServer, type RequestListener, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname } from "node:path";
 import type { DocumentRenderer } from "@careerden/domain";
@@ -60,6 +60,10 @@ export interface LocalBackendHostOptions {
   prepareImport?: PrepareLocalBackupImport;
   // Recognizes errors that mean the local data cannot be opened, which retrying will not fix.
   describeStartupError?: (error: unknown) => LocalDataStartupFailure | undefined;
+  // How long requests in flight at shutdown may take before their connections are dropped.
+  requestDrainTimeoutMs?: number;
+  // Ends the process once shutdown is over; the utility process passes process.exit.
+  exit?: (code: number) => void;
 }
 
 interface PendingRequest<T> {
@@ -95,6 +99,9 @@ export function startLocalBackendHost(
   const logger: StructuredLogger = (entry) => parentPort.postMessage({ type: "log", entry });
   // Backups run one at a time, and an import replaces the runtime the next one uses.
   let backupQueue: Promise<unknown> = Promise.resolve();
+  let starting: Promise<void> | undefined;
+  let shuttingDown: Promise<void> | undefined;
+  const openResponses = new Set<ServerResponse>();
 
   function request<T>(
     pending: Map<string, PendingRequest<T>>,
@@ -167,6 +174,10 @@ export function startLocalBackendHost(
         }
         response.statusCode = 503;
         response.end();
+      });
+      listening.on("request", (_request, response: ServerResponse) => {
+        openResponses.add(response);
+        response.once("close", () => openResponses.delete(response));
       });
       server = listening;
       await new Promise<void>((resolve, reject) => {
@@ -273,6 +284,10 @@ export function startLocalBackendHost(
     work: () => Promise<LocalBackupSummary>,
     failureMessage: string,
   ): void {
+    if (shuttingDown) {
+      parentPort.postMessage({ type: "backup:error", requestId, message: failureMessage });
+      return;
+    }
     backupQueue = backupQueue.then(work).then(
       (summary) => parentPort.postMessage({ type: "backup:result", requestId, summary }),
       (error: unknown) => {
@@ -310,18 +325,42 @@ export function startLocalBackendHost(
     parentPort.postMessage({ type: "diagnostics:result", requestId, database });
   }
 
-  async function stop(): Promise<void> {
-    await backupQueue;
+  // Stops accepting connections, drops event streams, which never end on their own, and gives
+  // other requests in flight a moment to finish before their connections are dropped too.
+  async function closeServer(): Promise<void> {
     const current = server;
     server = undefined;
-    if (current) {
-      // Event streams stay open indefinitely; drop them so close() can finish.
-      current.closeAllConnections();
-      await new Promise<void>((resolve) => current.close(() => resolve()));
+    if (!current) return;
+    const closed = new Promise<void>((resolve) => current.close(() => resolve()));
+    for (const response of openResponses) {
+      if (String(response.getHeader("content-type") ?? "").startsWith("text/event-stream")) {
+        response.destroy();
+      }
     }
+    current.closeIdleConnections();
+    let timeout: NodeJS.Timeout | undefined;
+    const drained = await Promise.race([
+      closed.then(() => true),
+      new Promise<boolean>((resolve) => {
+        timeout = setTimeout(() => resolve(false), options.requestDrainTimeoutMs ?? 1_000);
+      }),
+    ]);
+    clearTimeout(timeout);
+    if (!drained) {
+      current.closeAllConnections();
+      await closed;
+    }
+  }
+
+  // Closing the runtime stops its background work and closes the database, so PGlite never exits
+  // with an open client or mid-write.
+  async function shutdown(): Promise<void> {
+    await starting;
+    // A backup import swaps the data folder; let it finish rather than interrupt it.
+    await backupQueue;
+    await closeServer();
     await runtime?.close();
     runtime = undefined;
-    parentPort.postMessage({ type: "stopped" });
   }
 
   parentPort.on("message", (message) => {
@@ -330,10 +369,23 @@ export function startLocalBackendHost(
 
     switch (command.type) {
       case "start":
-        void start(command);
+        if (!shuttingDown) starting ??= start(command);
         return;
-      case "stop":
-        void stop();
+      case "shutdown":
+        shuttingDown ??= shutdown().then(
+          () => {
+            parentPort.postMessage({ type: "shutdown:complete" });
+            options.exit?.(0);
+          },
+          (error: unknown) => {
+            logger({
+              level: "error",
+              event: "local_backend.shutdown_failed",
+              fields: describeErrorForLog(error),
+            });
+            options.exit?.(1);
+          },
+        );
         return;
       case "backup:export":
         runBackup(

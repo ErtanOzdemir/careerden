@@ -106,6 +106,7 @@ let startupRecovery: StartupRecovery | null = null;
 let localLastMigration: string | undefined;
 let flushCookiesTimeout: NodeJS.Timeout | undefined;
 let isQuittingAfterCookieFlush = false;
+let desktopRuntimeShutdown: Promise<void> | undefined;
 const notificationActivations = new DesktopNotificationActivationQueue();
 
 protocol.registerSchemesAsPrivileged([packagedRendererSchemeRegistration]);
@@ -601,7 +602,13 @@ async function flushDefaultSessionCookies(): Promise<void> {
   await session.defaultSession.cookies.flushStore();
 }
 
-async function shutdownDesktopRuntime(): Promise<void> {
+// Runs once: a second quit request while shutting down waits for the same shutdown.
+function shutdownDesktopRuntime(): Promise<void> {
+  desktopRuntimeShutdown ??= stopDesktopRuntime();
+  return desktopRuntimeShutdown;
+}
+
+async function stopDesktopRuntime(): Promise<void> {
   localScrapingWorker?.stop();
   utilityScrapingRunner?.dispose();
   nativeNotificationPresenter?.closeAll();

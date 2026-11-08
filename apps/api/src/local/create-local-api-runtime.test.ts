@@ -9,7 +9,7 @@ import { ApplicationError } from "@careerden/application";
 import type { AiProvider } from "@careerden/domain";
 import type { AiProviderSelection } from "@careerden/infrastructure";
 import { aiModelCandidates, ModelFallbackAiProvider } from "@careerden/infrastructure";
-import type { LocalApiRuntime } from "./create-local-api-runtime.js";
+import type { LocalApiRuntime, LocalApiRuntimeOptions } from "./create-local-api-runtime.js";
 import { createLocalApiRuntime } from "./create-local-api-runtime.js";
 import { prepareLocalDataImport } from "../infrastructure/backup/local-data-backup.js";
 import { localSessionTokenHeader } from "./local-session.middleware.js";
@@ -38,13 +38,18 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     await rm(dataDir, { recursive: true, force: true });
   });
 
-  function start(aiProvider?: AiProvider, device = "Careerden Unplugged") {
-    return startWithModelProvider(aiProvider ? () => aiProvider : undefined, device);
+  function start(
+    aiProvider?: AiProvider,
+    device = "Careerden Unplugged",
+    overrides: Partial<LocalApiRuntimeOptions> = {},
+  ) {
+    return startWithModelProvider(aiProvider ? () => aiProvider : undefined, device, overrides);
   }
 
   async function startWithModelProvider(
     createAiProvider?: (selection: AiProviderSelection) => AiProvider,
     device = "Careerden Unplugged",
+    overrides: Partial<LocalApiRuntimeOptions> = {},
   ) {
     const runtime = await createLocalApiRuntime({
       // A fresh install has no data directory yet.
@@ -54,6 +59,7 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
       aiProviderSelection: { current: async () => selection },
       ...(createAiProvider ? { createAiProvider } : {}),
       backgroundPollIntervalMs: 50,
+      ...overrides,
     });
     runtimes.push(runtime);
     const server = runtime.app.listen(0);
@@ -306,6 +312,38 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     };
     expect(restored).toMatchObject({ id: application.id, tracking: { companyName: "Acme" } });
     expect(profile.headline).toBe("Backend engineer");
+  });
+
+  it("closes the database after a bounded wait for background work in flight", async () => {
+    selection = { provider: "anthropic", apiKey: "user-key" };
+    let analysisStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      analysisStarted = resolve;
+    });
+    const first = await start(
+      {
+        // Never answers, like a slow AI request when the app quits.
+        generate: () => {
+          analysisStarted();
+          return new Promise(() => undefined);
+        },
+      },
+      undefined,
+      { shutdownGraceMs: 100 },
+    );
+    const application = (await (await createManualJob(first.request)).json()) as { id: string };
+    await started;
+
+    await stop(first.runtime);
+
+    await expect(first.runtime.db.raw("select 1")).rejects.toThrow();
+    // The data opens again. No provider this time, so the reclaimed analysis fails fast.
+    selection = null;
+    const second = await start();
+    const reopened = (await (
+      await second.request(`/job-applications/${application.id}`)
+    ).json()) as { id: string };
+    expect(reopened.id).toBe(application.id);
   });
 });
 

@@ -20,6 +20,7 @@ export interface InProcessFollowUpReminderQueueOptions {
 // reminder recovery runner re-enqueues pending reminders on startup.
 export class InProcessFollowUpReminderQueue implements FollowUpReminderQueue {
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly deliveries = new Set<Promise<void>>();
   private readonly attempts: number;
   private readonly backoffDelayMs: number;
   private readonly now: () => number;
@@ -51,9 +52,11 @@ export class InProcessFollowUpReminderQueue implements FollowUpReminderQueue {
     this.clear(jobId);
   }
 
+  // Cancels scheduled reminders and resolves once deliveries already under way have finished.
   async close(): Promise<void> {
     this.closed = true;
     for (const jobId of [...this.timers.keys()]) this.clear(jobId);
+    await Promise.all([...this.deliveries]);
   }
 
   private schedule(
@@ -72,7 +75,10 @@ export class InProcessFollowUpReminderQueue implements FollowUpReminderQueue {
           return;
         }
         this.timers.delete(jobId);
-        void this.run(jobId, payload, attemptsMade);
+        const delivery = this.run(jobId, payload, attemptsMade).finally(() => {
+          this.deliveries.delete(delivery);
+        });
+        this.deliveries.add(delivery);
       },
       Math.min(delay, maximumTimerDelayMs),
     );

@@ -54,7 +54,7 @@ const providers: Array<{
   },
 ];
 
-type Feedback = { tone: "success" | "error"; message: string } | null;
+type Feedback = { tone: "success" | "warning" | "error"; message: string } | null;
 
 export type AiCredentialsBridge = NonNullable<NonNullable<Window["electronAPI"]>["aiCredentials"]>;
 
@@ -146,10 +146,14 @@ export function AiProviderPanel({
 
   function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // The desktop app checks the key with the provider first and rejects one that cannot work.
     void run("save", async () => {
-      setStatus(await bridge.save(input()));
+      const { warning, ...next } = await bridge.save(input());
+      setStatus(next);
       setApiKey("");
-      return { tone: "success", message: `${providerInfo.label} is now your AI provider.` };
+      return warning
+        ? { tone: "warning", message: warning }
+        : { tone: "success", message: `${providerInfo.label} is now your AI provider.` };
     });
   }
 
@@ -251,7 +255,7 @@ export function AiProviderPanel({
               size="sm"
               disabled={busy !== null || (!apiKey.trim() && !saved) || !status?.encryptionAvailable}
             >
-              {busy === "save" ? "Saving…" : "Save and use"}
+              {busy === "save" ? "Checking key…" : "Save and use"}
             </Button>
             <Button
               type="button"
@@ -322,7 +326,9 @@ export function AiProviderPanel({
             role={feedback.tone === "error" ? "alert" : "status"}
             className={cn(
               "text-sm",
-              feedback.tone === "error" ? "text-destructive" : "text-success",
+              feedback.tone === "error" && "text-destructive",
+              feedback.tone === "warning" && "text-foreground",
+              feedback.tone === "success" && "text-success",
             )}
           >
             {feedback.message}

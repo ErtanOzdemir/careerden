@@ -48,6 +48,42 @@ describe("API mappers", () => {
     ).toBeUndefined();
   });
 
+  it("maps AI provider failures and drops ones this client does not understand", () => {
+    const failedEvent = {
+      createdAt: "2026-06-02",
+      id: "event-failed",
+      jobApplicationId: "job-1",
+      metadata: { aiFailure: { category: "rate_limited", provider: "gemini", statusCode: 429 } },
+      occurredAt: "2026-06-02",
+      title: "AI analysis failed",
+      body: "The provider is temporarily limiting requests. Try again in a few minutes.",
+      type: "processing",
+    };
+    const detail = {
+      ...createApplicationDetail(),
+      status: "failed",
+      aiFailure: { category: "rate_limited" as const, provider: "gemini", statusCode: 429 },
+      events: [failedEvent],
+    };
+
+    const mapped = mapApiJobApplicationToUi(detail);
+    expect(mapped.processingAiFailure).toEqual({
+      category: "rate_limited",
+      provider: "gemini",
+      statusCode: 429,
+    });
+    expect(mapped.processingLog?.[0]).toMatchObject({
+      status: "failed",
+      aiFailure: { category: "rate_limited" },
+    });
+    expect(
+      mapApiJobApplicationToUi({
+        ...detail,
+        aiFailure: { category: "from_the_future" } as never,
+      }).processingAiFailure,
+    ).toBeUndefined();
+  });
+
   it("round-trips declined and rescinded offer statuses", () => {
     expect(mapApiStatusToUi("declined")).toBe("Declined");
     expect(mapApiStatusToUi("rescinded")).toBe("Rescinded");

@@ -1,5 +1,6 @@
 import type { JobApplicationStatus } from "./workflow-status.js";
 import type { ApplicationPackPreferences } from "./application-pack.js";
+import type { AiProviderFailure } from "../matching/ai-provider-error.js";
 
 export type ApplicationStatus =
   | "saved"
@@ -46,6 +47,8 @@ export interface JobApplication {
   sourceUrl?: string;
   status: JobApplicationStatus;
   failureReason?: string;
+  // Set when the failure came from the AI provider, so the UI can explain what to do about it.
+  aiFailure?: AiProviderFailure;
   analysisAttemptId?: string;
   documentGenerationAttemptId?: string;
   scrapeClaimedBy?: string;

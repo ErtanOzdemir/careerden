@@ -1,3 +1,4 @@
+import type { AiProviderFailureDto } from "@careerden/contracts";
 import type {
   ApiApplicationPackPreferences,
   ApiApplicationStatus,
@@ -37,6 +38,7 @@ export interface ProcessingLogItem {
   description: string;
   date: string;
   status: ProcessingLogStatus;
+  aiFailure?: AiProviderFailureDto;
 }
 
 export interface Contact {
@@ -131,6 +133,8 @@ export interface JobApplication {
   processingStatus?: string;
   processingStatusLabel?: string;
   processingFailureReason?: string;
+  // Why the AI provider failed, when it did; drives the failure message and its actions.
+  processingAiFailure?: AiProviderFailureDto;
   processingLog?: ProcessingLogItem[];
   profileReadiness?: ApiProfileReadiness;
   sourceUrl?: string;

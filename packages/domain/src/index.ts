@@ -27,6 +27,7 @@ export * from "./scraping/hidden-html.js";
 export * from "./scraping/invisible-characters.js";
 export * from "./scraping/sanitize-scrape-bundle.js";
 export * from "./matching/ai-provider.js";
+export * from "./matching/ai-provider-error.js";
 export * from "./matching/duration-claims.js";
 export * from "./matching/fallback-cover-letter.js";
 export * from "./matching/fallback-enhancement.js";

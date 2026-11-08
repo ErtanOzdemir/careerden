@@ -1,4 +1,6 @@
+import { AiProviderError } from "@careerden/domain";
 import type {
+  AiProviderFailure,
   CreditReservationReleaseReason,
   PersistenceTransaction,
   PersistenceUnitOfWork,
@@ -8,6 +10,7 @@ export interface FinalizeJobApplicationAnalysisFailureInput {
   jobApplicationId: string;
   analysisAttemptId: string;
   reason: string;
+  aiFailure?: AiProviderFailure;
   releaseReason?: Extract<CreditReservationReleaseReason, "failure" | "timeout">;
 }
 
@@ -43,6 +46,7 @@ export async function finalizeJobApplicationAnalysisFailure(
     input.jobApplicationId,
     input.analysisAttemptId,
     input.reason,
+    input.aiFailure,
   );
   if (!failed) {
     await transaction.credits.releaseReservation(input.analysisAttemptId, "superseded", now);
@@ -58,8 +62,21 @@ export async function finalizeJobApplicationAnalysisFailure(
     type: "processing",
     title: input.releaseReason === "timeout" ? "AI analysis timed out" : "AI analysis failed",
     body: input.reason,
-    metadata: { attemptId: input.analysisAttemptId },
+    metadata: {
+      attemptId: input.analysisAttemptId,
+      ...(input.aiFailure ? { aiFailure: input.aiFailure } : {}),
+    },
   });
   await transaction.jobApplicationChanges.changed(jobApplication.id, jobApplication.profileId);
   return true;
+}
+
+// The persisted reason and AI failure details for an error that ended an analysis attempt.
+export function analysisFailureFromError(
+  error: unknown,
+): Pick<FinalizeJobApplicationAnalysisFailureInput, "reason" | "aiFailure"> {
+  if (error instanceof AiProviderError) {
+    return { reason: error.message, aiFailure: error.toFailure() };
+  }
+  return { reason: error instanceof Error ? error.message : "Unknown AI analysis error" };
 }

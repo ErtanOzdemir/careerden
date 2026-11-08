@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AiOutputValidationError } from "../matching/ai/generate-with-output-schema.js";
+import { AiOutputValidationError } from "../matching/ai/ai-output-validation.error.js";
 import { describeErrorForLog } from "./describe-error-for-log.js";
 
 describe("describeErrorForLog", () => {

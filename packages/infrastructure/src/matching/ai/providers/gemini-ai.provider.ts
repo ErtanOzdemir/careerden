@@ -13,6 +13,7 @@ export class GeminiAiProvider implements AiProvider {
 
     // Gemini 2.5 Flash thinks by default, which dominates latency on interactive revisions.
     return generateWithOutputSchema(
+      "gemini",
       google(this.model),
       params,
       params.thinking === false ? { google: { thinkingConfig: { thinkingBudget: 0 } } } : undefined,

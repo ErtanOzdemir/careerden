@@ -7,8 +7,8 @@ export interface InProcessOutboxHandler {
   concurrency?: number;
   // Total tries including the first, matching the BullMQ queues' attempts option.
   maximumAttempts?: number;
-  // Delay before the next try after the given failed attempt (1-based).
-  retryDelayMs?: (attempt: number) => number;
+  // Delay before the next try after the given failed attempt (1-based) and its error.
+  retryDelayMs?: (attempt: number, error: unknown) => number;
   handle(event: ClaimedOutboxEvent): Promise<void>;
   // Errors that retrying cannot fix, such as validation failures.
   isUnrecoverable?(error: unknown): boolean;
@@ -140,7 +140,7 @@ export class InProcessOutboxRunner {
       handler.isUnrecoverable?.(error) === true || attempt >= (handler.maximumAttempts ?? 3);
 
     if (!isTerminal) {
-      const delayMs = (handler.retryDelayMs ?? defaultRetryDelayMs)(attempt);
+      const delayMs = (handler.retryDelayMs ?? defaultRetryDelayMs)(attempt, error);
       await this.outbox.markFailed(
         event.id,
         this.leaseOwner,
@@ -157,6 +157,6 @@ export class InProcessOutboxRunner {
 }
 
 // Same exponential schedule as the BullMQ queues: 5s, then 10s.
-function defaultRetryDelayMs(attempt: number): number {
+export function defaultRetryDelayMs(attempt: number): number {
   return 5_000 * 2 ** Math.max(0, attempt - 1);
 }

@@ -1,6 +1,7 @@
 import { APICallError, RetryError } from "ai";
 import { describe, expect, it } from "vitest";
-import { AiOutputValidationError } from "./generate-with-output-schema.js";
+import { AiProviderError } from "@careerden/domain";
+import { AiOutputValidationError } from "./ai-output-validation.error.js";
 import { isModelUnavailableError } from "./model-unavailable-error.js";
 
 function apiError(statusCode: number, message: string, responseBody?: string): APICallError {
@@ -32,6 +33,18 @@ describe("isModelUnavailableError", () => {
     ],
   ])("recognizes %s", (_label, error) => {
     expect(isModelUnavailableError(error)).toBe(true);
+  });
+
+  it("recognizes the provider clients' model_unavailable error and no other category", () => {
+    expect(
+      isModelUnavailableError(
+        new AiProviderError({ category: "model_unavailable", provider: "openai", statusCode: 404 }),
+      ),
+    ).toBe(true);
+    expect(isModelUnavailableError(new AiProviderError({ category: "invalid_api_key" }))).toBe(
+      false,
+    );
+    expect(isModelUnavailableError(new AiProviderError({ category: "rate_limited" }))).toBe(false);
   });
 
   it("looks through Careerden's validation error and the AI SDK retry error", () => {

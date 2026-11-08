@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { AiProvider } from "@careerden/domain";
+import { AiProviderError } from "@careerden/domain";
+import type { AiProvider, AiProviderErrorCategory } from "@careerden/domain";
 import { aiProviderNames, createAiProvider } from "@careerden/infrastructure";
 import type { AiProviderSelection } from "@careerden/infrastructure";
 import { redactKnownSecrets } from "@careerden/infrastructure/logging";
@@ -23,7 +24,18 @@ const saveInputSchema = z
   .strict();
 const testInputSchema = saveInputSchema;
 
-export type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
+export type AiCredentialsTestResult =
+  | { ok: true }
+  | { ok: false; message: string; category?: AiProviderErrorCategory };
+
+// A saved status, plus a note when the provider could not confirm the key but it may still work.
+export type AiCredentialsSaveResult = AiCredentialsStatus & { warning?: string };
+
+// Failures that prove the entered key or model cannot work, so saving it is refused.
+const blockingSaveCategories: ReadonlySet<AiProviderErrorCategory> = new Set([
+  "invalid_api_key",
+  "model_unavailable",
+]);
 
 interface IpcRegistrar {
   register(channel: string, handler: (event: unknown, ...args: unknown[]) => unknown): unknown;
@@ -46,9 +58,28 @@ export function registerAiCredentialsIpc(
   };
 
   registry.register(aiCredentialsIpcChannels.getStatus, () => store.getStatus());
-  registry.register(aiCredentialsIpcChannels.save, (_event, input) =>
-    changed(store.save(saveInputSchema.parse(input))),
-  );
+  // Sends one small request before saving so a mistyped or revoked key is reported right away
+  // instead of surfacing later as a failed analysis.
+  registry.register(aiCredentialsIpcChannels.save, async (_event, input) => {
+    const parsed = saveInputSchema.parse(input);
+    const apiKey = parsed.apiKey ?? (await store.apiKeyFor(parsed.provider));
+    const validation =
+      apiKey && (await store.getStatus()).encryptionAvailable
+        ? await testAiProvider(
+            { provider: parsed.provider, apiKey, ...(parsed.model ? { model: parsed.model } : {}) },
+            options.createProvider ?? createAiProvider,
+            options.testTimeoutMs ?? 30_000,
+          )
+        : ({ ok: true } as const);
+    if (!validation.ok && validation.category && blockingSaveCategories.has(validation.category)) {
+      throw new Error(validation.message);
+    }
+
+    const status: AiCredentialsSaveResult = await changed(store.save(parsed));
+    return validation.ok
+      ? status
+      : { ...status, warning: `Saved, but the provider check failed: ${validation.message}` };
+  });
   registry.register(aiCredentialsIpcChannels.remove, (_event, provider) =>
     changed(store.remove(providerSchema.parse(provider))),
   );
@@ -86,13 +117,26 @@ export async function testAiProvider(
       }),
       new Promise((_resolve, reject) => {
         timeout = setTimeout(
-          () => reject(new Error("The provider did not respond in time.")),
+          () =>
+            reject(
+              new AiProviderError(
+                { category: "provider_unavailable", provider: selection.provider },
+                { message: "The provider did not respond in time." },
+              ),
+            ),
           timeoutMs,
         );
       }),
     ]);
     return { ok: true };
   } catch (error) {
+    if (error instanceof AiProviderError) {
+      console.warn("AI provider check failed", {
+        event: "ai.provider_error",
+        ...error.toFailure(),
+      });
+      return { ok: false, message: error.message, category: error.category };
+    }
     return { ok: false, message: redactKey(describeError(error), selection.apiKey) };
   } finally {
     clearTimeout(timeout);

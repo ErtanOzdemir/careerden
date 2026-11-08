@@ -1,4 +1,5 @@
 export type ApplicationErrorCode =
+  | "ai_provider_error"
   | "ai_provider_not_configured"
   | "conflict"
   | "forbidden"

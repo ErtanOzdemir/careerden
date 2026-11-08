@@ -184,9 +184,15 @@ describe("local data backup", { timeout: 60_000 }, () => {
 
   it("upgrades an archive from an older schema with the remaining migrations", async () => {
     const migrations = listPostgresMigrations();
-    const older = migrations.at(-2)!;
+    // The schema just before the onboarding migration, whose backfill this test observes; later
+    // migrations must not move it.
+    const older =
+      migrations[migrations.indexOf("20261031000000_profile_onboarding_state.cjs") - 1]!;
     const { archivePath, manifest, profile } = await exportSeeded({ throughMigration: older });
-    expect(manifest).toMatchObject({ lastMigration: older, schemaVersion: migrations.length - 1 });
+    expect(manifest).toMatchObject({
+      lastMigration: older,
+      schemaVersion: migrations.indexOf(older) + 1,
+    });
     const stagingDir = join(root, "staging");
 
     await prepareLocalDataImport({ archivePath, stagingDir });

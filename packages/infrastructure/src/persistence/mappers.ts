@@ -1,5 +1,10 @@
-import { normalizeApplicationPackPreferences, richDocumentFromText } from "@careerden/domain";
+import {
+  isAiProviderErrorCategory,
+  normalizeApplicationPackPreferences,
+  richDocumentFromText,
+} from "@careerden/domain";
 import type {
+  AiProviderFailure,
   GeneratedDocument,
   JobApplication,
   JobApplicationContact,
@@ -25,6 +30,7 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
     sourceUrl: nullableString(row.source_url),
     status: row.status as JobApplicationStatus,
     failureReason: nullableString(row.failure_reason),
+    aiFailure: aiProviderFailure(row.ai_failure),
     analysisAttemptId: nullableString(row.analysis_attempt_id),
     documentGenerationAttemptId: nullableString(row.document_generation_attempt_id),
     scrapeClaimedBy: nullableString(row.scrape_claimed_by),
@@ -52,6 +58,16 @@ export function toJobApplication(row: Record<string, unknown>): JobApplication {
       workStyle: nullableString(row.work_style) as JobApplication["tracking"]["workStyle"],
       metadata: record(row.metadata),
     },
+  };
+}
+
+function aiProviderFailure(value: unknown): AiProviderFailure | undefined {
+  const failure = record(value);
+  if (!isAiProviderErrorCategory(failure.category)) return undefined;
+  return {
+    category: failure.category,
+    ...(typeof failure.provider === "string" ? { provider: failure.provider } : {}),
+    ...(typeof failure.statusCode === "number" ? { statusCode: failure.statusCode } : {}),
   };
 }
 

@@ -37,6 +37,8 @@ export function createErrorHandler(
 
     if (error instanceof ApplicationError) {
       const status = {
+        // The user's own AI provider rejected or failed the call; details carry the category.
+        ai_provider_error: 502,
         ai_provider_not_configured: 409,
         conflict: 409,
         forbidden: 403,

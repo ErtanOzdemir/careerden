@@ -11,6 +11,6 @@ export class OpenAiAiProvider implements AiProvider {
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const openai = createOpenAI({ apiKey: this.apiKey });
 
-    return generateWithOutputSchema(openai(this.model), params);
+    return generateWithOutputSchema("openai", openai(this.model), params);
   }
 }

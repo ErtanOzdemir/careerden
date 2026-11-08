@@ -77,6 +77,11 @@ export class AiCredentialsStore {
     return { provider, apiKey: entry.apiKey, ...(entry.model ? { model: entry.model } : {}) };
   }
 
+  // The stored key for one provider, for validating a model change before it is saved.
+  async apiKeyFor(provider: AiProviderName): Promise<string | undefined> {
+    return (await this.read()).providers[provider]?.apiKey;
+  }
+
   // Saves a key or model for a provider and makes it active. Omitting apiKey keeps the stored key.
   async save(input: { provider: AiProviderName; apiKey?: string; model?: string }): Promise<void> {
     await this.update((credentials) => {

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { APICallError } from "ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApplicationError } from "@careerden/application";
+import { AiProviderError } from "@careerden/domain";
 import type { AiProvider } from "@careerden/domain";
 import type { AiProviderSelection } from "@careerden/infrastructure";
 import { aiModelCandidates, ModelFallbackAiProvider } from "@careerden/infrastructure";
@@ -291,6 +292,41 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
         { timeout: 10_000, interval: 100 },
       )
       .toBe("failed");
+  });
+
+  it("fails analysis on a rejected key at once and records why for the UI", async () => {
+    selection = { provider: "openai", apiKey: "revoked-key" };
+    let calls = 0;
+    const { request } = await start({
+      generate: async () => {
+        calls += 1;
+        throw new AiProviderError({
+          category: "invalid_api_key",
+          provider: "openai",
+          statusCode: 401,
+        });
+      },
+    });
+
+    const application = (await (await createManualJob(request)).json()) as { id: string };
+
+    await expect
+      .poll(
+        async () =>
+          (await (await request(`/job-applications/${application.id}`)).json()) as {
+            status: string;
+            failureReason?: string;
+            aiFailure?: unknown;
+          },
+        { timeout: 10_000, interval: 100 },
+      )
+      .toMatchObject({
+        status: "failed",
+        failureReason: "Your API key is invalid or revoked. Update it in Settings.",
+        aiFailure: { category: "invalid_api_key", provider: "openai", statusCode: 401 },
+      });
+    // Not retried: a bad key fails the same way every time.
+    expect(calls).toBe(1);
   });
 
   it("exports a backup that a clean install on another device restores intact", async () => {

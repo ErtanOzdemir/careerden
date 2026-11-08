@@ -1,5 +1,6 @@
 import type { AiGenerateParams } from "@careerden/domain";
-import { generateText, NoObjectGeneratedError, Output, type LanguageModel } from "ai";
+import { generateText, Output, type LanguageModel } from "ai";
+import { toAiProviderError } from "./to-ai-provider-error.js";
 
 export type AiProviderOptions = Parameters<typeof generateText>[0]["providerOptions"];
 
@@ -9,8 +10,12 @@ export type AiProviderOptions = Parameters<typeof generateText>[0]["providerOpti
  * `Output.object` validates the model's JSON against `params.outputSchema` inside `generateText`,
  * so callers must pass a lenient schema and tighten afterwards — a strict schema here turns one bad
  * field into a failed job. The low temperature keeps structured output stable across retries.
+ *
+ * Every provider failure leaves as a domain `AiProviderError`, so callers can tell a bad key from
+ * an outage, and SDK errors carrying the request body never reach logs.
  */
 export async function generateWithOutputSchema<T>(
+  provider: string,
   model: LanguageModel,
   params: AiGenerateParams<T>,
   providerOptions?: AiProviderOptions,
@@ -28,23 +33,6 @@ export async function generateWithOutputSchema<T>(
 
     return params.outputSchema.parse(output);
   } catch (error) {
-    throw new AiOutputValidationError(error);
-  }
-}
-
-/**
- * Carries the raw model text alongside the validation failure. Without it, worker logs show only a
- * Zod issue list with no way to tell what the model actually returned.
- */
-export class AiOutputValidationError extends Error {
-  readonly modelText?: string;
-
-  constructor(readonly cause: unknown) {
-    const modelText = NoObjectGeneratedError.isInstance(cause) ? cause.text : undefined;
-    super(
-      `AI provider returned output that failed schema validation${modelText ? `: ${modelText.slice(0, 500)}` : ""}`,
-    );
-    this.name = "AiOutputValidationError";
-    this.modelText = modelText;
+    throw toAiProviderError(error, provider) ?? error;
   }
 }

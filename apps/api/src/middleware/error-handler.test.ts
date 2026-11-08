@@ -45,6 +45,26 @@ describe("errorHandler", () => {
     });
   });
 
+  it("maps AI provider failures to HTTP 502 with the failure category", () => {
+    const response = createResponse();
+
+    errorHandler(
+      new ApplicationError("ai_provider_error", "The selected model is no longer available.", {
+        aiFailure: { category: "model_unavailable", provider: "openrouter", statusCode: 404 },
+      }),
+      {} as Request,
+      response,
+      vi.fn() as NextFunction,
+    );
+
+    expect(response.status).toHaveBeenCalledWith(502);
+    expect(response.json).toHaveBeenCalledWith({
+      code: "ai_provider_error",
+      error: "The selected model is no longer available.",
+      aiFailure: { category: "model_unavailable", provider: "openrouter", statusCode: 404 },
+    });
+  });
+
   it("does not let application details override stable error fields", () => {
     const response = createResponse();
 

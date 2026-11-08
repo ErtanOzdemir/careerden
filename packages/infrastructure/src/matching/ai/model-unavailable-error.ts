@@ -1,3 +1,4 @@
+import { AiProviderError } from "@careerden/domain";
 import { APICallError } from "ai";
 
 // Wording providers use for a retired or unknown model, for example OpenAI's "model_not_found",
@@ -8,11 +9,13 @@ const modelUnavailablePattern =
 
 /**
  * Whether a provider rejected the request because the model is unknown, deprecated, or retired,
- * as opposed to a bad key, a rate limit, or invalid output. Looks through wrapping errors such as
- * the AI SDK's retry error and Careerden's output validation error.
+ * as opposed to a bad key, a rate limit, or invalid output. The provider clients report this as a
+ * domain `AiProviderError` with the `model_unavailable` category; raw SDK errors are still
+ * recognized, looking through wrapping errors such as the AI SDK's retry error.
  */
 export function isModelUnavailableError(error: unknown): boolean {
   return errorChain(error).some((candidate) => {
+    if (candidate instanceof AiProviderError) return candidate.category === "model_unavailable";
     if (!APICallError.isInstance(candidate)) return false;
 
     const text = `${candidate.message} ${candidate.responseBody ?? ""}`;

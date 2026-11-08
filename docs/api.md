@@ -118,6 +118,15 @@ and `jobDescription`; it optionally accepts `companyDescription`, `companyWebsit
 or WebP file up to 5 MB. Manual applications transition directly to `scraped` and follow the
 profile's automatic match-analysis preference.
 
+When AI analysis fails because of the AI provider, the application carries `aiFailure`
+(`{ category, provider?, statusCode? }`, defined by `aiProviderFailureSchema` in
+`@careerden/contracts`) alongside `failureReason`, and the `AI analysis failed` timeline event
+repeats it in `metadata.aiFailure`. The category is one of `invalid_api_key`,
+`insufficient_quota`, `rate_limited`, `model_unavailable`, `provider_unavailable`, or
+`invalid_output`. `POST /job-applications/:id/retry` starts the analysis again. In Careerden
+Unplugged, interactive AI routes report the same failures as HTTP `502` with the code
+`ai_provider_error`, the user-facing message, and `aiFailure`.
+
 The desktop scraping worker additionally uses these authenticated endpoints:
 
 | Method | Path                                       | Purpose                    |

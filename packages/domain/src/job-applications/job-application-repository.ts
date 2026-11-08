@@ -4,6 +4,7 @@ import type {
   GeneratedDocumentKind,
 } from "../documents/generated-document.js";
 import type { DocumentContent } from "../documents/rich-document.js";
+import type { AiProviderFailure } from "../matching/ai-provider-error.js";
 import type { MatchAnalysisResult } from "../matching/match-analysis.js";
 import type { ScrapeBundle } from "../scraping/scraped-data.js";
 import type {
@@ -120,7 +121,12 @@ export interface JobApplicationRepository {
     result: MatchAnalysisResult,
     content: DocumentContent,
   ): Promise<boolean>;
-  failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean>;
+  failAnalysis(
+    id: string,
+    attemptId: string,
+    reason: string,
+    aiFailure?: AiProviderFailure,
+  ): Promise<boolean>;
   beginDocumentGeneration(
     id: string,
     attemptId: string,

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { APICallError } from "ai";
 import { describe, expect, it, vi } from "vitest";
 import type { AiGenerateParams, AiProvider } from "@careerden/domain";
-import { AiOutputValidationError } from "./generate-with-output-schema.js";
+import { toAiProviderError } from "./to-ai-provider-error.js";
 import { ModelFallbackAiProvider } from "./model-fallback-ai.provider.js";
 
 const params = { system: "system", prompt: "prompt", outputSchema: z.object({ ok: z.boolean() }) };
@@ -48,8 +48,8 @@ describe("ModelFallbackAiProvider", () => {
   it("completes on the fallback model when the configured model is retired", async () => {
     const { createForModel, generate } = fakeProviders({
       "gpt-retired": async () => {
-        // Careerden's generation path wraps every provider error.
-        throw new AiOutputValidationError(retiredModelError("gpt-retired"));
+        // Careerden's generation path translates every provider error to an AiProviderError.
+        throw toAiProviderError(retiredModelError("gpt-retired"), "openai");
       },
       "gpt-4o-mini": async () => ({ ok: true }),
     });
@@ -100,6 +100,26 @@ describe("ModelFallbackAiProvider", () => {
     const provider = new ModelFallbackAiProvider("openai", ["a", "b"], createForModel);
 
     await expect(provider.generate(params)).rejects.toBe(unauthorized);
+    expect(createForModel).toHaveBeenCalledOnce();
+  });
+
+  it("does not switch models for a rejected key reported as an AiProviderError", async () => {
+    const unauthorized = toAiProviderError(
+      new APICallError({
+        message: "Incorrect API key provided",
+        url: "https://api.openai.com/v1/chat/completions",
+        requestBodyValues: {},
+        statusCode: 401,
+      }),
+      "openai",
+    );
+    const { createForModel } = fakeProviders({
+      a: async () => Promise.reject(unauthorized),
+      b: async () => ({ ok: true }),
+    });
+    const provider = new ModelFallbackAiProvider("openai", ["a", "b"], createForModel);
+
+    await expect(provider.generate(params)).rejects.toMatchObject({ category: "invalid_api_key" });
     expect(createForModel).toHaveBeenCalledOnce();
   });
 

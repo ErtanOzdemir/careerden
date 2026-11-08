@@ -43,7 +43,20 @@ interface AiCredentialsInput {
   model?: string;
 }
 
-type AiCredentialsTestResult = { ok: true } | { ok: false; message: string };
+type AiProviderErrorCategory =
+  | "invalid_api_key"
+  | "insufficient_quota"
+  | "rate_limited"
+  | "model_unavailable"
+  | "provider_unavailable"
+  | "invalid_output";
+
+type AiCredentialsTestResult =
+  | { ok: true }
+  | { ok: false; message: string; category?: AiProviderErrorCategory };
+
+// Present when the key was saved although the provider could not confirm it.
+type AiCredentialsSaveResult = AiCredentialsStatus & { warning?: string };
 
 type DesktopLogLevel = "info" | "debug";
 
@@ -86,7 +99,7 @@ interface Window {
     // Present only in the local desktop edition. Never returns a stored key.
     aiCredentials?: {
       getStatus: () => Promise<AiCredentialsStatus>;
-      save: (input: AiCredentialsInput) => Promise<AiCredentialsStatus>;
+      save: (input: AiCredentialsInput) => Promise<AiCredentialsSaveResult>;
       remove: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       setActive: (provider: AiProviderName) => Promise<AiCredentialsStatus>;
       test: (input: AiCredentialsInput) => Promise<AiCredentialsTestResult>;

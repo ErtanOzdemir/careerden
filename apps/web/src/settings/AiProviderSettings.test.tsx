@@ -9,11 +9,12 @@ function status(overrides: Partial<AiCredentialsStatus> = {}): AiCredentialsStat
 function installBridge(initial: AiCredentialsStatus) {
   const bridge = {
     getStatus: vi.fn(async () => initial),
-    save: vi.fn(async (input: AiCredentialsInput) =>
-      status({
-        activeProvider: input.provider,
-        providers: [{ provider: input.provider, keyHint: (input.apiKey ?? "0000").slice(-4) }],
-      }),
+    save: vi.fn(
+      async (input: AiCredentialsInput): Promise<AiCredentialsSaveResult> =>
+        status({
+          activeProvider: input.provider,
+          providers: [{ provider: input.provider, keyHint: (input.apiKey ?? "0000").slice(-4) }],
+        }),
     ),
     remove: vi.fn(async () => status()),
     setActive: vi.fn(async (provider: AiProviderName) =>
@@ -137,6 +138,43 @@ describe("AiProviderSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save and use" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/^Add a key first$/);
+  });
+
+  it("reports a key the provider rejects when saving it", async () => {
+    const bridge = installBridge(status());
+    bridge.save.mockRejectedValue(
+      new Error(
+        "Error invoking remote method 'ai-credentials-save': Error: Your API key is invalid or revoked. Update it in Settings.",
+      ),
+    );
+    render(<AiProviderSettings />);
+    await waitFor(() => expect(bridge.getStatus).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText("OpenAI API key"), { target: { value: "sk-bad" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and use" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /^Your API key is invalid or revoked\. Update it in Settings\.$/,
+    );
+    expect(screen.getByLabelText("OpenAI API key")).toHaveValue("sk-bad");
+  });
+
+  it("saves a key the provider could not confirm and says why", async () => {
+    const bridge = installBridge(status());
+    bridge.save.mockResolvedValue({
+      ...status({ activeProvider: "openai", providers: [{ provider: "openai", keyHint: "1234" }] }),
+      warning:
+        "Saved, but the provider check failed: The provider is temporarily limiting requests. Try again in a few minutes.",
+    });
+    render(<AiProviderSettings />);
+    await waitFor(() => expect(bridge.getStatus).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByLabelText("OpenAI API key"), { target: { value: "sk-1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and use" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /^Saved, but the provider check failed: The provider is temporarily limiting requests/,
+    );
   });
 
   it("accepts a free-form OpenRouter model id and explains how to choose one", async () => {

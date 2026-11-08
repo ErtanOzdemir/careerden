@@ -21,6 +21,7 @@ import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
 import { LinkedInImportFallback } from "../components/LinkedInImportFallback.js";
+import { ProcessingFailureBanner } from "../components/ProcessingFailureBanner.js";
 import { getLinkedInImportFailure, openManualPasteFlow } from "../lib/linkedin-import-fallback.js";
 import { aiProviderPath } from "../settings/AiProviderSettings.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
@@ -38,7 +39,6 @@ import {
   ExternalLink,
   Check,
   Pencil,
-  RefreshCw,
   CalendarClock,
   CalendarPlus2,
   Mail,
@@ -759,17 +759,13 @@ export default function AppDetail() {
       )}
 
       {app.processingStatus === "failed" && !linkedInImportFailure && (
-        <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 flex items-center justify-between">
-          <p className="text-sm text-destructive">
-            {app.processingFailureReason ?? "Processing failed"}
-          </p>
-          {!isArchived && (
-            <Button variant="outline" size="sm" onClick={handleRetry} disabled={isRetrying}>
-              <RefreshCw className="size-3.5" />
-              Retry
-            </Button>
-          )}
-        </div>
+        <ProcessingFailureBanner
+          reason={app.processingFailureReason}
+          aiFailure={app.processingAiFailure}
+          canRetry={!isArchived}
+          isRetrying={isRetrying}
+          onRetry={handleRetry}
+        />
       )}
 
       {(analysisCreditError ||

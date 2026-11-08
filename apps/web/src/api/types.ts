@@ -1,4 +1,4 @@
-import type { RichDocument } from "@careerden/contracts";
+import type { AiProviderFailureDto, RichDocument } from "@careerden/contracts";
 
 export type ApiApplicationStatus =
   | "saved"
@@ -58,6 +58,8 @@ export interface ApiProfileReadiness {
 }
 
 export interface ApiJobApplication {
+  // Present when processing failed because of the AI provider.
+  aiFailure?: AiProviderFailureDto;
   analysisAttemptId?: string;
   // Present on an update that changed the status; undoes it through undoStatusChange.
   statusChangeId?: string;

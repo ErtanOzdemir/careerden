@@ -24,7 +24,7 @@ import type {
   TimelineMilestone,
   UpcomingInterview,
 } from "../types";
-import { richDocumentFromText } from "@careerden/contracts";
+import { aiProviderFailureSchema, richDocumentFromText } from "@careerden/contracts";
 import type { RichDocument } from "./types.js";
 
 export function mapApiStatusToUi(status: ApiApplicationStatus): ApplicationStatus {
@@ -124,6 +124,7 @@ export function mapApiJobApplicationToUi(
     processingStatus: application.status,
     processingStatusLabel: formatProcessingStatus(application.status, application.failureReason),
     processingFailureReason: application.failureReason,
+    processingAiFailure: parseAiFailure(application.aiFailure),
     processingLog: detail ? mapProcessingLog(detail.events) : undefined,
     profileReadiness: detail?.profileReadiness,
     sourceUrl: application.sourceUrl,
@@ -416,6 +417,12 @@ function getUndoableStatusChange(
   };
 }
 
+// Ignores details this client does not understand, such as a category added by a newer server.
+function parseAiFailure(value: unknown): JobApplication["processingAiFailure"] {
+  const parsed = aiProviderFailureSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
 function mapProcessingLog(events: ApiJobApplicationEvent[]): ProcessingLogItem[] {
   return events
     .filter((event) => event.type === "processing")
@@ -426,6 +433,7 @@ function mapProcessingLog(events: ApiJobApplicationEvent[]): ProcessingLogItem[]
         description: event.body ?? "Processing update",
         date: formatShortDate(event.occurredAt),
         status: event.title.toLowerCase().includes("failed") ? "failed" : "completed",
+        aiFailure: parseAiFailure(event.metadata.aiFailure),
       } satisfies ProcessingLogItem,
       timestamp: Date.parse(event.occurredAt),
     }))

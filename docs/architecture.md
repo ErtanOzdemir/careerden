@@ -174,6 +174,17 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **No Chromium cookie store in Unplugged.** The local edition reaches its backend with
   Node's `fetch`, because opening the encrypted cookie store would trigger a keychain prompt on
   every launch and the edition has no cookies to keep.
+- **Categorized scrape failures with a paste fallback.** LinkedIn changes its HTML and answers
+  suspicious guest traffic with `999` or `429`, and a scraper fix only reaches users with a new
+  release. Every scrape failure is therefore classified as `blocked`, `rate_limited`, `network`,
+  `parse`, `empty_description`, `not_found`, `disabled`, or `unknown`. The categories and their
+  reason codec live in `@careerden/contracts` (so the renderer can read them) and the
+  classification rules in `@careerden/domain`. The category travels inside the failure reason,
+  because only an error message crosses the scraping utility process boundary. Whatever the
+  category, the application page offers the manual paste form, prefilled with the LinkedIn URL;
+  a pasted posting is an ordinary manual application and enters the normal analysis flow. A
+  LinkedIn import feature flag only has to set the add-job dialog's `linkedInImportEnabled`, or
+  fail queued imports as `disabled`, to reuse the same flow.
 - **A local log file instead of telemetry.** The main process is the only writer of
   `userData/logs/careerden.log`, which rotates at 5 MB and keeps at most five files. The local
   backend and scraping utility processes post structured entries to it over their parent ports,

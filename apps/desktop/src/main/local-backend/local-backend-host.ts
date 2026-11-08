@@ -25,6 +25,7 @@ export type CreateLocalBackendRuntime = (options: {
   sessionToken: string;
   pdfRenderer: DocumentRenderer;
   aiProviderSelection: AiProviderSelectionSource;
+  dataSnapshots: { appVersion: string; backupsDir: string; log: (message: string) => void };
   logger: StructuredLogger;
 }) => Promise<LocalBackendRuntime>;
 
@@ -100,6 +101,13 @@ export function startLocalBackendHost(
               "AI provider",
               (requestId) => ({ type: "ai-selection:request", requestId }),
             ),
+        },
+        dataSnapshots: {
+          appVersion: command.appVersion,
+          backupsDir: command.backupsDir,
+          // Snapshot messages hold versions, snapshot IDs, and sizes only.
+          log: (message) =>
+            logger({ level: "info", event: "data_snapshot.updated", fields: { message } }),
         },
         logger,
       });

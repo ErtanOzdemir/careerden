@@ -21,6 +21,8 @@ export interface LocalBackendProcessOptions {
   modulePath: string;
   dataDir: string;
   sessionToken: string;
+  appVersion: string;
+  backupsDir: string;
   // 0 picks a free loopback port.
   port?: number;
   renderPdf: (html: string) => Promise<Buffer>;
@@ -75,6 +77,8 @@ export class LocalBackendProcess {
       dataDir: this.options.dataDir,
       sessionToken: this.options.sessionToken,
       port: this.options.port ?? 0,
+      appVersion: this.options.appVersion,
+      backupsDir: this.options.backupsDir,
     });
 
     const event = await result.catch((error: unknown) => {

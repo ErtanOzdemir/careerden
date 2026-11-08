@@ -43,14 +43,16 @@ import {
   ResolvingAiProvider,
   consoleStructuredLogger,
   createAiProvider,
-  createPgliteDb,
   describeErrorForLog,
-  runPostgresMigrations,
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
 import { LoggingAiProvider } from "../infrastructure/matching/logging-ai.provider.js";
+import {
+  prepareLocalDatabase,
+  type LocalDataSnapshotPolicy,
+} from "../infrastructure/persistence/prepare-local-database.js";
 import { HttpRemoteImageFetcher } from "../infrastructure/scraping/http-remote-image.fetcher.js";
 import { createLocalFileRouter } from "./local-files.routes.js";
 import { localSession } from "./local-session.middleware.js";
@@ -72,6 +74,9 @@ export interface LocalApiRuntimeOptions {
   // Test seam for the provider built from a selection.
   createAiProvider?: (selection: AiProviderSelection) => AiProvider;
   backgroundPollIntervalMs?: number;
+  // Copies the data to the backups folder before migrations may change it. The desktop app
+  // always passes it; scripts and tests that open throwaway data may leave it out.
+  dataSnapshots?: LocalDataSnapshotPolicy;
   // Receives redacted operational events; the desktop shell writes them to its log file.
   logger?: StructuredLogger;
 }
@@ -88,11 +93,10 @@ export interface LocalApiRuntime {
 export async function createLocalApiRuntime(
   options: LocalApiRuntimeOptions,
 ): Promise<LocalApiRuntime> {
-  // PGlite creates only its own directory, not missing parents.
   const log = options.logger ?? consoleStructuredLogger;
+  // PGlite creates only its own directory, not missing parents.
   await mkdir(options.dataDir, { recursive: true });
-  const db = createPgliteDb(join(options.dataDir, "pglite"));
-  await migrate(db, log);
+  const db = await prepareLocalDatabase(options.dataDir, options.dataSnapshots, log);
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")
@@ -309,22 +313,6 @@ function applicationPackPayload(event: ClaimedOutboxEvent) {
     jobApplicationId: requirePayloadString(event, "jobApplicationId"),
     generationAttemptId: requirePayloadString(event, "generationAttemptId"),
   };
-}
-
-async function migrate(db: Knex, log: StructuredLogger): Promise<void> {
-  const startedAt = Date.now();
-  log({ level: "info", event: "migration.started" });
-  try {
-    const applied = await runPostgresMigrations(db);
-    log({
-      level: "info",
-      event: "migration.finished",
-      fields: { applied: applied.length, durationMs: Date.now() - startedAt },
-    });
-  } catch (error) {
-    log({ level: "error", event: "migration.failed", fields: describeErrorForLog(error) });
-    throw error;
-  }
 }
 
 function logBackgroundFailure(

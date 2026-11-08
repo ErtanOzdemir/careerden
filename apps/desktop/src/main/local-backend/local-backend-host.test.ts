@@ -32,7 +32,14 @@ class FakeParentPort extends EventEmitter implements LocalBackendParentPort {
   }
 }
 
-const start = { type: "start", dataDir: "/data", sessionToken: "token", port: 0 };
+const start = {
+  type: "start",
+  dataDir: "/data",
+  sessionToken: "token",
+  port: 0,
+  appVersion: "1.2.3",
+  backupsDir: "/backups",
+};
 
 describe("startLocalBackendHost", () => {
   const ports: FakeParentPort[] = [];
@@ -65,7 +72,11 @@ describe("startLocalBackendHost", () => {
     const ready = await port.next("ready");
 
     expect(createRuntime).toHaveBeenCalledWith(
-      expect.objectContaining({ dataDir: "/data", sessionToken: "token" }),
+      expect.objectContaining({
+        dataDir: "/data",
+        sessionToken: "token",
+        dataSnapshots: expect.objectContaining({ appVersion: "1.2.3", backupsDir: "/backups" }),
+      }),
     );
     await expect((await fetch(`http://127.0.0.1:${ready.port}/`)).text()).resolves.toBe("ok");
   });

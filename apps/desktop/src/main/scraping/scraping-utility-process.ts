@@ -1,10 +1,10 @@
 import process from "node:process";
+import { parseScrapeFailureReason, toScrapeFailureReason } from "@careerden/domain";
 import { describeErrorForLog, type StructuredLogEntry } from "@careerden/infrastructure/logging";
 import { ScrapeLinkedInJobUseCase } from "../../application/scraping/scrape-linkedin-job.use-case.js";
 import { LinkedInCompanyScraper } from "../../infrastructure/scraping/adapters/linkedin-company.scraper.js";
 import { LinkedInJobScraper } from "../../infrastructure/scraping/adapters/linkedin-job.scraper.js";
 import { createStructuredLogMessage } from "../logging/structured-log-message.js";
-import { categorizeScrapeError } from "./scrape-error-category.js";
 import {
   parseScrapingUtilityRequest,
   type ScrapingUtilityResponse,
@@ -49,11 +49,13 @@ async function handleMessage(message: unknown): Promise<void> {
       scrapeBundle,
     });
   } catch (error) {
+    // Only the message crosses the process boundary, so classify while the error type is known.
+    const reason = toScrapeFailureReason(error);
     log({
       level: "warn",
       event: "scrape.failed",
       fields: {
-        category: categorizeScrapeError(error),
+        category: parseScrapeFailureReason(reason)?.category ?? "unknown",
         durationMs: Date.now() - startedAt,
         ...describeErrorForLog(error),
       },
@@ -61,7 +63,7 @@ async function handleMessage(message: unknown): Promise<void> {
     postMessage({
       type: "scrape:error",
       requestId: request.requestId,
-      message: error instanceof Error ? error.message : "Unknown LinkedIn scraping error",
+      message: reason,
     });
   }
 }

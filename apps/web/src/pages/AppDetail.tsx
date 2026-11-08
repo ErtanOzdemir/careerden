@@ -20,6 +20,8 @@ import { formatApplicationStatus, mapUiStatusToApi } from "../api/mappers.js";
 import { cn } from "../lib/utils.js";
 import { ApplicationPackWorkspace } from "../components/ApplicationPackWorkspace.js";
 import { ScrapedHtmlDescription } from "../components/ScrapedHtmlDescription.js";
+import { LinkedInImportFallback } from "../components/LinkedInImportFallback.js";
+import { getLinkedInImportFailure, openManualPasteFlow } from "../lib/linkedin-import-fallback.js";
 import { aiProviderPath } from "../settings/AiProviderSettings.js";
 import { UnifiedSelect, type UnifiedSelectOption } from "../components/careerden/unified-select.js";
 import type {
@@ -532,6 +534,8 @@ export default function AppDetail() {
       app.processingStatus ?? "",
     );
   const processingLabel = getProcessingLabel(app);
+  const linkedInImportFailure = getLinkedInImportFailure(app);
+  const sourceUrl = app.sourceUrl;
   const persistedNotes = typeof app.metadata?.notes === "string" ? app.metadata.notes.trim() : "";
   const isNotesDirty = notes.trim() !== persistedNotes;
   const isArchived = Boolean(app.archivedAt);
@@ -744,7 +748,17 @@ export default function AppDetail() {
         </div>
       )}
 
-      {app.processingStatus === "failed" && (
+      {linkedInImportFailure && sourceUrl && (
+        <LinkedInImportFallback
+          failure={linkedInImportFailure}
+          failureReason={app.processingFailureReason}
+          isRetrying={isRetrying}
+          onPaste={() => openManualPasteFlow(sourceUrl)}
+          onRetry={isArchived ? undefined : () => void handleRetry()}
+        />
+      )}
+
+      {app.processingStatus === "failed" && !linkedInImportFailure && (
         <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 flex items-center justify-between">
           <p className="text-sm text-destructive">
             {app.processingFailureReason ?? "Processing failed"}

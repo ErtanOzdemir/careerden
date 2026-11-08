@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Knex } from "knex";
 import { afterEach, describe, expect, it } from "vitest";
 import { createPgliteDb } from "./pglite-knex.js";
-import { runPostgresMigrations } from "./postgres-knex.js";
+import { listPendingPostgresMigrations, runPostgresMigrations } from "./postgres-knex.js";
 import { PostgresJobApplicationRepository } from "./job-applications/postgres-job-application.repository.js";
 import { PostgresNotificationRepository } from "./notifications/postgres-notification.repository.js";
 import { PostgresOutboxRepository } from "./postgres-outbox.repository.js";
@@ -222,6 +222,19 @@ describe("createPgliteDb", { timeout: 30_000 }, () => {
     await expect(
       new PostgresUserProfileRepository(second).findById(profile.id),
     ).resolves.toMatchObject({ fullName: "Ada Lovelace" });
+  });
+
+  it("lists every shipped migration as pending before migrating and none after", async () => {
+    const db = createPgliteDb();
+    databases.push(db);
+
+    const before = await listPendingPostgresMigrations(db);
+    await runPostgresMigrations(db);
+
+    expect(before.length).toBeGreaterThan(0);
+    expect(before[0]).toMatch(/^\d{14}_.+\.cjs$/);
+    expect([...before].sort()).toEqual(before);
+    await expect(listPendingPostgresMigrations(db)).resolves.toEqual([]);
   });
 
   it("starts new profiles without onboarding and stores its timestamps", async () => {

@@ -573,6 +573,8 @@ async function startLocalBackend(
     modulePath: join(__dirname, "local-backend", "local-backend-utility-process.js"),
     dataDir: join(app.getPath("userData"), "data"),
     sessionToken,
+    appVersion: app.getVersion(),
+    backupsDir: join(app.getPath("userData"), "backups"),
     port: config.developmentBackend?.port ?? 0,
     renderPdf: (html) =>
       pdfRenderer.htmlToPdf(html).catch((error: unknown) => {

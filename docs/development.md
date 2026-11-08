@@ -109,6 +109,7 @@ The Vite proxy also exposes the health check at <http://localhost:5173/api/healt
 | `pnpm --filter @careerden/desktop package`                     | Package desktop for the current host platform            |
 | `pnpm --filter @careerden/desktop package:local`               | Package Careerden Unplugged after a local edition build  |
 | `pnpm --filter @careerden/infrastructure smoke:playwright-pdf` | Verify local Playwright PDF rendering                    |
+| `pnpm verify:desktop-release <tag>`                            | Check a desktop release has every edition's metadata     |
 | `pnpm build`                                                   | Build every workspace                                    |
 | `pnpm test`                                                    | Run all Vitest suites                                    |
 | `pnpm lint`                                                    | Run ESLint                                               |
@@ -136,7 +137,10 @@ or publishing a version.
 
 PostgreSQL migrations run automatically during API startup, and in Careerden Unplugged on
 every app start against its embedded PGlite database. Because local migrations run on users'
-devices where they cannot be rolled back, keep migrations additive. They can also be managed
+devices where they cannot be rolled back, keep migrations additive. Before a version change or
+pending migrations, Unplugged copies its data to `userData/backups/` first (see
+[pre-migration snapshots](../apps/desktop/README.md#pre-migration-snapshots)), but that is a
+recovery path, not a rollback. They can also be managed
 from the repository root:
 
 ```bash

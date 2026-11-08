@@ -164,9 +164,34 @@ describe("LocalScrapingWorker", () => {
 
     expect(api.failScrapeJob).toHaveBeenCalledWith(
       "job-1",
-      "LinkedIn public job details unavailable",
+      "scrape_unknown: LinkedIn public job details unavailable",
     );
     expect(api.submitScrapeData).not.toHaveBeenCalled();
+  });
+
+  it("keeps the category of a classified scrape failure", async () => {
+    const api = createApiClient({
+      claimNextScrapeJob: vi
+        .fn()
+        .mockResolvedValueOnce({
+          id: "job-1",
+          sourceUrl: "https://www.linkedin.com/jobs/view/1",
+        })
+        .mockResolvedValueOnce(null),
+    });
+    const runner = createRunner({
+      scrape: vi.fn(async () => {
+        // The utility process forwards only the encoded message.
+        throw new Error("scrape_rate_limited: LinkedIn public fetch failed: 429 Too Many Requests");
+      }),
+    });
+
+    await new LocalScrapingWorker({ api, runner }).runOnce();
+
+    expect(api.failScrapeJob).toHaveBeenCalledWith(
+      "job-1",
+      "scrape_rate_limited: LinkedIn public fetch failed: 429 Too Many Requests",
+    );
   });
 
   it.each([

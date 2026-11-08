@@ -6,8 +6,10 @@ import {
   type LocalBackendCommand,
   type LocalBackendEvent,
 } from "./local-backend-messages.js";
+import { LocalBackendStartError } from "../startup-recovery/startup-failure.js";
 
 type LocalBackendChild = Pick<UtilityProcess, "kill" | "on" | "postMessage">;
+type LocalBackendNotice = LocalBackendEvent | { type: "exit"; code: number };
 
 export type LocalBackendFork = (
   modulePath: string,
@@ -26,6 +28,8 @@ export interface LocalBackendProcessOptions {
   port?: number;
   renderPdf: (html: string) => Promise<Buffer>;
   getAiSelection: () => Promise<AiProviderSelection | null>;
+  // Only after the backend was ready. An exit during start rejects start() instead, so a failure
+  // that repeats on every launch never turns into a restart loop.
   onUnexpectedExit?: (code: number) => void;
   fork?: LocalBackendFork;
   startTimeoutMs?: number;
@@ -36,28 +40,35 @@ export interface LocalBackendProcessOptions {
 export class LocalBackendProcess {
   private child: LocalBackendChild | undefined;
   private stopping = false;
-  private readonly waiters = new Set<(event: LocalBackendEvent | { type: "exit" }) => void>();
+  private ready = false;
+  private readonly waiters = new Set<(event: LocalBackendNotice) => void>();
 
   constructor(private readonly options: LocalBackendProcessOptions) {}
 
-  async start(): Promise<{ baseUrl: string }> {
+  // Rejects with a LocalBackendStartError that says why the backend could not start.
+  async start(): Promise<{ baseUrl: string; lastMigration?: string }> {
     if (this.child) throw new Error("The local backend is already running");
 
     const fork = this.options.fork ?? utilityProcess.fork;
     const child = fork(this.options.modulePath, [], { serviceName: "careerden-local-backend" });
     this.child = child;
     this.stopping = false;
+    this.ready = false;
 
     child.on("message", (message: unknown) => this.handleMessage(child, message));
     child.on("exit", (code: number) => {
       if (this.child !== child) return;
       this.child = undefined;
-      this.notify({ type: "exit" });
-      if (!this.stopping) this.options.onUnexpectedExit?.(code);
+      this.notify({ type: "exit", code });
+      if (!this.stopping && this.ready) this.options.onUnexpectedExit?.(code);
     });
 
     const result = this.waitFor(
-      (event) => event.type === "ready" || event.type === "start:error" || event.type === "exit",
+      (event) =>
+        event.type === "ready" ||
+        event.type === "start:error" ||
+        event.type === "start:data-error" ||
+        event.type === "exit",
       this.options.startTimeoutMs ?? 60_000,
     );
     this.send({
@@ -72,16 +83,30 @@ export class LocalBackendProcess {
 
     const event = await result.catch((error: unknown) => {
       this.kill();
-      throw error;
+      throw new LocalBackendStartError({
+        reason: "start-failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
     });
-    if (event.type === "ready") return { baseUrl: `http://127.0.0.1:${event.port}` };
+    if (event.type === "ready") {
+      this.ready = true;
+      return {
+        baseUrl: `http://127.0.0.1:${event.port}`,
+        ...(event.lastMigration ? { lastMigration: event.lastMigration } : {}),
+      };
+    }
 
     this.kill();
-    throw new Error(
-      event.type === "start:error"
-        ? `The local backend failed to start: ${event.message}`
-        : "The local backend exited before it was ready",
-    );
+    if (event.type === "start:data-error") throw new LocalBackendStartError(event.failure);
+    throw new LocalBackendStartError({
+      reason: "start-failed",
+      message:
+        event.type === "start:error"
+          ? event.message
+          : event.type === "exit"
+            ? `The local backend exited before it was ready (code ${event.code})`
+            : "The local backend exited before it was ready",
+    });
   }
 
   async stop(): Promise<void> {
@@ -131,15 +156,15 @@ export class LocalBackendProcess {
   }
 
   private waitFor(
-    matches: (event: LocalBackendEvent | { type: "exit" }) => boolean,
+    matches: (event: LocalBackendNotice) => boolean,
     timeoutMs: number,
-  ): Promise<LocalBackendEvent | { type: "exit" }> {
+  ): Promise<LocalBackendNotice> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.waiters.delete(waiter);
         reject(new Error(`The local backend did not respond within ${timeoutMs}ms`));
       }, timeoutMs);
-      const waiter = (event: LocalBackendEvent | { type: "exit" }) => {
+      const waiter = (event: LocalBackendNotice) => {
         if (!matches(event)) return;
         clearTimeout(timeout);
         this.waiters.delete(waiter);
@@ -149,7 +174,7 @@ export class LocalBackendProcess {
     });
   }
 
-  private notify(event: LocalBackendEvent | { type: "exit" }): void {
+  private notify(event: LocalBackendNotice): void {
     for (const waiter of [...this.waiters]) waiter(event);
   }
 

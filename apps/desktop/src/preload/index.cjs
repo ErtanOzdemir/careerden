@@ -22,6 +22,14 @@ const aiCredentialsChannels = {
   test: "ai-credentials-test",
 };
 
+const startupRecoveryChannels = {
+  copyDiagnostics: "startup-recovery-copy-diagnostics",
+  getState: "startup-recovery-get-state",
+  openDataFolder: "startup-recovery-open-data-folder",
+  quit: "startup-recovery-quit",
+  restore: "startup-recovery-restore",
+};
+
 const edition = process.argv.includes("--careerden-edition=local") ? "local" : "cloud";
 
 const electronAPI = {
@@ -55,6 +63,15 @@ if (edition === "local") {
     remove: (provider) => ipcRenderer.invoke(aiCredentialsChannels.remove, provider),
     setActive: (provider) => ipcRenderer.invoke(aiCredentialsChannels.setActive, provider),
     test: (input) => ipcRenderer.invoke(aiCredentialsChannels.test, input),
+  };
+  // The recovery screen shown when the local data cannot be opened. Snapshots are chosen by the
+  // id the main process listed, never by path.
+  electronAPI.startupRecovery = {
+    getState: () => ipcRenderer.invoke(startupRecoveryChannels.getState),
+    restore: (snapshotId) => ipcRenderer.invoke(startupRecoveryChannels.restore, snapshotId),
+    openDataFolder: () => ipcRenderer.invoke(startupRecoveryChannels.openDataFolder),
+    copyDiagnostics: () => ipcRenderer.invoke(startupRecoveryChannels.copyDiagnostics),
+    quit: () => ipcRenderer.invoke(startupRecoveryChannels.quit),
   };
 }
 

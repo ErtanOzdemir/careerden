@@ -5,6 +5,7 @@ import type { Knex } from "knex";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createPgliteDb } from "@careerden/infrastructure";
 import { writeLastOpenedVersion } from "./last-opened-version.js";
+import { LocalDatabaseStartupError } from "./local-database-startup.js";
 import { LocalDataSnapshotSpaceError } from "./local-data-snapshots.js";
 import { prepareLocalDatabase, type LocalDataSnapshotPolicy } from "./prepare-local-database.js";
 
@@ -47,7 +48,7 @@ describe("prepareLocalDatabase", { timeout: 60_000 }, () => {
   }
 
   async function launch(appVersion: string, overrides: Partial<LocalDataSnapshotPolicy> = {}) {
-    const db = await prepareLocalDatabase(dataDir, policy(appVersion, overrides));
+    const { db } = await prepareLocalDatabase(dataDir, policy(appVersion, overrides));
     open.push(db);
     return db;
   }
@@ -78,6 +79,22 @@ describe("prepareLocalDatabase", { timeout: 60_000 }, () => {
 
     await expect(snapshots()).resolves.toEqual([]);
     await expect(recordedVersion()).resolves.toBe("0.8.0");
+  });
+
+  it("snapshots before a failing migration and reports it for the recovery screen", async () => {
+    await close(await launch("0.7.0"));
+    const db = await launch("0.7.0");
+    // Forgetting that a migration ran makes it run again and fail on its own columns.
+    const [latest] = await db("knex_migrations").orderBy("name", "desc").limit(1).pluck("name");
+    await db("knex_migrations").where({ name: latest }).delete();
+    await close(db);
+
+    const failure = await launch("0.8.0").catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(LocalDatabaseStartupError);
+    expect((failure as LocalDatabaseStartupError).failure.reason).toBe("migration");
+    await expect(snapshots()).resolves.toHaveLength(1);
+    await expect(recordedVersion()).resolves.toBe("0.7.0");
   });
 
   it("does not snapshot again on a relaunch with the same version", async () => {

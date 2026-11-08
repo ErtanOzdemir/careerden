@@ -13,15 +13,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Careerden Unplugged migrates the user's own database on every update, so each released
+  # version needs an upgrade fixture that `pnpm test` migrates. A missing one only warns: the
+  # fixture is generated from this tag and lands in a follow-up pull request.
+  upgrade-fixture:
+    name: Check database upgrade fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Warn when this version has no upgrade fixture
+        shell: bash
+        run: |
+          fixture="apps/api/test/fixtures/pglite/${GITHUB_REF_NAME}/fixture.json"
+          if [[ ! -f "${fixture}" ]]; then
+            echo "::warning title=Missing database upgrade fixture::No ${fixture}. Run 'pnpm --filter @careerden/api-app fixture:pglite --ref ${GITHUB_REF_NAME}' and commit the result so later migrations are tested against ${GITHUB_REF_NAME} databases."
+          fi
+
   build:
     name: Build ${{ matrix.edition }} ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # cloud is Careerden; local is Careerden Unplugged, whose data stays on the device. Both share one release
-        # with distinct artifact names and updater channels (latest*.yml and local*.yml).
-        edition: [cloud, local]
+        # cloud is Careerden; local is Careerden Unplugged, whose data stays on the device.
+        # Only Unplugged is released for now.
+        #
+        # TODO: the cloud edition is deferred, not dropped. When it ships, add `cloud` back to
+        # this list and drop the "Unplugged" suffix from the draft release title at the end of
+        # this workflow. Nothing else needs to change: every step below already handles both
+        # editions and gives them distinct artifact names and updater channels (latest*.yml
+        # and local*.yml) inside one release.
+        edition: [local]
         platform: [macos, windows-x64, linux-x64]
         include:
           - platform: macos
@@ -304,9 +327,11 @@ jobs:
           if [[ "${existing_draft}" == "true" ]]; then
             gh release upload "${GITHUB_REF_NAME}" release-assets/* --clobber
           else
+            # Only the Unplugged edition is in the build matrix, so the title names it. Drop
+            # the suffix when the cloud edition is released alongside it again.
             gh release create "${GITHUB_REF_NAME}" release-assets/* \
               --draft \
               --generate-notes \
-              --title "Careerden ${GITHUB_REF_NAME#v}" \
+              --title "Careerden Unplugged ${GITHUB_REF_NAME#v}" \
               --verify-tag
           fi

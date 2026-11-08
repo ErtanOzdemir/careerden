@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import type { JobApplication } from "../types.js";
 import type { ApiJobApplicationDetail, ApiProfile } from "../api/types.js";
 import { ApiError } from "../api/client.js";
@@ -474,6 +474,60 @@ function renderAppDetail() {
         <Route path="/applications/:id" element={<AppDetail />} />
       </Routes>
     </MemoryRouter>,
+  );
+}
+
+describe("AppDetail switching between applications", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("leaves the follow-up draft behind when the application changes", async () => {
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(jobApplicationsApi.get).mockImplementation(async (id: string) => ({
+      ...createApplicationDetail(),
+      contacts: [],
+      id,
+      tracking: { ...createApplicationDetail().tracking, companyName: `Company ${id}` },
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/applications/job-1?tab=timeline"]}>
+        <Routes>
+          <Route
+            path="/applications/:id"
+            element={
+              <>
+                <NavigateToApplication id="job-2" />
+                <AppDetail />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "+ Add follow-up" }));
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "Ping the recruiter" },
+    });
+    expect(screen.getByLabelText("Title")).toHaveValue("Ping the recruiter");
+
+    fireEvent.click(screen.getByRole("button", { name: "Open job-2" }));
+
+    expect(await screen.findByText("Company job-2")).toBeInTheDocument();
+    expect(screen.getByText("No follow-ups scheduled")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Title")).not.toBeInTheDocument();
+  });
+});
+
+function NavigateToApplication({ id }: { id: string }) {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(`/applications/${id}`)}>
+      Open {id}
+    </button>
   );
 }
 

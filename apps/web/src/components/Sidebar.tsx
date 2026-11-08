@@ -135,7 +135,7 @@ export default function Sidebar() {
         )}
         {isLocalEdition ? (
           updateState && (
-            <p className="mt-3 px-3 text-xs text-muted-foreground">
+            <p className="mt-3 px-3 text-center text-xs text-muted-foreground">
               Version {updateState.currentVersion}
             </p>
           )

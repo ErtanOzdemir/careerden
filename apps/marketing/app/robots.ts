@@ -1,22 +1,12 @@
 import type { MetadataRoute } from "next";
-import { absoluteUrl } from "@/lib/site";
+import { absoluteUrl, publicRoutes } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: "*",
-        allow: [
-          "/",
-          "/download",
-          "/privacy",
-          "/cookies",
-          "/terms",
-          "/gdpr",
-          "/data-deletion",
-          "/llms.txt",
-          "/llms-full.txt",
-        ],
+        allow: [...publicRoutes, "/llms.txt", "/llms-full.txt"],
         disallow: [
           "/onboarding",
           "/api/",
@@ -31,6 +21,5 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: absoluteUrl("/sitemap.xml"),
-    host: absoluteUrl("/"),
   };
 }

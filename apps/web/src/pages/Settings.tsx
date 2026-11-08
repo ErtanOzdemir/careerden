@@ -22,6 +22,7 @@ import {
   type Theme,
 } from "../theme.js";
 import { useDesktopUpdates } from "../desktop-updates/DesktopUpdateProvider.js";
+import { ReportIssuePanel } from "../settings/ReportIssuePanel.js";
 import {
   Download,
   Sparkles,
@@ -561,6 +562,8 @@ export default function Settings() {
           </p>
         )}
       </Panel>
+
+      <ReportIssuePanel />
 
       {updateState && (
         <p className="text-center text-xs text-muted-foreground">

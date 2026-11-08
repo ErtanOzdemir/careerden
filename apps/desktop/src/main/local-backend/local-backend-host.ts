@@ -3,6 +3,7 @@ import { createServer, type RequestListener, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { DocumentRenderer } from "@careerden/domain";
 import type { AiProviderSelection, AiProviderSelectionSource } from "@careerden/infrastructure";
+import { createLocalBackendLog } from "./local-backend-log.js";
 import {
   parseLocalBackendCommand,
   type LocalBackendCommand,
@@ -26,6 +27,7 @@ export type CreateLocalBackendRuntime = (options: {
   sessionToken: string;
   pdfRenderer: DocumentRenderer;
   aiProviderSelection: AiProviderSelectionSource;
+  dataSnapshots: { appVersion: string; backupsDir: string; log: (message: string) => void };
 }) => Promise<LocalBackendRuntime>;
 
 interface PendingRequest<T> {
@@ -103,6 +105,11 @@ export function startLocalBackendHost(
               "AI provider",
               (requestId) => ({ type: "ai-selection:request", requestId }),
             ),
+        },
+        dataSnapshots: {
+          appVersion: command.appVersion,
+          backupsDir: command.backupsDir,
+          log: createLocalBackendLog(command.logFile),
         },
       });
       const listening = createServer(runtime.app);

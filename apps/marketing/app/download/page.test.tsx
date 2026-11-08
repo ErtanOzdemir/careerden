@@ -57,7 +57,9 @@ describe("desktop download page", () => {
   });
 
   it("publishes unique, indexable metadata", () => {
-    expect(metadata.title).toBe("Download Careerden Unplugged for Desktop | Careerden");
+    expect(metadata.title).toEqual({
+      absolute: "Download Careerden Unplugged for Desktop | Careerden",
+    });
     expect(metadata.description).toMatch(/macOS, Windows, or Linux/);
     expect(metadata.description).toMatch(/keeps your data on your computer/);
     expect(metadata.alternates).toMatchObject({

@@ -44,7 +44,10 @@ import {
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
-import { openLocalDatabase } from "../infrastructure/persistence/local-database-startup.js";
+import {
+  prepareLocalDatabase,
+  type LocalDataSnapshotPolicy,
+} from "../infrastructure/persistence/prepare-local-database.js";
 import { HttpRemoteImageFetcher } from "../infrastructure/scraping/http-remote-image.fetcher.js";
 import { createLocalFileRouter } from "./local-files.routes.js";
 import { localSession } from "./local-session.middleware.js";
@@ -66,6 +69,9 @@ export interface LocalApiRuntimeOptions {
   // Test seam for the provider built from a selection.
   createAiProvider?: (selection: AiProviderSelection) => AiProvider;
   backgroundPollIntervalMs?: number;
+  // Copies the data to the backups folder before migrations may change it. The desktop app
+  // always passes it; scripts and tests that open throwaway data may leave it out.
+  dataSnapshots?: LocalDataSnapshotPolicy;
 }
 
 export interface LocalApiRuntime {
@@ -85,7 +91,7 @@ export async function createLocalApiRuntime(
   // PGlite creates only its own directory, not missing parents.
   await mkdir(options.dataDir, { recursive: true });
   // Throws LocalDatabaseStartupError when the database cannot be opened or migrated.
-  const { db, lastMigration } = await openLocalDatabase(join(options.dataDir, "pglite"));
+  const { db, lastMigration } = await prepareLocalDatabase(options.dataDir, options.dataSnapshots);
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")

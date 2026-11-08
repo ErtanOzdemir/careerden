@@ -1,8 +1,9 @@
 import { ImageResponse } from "next/og";
+import { socialImage } from "@/lib/metadata";
 
-export const alt = "Careerden — Job application tracker and CV creator";
-export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+export const alt = socialImage.alt;
+export const size = { width: socialImage.width, height: socialImage.height };
+export const contentType = socialImage.type;
 
 export default function OpenGraphImage() {
   return new ImageResponse(

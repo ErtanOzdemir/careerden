@@ -26,6 +26,9 @@ function createProcess(overrides: Partial<LocalBackendProcessOptions> = {}) {
     modulePath: "/dist/main/local-backend/local-backend-utility-process.js",
     dataDir: "/user-data/data",
     sessionToken: "token",
+    appVersion: "1.2.3",
+    backupsDir: "/user-data/backups",
+    logFile: "/user-data/logs/local-backend.log",
     renderPdf: vi.fn(async () => Buffer.from("%PDF")),
     getAiSelection: vi.fn(async () => null),
     fork: vi.fn(() => child as never),
@@ -52,6 +55,9 @@ describe("LocalBackendProcess", () => {
       dataDir: "/user-data/data",
       sessionToken: "token",
       port: 3010,
+      appVersion: "1.2.3",
+      backupsDir: "/user-data/backups",
+      logFile: "/user-data/logs/local-backend.log",
     });
   });
 

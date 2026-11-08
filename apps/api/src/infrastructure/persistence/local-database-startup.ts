@@ -42,11 +42,12 @@ export function describeLocalDatabaseStartupError(
 }
 
 // Opens the PGlite database in `directory` and migrates it to the latest schema, in stages, so a
-// failure says which stage broke. The database is closed again when any stage fails.
+// failure says which stage broke. The database is closed again when any stage fails. A caller
+// that already opened the database to inspect it passes that connection as `db`.
 export async function openLocalDatabase(
   directory: string,
+  db: Knex = createPgliteDb(directory),
 ): Promise<{ db: Knex; lastMigration: string | undefined }> {
-  const db = createPgliteDb(directory);
   try {
     // PGlite opens its files on the first query.
     await db.raw("select 1").catch((error: unknown) => {

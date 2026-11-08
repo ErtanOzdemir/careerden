@@ -175,7 +175,27 @@ describe("LinkedInCompanyScraper", () => {
         companyName: "Acme",
         linkedInUrl: "https://www.linkedin.com/company/acme",
       }),
-    ).rejects.toThrow("linkedin_guest_company_unavailable");
+    ).rejects.toMatchObject({ category: "blocked", name: "ScrapeFailureError" });
+  });
+
+  it.each([
+    [999, "blocked"],
+    [403, "blocked"],
+    [429, "rate_limited"],
+    [404, "not_found"],
+    [503, "network"],
+  ] as const)("classifies a guest %i company response as %s", async (status, category) => {
+    const scraper = new LinkedInCompanyScraper({
+      // The Response constructor rejects LinkedIn's non-standard 999, which real fetch delivers.
+      fetch: async () => ({ ok: false, status, statusText: "Refused" }) as Response,
+    });
+
+    await expect(
+      scraper.scrapeCompany({
+        companyName: "Acme",
+        linkedInUrl: "https://www.linkedin.com/company/acme",
+      }),
+    ).rejects.toMatchObject({ category, name: "ScrapeFailureError" });
   });
 });
 

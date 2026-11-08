@@ -3,6 +3,14 @@ import type { AiProviderSelection } from "@careerden/infrastructure";
 import type { StructuredLogEntry } from "@careerden/infrastructure/logging";
 import { parseStructuredLogMessage } from "../logging/structured-log-message.js";
 
+// What the main process learns about a backup it exported or imported.
+export interface LocalBackupSummary {
+  createdAt: string;
+  appVersion: string;
+  applications: number;
+  files: number;
+}
+
 // Mirrors localDatabaseStartupFailureReasons in @careerden/api-app/local, which the main process
 // does not import: it would load the whole API.
 export const localDataStartupFailureReasons = [
@@ -34,6 +42,15 @@ export type LocalBackendCommand =
       backupsDir: string;
     }
   | { type: "stop" }
+  | { type: "backup:export"; requestId: string; outputPath: string; appVersion: string }
+  | {
+      type: "backup:import";
+      requestId: string;
+      archivePath: string;
+      // Where the data being replaced is exported first.
+      snapshotPath: string;
+      appVersion: string;
+    }
   | { type: "pdf:result"; requestId: string; pdf: Uint8Array }
   | { type: "pdf:error"; requestId: string; message: string }
   | { type: "ai-selection:result"; requestId: string; selection: AiProviderSelection | null };
@@ -46,7 +63,9 @@ export type LocalBackendEvent =
   | { type: "stopped" }
   | { type: "pdf:request"; requestId: string; html: string }
   | { type: "ai-selection:request"; requestId: string }
-  | { type: "log"; entry: StructuredLogEntry };
+  | { type: "log"; entry: StructuredLogEntry }
+  | { type: "backup:result"; requestId: string; summary: LocalBackupSummary }
+  | { type: "backup:error"; requestId: string; message: string };
 
 export function parseLocalBackendCommand(message: unknown): LocalBackendCommand | undefined {
   const payload = asRecord(unwrapMessageEvent(message));
@@ -63,6 +82,19 @@ export function parseLocalBackendCommand(message: unknown): LocalBackendCommand 
         : undefined;
     case "stop":
       return { type: "stop" };
+    case "backup:export":
+      return isString(payload.requestId) &&
+        isString(payload.outputPath) &&
+        isString(payload.appVersion)
+        ? (payload as unknown as LocalBackendCommand)
+        : undefined;
+    case "backup:import":
+      return isString(payload.requestId) &&
+        isString(payload.archivePath) &&
+        isString(payload.snapshotPath) &&
+        isString(payload.appVersion)
+        ? (payload as unknown as LocalBackendCommand)
+        : undefined;
     case "pdf:result":
       return isString(payload.requestId) && payload.pdf instanceof Uint8Array
         ? (payload as unknown as LocalBackendCommand)
@@ -109,6 +141,14 @@ export function parseLocalBackendEvent(message: unknown): LocalBackendEvent | un
       const entry = parseStructuredLogMessage(payload);
       return entry ? { type: "log", entry } : undefined;
     }
+    case "backup:result":
+      return isString(payload.requestId) && isLocalBackupSummary(payload.summary)
+        ? (payload as unknown as LocalBackendEvent)
+        : undefined;
+    case "backup:error":
+      return isString(payload.requestId) && isString(payload.message)
+        ? (payload as unknown as LocalBackendEvent)
+        : undefined;
     default:
       return undefined;
   }
@@ -121,6 +161,17 @@ function isAiProviderSelection(value: unknown): value is AiProviderSelection {
     aiProviderNames.some((name) => name === selection.provider) &&
     isString(selection.apiKey) &&
     (selection.model === undefined || isString(selection.model))
+  );
+}
+
+function isLocalBackupSummary(value: unknown): value is LocalBackupSummary {
+  const summary = asRecord(value);
+  return (
+    summary !== undefined &&
+    isString(summary.createdAt) &&
+    isString(summary.appVersion) &&
+    Number.isInteger(summary.applications) &&
+    Number.isInteger(summary.files)
   );
 }
 

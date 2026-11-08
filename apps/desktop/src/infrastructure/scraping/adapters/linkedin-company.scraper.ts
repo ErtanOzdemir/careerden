@@ -1,5 +1,7 @@
 import type { CompanyLookupInput, ScrapedCompany, ScrapedJob } from "@careerden/domain";
+import { ScrapeFailureError, scrapeFailureCategoryForHttpStatus } from "@careerden/domain";
 import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.js";
+import { linkedInGuestFetchTimeoutMs } from "./linkedin-job.scraper.js";
 
 export interface LinkedInCompanyScraperOptions {
   fetch?: typeof fetch;
@@ -65,7 +67,7 @@ export function parseLinkedInGuestCompanyHtml(
   input: ParseLinkedInGuestCompanyInput,
 ): ScrapedCompany {
   if (isLinkedInAuthenticationPage(input.finalUrl, html)) {
-    throw new Error("linkedin_guest_company_unavailable: LinkedIn required authentication");
+    throw new ScrapeFailureError("blocked", "LinkedIn required authentication");
   }
 
   const organization = extractLinkedInOrganizationData(html);
@@ -154,24 +156,33 @@ async function fetchLinkedInGuestCompanyHtml(
   fetchImpl: typeof fetch,
   companyUrl: string,
 ): Promise<{ finalUrl: string; html: string }> {
-  const response = await fetchImpl(companyUrl, {
-    headers: {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    },
-    redirect: "follow",
-  });
+  let response: Response;
 
-  if (response.status === 404) {
-    throw new Error("LinkedIn company was not found");
+  try {
+    response = await fetchImpl(companyUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(linkedInGuestFetchTimeoutMs),
+    });
+  } catch (error) {
+    throw new ScrapeFailureError(
+      "network",
+      `LinkedIn could not be reached: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
   if (!response.ok) {
-    throw new Error(
-      `LinkedIn public company fetch failed: ${response.status} ${response.statusText}`,
+    throw new ScrapeFailureError(
+      scrapeFailureCategoryForHttpStatus(response.status),
+      response.status === 404
+        ? "LinkedIn company was not found"
+        : `LinkedIn public company fetch failed: ${response.status} ${response.statusText}`,
     );
   }
 

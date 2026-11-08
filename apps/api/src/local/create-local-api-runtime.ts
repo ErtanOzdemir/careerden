@@ -49,6 +49,8 @@ import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
 import { LoggingAiProvider } from "../infrastructure/matching/logging-ai.provider.js";
+import type { LocalBackupManifest } from "../contracts/backup/local-backup-manifest.schema.js";
+import { exportLocalData, localDataLayout } from "../infrastructure/backup/local-data-backup.js";
 import {
   prepareLocalDatabase,
   type LocalDataSnapshotPolicy,
@@ -84,6 +86,11 @@ export interface LocalApiRuntimeOptions {
 export interface LocalApiRuntime {
   app: Express;
   db: Knex;
+  // Writes a backup zip of the database and stored files; see exportLocalData.
+  exportBackup: (options: {
+    outputPath: string;
+    appVersion: string;
+  }) => Promise<LocalBackupManifest>;
   // The newest migration the database is at, for diagnostics.
   lastMigration: string | undefined;
   close: () => Promise<void>;
@@ -119,8 +126,9 @@ export async function createLocalApiRuntime(
   const unitOfWork = new PostgresPersistenceUnitOfWork(db, changeBus, notificationChangeBus, {
     decorateCredits: (credits) => new UnmeteredCreditRepository(credits),
   });
+  const filesDir = join(options.dataDir, localDataLayout.files);
   const storage = new LocalFileStorage({
-    rootDir: join(options.dataDir, "files"),
+    rootDir: filesDir,
     signingKey: randomBytes(32).toString("base64url"),
     urlPathPrefix: "/api/files",
   });
@@ -269,6 +277,8 @@ export async function createLocalApiRuntime(
   return {
     app,
     db,
+    exportBackup: ({ outputPath, appVersion }) =>
+      exportLocalData({ db, filesDir, outputPath, appVersion }),
     lastMigration,
     close: async () => {
       for (const interval of intervals) clearInterval(interval);

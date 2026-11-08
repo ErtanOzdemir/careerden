@@ -26,6 +26,7 @@ import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
 import { isTrustedMainWindowIpcSender } from "./ipc-sender-policy.js";
 import { ElectronPdfRenderer } from "./local-backend/electron-pdf-renderer.js";
 import { LocalBackendProcess } from "./local-backend/local-backend-process.js";
+import { backupFileExtension, registerLocalDataIpc } from "./local-data/local-data-ipc.js";
 import { DesktopLogger, resolveDesktopLogsDirectory } from "./logging/desktop-logger.js";
 import { registerLogSettingsIpc } from "./logging/log-settings-ipc.js";
 import { LogSettingsStore } from "./logging/log-settings-store.js";
@@ -389,6 +390,7 @@ async function initializeDesktopRuntime(): Promise<void> {
   if (aiCredentialsStore) registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore);
   // Only the local edition offers the debug logging setting.
   if (runtimeConfig.edition === "local") registerLogSettingsIpc(ipcHandlers, logSettings, logger);
+  if (localBackend) registerLocalDataIpc(ipcHandlers, createLocalDataIpcOptions(localBackend));
   ipcHandlers
     .register("job-application-queued", () => localScrapingWorker?.wake())
     .register(desktopNotificationIpcChannels.consumeActivations, () =>
@@ -747,6 +749,43 @@ function createStartupRecovery(restartGuard: RestartLoopGuard): StartupRecovery 
 
 function getLocalDataDir(): string {
   return join(app.getPath("userData"), "data");
+}
+
+// Backups never include ai-credentials.bin: it sits beside the data folder, not inside it, and
+// its keychain-bound encryption would not open on another device anyway.
+function createLocalDataIpcOptions(backend: LocalBackendProcess) {
+  const backupFilters = [{ name: "Careerden backup", extensions: [backupFileExtension] }];
+  return {
+    backend,
+    appVersion: app.getVersion(),
+    snapshotsDir: join(app.getPath("userData"), "backups"),
+    chooseExportPath: async (defaultFileName: string) => {
+      const options: Electron.SaveDialogOptions = {
+        title: "Export data",
+        defaultPath: join(app.getPath("documents"), defaultFileName),
+        filters: backupFilters,
+      };
+      const window = getMainWindow();
+      const result = window
+        ? await dialog.showSaveDialog(window, options)
+        : await dialog.showSaveDialog(options);
+      return result.canceled ? undefined : result.filePath;
+    },
+    chooseImportPath: async () => {
+      const options: Electron.OpenDialogOptions = {
+        title: "Import from backup",
+        properties: ["openFile"],
+        filters: backupFilters,
+      };
+      const window = getMainWindow();
+      const result = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+      return result.canceled ? undefined : result.filePaths[0];
+    },
+    // Reveals the data folder beside the automatic pre-import snapshots in "backups".
+    openDataFolder: async () => shell.showItemInFolder(getLocalDataDir()),
+  };
 }
 
 function withHeaders(init: RequestInit | undefined, headers: Record<string, string>): RequestInit {

@@ -4,7 +4,11 @@ import type { JobSiteScraper } from "../../../domain/scraping/job-site-scraper.j
 
 export interface LinkedInJobScraperOptions {
   fetch?: typeof fetch;
+  logger?: Pick<Console, "warn">;
 }
+
+/** A guest request that has not answered by then is reported as a network failure. */
+export const linkedInGuestFetchTimeoutMs = 30_000;
 
 export const linkedinGuestJobDetailEndpoint =
   "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting";
@@ -12,9 +16,11 @@ export const linkedInGuestParserVersion = "linkedin-guest-detail-v1";
 
 export class LinkedInJobScraper implements JobSiteScraper {
   private readonly fetchImpl: typeof fetch;
+  private readonly logger: Pick<Console, "warn">;
 
   constructor(options: LinkedInJobScraperOptions = {}) {
     this.fetchImpl = options.fetch ?? fetch;
+    this.logger = options.logger ?? console;
   }
 
   canHandle(url: string): boolean {
@@ -35,12 +41,25 @@ export class LinkedInJobScraper implements JobSiteScraper {
     const endpoint = `${linkedinGuestJobDetailEndpoint}/${jobId}`;
     const html = await fetchLinkedInHtml(this.fetchImpl, endpoint);
 
-    return parseLinkedInGuestJobDetailHtml(html, {
-      sourceUrl: url,
-      finalUrl: endpoint,
-      strategy: "guest",
-      sourceJobId: jobId,
-    });
+    try {
+      return parseLinkedInGuestJobDetailHtml(html, {
+        sourceUrl: url,
+        finalUrl: endpoint,
+        strategy: "guest",
+        sourceJobId: jobId,
+      });
+    } catch (error) {
+      // An unrecognized layout usually means LinkedIn changed the page, which only a release fixes.
+      if (error instanceof ScrapeFailureError && error.category === "parse") {
+        this.logger.warn("LinkedIn page did not match the expected structure", {
+          adapter: "linkedin-job",
+          parserVersion: linkedInGuestParserVersion,
+          url: endpoint,
+          detail: error.detail,
+        });
+      }
+      throw error;
+    }
   }
 
   async scrapeCompany(input: CompanyLookupInput): Promise<ScrapedCompany> {
@@ -372,6 +391,7 @@ async function fetchLinkedInHtml(fetchImpl: typeof fetch, url: string): Promise<
         "X-Requested-With": "XMLHttpRequest",
       },
       redirect: "follow",
+      signal: AbortSignal.timeout(linkedInGuestFetchTimeoutMs),
     });
   } catch (error) {
     throw new ScrapeFailureError(

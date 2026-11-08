@@ -27,6 +27,12 @@ const logSettingsChannels = {
   setLevel: "desktop-log-set-level",
 };
 
+const localDataChannels = {
+  export: "local-data-export",
+  import: "local-data-import",
+  openFolder: "local-data-open-folder",
+};
+
 const startupRecoveryChannels = {
   copyDiagnostics: "startup-recovery-copy-diagnostics",
   getState: "startup-recovery-get-state",
@@ -74,6 +80,14 @@ if (edition === "local") {
     getLevel: () => ipcRenderer.invoke(logSettingsChannels.getLevel),
     setLevel: (level) => ipcRenderer.invoke(logSettingsChannels.setLevel, level),
   };
+  // Backups of the on-device data. The main process opens every file dialog, so these take no
+  // arguments and never accept a path from the renderer.
+  electronAPI.localData = {
+    exportData: () => ipcRenderer.invoke(localDataChannels.export),
+    importData: () => ipcRenderer.invoke(localDataChannels.import),
+    openDataFolder: () => ipcRenderer.invoke(localDataChannels.openFolder),
+  };
+
   // The recovery screen shown when the local data cannot be opened. Snapshots are chosen by the
   // id the main process listed, never by path.
   electronAPI.startupRecovery = {

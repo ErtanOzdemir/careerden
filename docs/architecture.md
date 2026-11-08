@@ -174,6 +174,16 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **No Chromium cookie store in Unplugged.** The local edition reaches its backend with
   Node's `fetch`, because opening the encrypted cookie store would trigger a keychain prompt on
   every launch and the edition has no cookies to keep.
+- **Backups as JSON per table, restored through migrations.** An Unplugged backup is a zip
+  archive saved as `.careerden`, holding a manifest, one JSON file per table rendered by
+  PostgreSQL's `json_agg`, and the stored files, instead of a copy of the PGlite directory. The JSON is readable outside the app and stays
+  importable across releases: an import recreates the archive's schema by running migrations up to
+  the one it names, loads the rows with `json_populate_recordset`, and then runs the remaining
+  migrations, so older backups are upgraded exactly like an installed database. Archives from a
+  newer schema are rejected. Imports are restored into a staging folder first, and the current data
+  is exported to the `backups` folder beside it before the two are swapped, so a damaged archive
+  or a failed import never touches the existing data. AI keys are not part of a backup; the user
+  enters them again on the new device.
 - **A recovery screen instead of a restart loop.** A database that cannot be opened or migrated
   fails the same way on every launch, so Unplugged shows a recovery screen for it rather than
   restarting: restore a snapshot, open the data folder, copy diagnostics, or quit. Data from a
@@ -189,6 +199,10 @@ renderer. New routes and use cases belong in the shared composition, so both edi
   category, the application page offers the manual paste form, prefilled with the LinkedIn URL;
   a pasted posting is an ordinary manual application and enters the normal analysis flow. A
   LinkedIn import feature flag only has to set the add-job dialog's `linkedInImportEnabled`, or
+  fail queued imports as `disabled`, to reuse the same flow. The category also sets the retry
+  policy: `blocked` and `rate_limited` get one retry after 15 minutes and pause Unplugged's
+  scheduled scraping for 10, failures a retry cannot fix fail at once, and the rest keep the
+  three-attempt backoff.
   fail queued imports as `disabled`, to reuse the same flow.
 - **A local log file instead of telemetry.** The main process is the only writer of
   `userData/logs/careerden.log`, which rotates at 5 MB and keeps at most five files. The local

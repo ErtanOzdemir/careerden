@@ -194,6 +194,42 @@ describe("LocalScrapingWorker", () => {
     );
   });
 
+  it("stops draining and pauses scheduled runs after LinkedIn blocks a scrape", async () => {
+    let now = 1_000;
+    const api = createApiClient({
+      claimNextScrapeJob: vi.fn(async () => ({
+        id: "job-1",
+        sourceUrl: "https://www.linkedin.com/jobs/view/1",
+      })),
+    });
+    const runner = createRunner({
+      scrape: vi.fn(async () => {
+        throw new Error("scrape_blocked: LinkedIn public fetch failed: 999 Request denied");
+      }),
+    });
+    const worker = new LocalScrapingWorker({
+      api,
+      now: () => now,
+      runner,
+      throttleCooldownMs: 60_000,
+    });
+
+    await worker.runOnce({ scheduled: true });
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(1);
+
+    now += 30_000;
+    await worker.runOnce({ scheduled: true });
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(1);
+
+    // A user action still runs during the pause.
+    await worker.runOnce();
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(2);
+
+    now += 120_000;
+    await worker.runOnce({ scheduled: true });
+    expect(api.claimNextScrapeJob).toHaveBeenCalledTimes(3);
+  });
+
   it.each([
     [400, "validation"],
     [404, "not_found"],

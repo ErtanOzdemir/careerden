@@ -59,6 +59,29 @@ export interface DesktopLoggingAPI {
   setLevel: (level: DesktopLogLevel) => Promise<DesktopLogLevel>;
 }
 
+export interface LocalBackupSummary {
+  createdAt: string;
+  appVersion: string;
+  applications: number;
+  files: number;
+}
+
+export type LocalDataExportResult =
+  | { status: "canceled" }
+  | { status: "exported"; fileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+
+export type LocalDataImportResult =
+  | { status: "canceled" }
+  | { status: "imported"; snapshotFileName: string; summary: LocalBackupSummary }
+  | { status: "error"; message: string };
+
+export interface LocalDataAPI {
+  exportData: () => Promise<LocalDataExportResult>;
+  importData: () => Promise<LocalDataImportResult>;
+  openDataFolder: () => Promise<void>;
+}
+
 export type StartupRecoveryReason =
   | "database-open"
   | "migration"
@@ -102,6 +125,7 @@ export interface ElectronAPI {
   // Present only in the local edition.
   logging?: DesktopLoggingAPI;
   // Present only in the local edition.
+  localData?: LocalDataAPI;
   startupRecovery?: StartupRecoveryAPI;
   openExternal: (url: string) => Promise<void>;
   notifyJobApplicationQueued: () => Promise<void>;

@@ -44,6 +44,39 @@ describe("FailScrapeJobUseCase", () => {
     expect(recordChanged).toHaveBeenCalledOnce();
   });
 
+  it("keeps the failure category on the application and shows the readable detail", async () => {
+    const reason = "scrape_blocked: LinkedIn public fetch failed: 999 Request denied";
+    const job = createTestJobApplication({
+      status: "scraping",
+      scrapeClaimedBy: "desktop-a",
+      scrapeAttemptCount: 3,
+    });
+    const failed = createTestJobApplication({ ...job, status: "failed", failureReason: reason });
+    const repository = createJobApplicationRepository({
+      findById: vi.fn(async () => job),
+      recordScrapeFailure: vi.fn(async () => failed),
+    });
+    const { unitOfWork } = createUnitOfWork(repository, createProfiles());
+
+    await expect(
+      new FailScrapeJobUseCase(unitOfWork).execute(job.id, "user-1", {
+        claimedBy: "desktop-a",
+        reason,
+      }),
+    ).resolves.toBe("failed");
+    expect(repository.recordScrapeFailure).toHaveBeenCalledWith(
+      job.id,
+      expect.objectContaining({ reason }),
+    );
+    expect(repository.addEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Scraping failed",
+        body: "LinkedIn public fetch failed: 999 Request denied",
+        metadata: expect.objectContaining({ scrapeFailureCategory: "blocked" }),
+      }),
+    );
+  });
+
   it("rejects a failure report from another desktop claimant", async () => {
     const job = createTestJobApplication({ scrapeClaimedBy: "desktop-a" });
     const repository = createJobApplicationRepository({ findById: vi.fn(async () => job) });

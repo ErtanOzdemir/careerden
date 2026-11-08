@@ -467,6 +467,61 @@ describe("AppDetail notes", () => {
   });
 });
 
+describe("AppDetail LinkedIn import fallback", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("opens the prefilled paste form in one click when the LinkedIn scrape failed", async () => {
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      failureReason: "scrape_blocked: LinkedIn public fetch failed: 999 Request denied",
+      status: "failed",
+    });
+    const openAddJob = vi.fn((event: Event) => (event as CustomEvent).detail);
+    window.addEventListener("careerden:open-add-job", openAddJob);
+
+    renderAppDetail();
+
+    expect(await screen.findByText("LinkedIn blocked the import")).toBeInTheDocument();
+    expect(
+      screen.getByText("LinkedIn public fetch failed: 999 Request denied"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Paste the job description" }));
+
+    window.removeEventListener("careerden:open-add-job", openAddJob);
+    expect(openAddJob).toHaveReturnedWith({
+      method: "manual",
+      prefill: { jobUrl: "https://www.linkedin.com/jobs/view/1" },
+    });
+  });
+
+  it("keeps the generic failure banner when the job was scraped before failing", async () => {
+    vi.mocked(profilesApi.get).mockResolvedValue(createProfile());
+    vi.mocked(jobApplicationsApi.get).mockResolvedValue({
+      ...createApplicationDetail(),
+      failureReason: "AI analysis failed",
+      scrapeBundle: {
+        job: {
+          companyName: "Acme",
+          description: "Build React apps.",
+          raw: {},
+          requirements: [],
+          title: "Frontend Engineer",
+        },
+      },
+      status: "failed",
+    });
+
+    renderAppDetail();
+
+    expect(await screen.findByText("AI analysis failed")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Paste the job description" })).toBeNull();
+  });
+});
+
 function renderAppDetail() {
   return render(
     <MemoryRouter initialEntries={["/applications/job-1"]}>

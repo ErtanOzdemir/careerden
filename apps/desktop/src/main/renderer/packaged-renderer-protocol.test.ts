@@ -192,6 +192,23 @@ describe("packaged renderer protocol", () => {
     expect(onError).toHaveBeenCalledOnce();
   });
 
+  it("serves the renderer but no API when there is no backend to proxy to", async () => {
+    const fetchApi = vi.fn(async () => Response.json({ ok: true }));
+    const handler = createPackagedRendererProtocolHandler({
+      fetchApi,
+      fetchFile: vi.fn(async () => new Response("renderer")),
+      rendererDirectory: "/opt/careerden/renderer",
+    });
+
+    const api = await handler(new Request("careerden://app/api/profiles/me"));
+    const page = await handler(new Request("careerden://app/recovery"));
+
+    expect(api.status).toBe(503);
+    expect(fetchApi).not.toHaveBeenCalled();
+    expect(page.status).toBe(200);
+    expect(page.headers.get("Content-Security-Policy")).toBe(packagedRendererContentSecurityPolicy);
+  });
+
   it("preserves an API base path when constructing upstream URLs", () => {
     expect(
       buildProxiedApiUrl(

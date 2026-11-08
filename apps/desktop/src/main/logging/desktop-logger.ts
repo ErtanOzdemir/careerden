@@ -12,6 +12,7 @@ import type {
   StructuredLogEntry,
   StructuredLogger,
 } from "@careerden/infrastructure/logging";
+import { redactHomeDir } from "../startup-recovery/startup-diagnostics.js";
 import { RotatingLogFile } from "./rotating-log-file.js";
 
 export const desktopLogFileName = "careerden.log";
@@ -28,6 +29,8 @@ export interface DesktopLoggerOptions {
   maxFileBytes?: number;
   maxFiles?: number;
   now?: () => Date;
+  // Replaced with "~" in every value, so paths do not carry the user's account name.
+  homeDir?: string;
   // Also print entries to the console, for development.
   mirrorToConsole?: boolean;
 }
@@ -164,7 +167,9 @@ export class DesktopLogger {
   }
 
   private redact(value: string): string {
-    const redacted = redactSensitiveLogText(redactKnownSecrets(value, this.secrets));
+    const redacted = redactSensitiveLogText(
+      redactHomeDir(redactKnownSecrets(value, this.secrets), this.options.homeDir ?? ""),
+    );
     return redacted.length > maximumFieldValueLength
       ? `${redacted.slice(0, maximumFieldValueLength)}...[TRUNCATED]`
       : redacted;

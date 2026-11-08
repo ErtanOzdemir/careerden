@@ -174,6 +174,11 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 - **No Chromium cookie store in Unplugged.** The local edition reaches its backend with
   Node's `fetch`, because opening the encrypted cookie store would trigger a keychain prompt on
   every launch and the edition has no cookies to keep.
+- **A recovery screen instead of a restart loop.** A database that cannot be opened or migrated
+  fails the same way on every launch, so Unplugged shows a recovery screen for it rather than
+  restarting: restore a snapshot, open the data folder, copy diagnostics, or quit. Data from a
+  newer version is detected before migrating and asks for the latest release. Crashes after a
+  successful start still relaunch the app, but only twice within two minutes.
 - **Categorized scrape failures with a paste fallback.** LinkedIn changes its HTML and answers
   suspicious guest traffic with `999` or `429`, and a scraper fix only reaches users with a new
   release. Every scrape failure is therefore classified as `blocked`, `rate_limited`, `network`,

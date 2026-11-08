@@ -103,6 +103,15 @@ describe("DesktopLogger", () => {
     expect(log).toContain('"event":"api.unexpected_error"');
   });
 
+  it("replaces the home directory in paths", () => {
+    const logger = new DesktopLogger({ directory, homeDir: "/Users/ada" });
+
+    logger.exception("migration.failed", new Error("Cannot open /Users/ada/Library/data/pglite"));
+
+    expect(readLog()).toContain("Cannot open ~/Library/data/pglite");
+    expect(readLog()).not.toContain("/Users/ada");
+  });
+
   it("drops non-primitive, malformed, and reserved fields", () => {
     const logger = new DesktopLogger({ directory });
 

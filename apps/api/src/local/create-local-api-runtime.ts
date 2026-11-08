@@ -84,6 +84,8 @@ export interface LocalApiRuntimeOptions {
 export interface LocalApiRuntime {
   app: Express;
   db: Knex;
+  // The newest migration the database is at, for diagnostics.
+  lastMigration: string | undefined;
   close: () => Promise<void>;
 }
 
@@ -96,7 +98,12 @@ export async function createLocalApiRuntime(
   const log = options.logger ?? consoleStructuredLogger;
   // PGlite creates only its own directory, not missing parents.
   await mkdir(options.dataDir, { recursive: true });
-  const db = await prepareLocalDatabase(options.dataDir, options.dataSnapshots, log);
+  // Throws LocalDatabaseStartupError when the database cannot be opened or migrated.
+  const { db, lastMigration } = await prepareLocalDatabase(
+    options.dataDir,
+    options.dataSnapshots,
+    log,
+  );
   await db("user")
     .insert({ id: localUser.id, name: localUser.name, email: localUser.email })
     .onConflict("id")
@@ -262,6 +269,7 @@ export async function createLocalApiRuntime(
   return {
     app,
     db,
+    lastMigration,
     close: async () => {
       for (const interval of intervals) clearInterval(interval);
       await runner.close();

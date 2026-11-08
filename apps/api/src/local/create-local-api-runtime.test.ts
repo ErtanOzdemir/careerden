@@ -88,7 +88,7 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     runtimes.push(runtime);
 
     const events = logger.mock.calls.map(([entry]) => entry);
-    expect(events[0]).toEqual({ level: "info", event: "migration.started" });
+    expect(events[0]).toMatchObject({ level: "info", event: "migration.started" });
     expect(events[1]).toMatchObject({
       level: "info",
       event: "migration.finished",

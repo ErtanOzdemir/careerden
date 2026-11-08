@@ -17,6 +17,7 @@ import { DesktopUpdateGate } from "./desktop-updates/DesktopUpdateGate.js";
 import { DesktopUpdateProvider } from "./desktop-updates/DesktopUpdateProvider.js";
 import { isLocalEdition } from "./edition.js";
 import { AiProviderSettings, aiProviderPath } from "./settings/AiProviderSettings.js";
+import { StartupRecovery, startupRecoveryPath } from "./startup-recovery/StartupRecovery.js";
 
 export default function App() {
   const workspaceRoutes = (
@@ -35,12 +36,16 @@ export default function App() {
       <Routes>
         {isLocalEdition ? (
           // No sign-in, billing, or support routes: the local edition has no accounts or server.
-          <Route element={<LocalLayout />}>
-            {workspaceRoutes}
-            <Route path={aiProviderPath} element={<AiProviderSettings />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
+          <>
+            {/* Outside the layout, which reads the profile from a backend that is not running. */}
+            <Route path={startupRecoveryPath} element={<StartupRecovery />} />
+            <Route element={<LocalLayout />}>
+              {workspaceRoutes}
+              <Route path={aiProviderPath} element={<AiProviderSettings />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </>
         ) : (
           <>
             <Route path="/login" element={<Login />} />

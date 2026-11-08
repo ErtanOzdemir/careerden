@@ -137,6 +137,17 @@ review or download.
   entries carry metadata only and pass through `@careerden/infrastructure/logging` redaction;
   never log API keys, the per-launch session token, profile content, job posting text,
   prompts, model output, or file contents. The local edition's Settings toggles `debug` level.
+- Careerden Unplugged never restarts into a failure that will repeat. The backend classifies a
+  database PGlite cannot open, a failing migration, and data with migrations this build does
+  not ship (a downgrade) as `LocalDatabaseStartupError` and reports them as `start:data-error`;
+  any failure before `ready` rejects `LocalBackendProcess.start()` and never reaches
+  `onUnexpectedExit`. Startup failures show the `/recovery` route in the main window, outside
+  the local layout, with only the narrow `startupRecovery` preload bridge behind the main-window
+  sender policy. Unexpected exits after a successful start relaunch the app until the third
+  within two minutes, counted in `userData/local-backend-restarts.json`, which also shows
+  recovery. Restores pick a snapshot by the id the main process listed through
+  `LocalDataSnapshotSource`, never by path, move the current data folder to
+  `userData/backups/before-restore-<time>`, and relaunch.
 - First-run onboarding is shared by both editions. `OnboardingGate` shows the setup wizard in
   place of the app shell until `user_profiles.onboarding_completed_at` is set, and fails open
   when the profile cannot be read. The server stamps onboarding timestamps through

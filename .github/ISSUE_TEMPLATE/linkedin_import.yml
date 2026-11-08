@@ -1,0 +1,84 @@
+name: LinkedIn import problem
+description: A LinkedIn job link could not be imported, or imported with missing or wrong details.
+title: "[LinkedIn import]: "
+labels: ["bug", "area:linkedin"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Careerden imports public LinkedIn job postings without signing in to LinkedIn. Postings that are closed, private, or only visible when signed in cannot always be read.
+
+        > [!WARNING]
+        > Issues are public. **Do not share profile information, CV content, or API keys.**
+
+        As a workaround you can usually add the job through **Add job application → Manual entry** and paste the job details.
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition
+      options:
+        - Careerden Unplugged
+        - Careerden
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: job-url
+    attributes:
+      label: Job posting URL
+      description: The public LinkedIn job link you pasted. You can remove tracking parameters after the job ID.
+      placeholder: https://www.linkedin.com/jobs/view/1234567890
+    validations:
+      required: true
+  - type: textarea
+    id: error-message
+    attributes:
+      label: Error message
+      description: The exact message shown in the app, or describe which details were missing or wrong.
+    validations:
+      required: true
+  - type: dropdown
+    id: manual-entry
+    attributes:
+      label: Does manual entry work for this job?
+      description: Try **Add job application → Manual entry** with the same job details.
+      options:
+        - "Yes, manual entry works"
+        - "No, manual entry fails too"
+        - "I haven't tried it"
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostic-info
+    attributes:
+      label: Diagnostic info
+      description: |
+        Paste the app version. It is shown at the bottom of **Settings** ("Careerden · Version x.y.z"); Careerden Unplugged also shows it in the sidebar footer.
+      placeholder: "Version: 0.7.0"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Optional. For example, whether other LinkedIn jobs import fine.
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This report contains no profile information, CV content, or API keys.
+          required: true

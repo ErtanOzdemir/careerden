@@ -14,6 +14,7 @@ Thanks for your interest in contributing! This document provides guidelines and 
 - [Testing](#testing)
 - [Desktop Releases](#desktop-releases)
 - [Adding New Features](#adding-new-features)
+- [Reporting Issues](#reporting-issues)
 
 ## Code of Conduct
 
@@ -294,6 +295,16 @@ must never be moved or reused.
 1. Create the HTML template in `packages/infrastructure/src/documents/templates`.
 2. Add the template name to the renderer configuration.
 3. Test with sample data.
+
+## Reporting Issues
+
+Open issues through the forms under `.github/ISSUE_TEMPLATE/`: **Bug report**, **Feature
+request**, or **LinkedIn import problem**. Blank issues are disabled. The app's
+**Settings → Help → Report an issue** button opens the bug report form. Report security
+vulnerabilities privately as described in [SECURITY.md](SECURITY.md), never in a public issue.
+
+Issues are public: do not share profile information, CV content, or API keys. Maintainers
+triage with the `edition:unplugged`, `edition:cloud`, and `area:*` labels.
 
 ## Questions?
 

@@ -6,7 +6,11 @@ import type {
   UserProfileAccessRepository,
 } from "@careerden/domain";
 import type { RemoteImageFetcher } from "../../domain/scraping/remote-image-fetcher.js";
-import { assessProfileReadiness, canTransitionJobApplicationStatus } from "@careerden/domain";
+import {
+  assessProfileReadiness,
+  canTransitionJobApplicationStatus,
+  sanitizeScrapeBundleText,
+} from "@careerden/domain";
 import { ApplicationError } from "@careerden/application";
 import { enqueueStorageDeletions } from "@careerden/application";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
@@ -44,7 +48,7 @@ export class SubmitJobApplicationScrapeDataUseCase {
     const previousLogoFileId = await this.jobApplications.getCompanyLogoFileId(jobApplicationId);
     const logo = await storeCompanyLogo({
       jobApplicationId,
-      scrape: input.scrapeBundle,
+      scrape: sanitizeScrapeBundleText(input.scrapeBundle),
       remoteImages: this.remoteImages,
       storage: this.storage,
     });

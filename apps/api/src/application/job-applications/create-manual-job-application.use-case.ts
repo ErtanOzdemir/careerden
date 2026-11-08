@@ -9,7 +9,11 @@ import type {
   ScrapeBundle,
   UserProfileAccessRepository,
 } from "@careerden/domain";
-import { assessProfileReadiness } from "@careerden/domain";
+import {
+  assessProfileReadiness,
+  sanitizeScrapeBundleText,
+  stripInvisibleCharacters,
+} from "@careerden/domain";
 import { getAccessibleProfile } from "../profiles/profile-access.js";
 import { enqueueMatchAnalysisIfEnabled } from "./enqueue-match-analysis.js";
 import type { AiAvailability } from "../../domain/matching/ai-availability.js";
@@ -76,8 +80,8 @@ export class CreateManualJobApplicationUseCase {
           const jobApplication = await jobApplications.create({
             profileId: input.profileId,
             applicationPackPreferences: input.applicationPackPreferences,
-            companyName: input.companyName,
-            roleTitle: input.roleTitle,
+            companyName: stripInvisibleCharacters(input.companyName),
+            roleTitle: stripInvisibleCharacters(input.roleTitle),
             ...(input.jobLocation || input.roleType
               ? { roleType: input.jobLocation ?? input.roleType }
               : {}),
@@ -89,11 +93,13 @@ export class CreateManualJobApplicationUseCase {
             ...(input.lastResponseAt ? { lastResponseAt: input.lastResponseAt } : {}),
             ...(input.metadata ? { metadata: input.metadata } : {}),
           });
-          const scrapeBundle = createManualScrapeBundle(input, {
-            manualEntryId,
-            submittedAt,
-            logoFileId: storedLogo?.id,
-          });
+          const scrapeBundle = sanitizeScrapeBundleText(
+            createManualScrapeBundle(input, {
+              manualEntryId,
+              submittedAt,
+              logoFileId: storedLogo?.id,
+            }),
+          );
 
           await jobApplications.saveScrapeBundle(jobApplication.id, scrapeBundle);
           await jobApplications.updateStatus(jobApplication.id, "scraped");
@@ -144,6 +150,11 @@ function createManualScrapeBundle(
     manualEntryId: metadata.manualEntryId,
     submittedAt: metadata.submittedAt,
     ...(input.jobUrl ? { jobUrl: input.jobUrl } : {}),
+    // Keeps the pasted text as submitted when invisible characters are stripped from the normalized
+    // copy, so what was removed stays traceable.
+    ...(stripInvisibleCharacters(input.jobDescription) !== input.jobDescription
+      ? { jobDescription: input.jobDescription }
+      : {}),
   };
 
   return {

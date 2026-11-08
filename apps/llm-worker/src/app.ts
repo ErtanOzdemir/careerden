@@ -3,10 +3,12 @@ import {
   ExpireStaleCreditReservationsUseCase,
   ExtractJobRequirementsUseCase,
   FinalizeJobApplicationAnalysisFailureUseCase,
+  analysisFailureFromError,
 } from "@careerden/application";
 import { UnrecoverableError, Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
 import { RunMatchAnalysisUseCase } from "@careerden/application";
+import { AiProviderError } from "@careerden/domain";
 import type { JobApplicationQueuePayload } from "@careerden/domain";
 import {
   AiProviderFactory,
@@ -99,6 +101,15 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
       try {
         return await analyzeScrapedJob.execute(job.data);
       } catch (error) {
+        if (error instanceof AiProviderError) {
+          // Provider, status code, and category only: never the key, prompt, or response body.
+          console.warn("LLM worker AI provider call failed", {
+            event: "ai.provider_error",
+            jobApplicationId: job.data.jobApplicationId,
+            ...error.toFailure(),
+            retryable: error.retryable,
+          });
+        }
         const workerError = toBullMqWorkerError(error);
         const configuredAttempts = job.opts.attempts ?? 1;
         const isFinalAttempt = job.attemptsMade + 1 >= configuredAttempts;
@@ -106,7 +117,7 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
           await finalizeAnalysisFailure.execute({
             jobApplicationId: job.data.jobApplicationId,
             analysisAttemptId: job.data.analysisAttemptId,
-            reason: error instanceof Error ? error.message : "Unknown AI analysis error",
+            ...analysisFailureFromError(error),
           });
         }
         throw workerError;

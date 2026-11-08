@@ -19,6 +19,6 @@ export class OpenRouterAiProvider implements AiProvider {
       supportsStructuredOutputs: true,
     });
 
-    return generateWithOutputSchema(openrouter.chatModel(this.model), params);
+    return generateWithOutputSchema("openrouter", openrouter.chatModel(this.model), params);
   }
 }

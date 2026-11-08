@@ -24,6 +24,7 @@ export * from "./persistence/persistence-unit-of-work.js";
 export * from "./scraping/scraped-data.js";
 export * from "./scraping/scrape-failure.js";
 export * from "./matching/ai-provider.js";
+export * from "./matching/ai-provider-error.js";
 export * from "./matching/duration-claims.js";
 export * from "./matching/fallback-cover-letter.js";
 export * from "./matching/fallback-enhancement.js";

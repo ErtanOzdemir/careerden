@@ -14,10 +14,11 @@ import {
   GenerateDocumentsUseCase,
   GenerateRequestedApplicationPackUseCase,
   RunMatchAnalysisUseCase,
+  analysisFailureFromError,
   restoreFollowUpReminders,
 } from "@careerden/application";
 import type { AiGenerateParams, AiProvider, DocumentRenderer } from "@careerden/domain";
-import { outboxEventTypes } from "@careerden/domain";
+import { AiProviderError, outboxEventTypes } from "@careerden/domain";
 import type {
   AiProviderSelection,
   AiProviderSelectionSource,
@@ -40,6 +41,7 @@ import {
   PostgresReminderOutboxDispatcher,
   PostgresUserProfileRepository,
   ResolvingAiProvider,
+  defaultRetryDelayMs,
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
@@ -160,23 +162,36 @@ export async function createLocalApiRuntime(
     unitOfWork,
   );
   const failApplicationPack = new FailApplicationPackGenerationUseCase(unitOfWork);
+  // A bad key, an empty balance, or a removed model fails the same way on every try.
   const isUnrecoverable = (error: unknown) =>
     error instanceof ApplicationError ||
     error instanceof AiProviderNotConfiguredError ||
-    error instanceof InvalidOutboxPayloadError;
+    error instanceof InvalidOutboxPayloadError ||
+    (error instanceof AiProviderError && !error.retryable);
 
   const handlers: InProcessOutboxHandler[] = [
     {
       name: "analysis",
       types: [outboxEventTypes.jobApplicationAnalysisRequested],
       concurrency: 2,
-      handle: (event) => analyze.execute(analysisPayload(event)),
+      handle: async (event) => {
+        try {
+          await analyze.execute(analysisPayload(event));
+        } catch (error) {
+          logAiProviderError(error);
+          throw error;
+        }
+      },
       isUnrecoverable,
+      // The SDK already retried within seconds; a rate limit needs minutes to lift.
+      retryDelayMs: (attempt, error) =>
+        error instanceof AiProviderError && error.category === "rate_limited"
+          ? 60_000 * 2 ** Math.max(0, attempt - 1)
+          : defaultRetryDelayMs(attempt),
       onTerminalFailure: async (event, error) => {
-        const payload = analysisPayload(event);
         await finalizeAnalysisFailure.execute({
-          ...payload,
-          reason: error instanceof Error ? error.message : "Unknown AI analysis error",
+          ...analysisPayload(event),
+          ...analysisFailureFromError(error),
         });
       },
     },
@@ -263,9 +278,25 @@ class ConfigurationAwareAiProvider implements AiProvider {
       if (error instanceof AiProviderNotConfiguredError) {
         throw new ApplicationError("ai_provider_not_configured", error.message);
       }
+      if (error instanceof AiProviderError) {
+        logAiProviderError(error);
+        throw new ApplicationError("ai_provider_error", error.message, {
+          aiFailure: error.toFailure(),
+        });
+      }
       throw error;
     }
   }
+}
+
+// Provider, status code, and category only: never the key, the prompt, or the provider's response.
+function logAiProviderError(error: unknown): void {
+  if (!(error instanceof AiProviderError)) return;
+  console.warn("AI provider call failed", {
+    event: "ai.provider_error",
+    ...error.toFailure(),
+    retryable: error.retryable,
+  });
 }
 
 class InvalidOutboxPayloadError extends Error {

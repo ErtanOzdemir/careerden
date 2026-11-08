@@ -19,7 +19,7 @@ import type {
   UpdateJobApplicationFollowUpInput,
   UpdateJobApplicationTrackingInput,
 } from "@careerden/domain";
-import type { CreateJobApplicationInput } from "@careerden/domain";
+import type { AiProviderFailure, CreateJobApplicationInput } from "@careerden/domain";
 import type { JobApplicationStatus } from "@careerden/domain";
 import { normalizeApplicationPackPreferences } from "@careerden/domain";
 import { canArchiveJobApplication } from "@careerden/domain";
@@ -122,6 +122,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...claimable,
       status: "scraping",
       failureReason: undefined,
+      aiFailure: undefined,
       scrapeClaimedBy: input.claimedBy,
       scrapeClaimExpiresAt: claimExpiresAt,
       scrapeAttemptCount: claimable.scrapeAttemptCount + 1,
@@ -180,6 +181,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status: isFinalFailure ? "failed" : "queued",
       failureReason: input.reason,
+      aiFailure: undefined,
       scrapeClaimedBy: undefined,
       scrapeClaimExpiresAt: undefined,
       nextScrapeAttemptAt: isFinalFailure ? undefined : new Date(now.getTime() + input.backoffMs),
@@ -246,6 +248,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status: "queued",
       failureReason: undefined,
+      aiFailure: undefined,
       analysisAttemptId: undefined,
       scrapeClaimedBy: undefined,
       scrapeClaimExpiresAt: undefined,
@@ -276,6 +279,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status: "scraped",
       failureReason: undefined,
+      aiFailure: undefined,
       analysisAttemptId: undefined,
       scrapeClaimedBy: undefined,
       scrapeClaimExpiresAt: undefined,
@@ -359,7 +363,12 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     return true;
   }
 
-  async failAnalysis(id: string, attemptId: string, reason: string): Promise<boolean> {
+  async failAnalysis(
+    id: string,
+    attemptId: string,
+    reason: string,
+    aiFailure?: AiProviderFailure,
+  ): Promise<boolean> {
     const jobApplication = this.jobApplications.get(id);
     if (
       !jobApplication ||
@@ -369,7 +378,12 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     ) {
       return false;
     }
-    this.jobApplications.set(id, { ...jobApplication, status: "failed", failureReason: reason });
+    this.jobApplications.set(id, {
+      ...jobApplication,
+      status: "failed",
+      failureReason: reason,
+      aiFailure,
+    });
     return true;
   }
 
@@ -396,6 +410,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...jobApplication,
       status: "generating_documents",
       failureReason: undefined,
+      aiFailure: undefined,
       documentGenerationAttemptId: attemptId,
     });
     return { started: true, ...(supersededAttemptId ? { supersededAttemptId } : {}) };
@@ -425,7 +440,12 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
     ) {
       return false;
     }
-    this.jobApplications.set(id, { ...jobApplication, status: "failed", failureReason: reason });
+    this.jobApplications.set(id, {
+      ...jobApplication,
+      status: "failed",
+      failureReason: reason,
+      aiFailure: undefined,
+    });
     return true;
   }
 
@@ -444,6 +464,7 @@ export class InMemoryJobApplicationRepository implements JobApplicationRepositor
       ...existing,
       status,
       failureReason,
+      aiFailure: undefined,
       scrapeClaimedBy: status === "failed" ? undefined : existing.scrapeClaimedBy,
       scrapeClaimExpiresAt: status === "failed" ? undefined : existing.scrapeClaimExpiresAt,
       nextScrapeAttemptAt: status === "failed" ? undefined : existing.nextScrapeAttemptAt,

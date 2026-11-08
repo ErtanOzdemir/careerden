@@ -11,6 +11,6 @@ export class DeepSeekAiProvider implements AiProvider {
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const deepseek = createDeepSeek({ apiKey: this.apiKey });
 
-    return generateWithOutputSchema(deepseek(this.model), params);
+    return generateWithOutputSchema("deepseek", deepseek(this.model), params);
   }
 }

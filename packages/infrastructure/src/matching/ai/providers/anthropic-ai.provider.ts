@@ -11,6 +11,6 @@ export class AnthropicAiProvider implements AiProvider {
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const anthropic = createAnthropic({ apiKey: this.apiKey });
 
-    return generateWithOutputSchema(anthropic(this.model), params);
+    return generateWithOutputSchema("anthropic", anthropic(this.model), params);
   }
 }

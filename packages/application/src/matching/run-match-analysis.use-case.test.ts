@@ -254,6 +254,35 @@ describe("RunMatchAnalysisUseCase", () => {
     ]);
   });
 
+  it("records the model that produced the analysis", async () => {
+    const aiProvider: AiProvider = {
+      async generate<T>(params: AiGenerateParams<T>): Promise<T> {
+        params.onModelUsed?.({ provider: "openai", model: "gpt-4o-mini" });
+        return params.outputSchema.parse(completeResponse());
+      },
+    };
+
+    const analysis = await new RunMatchAnalysisUseCase(aiProvider).execute({
+      jobApplicationId: "job-1",
+      profile: createProfile(),
+      scrape: createScrape(),
+    });
+
+    expect(analysis.generatedBy).toEqual({ provider: "openai", model: "gpt-4o-mini" });
+  });
+
+  it("leaves the model unset when the provider does not report one", async () => {
+    const { aiProvider } = createAiProvider([completeResponse()]);
+
+    const analysis = await new RunMatchAnalysisUseCase(aiProvider).execute({
+      jobApplicationId: "job-1",
+      profile: createProfile(),
+      scrape: createScrape(),
+    });
+
+    expect(analysis).not.toHaveProperty("generatedBy");
+  });
+
   it("never returns an empty cover letter", async () => {
     const { aiProvider } = createAiProvider([
       {

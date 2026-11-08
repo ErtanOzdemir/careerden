@@ -18,8 +18,10 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createAiProvider } from "@careerden/infrastructure";
 import { registerAiCredentialsIpc } from "./ai-credentials/ai-credentials-ipc.js";
 import { AiCredentialsStore } from "./ai-credentials/ai-credentials-store.js";
+import { AiModelCatalogManager } from "./ai-models/ai-model-catalog-manager.js";
 import { getDesktopAppIdentity } from "./desktop-app-identity.js";
 import { loadDesktopRuntimeConfig, type DesktopRuntimeConfig } from "./desktop-runtime-config.js";
 import { IpcHandlerRegistry } from "./ipc-handlers-registry.js";
@@ -152,6 +154,7 @@ async function initializeDesktopRuntime(): Promise<void> {
 
   const { desktopUpdateRepository } = runtimeConfig;
   let aiCredentialsStore: AiCredentialsStore | undefined;
+  let aiModelCatalog: AiModelCatalogManager | undefined;
   let apiBaseUrl: string;
   let apiRequestHeaders: Record<string, string> = {};
   // Registered before the local backend starts, so the recovery screen can use them too.
@@ -170,8 +173,10 @@ async function initializeDesktopRuntime(): Promise<void> {
     });
     startupRecovery = createStartupRecovery(localRestartGuard);
     registerStartupRecoveryIpc(ipcHandlers, startupRecovery);
+    aiModelCatalog = createAiModelCatalogManager(desktopUpdateRepository);
+    await aiModelCatalog.start();
     try {
-      const backend = await startLocalBackend(runtimeConfig, aiCredentialsStore);
+      const backend = await startLocalBackend(runtimeConfig, aiCredentialsStore, aiModelCatalog);
       apiBaseUrl = backend.baseUrl;
       apiRequestHeaders = backend.headers;
     } catch (error) {
@@ -343,7 +348,13 @@ async function initializeDesktopRuntime(): Promise<void> {
     },
   });
 
-  if (aiCredentialsStore) registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore);
+  if (aiCredentialsStore) {
+    const catalog = aiModelCatalog;
+    registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore, {
+      createProvider: (selection) =>
+        createAiProvider(catalog ? catalog.withModels(selection) : selection),
+    });
+  }
   if (localBackend) registerLocalDataIpc(ipcHandlers, createLocalDataIpcOptions(localBackend));
   ipcHandlers
     .register("job-application-queued", () => localScrapingWorker?.wake())
@@ -543,9 +554,49 @@ async function shutdownDesktopRuntime(): Promise<void> {
   localBackend = null;
 }
 
+// Model ids are read from the default branch rather than a release asset, so they can change
+// without a release. Builds without an update repository use the embedded defaults.
+function createAiModelCatalogManager(updateRepository: string | undefined): AiModelCatalogManager {
+  const cachePath = join(app.getPath("userData"), "ai-models-cache.json");
+  const catalogUrl = updateRepository
+    ? `https://raw.githubusercontent.com/${updateRepository}/HEAD/apps/desktop/ai-models.json`
+    : undefined;
+
+  return new AiModelCatalogManager({
+    ...(catalogUrl
+      ? {
+          fetchCatalog: async () => {
+            // The local edition keeps Chromium's cookie store closed, so this uses Node's fetch.
+            const response = await fetch(catalogUrl, {
+              headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+              signal: AbortSignal.timeout(10_000),
+            });
+            if (!response.ok) {
+              throw new Error(`AI model catalog request failed with HTTP ${response.status}`);
+            }
+            return response.json();
+          },
+        }
+      : {}),
+    readCachedCatalog: async () => {
+      try {
+        return JSON.parse(await readFile(cachePath, "utf8")) as unknown;
+      } catch (error) {
+        if (isNodeErrorWithCode(error, "ENOENT")) return undefined;
+        throw error;
+      }
+    },
+    writeCachedCatalog: async (catalog) => {
+      await mkdir(app.getPath("userData"), { recursive: true });
+      await writeFile(cachePath, `${JSON.stringify(catalog, null, 2)}\n`, "utf8");
+    },
+  });
+}
+
 async function startLocalBackend(
   config: Extract<DesktopRuntimeConfig, { edition: "local" }>,
   aiCredentialsStore: AiCredentialsStore,
+  aiModelCatalog: AiModelCatalogManager,
 ): Promise<{ baseUrl: string; headers: Record<string, string> }> {
   const sessionToken =
     config.developmentBackend?.sessionToken ?? randomBytes(32).toString("base64url");
@@ -562,7 +613,10 @@ async function startLocalBackend(
     logFile: join(app.getPath("userData"), "logs", "local-backend.log"),
     port: config.developmentBackend?.port ?? 0,
     renderPdf: (html) => pdfRenderer.htmlToPdf(html),
-    getAiSelection: () => aiCredentialsStore.currentSelection(),
+    getAiSelection: async () => {
+      const selection = await aiCredentialsStore.currentSelection();
+      return selection ? aiModelCatalog.withModels(selection) : null;
+    },
     onUnexpectedExit: (code) => {
       void handleUnexpectedLocalBackendExit(code);
     },

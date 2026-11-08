@@ -5,7 +5,7 @@ import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 export class DeepSeekAiProvider implements AiProvider {
   constructor(
     private readonly apiKey: string,
-    private readonly model = "deepseek-chat",
+    readonly model: string,
   ) {}
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {

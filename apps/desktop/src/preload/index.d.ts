@@ -59,6 +59,16 @@ export interface DesktopLoggingAPI {
   setLevel: (level: DesktopLogLevel) => Promise<DesktopLogLevel>;
 }
 
+export type DiagnosticsCopyResult = { status: "copied" } | { status: "error" };
+export type OpenLogFolderResult = { status: "opened" } | { status: "error" };
+
+export interface DesktopDiagnosticsAPI {
+  // Copies a Markdown diagnostics summary to the clipboard in the main process.
+  copyDiagnostics: () => Promise<DiagnosticsCopyResult>;
+  // Opens userData/logs in the operating system's file manager.
+  openLogFolder: () => Promise<OpenLogFolderResult>;
+}
+
 export interface LocalBackupSummary {
   createdAt: string;
   appVersion: string;
@@ -112,8 +122,8 @@ export interface StartupRecoveryAPI {
   // Relaunches the app on success.
   restore: (snapshotId: string) => Promise<StartupRecoveryRestoreResult>;
   openDataFolder: () => Promise<void>;
-  // Copies the diagnostics to the clipboard and returns them.
-  copyDiagnostics: () => Promise<string>;
+  // Copies the diagnostics summary to the clipboard in the main process.
+  copyDiagnostics: () => Promise<void>;
   quit: () => Promise<void>;
 }
 
@@ -124,6 +134,8 @@ export interface ElectronAPI {
   aiCredentials?: AiCredentialsAPI;
   // Present only in the local edition.
   logging?: DesktopLoggingAPI;
+  // Present only in the local edition.
+  diagnostics?: DesktopDiagnosticsAPI;
   // Present only in the local edition.
   localData?: LocalDataAPI;
   startupRecovery?: StartupRecoveryAPI;

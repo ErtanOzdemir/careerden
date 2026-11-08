@@ -137,6 +137,10 @@ review or download.
   entries carry metadata only and pass through `@careerden/infrastructure/logging` redaction;
   never log API keys, the per-launch session token, profile content, job posting text,
   prompts, model output, or file contents. The local edition's Settings toggles `debug` level.
+  Its **Copy diagnostics** builds a Markdown summary (versions, OS, PGlite engine and last
+  migration, AI provider name, Linux `safeStorage` backend, update status, last 50 log lines) in
+  the main process, re-redacts it, and writes it to the clipboard; the recovery screen copies the
+  same summary. Diagnostics and open-log-folder IPC take no arguments and return only a status.
 - Careerden Unplugged exports its data as one zip archive with the `.careerden` extension: `manifest.json` (format version, schema
   version, last migration, app version, creation time), one Postgres-rendered JSON file per
   table, and the stored files. AI keys live outside the data folder and are never included.

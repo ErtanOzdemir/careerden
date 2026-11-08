@@ -218,6 +218,9 @@ renderer. New routes and use cases belong in the shared composition, so both edi
   so rotation never races between processes. Every entry carries metadata only, such as event
   names, status codes, provider names, and trace IDs, and passes through the same redaction rules
   as the API's error logs plus the session token and API keys the main process holds.
+  Settings and the recovery screen copy a Markdown diagnostics summary with versions, the
+  database migration, the AI provider's name, update status, and the last 50 log lines, built
+  and copied in the main process so the renderer never receives log contents or paths.
 - **One version for both editions.** A single `vX.Y.Z` tag builds both editions into one draft
   release. Distinct artifact names and updater channels (`latest*.yml` and `local*.yml`) keep
   each installation on its own edition.

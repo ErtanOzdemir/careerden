@@ -166,10 +166,16 @@ export class DesktopLogger {
     return sanitized;
   }
 
-  private redact(value: string): string {
-    const redacted = redactSensitiveLogText(
+  // Applies the log file's redaction rules, including registered secrets, to text that leaves the
+  // main process in another way, such as the copied diagnostics summary.
+  redactText(value: string): string {
+    return redactSensitiveLogText(
       redactHomeDir(redactKnownSecrets(value, this.secrets), this.options.homeDir ?? ""),
     );
+  }
+
+  private redact(value: string): string {
+    const redacted = this.redactText(value);
     return redacted.length > maximumFieldValueLength
       ? `${redacted.slice(0, maximumFieldValueLength)}...[TRUNCATED]`
       : redacted;

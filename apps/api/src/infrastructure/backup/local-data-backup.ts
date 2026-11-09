@@ -16,6 +16,7 @@ import {
   localBackupTableRowsSchema,
   type LocalBackupManifest,
 } from "../../contracts/backup/local-backup-manifest.schema.js";
+import { recordPgliteEngine } from "../persistence/pglite-engine.js";
 import { listDataTables, readTableRowsJson, replaceTableRows } from "./postgres-table-rows.js";
 import { readZipArchive, writeZipArchive, ZipArchiveError } from "./zip-archive.js";
 
@@ -109,11 +110,7 @@ export async function prepareLocalDataImport(
   await rm(options.stagingDir, { recursive: true, force: true });
   await mkdir(options.stagingDir, { recursive: true });
   try {
-    await restoreDatabase(
-      join(options.stagingDir, localDataLayout.database),
-      manifest,
-      rowsByTable,
-    );
+    await restoreDatabase(options.stagingDir, manifest, rowsByTable);
     const filesDir = join(options.stagingDir, localDataLayout.files);
     await mkdir(filesDir, { recursive: true });
     for (const [name, body] of files) {
@@ -193,12 +190,13 @@ function parseTables(
   return rowsByTable;
 }
 
+// The staged database is written by the bundled engine, so the staging folder records it.
 async function restoreDatabase(
-  databaseDir: string,
+  stagingDir: string,
   manifest: LocalBackupManifest,
   rowsByTable: Map<string, string>,
 ): Promise<void> {
-  const db = createPgliteDb(databaseDir);
+  const db = createPgliteDb(join(stagingDir, localDataLayout.database));
   try {
     await runPostgresMigrationsThrough(db, manifest.lastMigration);
     const tables = await listDataTables(db);
@@ -213,6 +211,7 @@ async function restoreDatabase(
       throw damaged("Its data could not be restored.", error);
     }
     await runPostgresMigrations(db);
+    await recordPgliteEngine(stagingDir, db);
   } finally {
     await db.destroy();
   }

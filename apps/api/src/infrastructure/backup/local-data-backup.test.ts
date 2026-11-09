@@ -11,9 +11,11 @@ import {
   createPgliteDb,
   getLatestAppliedPostgresMigration,
   listPostgresMigrations,
+  pgliteVersion,
   runPostgresMigrations,
   runPostgresMigrationsThrough,
 } from "@careerden/infrastructure";
+import { readPgliteEngine } from "../persistence/pglite-engine.js";
 import { exportLocalData, LocalBackupError, prepareLocalDataImport } from "./local-data-backup.js";
 
 const createdAt = new Date("2026-11-01T09:30:00.000Z");
@@ -180,6 +182,8 @@ describe("local data backup", { timeout: 60_000 }, () => {
       contentType: "application/pdf",
       body: Buffer.from("%PDF-1.7 cv"),
     });
+    // The staged folder names the engine that wrote it, like a folder the app opened itself.
+    await expect(readPgliteEngine(stagingDir)).resolves.toMatchObject({ pglite: pgliteVersion });
   });
 
   it("upgrades an archive from an older schema with the remaining migrations", async () => {

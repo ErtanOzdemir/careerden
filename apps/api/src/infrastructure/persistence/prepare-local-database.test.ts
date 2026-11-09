@@ -3,10 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Knex } from "knex";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createPgliteDb } from "@careerden/infrastructure";
+import { createPgliteDb, pgliteVersion } from "@careerden/infrastructure";
+import type { StructuredLogEntry } from "@careerden/infrastructure";
 import { writeLastOpenedVersion } from "./last-opened-version.js";
 import { LocalDatabaseStartupError } from "./local-database-startup.js";
 import { LocalDataSnapshotSpaceError } from "./local-data-snapshots.js";
+import { pgliteEngineFile, readPgliteEngine } from "./pglite-engine.js";
 import { prepareLocalDatabase, type LocalDataSnapshotPolicy } from "./prepare-local-database.js";
 
 // Opens real PGlite databases on disk, which takes a few seconds per open in a parallel run.
@@ -81,6 +83,31 @@ describe("prepareLocalDatabase", { timeout: 60_000 }, () => {
     await expect(recordedVersion()).resolves.toBe("0.8.0");
   });
 
+  it("records the bundled PGlite engine next to the data once it opens", async () => {
+    const events: StructuredLogEntry[] = [];
+    const { db } = await prepareLocalDatabase(dataDir, policy("0.8.0"), (entry) => {
+      events.push(entry);
+    });
+    await close(db);
+    await close(await launch("0.8.0"));
+
+    await expect(readPgliteEngine(dataDir)).resolves.toEqual({
+      pglite: pgliteVersion,
+      postgres: expect.stringMatching(/^\d+\.\d+/),
+      recordedAt: expect.any(String),
+    });
+    expect(events.filter((entry) => entry.event === "database.engine_recorded")).toEqual([
+      expect.objectContaining({ fields: { previousPglite: null, previousPostgres: null } }),
+    ]);
+  });
+
+  it("records the engine for data opened without a snapshot policy", async () => {
+    const { db } = await prepareLocalDatabase(dataDir);
+    open.push(db);
+
+    await expect(readPgliteEngine(dataDir)).resolves.toMatchObject({ pglite: pgliteVersion });
+  });
+
   it("snapshots before a failing migration and reports it for the recovery screen", async () => {
     await close(await launch("0.7.0"));
     const db = await launch("0.7.0");
@@ -129,6 +156,7 @@ describe("prepareLocalDatabase", { timeout: 60_000 }, () => {
       ),
     ]);
 
+    await expect(readdir(join(backupsDir, snapshot!))).resolves.toContain(pgliteEngineFile);
     const copy = createPgliteDb(join(backupsDir, snapshot!, "pglite"));
     open.push(copy);
     await expect(copy("legacy_notes").select("note")).resolves.toEqual([

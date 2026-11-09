@@ -241,6 +241,13 @@ review or download.
   copies `data/pglite` and `data/files` to `userData/backups/before-migration-<time>/` while
   PGlite is closed, keeps the newest three, and refuses to migrate without free space for the
   copy. The version record is written only after migrations succeed.
+- PGlite is pinned to the exact `pgliteVersion` exported by `@careerden/infrastructure`, and a test
+  fails when a `package.json` drifts from it or uses a range. Never let a tool upgrade PGlite
+  automatically: a major release can change the PostgreSQL data format. After opening and
+  migrating, and after staging an import, the local edition writes `data/pglite-engine.json` with
+  the PGlite and PostgreSQL versions; snapshots copy it. A PGlite upgrade that changes the format
+  must ship the dump/restore migration and checklist in
+  [docs/architecture.md](docs/architecture.md#architecture-decisions).
 - Every released version keeps a Careerden Unplugged upgrade fixture, a SQL dump with stored
   files under `apps/api/test/fixtures/pglite/v<version>/`, built at that release's schema by
   `pnpm --filter @careerden/api-app fixture:pglite`. `pnpm test` migrates each one. Released

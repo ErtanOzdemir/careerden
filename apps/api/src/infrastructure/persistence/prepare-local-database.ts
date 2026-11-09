@@ -6,6 +6,7 @@ import type { StructuredLogger } from "@careerden/infrastructure";
 import { readLastOpenedVersion, writeLastOpenedVersion } from "./last-opened-version.js";
 import { openLocalDatabase } from "./local-database-startup.js";
 import { createLocalDataSnapshot, pruneLocalDataSnapshots } from "./local-data-snapshots.js";
+import { recordPgliteEngine } from "./pglite-engine.js";
 
 export const defaultKeptLocalDataSnapshots = 3;
 
@@ -27,14 +28,19 @@ export interface LocalDataSnapshotPolicy {
 // taken while the database is closed and before any migration runs. The version is recorded only
 // after the migrations succeed, so a failed upgrade snapshots again on the next attempt.
 // Opening and migrating go through openLocalDatabase, so failures there throw
-// LocalDatabaseStartupError for the recovery screen.
+// LocalDatabaseStartupError for the recovery screen. Once open, the bundled PGlite engine is
+// recorded next to the data, so a future engine upgrade knows which format the data is in.
 export async function prepareLocalDatabase(
   dataDir: string,
   snapshots?: LocalDataSnapshotPolicy,
   logger?: StructuredLogger,
 ): Promise<{ db: Knex; lastMigration: string | undefined }> {
   const pgliteDir = join(dataDir, "pglite");
-  if (!snapshots) return openLocalDatabase(pgliteDir, undefined, logger);
+  if (!snapshots) {
+    return withRecordedEngine(dataDir, await openLocalDatabase(pgliteDir, undefined, logger), {
+      logger,
+    });
+  }
 
   const log = snapshots.log ?? (() => undefined);
   const previous = await readLastOpenedVersion(dataDir);
@@ -84,7 +90,10 @@ export async function prepareLocalDatabase(
     }
   }
 
-  const opened = await openLocalDatabase(pgliteDir, db, logger);
+  const opened = await withRecordedEngine(dataDir, await openLocalDatabase(pgliteDir, db, logger), {
+    logger,
+    now: snapshots.now,
+  });
   if (previous?.version !== snapshots.appVersion) {
     try {
       await writeLastOpenedVersion(dataDir, snapshots.appVersion, snapshots.now?.());
@@ -94,6 +103,32 @@ export async function prepareLocalDatabase(
     }
   }
   return opened;
+}
+
+// Records the engine for a database that opened and migrated, closing it if the record cannot be
+// written.
+async function withRecordedEngine<T extends { db: Knex }>(
+  dataDir: string,
+  opened: T,
+  options: { logger?: StructuredLogger | undefined; now?: (() => Date) | undefined },
+): Promise<T> {
+  try {
+    const { changed, previous } = await recordPgliteEngine(dataDir, opened.db, options.now?.());
+    if (changed) {
+      options.logger?.({
+        level: "info",
+        event: "database.engine_recorded",
+        fields: {
+          previousPglite: previous?.pglite ?? null,
+          previousPostgres: previous?.postgres ?? null,
+        },
+      });
+    }
+    return opened;
+  } catch (error) {
+    await opened.db.destroy();
+    throw error;
+  }
 }
 
 async function exists(path: string): Promise<boolean> {

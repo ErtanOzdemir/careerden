@@ -198,6 +198,43 @@ renderer. New routes and use cases belong in the shared composition, so both edi
   is exported to the `backups` folder beside it before the two are swapped, so a damaged archive
   or a failed import never touches the existing data. AI keys are not part of a backup; the user
   enters them again on the new device.
+- **A recorded PGlite engine, upgraded by dump and restore.** A PGlite major release can embed a
+  newer PostgreSQL whose data directory the previous release cannot open (0.2 runs PostgreSQL 16,
+  0.3 runs 17), so bumping the dependency without a migration would lock every Unplugged user
+  out of their data. PGlite is therefore pinned to an exact version, recorded as `pgliteVersion`
+  in `@careerden/infrastructure`; a test fails when either `package.json` drifts from it or uses a
+  range. After the database opens and migrates, and after an import is staged, the app writes
+  `data/pglite-engine.json` with the PGlite release and the embedded PostgreSQL version, such as
+  `{ "pglite": "0.5.10", "postgres": "17.5", "recordedAt": "…" }`. The record lives next to
+  `pglite`, so snapshots and restores carry it with the data it describes. No dependency bot is
+  configured; any that is added must ignore `@electric-sql/pglite`, `@electric-sql/pglite-tools`,
+  and `knex-pglite`.
+
+  When a release has to move to a PGlite whose data format changed, it ships this migration:
+  1. Keep the previous engine as an aliased dependency, for example
+     `"pglite-05": "npm:@electric-sql/pglite@0.5.10"`, alongside the new one.
+  2. Before `prepareLocalDatabase` opens the data, compare the record with the bundled engine.
+     A missing record means the data predates it and was written by PGlite 0.5.10.
+  3. On a mismatch, take the usual pre-migration snapshot, open the data with the old engine,
+     dump it with `pg_dump` from the matching `@electric-sql/pglite-tools`, and restore the dump
+     with the new engine into `data/pglite.next`.
+  4. Verify the copy by comparing the row count of every table in both databases. Only then move
+     the old directory to `data/pglite.pre-<new pglite version>`, kept rather than deleted,
+     rename `pglite.next` to `pglite`, and write the new record.
+  5. Any failure leaves `pglite` untouched, removes `pglite.next`, and throws
+     `LocalDatabaseStartupError` with `database-open`, so the recovery screen offers the
+     snapshot instead of a restart loop.
+
+  The pull request that upgrades PGlite must:
+  - [ ] bump `pgliteVersion` and both `package.json` files together, and note the embedded
+        PostgreSQL version from the PGlite release notes;
+  - [ ] state whether the data directory format changed, and if it did, add the migration above;
+  - [ ] pass `pnpm test`, which migrates every released fixture under
+        `apps/api/test/fixtures/pglite/`, and open a data folder written by the previous release
+        in a packaged Unplugged build;
+  - [ ] describe the rollback: the snapshot and `pglite.pre-<version>` folder that the previous
+        release can still open, and how a user returns to it.
+
 - **A recovery screen instead of a restart loop.** A database that cannot be opened or migrated
   fails the same way on every launch, so Unplugged shows a recovery screen for it rather than
   restarting: restore a snapshot, open the data folder, copy diagnostics, or quit. Data from a

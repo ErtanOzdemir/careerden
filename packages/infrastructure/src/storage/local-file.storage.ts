@@ -73,6 +73,16 @@ export class LocalFileStorage implements FileStorage {
     };
   }
 
+  // Like get, but resolves null for a missing file instead of rejecting with ENOENT.
+  async find(fileId: string): Promise<StoredFileContent | null> {
+    try {
+      return await this.get(fileId);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
   async getSignedUrl(fileId: string): Promise<string> {
     await stat(this.resolvePath(fileId));
     const expires = String(this.now().getTime() + this.urlTtlMs);

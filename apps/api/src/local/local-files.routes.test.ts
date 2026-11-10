@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LocalFileStorage } from "@careerden/infrastructure";
+import { ReadSignedFileUseCase } from "../application/storage/read-signed-file.use-case.js";
+import { errorHandler } from "../middleware/error-handler.js";
 import { createLocalFileRouter } from "./local-files.routes.js";
 
 describe("createLocalFileRouter", () => {
@@ -24,7 +26,11 @@ describe("createLocalFileRouter", () => {
 
   async function serve(storage: LocalFileStorage): Promise<string> {
     const app = express();
-    app.use("/files", createLocalFileRouter(storage));
+    app.use(
+      "/files",
+      createLocalFileRouter({ readSignedFile: new ReadSignedFileUseCase(storage) }),
+    );
+    app.use(errorHandler);
     server = app.listen(0);
     await new Promise<void>((resolve) => server!.once("listening", () => resolve()));
     return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -67,8 +73,13 @@ describe("createLocalFileRouter", () => {
       fetch(`${baseUrl}${path.replace(/signature=[^&]+/, "signature=forged")}`),
     ]);
 
-    expect(unsigned.status).toBe(403);
-    expect(tampered.status).toBe(403);
+    for (const response of [unsigned, tampered]) {
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({
+        code: "forbidden",
+        error: "Invalid or expired file link",
+      });
+    }
   });
 
   it("returns 404 for a signed link whose file was deleted", async () => {
@@ -82,6 +93,9 @@ describe("createLocalFileRouter", () => {
     const path = (await storage.getSignedUrl(stored.id)).replace(/^\/api/, "");
     await storage.delete(stored.id);
 
-    expect((await fetch(`${baseUrl}${path}`)).status).toBe(404);
+    const response = await fetch(`${baseUrl}${path}`);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ code: "not_found", error: "File not found" });
   });
 });

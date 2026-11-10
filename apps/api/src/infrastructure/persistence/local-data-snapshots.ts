@@ -2,11 +2,12 @@ import type { Dirent } from "node:fs";
 import { cp, lstat, mkdir, readdir, rename, rm, stat, statfs, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lastOpenedVersionFile } from "./last-opened-version.js";
+import { pgliteEngineFile } from "./pglite-engine.js";
 
 // What a snapshot copies out of the data folder. `pglite` is the database, `files` the stored
-// documents and images, and the version record makes a restored folder report the version it
-// came from.
-const snapshotEntries = ["pglite", "files", lastOpenedVersionFile] as const;
+// documents and images, the version record makes a restored folder report the version it came
+// from, and the engine record names the PGlite release that wrote `pglite`.
+const snapshotEntries = ["pglite", "files", lastOpenedVersionFile, pgliteEngineFile] as const;
 
 // `before-migration-<UTC timestamp with dashes>`. The name sorts by time and matches the
 // `before-<kind>-<time>` folders the startup recovery screen lists and restores.

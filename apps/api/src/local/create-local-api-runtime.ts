@@ -50,6 +50,7 @@ import {
 } from "@careerden/infrastructure";
 import { createApiApp } from "../api-app.js";
 import { UnmeteredCreditRepository } from "../application/billing/unmetered-credit-repository.js";
+import { ReadSignedFileUseCase } from "../application/storage/read-signed-file.use-case.js";
 import type { AuthenticatedUser } from "../auth/session.middleware.js";
 import { LoggingAiProvider } from "../infrastructure/matching/logging-ai.provider.js";
 import type { LocalBackupManifest } from "../contracts/backup/local-backup-manifest.schema.js";
@@ -167,7 +168,10 @@ export async function createLocalApiRuntime(
     http: {
       enableHsts: false,
       mountRawRoutes: (rawApp) => {
-        rawApp.use("/files", createLocalFileRouter(storage));
+        rawApp.use(
+          "/files",
+          createLocalFileRouter({ readSignedFile: new ReadSignedFileUseCase(storage) }),
+        );
       },
       authenticate: localSession(options.sessionToken, localUser),
       logUnexpectedError: (entry, error) => {

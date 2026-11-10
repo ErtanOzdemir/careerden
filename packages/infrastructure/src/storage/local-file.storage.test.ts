@@ -76,6 +76,20 @@ describe("LocalFileStorage", () => {
     await expect(storage.get(stored.id)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("finds stored files and resolves null for missing ones", async () => {
+    const storage = createStorage();
+    const stored = await storage.put({
+      fileName: "cv.pdf",
+      contentType: "application/pdf",
+      body: Buffer.from("pdf"),
+    });
+
+    await expect(storage.find(stored.id)).resolves.toMatchObject({ body: Buffer.from("pdf") });
+    await storage.delete(stored.id);
+    await expect(storage.find(stored.id)).resolves.toBeNull();
+    await expect(storage.find("../escape.pdf")).rejects.toThrow("Invalid file id");
+  });
+
   it("rejects ids that escape the storage root", async () => {
     const storage = createStorage();
 

@@ -3,12 +3,10 @@ import {
   ExpireStaleCreditReservationsUseCase,
   ExtractJobRequirementsUseCase,
   FinalizeJobApplicationAnalysisFailureUseCase,
-  analysisFailureFromError,
 } from "@careerden/application";
-import { UnrecoverableError, Worker } from "bullmq";
+import { Worker } from "bullmq";
 import type { Worker as BullMqWorker } from "bullmq";
 import { RunMatchAnalysisUseCase } from "@careerden/application";
-import { AiProviderError } from "@careerden/domain";
 import type { JobApplicationQueuePayload } from "@careerden/domain";
 import {
   AiProviderFactory,
@@ -26,7 +24,7 @@ import {
 import { PostgresAnalysisOutboxDispatcher } from "./infrastructure/persistence/postgres-analysis-outbox.dispatcher.js";
 import type { Knex } from "knex";
 import type { LlmWorkerEnv } from "./env.js";
-import { toBullMqWorkerError } from "./bullmq-worker-error.js";
+import { processMatchAnalysis } from "./process-match-analysis.js";
 
 export interface LlmWorkerRuntime {
   db: Knex;
@@ -97,32 +95,14 @@ export async function createLlmWorkerRuntime(env: LlmWorkerEnv): Promise<LlmWork
   }, 60_000);
   const worker = new Worker<JobApplicationQueuePayload>(
     jobApplicationQueueName,
-    async (job) => {
-      try {
-        return await analyzeScrapedJob.execute(job.data);
-      } catch (error) {
-        if (error instanceof AiProviderError) {
-          // Provider, status code, and category only: never the key, prompt, or response body.
-          console.warn("LLM worker AI provider call failed", {
-            event: "ai.provider_error",
-            jobApplicationId: job.data.jobApplicationId,
-            ...error.toFailure(),
-            retryable: error.retryable,
-          });
-        }
-        const workerError = toBullMqWorkerError(error);
-        const configuredAttempts = job.opts.attempts ?? 1;
-        const isFinalAttempt = job.attemptsMade + 1 >= configuredAttempts;
-        if (workerError instanceof UnrecoverableError || isFinalAttempt) {
-          await finalizeAnalysisFailure.execute({
-            jobApplicationId: job.data.jobApplicationId,
-            analysisAttemptId: job.data.analysisAttemptId,
-            ...analysisFailureFromError(error),
-          });
-        }
-        throw workerError;
-      }
-    },
+    (job) =>
+      processMatchAnalysis({
+        payload: job.data,
+        attemptsMade: job.attemptsMade,
+        maximumAttempts: job.opts.attempts ?? 1,
+        analyze: analyzeScrapedJob,
+        finalizeFailure: finalizeAnalysisFailure,
+      }),
     {
       concurrency: env.LLM_WORKER_CONCURRENCY,
       connection: { url: env.REDIS_URL },

@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import type { Express, RequestHandler } from "express";
+import { ApplyProfileImportUseCase } from "./application/profiles/apply-profile-import.use-case.js";
 import { CreateProfileUseCase } from "./application/profiles/create-profile.use-case.js";
 import { CreateManualJobApplicationUseCase } from "./application/job-applications/create-manual-job-application.use-case.js";
 import { ArchiveJobApplicationUseCase } from "./application/job-applications/archive-job-application.use-case.js";
@@ -18,6 +19,8 @@ import { UpdateOnboardingStateUseCase } from "./application/profiles/update-onbo
 import { UpdateProfileUseCase } from "./application/profiles/update-profile.use-case.js";
 import { GetOrCreateCurrentProfileUseCase } from "./application/profiles/get-or-create-current-profile.use-case.js";
 import { GetProfileUseCase } from "./application/profiles/get-profile.use-case.js";
+import { ExtractProfileFromCvUseCase } from "./application/profiles/extract-profile-from-cv.use-case.js";
+import { DocumentCvTextExtractor } from "./infrastructure/profiles/document-cv-text-extractor.js";
 import { PreviewApplicationPackUseCase } from "./application/job-applications/preview-application-pack.use-case.js";
 import { ApplyDocumentFieldTipUseCase } from "./application/job-applications/apply-document-field-tip.use-case.js";
 import { RewriteCoverLetterUseCase } from "./application/job-applications/rewrite-cover-letter.use-case.js";
@@ -84,7 +87,7 @@ export interface ApiAppDependencies {
   remoteImageFetcher: RemoteImageFetcher;
   jobApplicationChanges: JobApplicationChangeSubscriber;
   notificationChanges: NotificationChangeSubscriber;
-  // Absent disables the AI-backed document editing routes.
+  // Absent disables the AI-backed document editing and CV import routes.
   aiProvider?: AiProvider;
   // Absent treats AI analysis as always available.
   aiAvailability?: AiAvailability;
@@ -159,6 +162,16 @@ export function createApiApp(dependencies: ApiAppDependencies): Express {
       getProfile,
       updateProfile: new UpdateProfileUseCase(profiles),
       updateOnboardingState: new UpdateOnboardingStateUseCase(profiles),
+      applyProfileImport: new ApplyProfileImportUseCase(profiles),
+      ...(aiProvider
+        ? {
+            extractProfileFromCv: new ExtractProfileFromCvUseCase(
+              profiles,
+              new DocumentCvTextExtractor(),
+              aiProvider,
+            ),
+          }
+        : {}),
     }),
   );
   app.use(

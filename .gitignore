@@ -17,3 +17,5 @@ apps/desktop/release/
 apps/desktop/release-local/
 apps/desktop/renderer/
 .claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock

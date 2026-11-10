@@ -1,10 +1,13 @@
 import { Router } from "express";
 import type { Request, Router as ExpressRouter } from "express";
+import type { ApplyProfileImportUseCase } from "../application/profiles/apply-profile-import.use-case.js";
 import type { CreateProfileUseCase } from "../application/profiles/create-profile.use-case.js";
+import type { ExtractProfileFromCvUseCase } from "../application/profiles/extract-profile-from-cv.use-case.js";
 import type { GetOrCreateCurrentProfileUseCase } from "../application/profiles/get-or-create-current-profile.use-case.js";
 import type { GetProfileUseCase } from "../application/profiles/get-profile.use-case.js";
 import type { UpdateOnboardingStateUseCase } from "../application/profiles/update-onboarding-state.use-case.js";
 import type { UpdateProfileUseCase } from "../application/profiles/update-profile.use-case.js";
+import { applyProfileImportSchema } from "../contracts/profiles/cv-import.schema.js";
 import {
   createProfileSchema,
   updateOnboardingStateSchema,
@@ -12,6 +15,7 @@ import {
 } from "../contracts/profiles/profile.schema.js";
 import { validateBody } from "../middleware/validate-body.js";
 import type { AuthenticatedRequest } from "../auth/session.middleware.js";
+import { parseCvUpload, uploadCv } from "./cv-upload.js";
 
 export function createProfileRouter(dependencies: {
   createProfile: CreateProfileUseCase;
@@ -19,6 +23,9 @@ export function createProfileRouter(dependencies: {
   getProfile: GetProfileUseCase;
   updateProfile: UpdateProfileUseCase;
   updateOnboardingState: UpdateOnboardingStateUseCase;
+  applyProfileImport: ApplyProfileImportUseCase;
+  // Absent leaves CV import unavailable, as on runtimes without an AI provider.
+  extractProfileFromCv?: ExtractProfileFromCvUseCase;
 }): ExpressRouter {
   const router = Router();
 
@@ -56,6 +63,38 @@ export function createProfileRouter(dependencies: {
         );
 
         response.json(updated);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  const { extractProfileFromCv } = dependencies;
+  if (extractProfileFromCv) {
+    router.post("/me/cv-import", uploadCv, async (request, response, next) => {
+      try {
+        const cv = parseCvUpload(request.file);
+        const user = currentUser(request);
+        const profile = await dependencies.getCurrentProfile.execute(user);
+
+        response.json({ draft: await extractProfileFromCv.execute(profile.id, user.id, cv) });
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
+
+  router.post(
+    "/me/cv-import/apply",
+    validateBody(applyProfileImportSchema),
+    async (request, response, next) => {
+      try {
+        const user = currentUser(request);
+        const profile = await dependencies.getCurrentProfile.execute(user);
+
+        response.json(
+          await dependencies.applyProfileImport.execute(profile.id, user.id, request.body),
+        );
       } catch (error) {
         next(error);
       }

@@ -77,6 +77,13 @@ review or download.
   content, never `raw` or display HTML, in one `<job_posting_data>` block built by
   `promptWithJobPostingData` after the trusted instructions, and their system prompts include
   `jobPostingDataRules`. The web app labels every generated document as AI output.
+- An uploaded CV is untrusted input too. `POST /profiles/me/cv-import` extracts its text in the
+  API (unpdf for PDF, the WordprocessingML parts of a DOCX), never stores the file, and puts the
+  text in one escaped `<cv_document>` block that the system prompt marks as data. The result is a
+  draft the user reviews; `ApplyProfileImportUseCase` saves only the kept sections through
+  `mergeProfileImport`, which fills empty fields and appends missing list entries without
+  overwriting the profile. CV import is an interactive AI call without a credit reservation, and
+  its text, like other profile content, never reaches logs.
 - Use explicit workflow status transitions for job applications.
 - Job application archiving is orthogonal to tracker and processing status. Only stable
   `scraped` applications without queued analysis, `review_ready`, `completed`, or `failed`

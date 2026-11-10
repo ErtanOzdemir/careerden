@@ -4,6 +4,7 @@ import { Panel } from "../components/careerden/panel.js";
 import { Field } from "../components/careerden/field.js";
 import RichTextEditor, { RichTextViewer } from "../components/RichTextEditor.js";
 import { profilesApi } from "../api/profiles.js";
+import { CvImportDialog } from "../components/CvImportDialog.js";
 import { emptyRichDocument, richDocumentFromText } from "@careerden/contracts";
 import type {
   ApiProfile,
@@ -26,6 +27,7 @@ import {
   Pencil,
   Save,
   X,
+  FileUp,
 } from "lucide-react";
 
 const sections = [
@@ -82,26 +84,29 @@ export default function ProfileManager() {
   const [projects, setProjects] = useState<ApiProfileProject[]>([]);
   const [certifications, setCertifications] = useState<string[]>([]);
   const [newCert, setNewCert] = useState("");
+  const [isImportingCv, setIsImportingCv] = useState(false);
+
+  function showProfile(p: ApiProfile) {
+    setProfile(p);
+    setFullName(p.fullName ?? "");
+    setEmail(p.email ?? "");
+    setProfession(p.profession ?? "");
+    setLocation(p.location ?? "");
+    setHeadline(p.headline ?? "");
+    setSummaryRichText(p.summaryRichText ?? richDocumentFromText(p.summary ?? ""));
+    setSkills(p.skills ?? []);
+    setExperience(p.experience ?? []);
+    setEducation(p.education ?? []);
+    setProjects(p.projects ?? []);
+    setCertifications(p.certifications ?? []);
+  }
 
   useEffect(() => {
     let isMounted = true;
     profilesApi
       .me()
       .then((p) => {
-        if (isMounted) {
-          setProfile(p);
-          setFullName(p.fullName ?? "");
-          setEmail(p.email ?? "");
-          setProfession(p.profession ?? "");
-          setLocation(p.location ?? "");
-          setHeadline(p.headline ?? "");
-          setSummaryRichText(p.summaryRichText ?? richDocumentFromText(p.summary ?? ""));
-          setSkills(p.skills ?? []);
-          setExperience(p.experience ?? []);
-          setEducation(p.education ?? []);
-          setProjects(p.projects ?? []);
-          setCertifications(p.certifications ?? []);
-        }
+        if (isMounted) showProfile(p);
       })
       .catch((e) => {
         if (isMounted) setError(e.message);
@@ -245,7 +250,24 @@ export default function ProfileManager() {
               </p>
             )}
           </div>
+          <Button variant="outline" size="sm" onClick={() => setIsImportingCv(true)}>
+            <FileUp className="size-3.5" /> Import from CV
+          </Button>
         </Panel>
+        <CvImportDialog
+          open={isImportingCv}
+          onClose={() => setIsImportingCv(false)}
+          onApplied={(updated) => {
+            // Any open editor holds pre-import values that would overwrite the import on save.
+            setIsEditingBasics(false);
+            setIsEditingSummary(false);
+            setIsEditingSkills(false);
+            setIsEditingCertifications(false);
+            showProfile(updated);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+          }}
+        />
 
         {error && (
           <div className="rounded-xl border border-destructive/20 bg-danger-soft p-4 text-sm text-destructive">

@@ -64,11 +64,23 @@ stored in `compose.yaml`, anyone with repository access can read them.
 
 ## Profiles
 
-| Method         | Path            | Description                        |
-| -------------- | --------------- | ---------------------------------- |
-| `GET`, `PATCH` | `/profiles/me`  | Read or update the current profile |
-| `POST`         | `/profiles`     | Create a profile                   |
-| `GET`, `PATCH` | `/profiles/:id` | Read or update an owned profile    |
+| Method         | Path                           | Description                                      |
+| -------------- | ------------------------------ | ------------------------------------------------ |
+| `GET`, `PATCH` | `/profiles/me`                 | Read or update the current profile               |
+| `POST`         | `/profiles/me/cv-import`       | Read profile details from an uploaded CV (draft) |
+| `POST`         | `/profiles/me/cv-import/apply` | Add the reviewed draft to the current profile    |
+| `POST`         | `/profiles`                    | Create a profile                                 |
+| `GET`, `PATCH` | `/profiles/:id`                | Read or update an owned profile                  |
+
+`POST /profiles/me/cv-import` takes a `multipart/form-data` field named `cv` holding a PDF,
+DOCX, or UTF-8 text file of at most 10 MB, identified by its content. The API extracts the text
+locally, sends only that text to the AI provider, and returns `{ draft }` without storing the file
+or changing the profile. It is mounted only when the runtime has an AI provider; Careerden
+Unplugged answers `409 ai_provider_not_configured` until a key is saved. Files without a text
+layer, such as scans, return `400 validation`. `POST /profiles/me/cv-import/apply` accepts the
+draft fields the user kept and never overwrites: single-value fields are filled only while empty,
+and experience, education, projects, skills, certifications, and links are appended unless the
+profile already has a matching entry.
 
 CV and cover-letter documents are always rendered from the predefined HTML templates in
 `@careerden/contracts` (`html-template-registry.ts`); there is no upload step. A profile can

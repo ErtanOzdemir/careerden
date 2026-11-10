@@ -326,6 +326,25 @@ export interface ApiProfile {
   updatedAt: string;
 }
 
+/** Profile details read from a CV; nothing is saved until the reviewed draft is applied. */
+export type ApiProfileImportDraft = Partial<
+  Pick<
+    ApiProfile,
+    | "certifications"
+    | "education"
+    | "email"
+    | "experience"
+    | "fullName"
+    | "headline"
+    | "links"
+    | "location"
+    | "profession"
+    | "projects"
+    | "skills"
+    | "summary"
+  >
+>;
+
 export interface ApiUpdateOnboardingPayload {
   checklistDismissed?: boolean;
   completed?: boolean;

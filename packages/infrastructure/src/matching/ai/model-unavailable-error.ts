@@ -2,10 +2,10 @@ import { AiProviderError } from "@careerden/domain";
 import { APICallError } from "ai";
 
 // Wording providers use for a retired or unknown model, for example OpenAI's "model_not_found",
-// Anthropic's 404 "model: …", DeepSeek's "Model Not Exist", and OpenRouter's "is not a valid
+// Anthropic's 404 "model: …", DeepSeek's "The supported API model names are …", and OpenRouter's "is not a valid
 // model ID". Matched only together with the word "model" so unrelated 400s are not retried.
 const modelUnavailablePattern =
-  /not[ _]?found|does not exist|not exist|not a valid model|invalid model|unknown model|deprecated|decommissioned|retired|no longer (?:available|supported)|has been (?:removed|shut ?down)/i;
+  /not[ _]?found|does not exist|not exist|not a valid model|invalid model|unknown model|supported (?:api )?model names|deprecated|decommissioned|retired|no longer (?:available|supported)|has been (?:removed|shut ?down)/i;
 
 /**
  * Whether a provider rejected the request because the model is unknown, deprecated, or retired,

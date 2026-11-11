@@ -26,6 +26,13 @@ describe("isModelUnavailableError", () => {
       apiError(404, "models/gemini-retired is not found for API version v1beta"),
     ],
     ["DeepSeek missing model", apiError(400, "Model Not Exist")],
+    [
+      "DeepSeek unsupported model name",
+      apiError(
+        400,
+        "The supported API model names are deepseek-flash, deepseek-v4-pro, but you passed deepseek-retired-qa-model.",
+      ),
+    ],
     ["OpenRouter invalid model", apiError(400, "vendor/retired is not a valid model ID")],
     [
       "a deprecation notice in the body",

@@ -144,7 +144,7 @@ describe("AiProviderSettings", () => {
     const bridge = installBridge(status());
     bridge.save.mockRejectedValue(
       new Error(
-        "Error invoking remote method 'ai-credentials-save': Error: Your API key is invalid or revoked. Update it in Settings.",
+        "Error invoking remote method 'ai-credentials-save': Error: Your API key is invalid or revoked. Check it and enter it again.",
       ),
     );
     render(<AiProviderSettings />);
@@ -154,7 +154,7 @@ describe("AiProviderSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save and use" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /^Your API key is invalid or revoked\. Update it in Settings\.$/,
+      /^Your API key is invalid or revoked\. Check it and enter it again\.$/,
     );
     expect(screen.getByLabelText("OpenAI API key")).toHaveValue("sk-bad");
   });

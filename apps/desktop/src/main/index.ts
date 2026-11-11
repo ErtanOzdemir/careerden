@@ -411,6 +411,7 @@ async function initializeDesktopRuntime(): Promise<void> {
     registerAiCredentialsIpc(ipcHandlers, aiCredentialsStore, {
       createProvider: (selection) =>
         createAiProvider(catalog ? catalog.withModels(selection) : selection),
+      logger,
     });
   }
   // Only the local edition offers the debug logging setting.

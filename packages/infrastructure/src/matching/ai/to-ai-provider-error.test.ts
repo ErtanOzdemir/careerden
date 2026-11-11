@@ -112,6 +112,14 @@ const cases: Array<[string, string, number | undefined, string, string]> = [
     '{"error":{"message":"Model Not Exist","type":"invalid_request_error"}}',
     "Model Not Exist",
   ],
+  [
+    "deepseek",
+    "model_unavailable",
+    400,
+    // Captured from the DeepSeek API for a model ID it does not serve.
+    '{"error":{"message":"The supported API model names are deepseek-flash, deepseek-v4-pro, but you passed deepseek-retired-qa-model. (request_id: decbcb3a-a2dd-4b30-b0d7-ae4f421815b2)","type":"invalid_request_error","param":null,"code":"invalid_request_error"}}',
+    "The supported API model names are deepseek-flash, deepseek-v4-pro, but you passed deepseek-retired-qa-model. (request_id: decbcb3a-a2dd-4b30-b0d7-ae4f421815b2)",
+  ],
   ["deepseek", "rate_limited", 429, '{"error":{"message":"Rate Limit Reached"}}', "Rate limit"],
   ["deepseek", "provider_unavailable", 500, '{"error":{"message":"Server Error"}}', "Error"],
   // Anthropic

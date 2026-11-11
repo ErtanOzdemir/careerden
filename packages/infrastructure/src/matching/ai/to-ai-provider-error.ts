@@ -21,8 +21,9 @@ const insufficientQuotaPattern =
   /insufficient[_ ]quota|insufficient[_ ]balance|insufficient[_ ]credits|credit balance is too low|payment[_ ]required|requires more credits|billing[_ ]hard[_ ]limit/;
 const invalidApiKeyPattern =
   /invalid[_ ]api[_ ]key|incorrect api key|api key not valid|api[_ ]key[_ ]invalid|api key expired|invalid x-api-key|authentication[_ ]error|no auth credentials|user not found/;
+// DeepSeek answers an unknown model with a 400 that lists the models it supports.
 const modelUnavailablePattern =
-  /model[_ ]not[_ ]found|model[^.\n]{0,80}(?:not found|does not exist|not exist|is not a valid|not available|not supported|decommissioned|deprecated)|no endpoints found|invalid model|unknown model/;
+  /model[_ ]not[_ ]found|model[^.\n]{0,80}(?:not found|does not exist|not exist|is not a valid|not available|not supported|decommissioned|deprecated)|no endpoints found|invalid model|unknown model|supported (?:api )?model names/;
 const networkErrorCodes = new Set([
   "ECONNREFUSED",
   "ECONNRESET",

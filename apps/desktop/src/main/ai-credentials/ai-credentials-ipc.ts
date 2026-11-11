@@ -37,6 +37,20 @@ const blockingSaveCategories: ReadonlySet<AiProviderErrorCategory> = new Set([
   "model_unavailable",
 ]);
 
+// The settings page is where a key is updated, so its message does not point back to Settings.
+const settingsPageMessages: Partial<Record<AiProviderErrorCategory, string>> = {
+  invalid_api_key: "Your API key is invalid or revoked. Check it and enter it again.",
+};
+
+// Receives provider check failures; the main process passes the desktop log file's logger.
+export interface AiCredentialsLogger {
+  warn(event: string, fields: Record<string, string | number>): void;
+}
+
+const consoleLogger: AiCredentialsLogger = {
+  warn: (event, fields) => console.warn("AI provider check failed", { event, ...fields }),
+};
+
 interface IpcRegistrar {
   register(channel: string, handler: (event: unknown, ...args: unknown[]) => unknown): unknown;
 }
@@ -49,8 +63,10 @@ export function registerAiCredentialsIpc(
     onChanged?: () => void;
     createProvider?: (selection: AiProviderSelection) => AiProvider;
     testTimeoutMs?: number;
+    logger?: AiCredentialsLogger;
   } = {},
 ): void {
+  const logger = options.logger ?? consoleLogger;
   const changed = async (work: Promise<void>): Promise<AiCredentialsStatus> => {
     await work;
     options.onChanged?.();
@@ -69,6 +85,7 @@ export function registerAiCredentialsIpc(
             { provider: parsed.provider, apiKey, ...(parsed.model ? { model: parsed.model } : {}) },
             options.createProvider ?? createAiProvider,
             options.testTimeoutMs ?? 30_000,
+            logger,
           )
         : ({ ok: true } as const);
     if (!validation.ok && validation.category && blockingSaveCategories.has(validation.category)) {
@@ -97,6 +114,7 @@ export function registerAiCredentialsIpc(
       { provider: parsed.provider, apiKey, ...(parsed.model ? { model: parsed.model } : {}) },
       options.createProvider ?? createAiProvider,
       options.testTimeoutMs ?? 30_000,
+      logger,
     );
   });
 }
@@ -105,6 +123,7 @@ export async function testAiProvider(
   selection: AiProviderSelection,
   createProvider: (selection: AiProviderSelection) => AiProvider,
   timeoutMs: number,
+  logger: AiCredentialsLogger = consoleLogger,
 ): Promise<AiCredentialsTestResult> {
   let timeout: NodeJS.Timeout | undefined;
   try {
@@ -131,11 +150,12 @@ export async function testAiProvider(
     return { ok: true };
   } catch (error) {
     if (error instanceof AiProviderError) {
-      console.warn("AI provider check failed", {
-        event: "ai.provider_error",
-        ...error.toFailure(),
-      });
-      return { ok: false, message: error.message, category: error.category };
+      logger.warn("ai.provider_error", { ...error.toFailure() });
+      return {
+        ok: false,
+        message: settingsPageMessages[error.category] ?? error.message,
+        category: error.category,
+      };
     }
     return { ok: false, message: redactKey(describeError(error), selection.apiKey) };
   } finally {

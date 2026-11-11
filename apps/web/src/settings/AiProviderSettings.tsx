@@ -316,7 +316,7 @@ export function AiProviderPanel({
               className="ml-auto text-sm text-primary hover:underline"
               onClick={() => void window.electronAPI?.openExternal?.(providerInfo.keysUrl)}
             >
-              Get a {providerInfo.label} key
+              Get an API key from {providerInfo.label}
             </button>
           </div>
         </form>

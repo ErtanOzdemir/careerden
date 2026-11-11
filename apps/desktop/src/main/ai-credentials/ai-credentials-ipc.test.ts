@@ -29,6 +29,7 @@ describe("registerAiCredentialsIpc", () => {
   function register(provider?: AiProvider) {
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
     const onChanged = vi.fn();
+    const logger = { warn: vi.fn() };
     const createProvider = vi.fn(() => provider ?? { generate: async () => ({ ok: true }) });
     registerAiCredentialsIpc(
       {
@@ -38,12 +39,12 @@ describe("registerAiCredentialsIpc", () => {
         },
       },
       store,
-      { onChanged, createProvider: createProvider as never, testTimeoutMs: 1_000 },
+      { onChanged, createProvider: createProvider as never, testTimeoutMs: 1_000, logger },
     );
     // Like ipcMain.handle, report synchronous handler errors as rejections.
     const invoke = async (channel: string, ...args: unknown[]) =>
       handlers.get(channel)?.({}, ...args);
-    return { invoke, onChanged, createProvider, handlers };
+    return { invoke, onChanged, createProvider, handlers, logger };
   }
 
   it("registers exactly the credential channels", () => {
@@ -134,10 +135,25 @@ describe("registerAiCredentialsIpc", () => {
 
     await expect(
       invoke(aiCredentialsIpcChannels.save, { provider: "openai", apiKey: "sk-revoked-0000" }),
-    ).rejects.toThrow("Your API key is invalid or revoked. Update it in Settings.");
+    ).rejects.toThrow("Your API key is invalid or revoked. Check it and enter it again.");
 
     expect((await store.getStatus()).providers).toEqual([]);
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it("writes the provider check failure to the log without the key", async () => {
+    const { invoke, logger } = register(failingProvider("invalid_api_key"));
+
+    await expect(
+      invoke(aiCredentialsIpcChannels.save, { provider: "openai", apiKey: "sk-revoked-0000" }),
+    ).rejects.toThrow();
+
+    expect(logger.warn).toHaveBeenCalledWith("ai.provider_error", {
+      category: "invalid_api_key",
+      provider: "openai",
+      statusCode: 401,
+    });
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("sk-revoked");
   });
 
   it("checks a model change against the stored key before saving it", async () => {

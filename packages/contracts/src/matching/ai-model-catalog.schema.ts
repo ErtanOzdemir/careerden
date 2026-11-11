@@ -64,7 +64,7 @@ export const embeddedAiModelCatalog: ResolvedAiModelCatalog = {
   providers: {
     openai: { recommended: "gpt-4.1-mini", fallbacks: ["gpt-4o-mini"] },
     gemini: { recommended: "gemini-2.5-flash", fallbacks: ["gemini-flash-latest"] },
-    deepseek: { recommended: "deepseek-chat", fallbacks: [] },
+    deepseek: { recommended: "deepseek-chat", fallbacks: ["deepseek-flash"] },
     anthropic: { recommended: "claude-haiku-5-5", fallbacks: ["claude-haiku-4-5"] },
     openrouter: { recommended: "openrouter/auto", fallbacks: [] },
   },

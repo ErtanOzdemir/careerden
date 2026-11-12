@@ -319,6 +319,7 @@ function toTemplateData(
     summary: resolved.summary,
     raw_summary: profile.summary ?? "",
     skills: resolved.skills,
+    skill_groups: resolved.skillGroups,
     certifications: resolved.certifications,
     education_list: selectedEducation,
     selected_education: selectedEducation,

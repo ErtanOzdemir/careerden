@@ -12,7 +12,7 @@ describe("toUserProfile", () => {
       summary: "Formatted summary",
       summary_rich_text: summaryRichText,
       links: [],
-      skills: [],
+      skill_groups: [],
       experience: [
         {
           company: "Analytical Engines",

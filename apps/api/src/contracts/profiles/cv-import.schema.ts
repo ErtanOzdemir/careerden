@@ -4,6 +4,7 @@ import {
   profileEducationSchema,
   profileExperienceSchema,
   profileProjectSchema,
+  profileSkillGroupSchema,
 } from "./profile.schema.js";
 
 /**
@@ -20,7 +21,7 @@ export const aiCvExtractionSchema = z.object({
   location: z.string(),
   links: z.array(z.string()),
   summary: z.string(),
-  skills: z.array(z.string()),
+  skillGroups: z.array(z.object({ name: z.string(), skills: z.array(z.string()) })),
   certifications: z.array(z.string()),
   experience: z.array(
     z.object({
@@ -63,7 +64,7 @@ export const applyProfileImportSchema = z
     location: z.string().min(1).optional(),
     links: z.array(z.string().url()).optional(),
     summary: z.string().min(1).optional(),
-    skills: z.array(z.string().min(1)).optional(),
+    skillGroups: z.array(profileSkillGroupSchema).optional(),
     certifications: z.array(z.string().min(1)).optional(),
     experience: z.array(profileExperienceSchema).optional(),
     education: z.array(profileEducationSchema).optional(),

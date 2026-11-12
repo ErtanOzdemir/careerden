@@ -109,6 +109,22 @@ export const cvMinimalHtml = `<!doctype html>
         color: #a3a3a3;
         content: " · ";
       }
+      .skill-group + .skill-group {
+        margin-top: 3px;
+      }
+      .skill-group-name {
+        color: inherit;
+        display: inline;
+        font-size: inherit;
+        font-weight: 600;
+        margin: 0;
+      }
+      .skill-group-name::after {
+        content: ": ";
+      }
+      .skill-group .skills-list {
+        display: inline;
+      }
       .cert-list {
         list-style: none;
         margin: 0;
@@ -169,9 +185,7 @@ export const cvMinimalHtml = `<!doctype html>
     {{/project_content}} {{#skills}}
     <section>
       <h2>Skills</h2>
-      <ul class="skills-list" data-field-ref="skills">
-        {{skills}}
-      </ul>
+      <div class="skill-groups" data-field-ref="skills">{{skill_groups}}</div>
     </section>
     {{/skills}} {{#certifications}}
     <section>

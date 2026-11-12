@@ -177,7 +177,7 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
         method: "PATCH",
         body: JSON.stringify({
           headline: "Backend engineer",
-          skills: ["TypeScript"],
+          skillGroups: [{ name: "", skills: ["TypeScript"] }],
           experience: [{ company: "Analytical Engines", title: "Engineer" }],
         }),
       })

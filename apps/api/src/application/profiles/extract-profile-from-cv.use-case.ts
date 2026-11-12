@@ -1,4 +1,5 @@
 import {
+  normalizeSkillGroups,
   richDocumentToPlainText,
   type AiProvider,
   type ProfileEducation,
@@ -101,7 +102,7 @@ function extractionSystemPrompt(): string {
     "fullName is the candidate's name. email is their own email address. location is where they live, as written. headline is the short professional title near the name, if any. profession is their occupation in two to four words, taken from the headline or most recent title.",
     "summary is the profile or summary paragraph as written, or an empty string when the CV has none. Do not write one.",
     "links are the candidate's own profile or portfolio URLs, such as LinkedIn, GitHub, or a personal site. Return full URLs.",
-    "skills are individual skills, tools, technologies, and languages, one per entry, without levels or categories.",
+    "skillGroups hold the CV's skills, tools, technologies, and languages, one per entry and without levels, under a short category name. Use the CV's own skill headings when it has them. Otherwise group related skills under short names such as DevOps, Frontend, Backend, Mobile, Data, Cloud, Languages, or Tools, in the CV's language. Put a skill that fits no category in a group with an empty name, and list each skill only once.",
     "certifications are certificate or licence names, each with its issuer or year if the CV gives one.",
     "experience lists every position, most recent first. A company with several roles produces one entry per role.",
     "Dates are written as YYYY-MM when the month is known, otherwise YYYY. endDate is an empty string for a current position.",
@@ -142,8 +143,13 @@ export function normalizeExtraction(extraction: AiCvExtractionDto): ProfileImpor
     linkKey,
   );
   if (links.length > 0) draft.links = links;
-  const skills = unique(extraction.skills.map(clean));
-  if (skills.length > 0) draft.skills = skills;
+  const skillGroups = normalizeSkillGroups(
+    extraction.skillGroups.map((group) => ({
+      name: clean(group.name),
+      skills: group.skills.map(clean),
+    })),
+  );
+  if (skillGroups.length > 0) draft.skillGroups = skillGroups;
   const certifications = unique(extraction.certifications.map(clean));
   if (certifications.length > 0) draft.certifications = certifications;
 

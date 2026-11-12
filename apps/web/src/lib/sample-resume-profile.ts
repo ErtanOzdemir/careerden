@@ -79,13 +79,18 @@ export const sampleResumeProfile: ApiProfile = {
   links: ["example.com", "linkedin.com/in/janedoe-example"],
   location: "Rotterdam, Netherlands",
   projects: [],
-  skills: [
-    "Interaction design",
-    "Design systems",
-    "User research",
-    "Prototyping",
-    "Figma",
-    "Workshop facilitation",
+  skillGroups: [
+    {
+      name: "",
+      skills: [
+        "Interaction design",
+        "Design systems",
+        "User research",
+        "Prototyping",
+        "Figma",
+        "Workshop facilitation",
+      ],
+    },
   ],
   summary:
     "Product designer with nine years of experience turning complicated operational tools into calm, usable software. I like working close to engineering and closer to the people who use what we build.",

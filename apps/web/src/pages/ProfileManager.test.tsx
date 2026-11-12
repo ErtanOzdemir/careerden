@@ -75,6 +75,43 @@ describe("ProfileManager", () => {
     });
   });
 
+  it("saves skills by category", async () => {
+    const profile = {
+      ...createProfile(createRichText()),
+      skillGroups: [{ name: "", skills: ["TypeScript", "Kubernetes"] }],
+    };
+    const updated = {
+      ...profile,
+      skillGroups: [
+        { name: "DevOps", skills: ["Kubernetes"] },
+        { name: "", skills: ["TypeScript"] },
+      ],
+    };
+    vi.mocked(profilesApi.me).mockResolvedValue(profile);
+    vi.mocked(profilesApi.update).mockResolvedValue(updated);
+
+    render(<ProfileManager />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit skills" }));
+    fireEvent.change(screen.getByLabelText("New category"), { target: { value: "DevOps" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add category" }));
+    fireEvent.change(screen.getByLabelText("Move Kubernetes to category"), {
+      target: { value: "0" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save skills" }));
+
+    await waitFor(() => {
+      expect(profilesApi.update).toHaveBeenCalledWith("profile-1", {
+        skillGroups: [
+          { name: "DevOps", skills: ["Kubernetes"] },
+          { name: "", skills: ["TypeScript"] },
+        ],
+      });
+    });
+    expect(await screen.findByRole("heading", { name: "DevOps" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Other" })).toBeInTheDocument();
+  });
+
   it("highlights the navigation item for the section being edited", async () => {
     const profile = createProfile(createRichText());
     vi.mocked(profilesApi.me).mockResolvedValue(profile);
@@ -137,7 +174,7 @@ function createProfile(richText: RichDocument): ApiProfile {
         achievements: [],
       },
     ],
-    skills: [],
+    skillGroups: [],
     summary: "Built reliable systems",
     summaryRichText: richText,
     updatedAt: "2026-07-13T00:00:00.000Z",

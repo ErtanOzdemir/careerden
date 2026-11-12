@@ -164,7 +164,7 @@ function createProfile(
     followUpRemindersEnabled: true,
     links: [],
     summary: overrides.summary,
-    skills: [],
+    skillGroups: [],
     experience: [
       {
         company: "Analytical Engines",

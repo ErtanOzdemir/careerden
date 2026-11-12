@@ -1,3 +1,4 @@
+import { profileSkills } from "../profiles/skill-groups.js";
 import type { UserProfile } from "../profiles/user-profile.js";
 
 /**
@@ -47,7 +48,7 @@ export function collectSupportedDurationClaims(
     profile.profession,
     profile.headline,
     profile.summary,
-    ...profile.skills,
+    ...profileSkills(profile.skillGroups),
     ...profile.experience.flatMap((experience) => [
       experience.title,
       experience.company,

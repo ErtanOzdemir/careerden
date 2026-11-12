@@ -25,7 +25,7 @@ function emptyExtraction(overrides: Partial<AiCvExtractionDto> = {}): AiCvExtrac
     location: "",
     links: [],
     summary: "",
-    skills: [],
+    skillGroups: [],
     certifications: [],
     experience: [],
     education: [],
@@ -104,7 +104,12 @@ describe("normalizeExtraction", () => {
       emptyExtraction({
         email: "Not an email",
         links: ["github.com/ada", "ada@example.com", "https://github.com/ada/", "not a link"],
-        skills: ["TypeScript", " typescript ", ""],
+        skillGroups: [
+          { name: " Languages ", skills: ["TypeScript", " typescript ", ""] },
+          { name: "languages", skills: ["Python"] },
+          { name: "", skills: ["Excel"] },
+          { name: "Empty", skills: [" "] },
+        ],
         experience: [
           {
             company: "Analytical Engines",
@@ -124,7 +129,10 @@ describe("normalizeExtraction", () => {
 
     expect(draft).toEqual({
       links: ["https://github.com/ada"],
-      skills: ["TypeScript"],
+      skillGroups: [
+        { name: "Languages", skills: ["TypeScript", "Python"] },
+        { name: "", skills: ["Excel"] },
+      ],
       experience: [
         {
           company: "Analytical Engines",

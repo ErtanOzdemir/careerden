@@ -45,3 +45,54 @@ describe("CV templates", () => {
     },
   );
 });
+
+describe("CV skills section", () => {
+  it.each(listHtmlTemplates("cv").map((template) => [template.id]))(
+    "%s keeps one plain skills list when nothing is categorized",
+    (templateId) => {
+      const html = renderHtmlTemplate(templateId, {
+        ...cvData,
+        skills: ["Mathematics", "Notation"],
+        skill_groups: [{ name: "", skills: ["Mathematics", "Notation"] }],
+      });
+
+      expect(html).toContain(
+        '<div class="skill-groups" data-field-ref="skills"><ul class="skills-list"><li>Mathematics</li><li>Notation</li></ul></div>',
+      );
+      expect(html).not.toContain('class="skill-group-name"');
+    },
+  );
+
+  it.each(listHtmlTemplates("cv").map((template) => [template.id]))(
+    "%s shows each category under its name, with uncategorized skills as Other",
+    (templateId) => {
+      const html = renderHtmlTemplate(templateId, {
+        ...cvData,
+        skills: ["Kubernetes", "React", "Notation"],
+        skill_groups: [
+          { name: "DevOps", skills: ["Kubernetes"] },
+          { name: "Front <end>", skills: ["React"] },
+          { name: "", skills: ["Notation"] },
+        ],
+      });
+
+      expect(html).toContain(
+        '<div class="skill-group"><h3 class="skill-group-name">DevOps</h3><ul class="skills-list"><li>Kubernetes</li></ul></div>' +
+          '<div class="skill-group"><h3 class="skill-group-name">Front &lt;end&gt;</h3><ul class="skills-list"><li>React</li></ul></div>' +
+          '<div class="skill-group"><h3 class="skill-group-name">Other</h3><ul class="skills-list"><li>Notation</li></ul></div>',
+      );
+    },
+  );
+
+  it("falls back to the flat skills list when no groups are passed", () => {
+    const html = renderHtmlTemplate("cv.default", { ...cvData, skills: ["Mathematics"] });
+
+    expect(html).toContain('<ul class="skills-list"><li>Mathematics</li></ul>');
+  });
+
+  it("omits the skills section when there are no skills", () => {
+    const html = renderHtmlTemplate("cv.default", { ...cvData, skills: [], skill_groups: [] });
+
+    expect(html).not.toContain('data-field-ref="skills"');
+  });
+});

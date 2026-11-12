@@ -19,7 +19,7 @@ const maximumCvSize = 10 * 1024 * 1024;
 const importSections = [
   "basics",
   "summary",
-  "skills",
+  "skillGroups",
   "experience",
   "education",
   "projects",
@@ -31,7 +31,7 @@ export type CvImportSection = (typeof importSections)[number];
 const sectionLabels: Record<CvImportSection, string> = {
   basics: "Basic information",
   summary: "Professional summary",
-  skills: "Skills",
+  skillGroups: "Skills",
   experience: "Experience",
   education: "Education",
   projects: "Projects",
@@ -330,8 +330,10 @@ function previewLines(draft: ApiProfileImportDraft, section: CvImportSection): s
         ].filter((line): line is string => Boolean(line));
       case "summary":
         return [draft.summary ?? ""];
-      case "skills":
-        return [(draft.skills ?? []).join(", ")];
+      case "skillGroups":
+        return (draft.skillGroups ?? []).map((group) =>
+          [group.name, group.skills.join(", ")].filter(Boolean).join(": "),
+        );
       case "certifications":
         return draft.certifications ?? [];
       case "experience":

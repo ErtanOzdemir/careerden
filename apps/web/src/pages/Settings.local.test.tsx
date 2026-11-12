@@ -26,7 +26,7 @@ vi.mock("../api/profiles.js", () => ({
       experience: [],
       links: [],
       projects: [],
-      skills: [],
+      skillGroups: [],
       createdAt: "2026-10-29T00:00:00.000Z",
       updatedAt: "2026-10-29T00:00:00.000Z",
     })),

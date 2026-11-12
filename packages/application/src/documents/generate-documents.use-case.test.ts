@@ -19,7 +19,7 @@ describe("GenerateDocumentsUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const jobApplication = await jobApplications.create({ profileId: profile.id });
@@ -65,7 +65,7 @@ describe("GenerateDocumentsUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: [],
+      skillGroups: [],
       experience: [],
     });
     await profiles.update(profile.id, { defaultCvTemplateId: "cv.default" });
@@ -136,7 +136,7 @@ describe("GenerateDocumentsUseCase", () => {
       email: "ada@example.com",
       summary: "Original summary.",
       summaryRichText: originalSummary,
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       certifications: ["Azure Fundamentals"],
       education: [
         {
@@ -258,6 +258,9 @@ describe("GenerateDocumentsUseCase", () => {
       richDocumentFromText("User-edited summary."),
     );
     expect(capturedData[0]?.skills).toEqual(["TypeScript", "Node.js"]);
+    expect(capturedData[0]?.skill_groups).toEqual([
+      { name: "", skills: ["TypeScript", "Node.js"] },
+    ]);
     expect(capturedData[0]?.certifications).toEqual(["AWS Practitioner"]);
     expect(capturedData[0]?.selected_education).toHaveLength(1);
     const selectedEducation = capturedData[0]?.selected_education as Array<{
@@ -333,7 +336,7 @@ describe("GenerateDocumentsUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const jobApplication = await jobApplications.create({ profileId: profile.id });

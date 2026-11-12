@@ -15,7 +15,7 @@ describe("InMemoryUserProfileRepository", () => {
       ],
       fullName: "Ada Lovelace",
       headline: "Engineer",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
     });
 
     const updated = await repository.update(profile.id, {
@@ -25,20 +25,22 @@ describe("InMemoryUserProfileRepository", () => {
           institution: "University",
         },
       ],
-      skills: ["TypeScript", "React"],
+      skillGroups: [{ name: "", skills: ["TypeScript", "React"] }],
     });
 
     expect(updated?.fullName).toBe("Ada Lovelace");
     expect(updated?.experience).toEqual(profile.experience);
     expect(updated?.education).toEqual([{ degree: "BSc", institution: "University" }]);
-    expect(updated?.skills).toEqual(["TypeScript", "React"]);
+    expect(updated?.skillGroups).toEqual([{ name: "", skills: ["TypeScript", "React"] }]);
     expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(profile.updatedAt.getTime());
   });
 
   it("returns null when updating a missing profile", async () => {
     const repository = new InMemoryUserProfileRepository();
 
-    await expect(repository.update("missing", { skills: ["React"] })).resolves.toBeNull();
+    await expect(
+      repository.update("missing", { skillGroups: [{ name: "", skills: ["React"] }] }),
+    ).resolves.toBeNull();
   });
 
   it("defaults and updates automatic processing preferences", async () => {
@@ -47,7 +49,7 @@ describe("InMemoryUserProfileRepository", () => {
       email: "ada@example.com",
       experience: [],
       fullName: "Ada Lovelace",
-      skills: [],
+      skillGroups: [],
     });
 
     expect(profile.autoRunMatchAnalysis).toBe(true);
@@ -68,7 +70,7 @@ describe("InMemoryUserProfileRepository", () => {
       email: "ada@example.com",
       experience: [],
       fullName: "Ada Lovelace",
-      skills: [],
+      skillGroups: [],
     });
 
     const updated = await repository.update(profile.id, {

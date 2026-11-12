@@ -155,6 +155,15 @@ export const cvModernHtml = `<!doctype html>
         font-size: 8.5pt;
         padding: 3px 9px;
       }
+      .skill-group + .skill-group {
+        margin-top: 8px;
+      }
+      .skill-group-name {
+        color: #334155;
+        font-size: 9pt;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
       .cert-list {
         margin: 0;
         padding-left: 16px;
@@ -200,9 +209,7 @@ export const cvModernHtml = `<!doctype html>
     {{/experience_content}} {{#skills}}
     <section>
       <h2>Skills</h2>
-      <ul class="skills-list" data-field-ref="skills">
-        {{skills}}
-      </ul>
+      <div class="skill-groups" data-field-ref="skills">{{skill_groups}}</div>
     </section>
     {{/skills}} {{#education_content}}
     <section>

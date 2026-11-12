@@ -538,7 +538,10 @@ export const seedTables = [
         location: "Istanbul, Turkey (open to remote)",
         links: json(["https://github.com/example"]),
         summary: "Backend engineer with eight years of experience in TypeScript and Node.js.",
-        skills: json(skills),
+        skill_groups: json([
+          { name: "Backend", skills: skills.slice(0, 4) },
+          { name: "Cloud", skills: skills.slice(4) },
+        ]),
         experience: json(experience),
         education: json(education),
         certifications: json(certifications),

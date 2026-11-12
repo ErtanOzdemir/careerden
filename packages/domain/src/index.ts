@@ -5,6 +5,7 @@ export * from "./billing/billing-subscription-repository.js";
 export * from "./profiles/user-profile.js";
 export * from "./profiles/user-profile-repository.js";
 export * from "./profiles/profile-readiness.js";
+export * from "./profiles/skill-groups.js";
 export * from "./job-applications/application-pack.js";
 export * from "./job-applications/application-pack-generation.queue.js";
 export * from "./job-applications/archive-policy.js";

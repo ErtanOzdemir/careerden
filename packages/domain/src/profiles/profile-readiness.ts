@@ -1,3 +1,4 @@
+import { profileSkills } from "./skill-groups.js";
 import type { UserProfile } from "./user-profile.js";
 
 export type ProfileReadinessState = "ready" | "warning" | "blocked";
@@ -10,7 +11,7 @@ export interface ProfileReadiness {
 
 export function assessProfileReadiness(profile: UserProfile): ProfileReadiness {
   const hasPositioning = hasText(profile.profession, profile.headline, profile.summary);
-  const hasSkills = profile.skills.some((skill) => skill.trim().length > 0);
+  const hasSkills = profileSkills(profile.skillGroups).some((skill) => skill.trim().length > 0);
   const hasEvidence =
     profile.experience.length > 0 ||
     profile.projects.length > 0 ||

@@ -29,7 +29,7 @@ const baseProfile: ApiProfile = {
   experience: [],
   links: [],
   projects: [],
-  skills: [],
+  skillGroups: [],
   createdAt: "2026-10-31T00:00:00.000Z",
   updatedAt: "2026-10-31T00:00:00.000Z",
 };
@@ -83,7 +83,11 @@ describe("OnboardingWizard", () => {
   });
 
   it("requires a name and saves only the changed profile basics", async () => {
-    const updated = { ...baseProfile, fullName: "Ada Lovelace", skills: ["Math"] };
+    const updated = {
+      ...baseProfile,
+      fullName: "Ada Lovelace",
+      skillGroups: [{ name: "", skills: ["Math"] }],
+    };
     profileMocks.update.mockResolvedValue(updated);
     const onProfileChange = vi.fn();
     render(
@@ -106,7 +110,7 @@ describe("OnboardingWizard", () => {
     expect(await screen.findByText("Preferences")).toBeInTheDocument();
     expect(profileMocks.update).toHaveBeenCalledWith("profile-1", {
       fullName: "Ada Lovelace",
-      skills: ["Math"],
+      skillGroups: [{ name: "", skills: ["Math"] }],
     });
     expect(onProfileChange).toHaveBeenCalledWith(updated);
   });

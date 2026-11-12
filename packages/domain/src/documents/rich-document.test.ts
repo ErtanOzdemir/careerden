@@ -62,7 +62,7 @@ function profileWithThreeExperiences() {
   return {
     summary: "A backend engineer.",
     summaryRichText: undefined,
-    skills: ["TypeScript"],
+    skillGroups: [{ name: "", skills: ["TypeScript"] }],
     certifications: ["AWS"],
     experience: [
       { company: "Acme", title: "Engineer" },

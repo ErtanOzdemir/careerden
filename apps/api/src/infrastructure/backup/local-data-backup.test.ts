@@ -43,12 +43,19 @@ describe("local data backup", { timeout: 60_000 }, () => {
 
   async function seed(db: Knex, filesDir: string) {
     await db("user").insert({ id: "local-user", name: "", email: "" });
-    const profile = await new PostgresUserProfileRepository(db).createForUserId("local-user", {
-      fullName: "Ada Lovelace",
+    // A raw row, because the repository writes the latest schema and older archives predate it.
+    const skills = (await db.schema.hasColumn("user_profiles", "skill_groups"))
+      ? { skill_groups: JSON.stringify([{ name: "", skills: ["TypeScript"] }]) }
+      : { skills: JSON.stringify(["TypeScript"]) };
+    await db("user_profiles").insert({
+      id: "a0000000-0000-4000-8000-000000000001",
+      user_id: "local-user",
+      full_name: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
-      experience: [{ company: "Analytical Engines", title: "Engineer" }],
-    } as never);
+      experience: JSON.stringify([{ company: "Analytical Engines", title: "Engineer" }]),
+      ...skills,
+    });
+    const profile = (await new PostgresUserProfileRepository(db).findByUserId("local-user"))!;
     const application = await new PostgresJobApplicationRepository(db).create({
       profileId: profile.id,
       companyName: "Acme",
@@ -158,7 +165,7 @@ describe("local data backup", { timeout: 60_000 }, () => {
     ).resolves.toMatchObject({
       id: profile.id,
       fullName: "Ada Lovelace",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [{ company: "Analytical Engines", title: "Engineer" }],
       createdAt: profile.createdAt,
     });
@@ -206,6 +213,8 @@ describe("local data backup", { timeout: 60_000 }, () => {
     const restored = await new PostgresUserProfileRepository(db).findById(profile.id);
     // The onboarding migration marks profiles that predate it as onboarded.
     expect(restored?.onboardingCompletedAt).toBeInstanceOf(Date);
+    // The skill groups migration moves the flat skills into one uncategorized group.
+    expect(restored?.skillGroups).toEqual([{ name: "", skills: ["TypeScript"] }]);
   });
 
   it("rejects an archive from a newer schema without touching the staging directory", async () => {

@@ -1,5 +1,5 @@
 import type { RichDocument, UserProfile } from "@careerden/domain";
-import { richDocumentToPlainText } from "@careerden/domain";
+import { profileSkills, richDocumentToPlainText } from "@careerden/domain";
 
 /**
  * Verifies the links an AI tip claims before they are trusted downstream: a requirement must match
@@ -39,7 +39,7 @@ function profileCorpus(profile: UserProfile): string[] {
     profile.headline,
     profile.profession,
     plainText(profile.summary, profile.summaryRichText),
-    ...profile.skills,
+    ...profileSkills(profile.skillGroups),
     ...profile.certifications,
     ...profile.experience.flatMap((experience) => [
       experience.title,

@@ -13,7 +13,7 @@ describe("CreateManualJobApplicationUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [{ company: "Engines", title: "Engineer" }],
     });
     const accountProfiles = withAccountOwnership(profiles);
@@ -107,7 +107,7 @@ describe("CreateManualJobApplicationUseCase", () => {
       fullName: "Ada Lovelace",
       email: "ada@example.com",
       autoRunMatchAnalysis: false,
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const accountProfiles = withAccountOwnership(profiles);
@@ -142,7 +142,7 @@ describe("CreateManualJobApplicationUseCase", () => {
       fullName: "Ada Lovelace",
       email: "ada@example.com",
       autoRunMatchAnalysis: false,
-      skills: [],
+      skillGroups: [],
       experience: [],
     });
     const accountProfiles = withAccountOwnership(profiles);
@@ -187,7 +187,7 @@ describe("CreateManualJobApplicationUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: [],
+      skillGroups: [],
       experience: [],
     });
     const accountProfiles = withAccountOwnership(profiles);

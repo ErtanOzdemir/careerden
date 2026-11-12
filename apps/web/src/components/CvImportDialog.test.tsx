@@ -17,7 +17,7 @@ import { profilesApi } from "../api/profiles.js";
 const draft: ApiProfileImportDraft = {
   fullName: "Ada Lovelace",
   headline: "Analyst",
-  skills: ["Mathematics", "Notation"],
+  skillGroups: [{ name: "", skills: ["Mathematics", "Notation"] }],
   experience: [{ company: "Analytical Engines", title: "Analyst", startDate: "1842" }],
 };
 
@@ -90,7 +90,7 @@ describe("CvImportDialog", () => {
 
 describe("selectDraftSections", () => {
   it("keeps basic fields together and drops unselected sections", () => {
-    expect(availableSections(draft)).toEqual(["basics", "skills", "experience"]);
+    expect(availableSections(draft)).toEqual(["basics", "skillGroups", "experience"]);
     expect(selectDraftSections(draft, new Set(["basics"]))).toEqual({
       fullName: "Ada Lovelace",
       headline: "Analyst",

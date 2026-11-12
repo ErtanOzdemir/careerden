@@ -1,5 +1,7 @@
 import type { RichDocument } from "../documents/rich-document.js";
 import { richDocumentFromText, richDocumentToPlainText } from "../documents/rich-document.js";
+import type { ProfileSkillGroup } from "./skill-groups.js";
+import { normalizeSkillGroups } from "./skill-groups.js";
 
 export interface ProfileExperience {
   company: string;
@@ -42,7 +44,8 @@ export interface UserProfile {
   links: string[];
   summary?: string;
   summaryRichText?: RichDocument;
-  skills: string[];
+  /** Profile-level skills by category; an empty name holds uncategorized skills. */
+  skillGroups: ProfileSkillGroup[];
   experience: ProfileExperience[];
   education: ProfileEducation[];
   certifications: string[];
@@ -112,6 +115,7 @@ function normalizeUserProfileInput(input: UpdateUserProfileInput): UpdateUserPro
   return {
     ...input,
     ...(summaryChanged ? normalizeSummary(input.summary, input.summaryRichText) : {}),
+    ...(input.skillGroups ? { skillGroups: normalizeSkillGroups(input.skillGroups) } : {}),
     ...(input.experience ? { experience: input.experience.map(normalizeDescriptionRichText) } : {}),
     ...(input.education ? { education: input.education.map(normalizeDescriptionRichText) } : {}),
     ...(input.projects ? { projects: input.projects.map(normalizeDescriptionRichText) } : {}),

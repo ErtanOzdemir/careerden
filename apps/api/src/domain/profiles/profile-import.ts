@@ -2,9 +2,11 @@ import type {
   ProfileEducation,
   ProfileExperience,
   ProfileProject,
+  ProfileSkillGroup,
   UpdateUserProfileInput,
   UserProfile,
 } from "@careerden/domain";
+import { normalizeSkillGroups, profileSkills } from "@careerden/domain";
 
 /**
  * Profile details read from a CV, shown to the user before anything is saved. The user may drop
@@ -18,7 +20,7 @@ export interface ProfileImportDraft {
   location?: string;
   links?: string[];
   summary?: string;
-  skills?: string[];
+  skillGroups?: ProfileSkillGroup[];
   certifications?: string[];
   experience?: ProfileExperience[];
   education?: ProfileEducation[];
@@ -39,7 +41,8 @@ const scalarFields: ScalarField[] = [
 /**
  * Turns an imported draft into a profile update that never overwrites what the user already wrote:
  * single-value fields are filled only while empty, and list entries are appended unless the profile
- * already has a matching one. Returns only the fields that change.
+ * already has a matching one. Imported skills join the profile's category of the same name, or a new
+ * one, unless the profile already has them in any category. Returns only the fields that change.
  */
 export function mergeProfileImport(
   profile: UserProfile,
@@ -54,8 +57,8 @@ export function mergeProfileImport(
 
   const links = appendMissing(profile.links, draft.links, linkKey);
   if (links) update.links = links;
-  const skills = appendMissing(profile.skills, draft.skills, textKey);
-  if (skills) update.skills = skills;
+  const skillGroups = appendMissingSkills(profile.skillGroups, draft.skillGroups);
+  if (skillGroups) update.skillGroups = skillGroups;
   const certifications = appendMissing(profile.certifications, draft.certifications, textKey);
   if (certifications) update.certifications = certifications;
   const experience = appendMissing(profile.experience, draft.experience, (item) =>
@@ -87,6 +90,17 @@ function appendMissing<T>(
   });
 
   return added.length > 0 ? [...current, ...added] : undefined;
+}
+
+// Returns the combined groups, or undefined when the draft adds no new skill.
+function appendMissingSkills(
+  current: ProfileSkillGroup[],
+  imported: ProfileSkillGroup[] | undefined,
+): ProfileSkillGroup[] | undefined {
+  const combined = normalizeSkillGroups([...current, ...(imported ?? [])]);
+  return profileSkills(combined).length > profileSkills(normalizeSkillGroups(current)).length
+    ? combined
+    : undefined;
 }
 
 function textKey(value: string): string {

@@ -81,7 +81,7 @@ async function createReadyApplication() {
   const profile = await profiles.create({
     fullName: "Ada Lovelace",
     email: "ada@example.com",
-    skills: ["TypeScript"],
+    skillGroups: [{ name: "", skills: ["TypeScript"] }],
     experience: [],
   });
   const jobApplications = new InMemoryJobApplicationRepository();

@@ -80,7 +80,15 @@ Unplugged answers `409 ai_provider_not_configured` until a key is saved. Files w
 layer, such as scans, return `400 validation`. `POST /profiles/me/cv-import/apply` accepts the
 draft fields the user kept and never overwrites: single-value fields are filled only while empty,
 and experience, education, projects, skills, certifications, and links are appended unless the
-profile already has a matching entry.
+profile already has a matching entry. Imported skills join the profile's category of the same name,
+or a new one, unless the profile already lists them in any category.
+
+A profile stores its skills as `skillGroups`, a list of `{ name, skills }` categories such as
+`{ "name": "DevOps", "skills": ["AWS", "Docker"] }`. A group with an empty `name` holds
+uncategorized skills. The API trims names and skills, merges groups whose names differ only in case,
+keeps each skill in one group, drops empty groups, and puts uncategorized skills last. CV templates
+show each category under its name, or a single plain list when nothing is categorized; match
+analysis reads the skills as one flat list.
 
 CV and cover-letter documents are always rendered from the predefined HTML templates in
 `@careerden/contracts` (`html-template-registry.ts`); there is no upload step. A profile can

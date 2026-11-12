@@ -17,7 +17,7 @@ describe("SubmitJobApplicationUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const changes: JobApplicationChange[] = [];
@@ -62,7 +62,7 @@ describe("SubmitJobApplicationUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const changes: JobApplicationChange[] = [];
@@ -82,7 +82,7 @@ describe("SubmitJobApplicationUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: [],
+      skillGroups: [],
       experience: [],
     });
     const changes: JobApplicationChange[] = [];

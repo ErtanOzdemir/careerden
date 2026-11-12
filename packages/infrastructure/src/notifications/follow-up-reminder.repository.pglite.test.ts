@@ -27,7 +27,7 @@ describe("PostgresFollowUpReminderRepository.listUndeliveredSince", { timeout: 3
     const profile = await new PostgresUserProfileRepository(db).createForUserId(userId, {
       fullName: email,
       email,
-      skills: [],
+      skillGroups: [],
       experience: [],
     } as never);
     if (!remindersEnabled) {

@@ -5,19 +5,22 @@ import { createProfileRepository, createTestProfile } from "./profile-test-helpe
 
 describe("ApplyProfileImportUseCase", () => {
   it("saves only what the import adds to the profile", async () => {
-    const profile = { ...createTestProfile(), skills: ["TypeScript"] };
+    const profile = { ...createTestProfile(), skillGroups: [{ name: "", skills: ["TypeScript"] }] };
     const profiles = createProfileRepository(profile);
 
     await new ApplyProfileImportUseCase(profiles).execute(profile.id, "user-1", {
       fullName: "Someone Else",
       headline: "Analyst",
-      skills: ["typescript", "PostgreSQL"],
+      skillGroups: [{ name: "Data", skills: ["typescript", "PostgreSQL"] }],
       summary: "Writes algorithms.",
     });
 
     expect(profiles.update).toHaveBeenCalledWith(profile.id, {
       headline: "Analyst",
-      skills: ["TypeScript", "PostgreSQL"],
+      skillGroups: [
+        { name: "Data", skills: ["PostgreSQL"] },
+        { name: "", skills: ["TypeScript"] },
+      ],
       summary: "Writes algorithms.",
       summaryRichText: {
         version: 1,

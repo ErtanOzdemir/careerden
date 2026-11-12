@@ -30,6 +30,12 @@ export const profileProjectSchema = z.object({
   achievements: z.array(z.string().min(1)).default([]),
 });
 
+/** A skill category; an empty name holds uncategorized skills. */
+export const profileSkillGroupSchema = z.object({
+  name: z.string(),
+  skills: z.array(z.string().min(1)),
+});
+
 const profileObjectSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
@@ -42,7 +48,7 @@ const profileObjectSchema = z.object({
   links: z.array(z.string().url()).default([]),
   summary: z.string().optional(),
   summaryRichText: richDocumentSchema.optional(),
-  skills: z.array(z.string().min(1)).default([]),
+  skillGroups: z.array(profileSkillGroupSchema).default([]),
   experience: z.array(profileExperienceSchema).default([]),
   education: z.array(profileEducationSchema).default([]),
   certifications: z.array(z.string().min(1)).default([]),

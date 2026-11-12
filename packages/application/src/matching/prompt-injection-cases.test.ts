@@ -132,7 +132,7 @@ function profile(): UserProfile {
     email: "jordan@example.com",
     headline: "Backend Engineer",
     summary: "Backend engineer building Node.js services.",
-    skills: ["Node.js", "TypeScript", "PostgreSQL"],
+    skillGroups: [{ name: "", skills: ["Node.js", "TypeScript", "PostgreSQL"] }],
     certifications: [],
     experience: [
       {

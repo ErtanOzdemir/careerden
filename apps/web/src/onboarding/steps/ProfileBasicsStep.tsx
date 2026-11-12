@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { FileUp } from "lucide-react";
+import { profileSkills, replaceProfileSkills } from "@careerden/contracts";
 import { Field, TextAreaField } from "../../components/careerden/field.js";
 import { Button } from "../../components/ui/button.js";
 import { profilesApi } from "../../api/profiles.js";
@@ -28,7 +29,7 @@ function formValues(profile: ApiProfile) {
     headline: profile.headline ?? "",
     location: profile.location ?? "",
     summary: profile.summary ?? "",
-    skills: profile.skills.join(", "),
+    skills: profileSkills(profile.skillGroups).join(", "),
   };
 }
 
@@ -65,7 +66,9 @@ export function ProfileBasicsStep({
     if (values.headline.trim() !== initial.headline) payload.headline = values.headline.trim();
     if (values.location.trim() !== initial.location) payload.location = values.location.trim();
     if (values.summary.trim() !== initial.summary) payload.summary = values.summary.trim();
-    if (values.skills !== initial.skills) payload.skills = parseSkills(values.skills);
+    if (values.skills !== initial.skills) {
+      payload.skillGroups = replaceProfileSkills(profile.skillGroups, parseSkills(values.skills));
+    }
 
     if (Object.keys(payload).length === 0) {
       onNext();

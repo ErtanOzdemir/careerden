@@ -23,7 +23,7 @@ const profile: ApiProfile = {
   experience: [],
   links: [],
   projects: [],
-  skills: [],
+  skillGroups: [],
   defaultCvTemplateId: "cv.default",
   createdAt: "2026-10-31T00:00:00.000Z",
   updatedAt: "2026-10-31T00:00:00.000Z",

@@ -71,7 +71,7 @@ describe("GetJobApplicationDetailUseCase", () => {
     vi.mocked(profiles.findById).mockResolvedValue({
       ...(await profiles.findById(job.profileId))!,
       headline: undefined,
-      skills: [],
+      skillGroups: [],
       experience: [],
     });
 

@@ -84,6 +84,12 @@ review or download.
   `mergeProfileImport`, which fills empty fields and appends missing list entries without
   overwriting the profile. CV import is an interactive AI call without a credit reservation, and
   its text, like other profile content, never reaches logs.
+- Profile skills are `skillGroups`, user-named `{ name, skills }` categories where an empty name
+  holds uncategorized skills; the pure helpers live in `@careerden/contracts` (`skill-groups.ts`)
+  and normalize on every write. Matching, readiness, and tip grounding read the flat
+  `profileSkills` list, so categories never change analysis. A document's `skillSuggestions` stay
+  a flat, per-application list that `groupSkillsBySkillGroups` groups by the profile's categories
+  when the CV renders `{{skill_groups}}`. `ProfileProject.skills` stays a flat list.
 - Use explicit workflow status transitions for job applications.
 - Job application archiving is orthogonal to tracker and processing status. Only stable
   `scraped` applications without queued analysis, `review_ready`, `completed`, or `failed`

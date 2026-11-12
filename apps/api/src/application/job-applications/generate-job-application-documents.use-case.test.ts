@@ -13,7 +13,7 @@ describe("GenerateJobApplicationDocumentsUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const jobApplication = await jobApplications.create({ profileId: profile.id });
@@ -61,7 +61,7 @@ describe("GenerateJobApplicationDocumentsUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const jobApplication = await jobApplications.create({ profileId: profile.id });
@@ -107,7 +107,7 @@ describe("GenerateJobApplicationDocumentsUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     const jobApplication = await jobApplications.create({ profileId: profile.id });

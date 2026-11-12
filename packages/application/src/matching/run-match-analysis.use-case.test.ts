@@ -89,6 +89,33 @@ describe("RunMatchAnalysisUseCase", () => {
     expect(prompt.userProfile?.experience?.[0]).not.toHaveProperty("descriptionRichText");
   });
 
+  it("sends categorized skills as the same flat list an uncategorized profile sends", async () => {
+    const flat = createAiProvider([completeResponse()]);
+    const grouped = createAiProvider([completeResponse()]);
+
+    await new RunMatchAnalysisUseCase(flat.aiProvider).execute({
+      jobApplicationId: "job-1",
+      profile: createProfile({ skills: ["Kubernetes", "TypeScript", "React"] }),
+      scrape: createScrape(),
+    });
+    await new RunMatchAnalysisUseCase(grouped.aiProvider).execute({
+      jobApplicationId: "job-1",
+      profile: createProfile({
+        skillGroups: [
+          { name: "DevOps", skills: ["Kubernetes"] },
+          { name: "", skills: ["TypeScript", "React"] },
+        ],
+      }),
+      scrape: createScrape(),
+    });
+
+    const flatPrompt = parsePrompt(flat.calls[0]);
+    const groupedPrompt = parsePrompt(grouped.calls[0]);
+    expect(groupedPrompt.userProfile?.skills).toEqual(["Kubernetes", "TypeScript", "React"]);
+    expect(groupedPrompt.userProfile).not.toHaveProperty("skillGroups");
+    expect(groupedPrompt).toEqual(flatPrompt);
+  });
+
   it("sends the posting as untrusted data, separate from the instructions and without raw payloads", async () => {
     const { aiProvider, calls } = createAiProvider([completeResponse()]);
     const injection =
@@ -394,6 +421,8 @@ interface PromptShape {
   requiredOutput?: Record<string, string>;
   tipWritingRules?: string[];
   userProfile?: {
+    skillGroups?: unknown;
+    skills?: string[];
     summaryRichText?: unknown;
     experience?: Array<{ descriptionRichText?: unknown }>;
   };
@@ -439,6 +468,7 @@ function createProfile(
     summary?: string;
     experienceDescription?: string;
     skills?: string[];
+    skillGroups?: UserProfile["skillGroups"];
     startDate?: string;
     endDate?: string;
   } = {},
@@ -457,7 +487,9 @@ function createProfile(
     links: [],
     summary: overrides.summary,
     summaryRichText: richDocumentFromText(overrides.summary ?? ""),
-    skills: overrides.skills ?? ["TypeScript"],
+    skillGroups: overrides.skillGroups ?? [
+      { name: "", skills: overrides.skills ?? ["TypeScript"] },
+    ],
     experience: [
       {
         company: "Analytical Engines",

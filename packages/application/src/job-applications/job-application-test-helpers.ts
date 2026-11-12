@@ -81,7 +81,7 @@ export function createProfiles(): UserProfileAccessRepository {
       followUpRemindersEnabled: true,
       headline: "Software Engineer",
       links: [],
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [{ company: "Acme", title: "Engineer" }],
       education: [],
       certifications: [],

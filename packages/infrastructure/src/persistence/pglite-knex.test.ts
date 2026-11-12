@@ -47,7 +47,7 @@ describe("createPgliteDb", { timeout: 30_000 }, () => {
     return new PostgresUserProfileRepository(db).createForUserId("local-user", {
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [{ company: "Analytical Engines", title: "Engineer" }],
     } as never);
   }
@@ -59,7 +59,7 @@ describe("createPgliteDb", { timeout: 30_000 }, () => {
 
     await expect(profiles.findByUserId("local-user")).resolves.toMatchObject({
       id: profile.id,
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [{ company: "Analytical Engines", title: "Engineer" }],
     });
     expect(profile.createdAt).toBeInstanceOf(Date);

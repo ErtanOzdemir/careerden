@@ -854,7 +854,7 @@ function createProfile(): ApiProfile {
     id: "profile-1",
     links: [],
     projects: [],
-    skills: [],
+    skillGroups: [],
     updatedAt: "2026-07-17T08:00:00.000Z",
   };
 }

@@ -140,6 +140,15 @@ export const cvLedgerHtml = `<!doctype html>
         break-inside: avoid;
         margin-bottom: 2px;
       }
+      .skill-group + .skill-group {
+        margin-top: 6px;
+      }
+      .skill-group-name {
+        color: inherit;
+        font-size: inherit;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
       .cert-list {
         columns: 2;
         column-gap: 18px;
@@ -202,9 +211,7 @@ export const cvLedgerHtml = `<!doctype html>
     {{/project_content}} {{#skills}}
     <section>
       <h2>Skills</h2>
-      <ul class="skills-list" data-field-ref="skills">
-        {{skills}}
-      </ul>
+      <div class="skill-groups" data-field-ref="skills">{{skill_groups}}</div>
     </section>
     {{/skills}} {{#certifications}}
     <section>

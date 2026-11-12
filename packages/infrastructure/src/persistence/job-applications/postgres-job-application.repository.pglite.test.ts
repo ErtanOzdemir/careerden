@@ -23,7 +23,7 @@ describe("PostgresJobApplicationRepository AI failures", { timeout: 30_000 }, ()
     const profile = await new PostgresUserProfileRepository(db).createForUserId("user-1", {
       fullName: "Ada",
       email: "ada@example.com",
-      skills: [],
+      skillGroups: [],
       experience: [],
     } as never);
     const jobApplications = new PostgresJobApplicationRepository(db);

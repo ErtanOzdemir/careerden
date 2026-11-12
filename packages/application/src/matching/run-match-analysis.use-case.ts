@@ -7,7 +7,7 @@ import type {
   ScrapeBundle,
   UserProfile,
 } from "@careerden/domain";
-import { buildFallbackCoverLetter } from "@careerden/domain";
+import { buildFallbackCoverLetter, profileSkills } from "@careerden/domain";
 import { fillMissingTipEntries } from "./complete-enhancements.js";
 import {
   companyForPrompt,
@@ -306,11 +306,14 @@ function indexList(count: number): number[] {
   return Array.from({ length: count }, (_, index) => index);
 }
 
+// Skills reach the model as the flat list they have always been, so categorizing them never
+// changes what the analysis sees.
 function toPlainTextProfile(profile: UserProfile) {
-  const { summaryRichText: _summaryRichText, ...plainProfile } = profile;
+  const { summaryRichText: _summaryRichText, skillGroups, ...plainProfile } = profile;
 
   return {
     ...plainProfile,
+    skills: profileSkills(skillGroups),
     experience: profile.experience.map(
       ({ descriptionRichText: _richText, ...experience }) => experience,
     ),

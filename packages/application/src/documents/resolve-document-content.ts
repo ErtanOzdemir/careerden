@@ -3,10 +3,16 @@ import type {
   ProfileEducation,
   ProfileExperience,
   ProfileProject,
+  ProfileSkillGroup,
   RichDocument,
   UserProfile,
 } from "@careerden/domain";
-import { profileProjectDescriptionAsProse, richDocumentFromText } from "@careerden/domain";
+import {
+  groupSkillsBySkillGroups,
+  profileProjectDescriptionAsProse,
+  profileSkills,
+  richDocumentFromText,
+} from "@careerden/domain";
 
 export interface ResolvedDocumentExperience {
   company: string;
@@ -38,6 +44,8 @@ export interface ResolvedDocumentContent {
   education: ResolvedDocumentEducation[];
   experiences: ResolvedDocumentExperience[];
   projects: ResolvedDocumentProject[];
+  /** The document's skills grouped by the profile's categories, for the CV's skills section. */
+  skillGroups: ProfileSkillGroup[];
   skills: string[];
   summary: RichDocument;
 }
@@ -46,6 +54,10 @@ export function resolveDocumentContent(
   profile: UserProfile,
   content: DocumentContent,
 ): ResolvedDocumentContent {
+  const skills = content.skillSuggestions?.length
+    ? content.skillSuggestions
+    : profileSkills(profile.skillGroups);
+
   return {
     certifications: content.certificationSuggestions?.length
       ? content.certificationSuggestions
@@ -54,7 +66,8 @@ export function resolveDocumentContent(
     education: resolveEducation(profile.education, content),
     experiences: resolveExperiences(profile.experience, content),
     projects: resolveProjects(profile.projects, content),
-    skills: content.skillSuggestions?.length ? content.skillSuggestions : profile.skills,
+    skillGroups: groupSkillsBySkillGroups(skills, profile.skillGroups),
+    skills,
     summary: content.customizedSummary,
   };
 }

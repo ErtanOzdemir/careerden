@@ -502,7 +502,7 @@ describe("API mappers", () => {
       links: [],
       location: "Remote",
       projects: [{ achievements: [], name: "Portfolio", skills: [], url: "https://example.com" }],
-      skills: ["Figma"],
+      skillGroups: [{ name: "", skills: ["Figma"] }],
       summary: "Designs software.",
       updatedAt: "2026-06-01T00:00:00.000Z",
     };
@@ -687,7 +687,7 @@ function createProfile(): ApiProfile {
     id: "profile-1",
     location: "Remote",
     projects: [],
-    skills: ["React"],
+    skillGroups: [{ name: "", skills: ["React"] }],
     summary: "Builds product UI.",
     updatedAt: "2026-06-01T00:00:00.000Z",
   };

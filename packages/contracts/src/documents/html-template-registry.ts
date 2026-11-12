@@ -1,4 +1,6 @@
 import { isRichDocument, renderRichDocumentToHtml } from "./rich-document-html.js";
+import type { ProfileSkillGroup } from "../profiles/skill-groups.js";
+import { hasNamedSkillGroups, UNCATEGORIZED_SKILL_GROUP_LABEL } from "../profiles/skill-groups.js";
 import { cvDefaultHtml } from "./templates/cv-default.js";
 import { cvEditorialHtml } from "./templates/cv-editorial.js";
 import { cvLedgerHtml } from "./templates/cv-ledger.js";
@@ -94,8 +96,34 @@ export function renderHtmlTemplate(templateId: string, data: Record<string, unkn
   );
 
   return withConditionalSections.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_match, key: string) => {
+    if (key === "skill_groups") return renderSkillGroups(data);
     return stringifyTemplateValue(data[key], key);
   });
+}
+
+/**
+ * Renders `{{skill_groups}}`: one `skills-list` per category under its name, or a single plain
+ * `skills-list` when nothing is categorized so uncategorized CVs look as they always have. Falls
+ * back to the flat `skills` list for callers that do not pass groups.
+ */
+function renderSkillGroups(data: Record<string, unknown>): string {
+  const groups = Array.isArray(data.skill_groups)
+    ? (data.skill_groups as ProfileSkillGroup[])
+    : [{ name: "", skills: Array.isArray(data.skills) ? (data.skills as string[]) : [] }];
+  const list = (skills: string[]) =>
+    `<ul class="skills-list">${skills.map((skill) => `<li>${escapeHtml(skill)}</li>`).join("")}</ul>`;
+
+  if (!hasNamedSkillGroups(groups)) return list(groups.flatMap((group) => group.skills));
+
+  return groups
+    .filter((group) => group.skills.length > 0)
+    .map(
+      (group) =>
+        `<div class="skill-group"><h3 class="skill-group-name">${escapeHtml(
+          group.name.trim() || UNCATEGORIZED_SKILL_GROUP_LABEL,
+        )}</h3>${list(group.skills)}</div>`,
+    )
+    .join("");
 }
 
 // Lets the array branch below tag each rendered `<li>` with a `data-field-ref` the preview iframe

@@ -1,6 +1,7 @@
 import {
   isAiProviderErrorCategory,
   normalizeApplicationPackPreferences,
+  normalizeSkillGroups,
   richDocumentFromText,
 } from "@careerden/domain";
 import type {
@@ -15,6 +16,7 @@ import type {
   ProfileEducation,
   ProfileExperience,
   ProfileProject,
+  ProfileSkillGroup,
   RichDocument,
   UserProfile,
 } from "@careerden/domain";
@@ -152,7 +154,12 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     summaryRichText:
       toRichDocument(row.summary_rich_text) ??
       (summary !== undefined ? richDocumentFromText(summary) : undefined),
-    skills: stringArray(row.skills),
+    skillGroups: normalizeSkillGroups(
+      jsonArray<ProfileSkillGroup>(row.skill_groups).map((group) => ({
+        name: typeof group?.name === "string" ? group.name : "",
+        skills: stringArray(group?.skills),
+      })),
+    ),
     experience: jsonArray<ProfileExperience>(row.experience).map(withDescriptionRichText),
     education: jsonArray<ProfileEducation>(row.education).map(withDescriptionRichText),
     certifications: stringArray(row.certifications),

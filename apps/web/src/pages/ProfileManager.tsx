@@ -5,6 +5,11 @@ import { Field } from "../components/careerden/field.js";
 import RichTextEditor, { RichTextViewer } from "../components/RichTextEditor.js";
 import { profilesApi } from "../api/profiles.js";
 import { CvImportDialog } from "../components/CvImportDialog.js";
+import {
+  editableSkillGroups,
+  SkillGroupsEditor,
+  SkillGroupsView,
+} from "../components/SkillGroupsEditor.js";
 import { emptyRichDocument, richDocumentFromText } from "@careerden/contracts";
 import type {
   ApiProfile,
@@ -12,6 +17,7 @@ import type {
   ApiProfileExperience,
   ApiProfileEducation,
   ApiProfileProject,
+  ApiProfileSkillGroup,
   RichDocument,
 } from "../api/types.js";
 import {
@@ -77,8 +83,7 @@ export default function ProfileManager() {
   const [location, setLocation] = useState("");
   const [headline, setHeadline] = useState("");
   const [summaryRichText, setSummaryRichText] = useState(emptyRichDocument);
-  const [skills, setSkills] = useState<string[]>([]);
-  const [newSkill, setNewSkill] = useState("");
+  const [skillGroups, setSkillGroups] = useState<ApiProfileSkillGroup[]>([]);
   const [experience, setExperience] = useState<ApiProfileExperience[]>([]);
   const [education, setEducation] = useState<ApiProfileEducation[]>([]);
   const [projects, setProjects] = useState<ApiProfileProject[]>([]);
@@ -94,7 +99,7 @@ export default function ProfileManager() {
     setLocation(p.location ?? "");
     setHeadline(p.headline ?? "");
     setSummaryRichText(p.summaryRichText ?? richDocumentFromText(p.summary ?? ""));
-    setSkills(p.skills ?? []);
+    setSkillGroups(p.skillGroups ?? []);
     setExperience(p.experience ?? []);
     setEducation(p.education ?? []);
     setProjects(p.projects ?? []);
@@ -183,18 +188,6 @@ export default function ProfileManager() {
     setLocation(profile.location ?? "");
     setHeadline(profile.headline ?? "");
     setIsEditingBasics(false);
-  }
-
-  function addSkill() {
-    const s = newSkill.trim();
-    if (s && !skills.includes(s)) {
-      setSkills((prev) => [...prev, s]);
-      setNewSkill("");
-    }
-  }
-
-  function removeSkill(skill: string) {
-    setSkills((prev) => prev.filter((s) => s !== skill));
   }
 
   function addCert() {
@@ -397,64 +390,28 @@ export default function ProfileManager() {
                 isSaving={isSaving}
                 label="skills"
                 onCancel={() => {
-                  setSkills(profile.skills);
-                  setNewSkill("");
+                  setSkillGroups(profile.skillGroups);
                   setIsEditingSkills(false);
                 }}
-                onEdit={() => setIsEditingSkills(true)}
+                onEdit={() => {
+                  setSkillGroups(editableSkillGroups(profile.skillGroups));
+                  setIsEditingSkills(true);
+                }}
                 onSave={() => {
-                  void savePartial({ skills: skills.filter(Boolean) }).then((updated) => {
+                  void savePartial({ skillGroups }).then((updated) => {
                     if (updated) {
-                      setSkills(updated.skills);
-                      setNewSkill("");
+                      setSkillGroups(updated.skillGroups);
                       setIsEditingSkills(false);
                     }
                   });
                 }}
               />
             </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {skills.map((skill) =>
-                isEditingSkills ? (
-                  <button
-                    key={skill}
-                    onClick={() => removeSkill(skill)}
-                    className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
-                    type="button"
-                  >
-                    {skill} <X className="inline size-3" />
-                  </button>
-                ) : (
-                  <span
-                    key={skill}
-                    className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
-                  >
-                    {skill}
-                  </span>
-                ),
-              )}
-              {isEditingSkills && (
-                <div className="flex items-center gap-1">
-                  <input
-                    aria-label="New skill"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addSkill()}
-                    placeholder="Add skill"
-                    className="w-24 rounded-full border border-dashed border-border bg-transparent px-3 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
-                  />
-                  <button
-                    onClick={addSkill}
-                    className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                    type="button"
-                  >
-                    <Plus className="size-3" />
-                    Add
-                  </button>
-                </div>
-              )}
-              {!isEditingSkills && skills.length === 0 && (
-                <p className="text-sm text-muted-foreground">No skills added yet.</p>
+            <div className="mt-5">
+              {isEditingSkills ? (
+                <SkillGroupsEditor groups={skillGroups} onChange={setSkillGroups} />
+              ) : (
+                <SkillGroupsView groups={skillGroups} />
               )}
             </div>
           </Panel>

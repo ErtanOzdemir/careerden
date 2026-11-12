@@ -27,6 +27,7 @@ import type {
 import {
   aiProviderFailureSchema,
   parseScrapeFailureReason,
+  profileSkills,
   richDocumentFromText,
 } from "@careerden/contracts";
 import type { RichDocument } from "./types.js";
@@ -192,7 +193,7 @@ function mapInitialDocumentContent(match: ApiMatchAnalysis, profile?: ApiProfile
       experienceIndex: index,
       description: toRichDocument(experience.description, experience.descriptionRichText),
     })),
-    skillSuggestions: profile?.skills ?? [],
+    skillSuggestions: profileSkills(profile?.skillGroups ?? []),
     educationEnhancements: (profile?.education ?? []).map((education, index) => ({
       educationIndex: index,
       description: toRichDocument(education.description, education.descriptionRichText),
@@ -224,13 +225,11 @@ export function mapApiProfileToUi(profile: ApiProfile): Profile {
       achievements: [experience.description ?? "No description added yet."],
       icon: "work",
     })),
-    skills: [
-      {
-        name: "Skills",
-        icon: "design_services",
-        skills: profile.skills,
-      },
-    ],
+    skills: profile.skillGroups.map((group) => ({
+      name: group.name || "Skills",
+      icon: "design_services",
+      skills: group.skills,
+    })),
     education: profile.education.map((education, index) => ({
       id: `${profile.id}-education-${index}`,
       degree: [education.degree, education.field].filter(Boolean).join(", ") || "Education",

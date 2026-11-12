@@ -13,7 +13,7 @@ describe("RequestApplicationPackGenerationUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     Object.assign(profiles, { findUserIdByProfileId: vi.fn(async () => "user-1") });
@@ -60,7 +60,7 @@ describe("RequestApplicationPackGenerationUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      skills: ["TypeScript"],
+      skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
     Object.assign(profiles, { findUserIdByProfileId: vi.fn(async () => "user-1") });

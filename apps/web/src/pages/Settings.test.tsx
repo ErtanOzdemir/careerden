@@ -401,7 +401,7 @@ function createProfile(overrides: Partial<ApiProfile> = {}): ApiProfile {
     experience: [],
     links: [],
     projects: [],
-    skills: [],
+    skillGroups: [],
     updatedAt: "2026-07-04T00:00:00.000Z",
     ...overrides,
   };

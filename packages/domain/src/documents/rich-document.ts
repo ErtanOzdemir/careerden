@@ -4,6 +4,7 @@ import {
   mergeRichDocumentsAsProse,
   richDocumentFromText,
 } from "@careerden/contracts";
+import { profileSkills } from "../profiles/skill-groups.js";
 import type { ProfileProject, UserProfile } from "../profiles/user-profile.js";
 
 /**
@@ -82,7 +83,7 @@ export function documentContentFromProfile(
     | "education"
     | "experience"
     | "projects"
-    | "skills"
+    | "skillGroups"
     | "summary"
     | "summaryRichText"
   >,
@@ -97,7 +98,7 @@ export function documentContentFromProfile(
       experienceIndex: index,
       description: toRichDocument(experience.description, experience.descriptionRichText),
     })),
-    skillSuggestions: [...profile.skills],
+    skillSuggestions: profileSkills(profile.skillGroups),
     educationEnhancements: profile.education.map((education, index) => ({
       educationIndex: index,
       description: toRichDocument(education.description, education.descriptionRichText),

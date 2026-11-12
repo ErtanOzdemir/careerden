@@ -142,6 +142,15 @@ export const cvTechnicalHtml = `<!doctype html>
         font-size: 7.5pt;
         padding: 2px 7px;
       }
+      .skill-group + .skill-group {
+        margin-top: 8px;
+      }
+      .skill-group-name {
+        color: #111827;
+        font-size: 8pt;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
       .cert-list {
         margin: 0;
         padding-left: 16px;
@@ -180,9 +189,7 @@ export const cvTechnicalHtml = `<!doctype html>
     {{/summary}} {{#skills}}
     <section>
       <h2>Skills</h2>
-      <ul class="skills-list" data-field-ref="skills">
-        {{skills}}
-      </ul>
+      <div class="skill-groups" data-field-ref="skills">{{skill_groups}}</div>
     </section>
     {{/skills}} {{#experience_content}}
     <section>

@@ -1,7 +1,9 @@
 import type { RichDocument } from "@careerden/contracts";
 import {
   emptyRichDocument,
+  groupSkillsBySkillGroups,
   mergeRichDocumentsAsProse,
+  profileSkills,
   richDocumentFromText,
 } from "@careerden/contracts";
 import type { ApiDocumentContent, ApiProfile } from "../api/types.js";
@@ -23,7 +25,10 @@ export function buildPreviewTemplateData(
     };
   }
 
-  const skills = content.skillSuggestions.length > 0 ? content.skillSuggestions : profile.skills;
+  const skills =
+    content.skillSuggestions.length > 0
+      ? content.skillSuggestions
+      : profileSkills(profile.skillGroups);
   const certifications =
     content.certificationSuggestions.length > 0
       ? content.certificationSuggestions
@@ -90,6 +95,7 @@ export function buildPreviewTemplateData(
     summary: content.customizedSummary,
     experience_content: experienceContent,
     skills,
+    skill_groups: groupSkillsBySkillGroups(skills, profile.skillGroups),
     education_content: educationContent,
     project_content: projectContent,
     certifications,

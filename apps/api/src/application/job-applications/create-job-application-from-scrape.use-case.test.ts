@@ -18,7 +18,7 @@ describe("CreateJobApplicationFromScrapeUseCase", () => {
             id: "profile-1",
             autoRunMatchAnalysis: true,
             profession: "Software Engineer",
-            skills: ["TypeScript"],
+            skillGroups: [{ name: "", skills: ["TypeScript"] }],
             experience: [],
             projects: [],
             education: [],

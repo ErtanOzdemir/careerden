@@ -53,7 +53,8 @@ describe("resolveDocumentContent", () => {
       skillSuggestions: [],
     });
 
-    expect(resolved.skills).toEqual(profile.skills);
+    expect(resolved.skills).toEqual(["TypeScript"]);
+    expect(resolved.skillGroups).toEqual(profile.skillGroups);
     expect(resolved.certifications).toEqual(profile.certifications);
     expect(richDocumentToPlainText(resolved.experiences[0]!.description!)).toBe(
       "Original experience description.",
@@ -112,7 +113,7 @@ function createProfile(): UserProfile {
         skills: ["TypeScript"],
       },
     ],
-    skills: ["TypeScript"],
+    skillGroups: [{ name: "", skills: ["TypeScript"] }],
     summary: "Original summary.",
     updatedAt: new Date("2026-07-14T00:00:00.000Z"),
   };

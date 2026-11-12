@@ -6,7 +6,7 @@ import { unpluggedRelease } from "@/lib/desktop-release";
 import DownloadPage, { metadata } from "./page";
 
 describe("desktop download page", () => {
-  it("offers a Careerden Unplugged package for every supported platform", () => {
+  it("offers the Careerden Unplugged macOS packages and hides Windows and Linux", () => {
     const { container } = render(<DownloadPage />);
 
     expect(
@@ -16,13 +16,16 @@ describe("desktop download page", () => {
       "Unplugged",
     );
     const base = `https://github.com/ErtanOzdemir/careerden/releases/download/v${unpluggedRelease.version}`;
-    for (const suffix of ["arm64.dmg", "x64.dmg", "x64.exe", "x86_64.AppImage"]) {
+    for (const suffix of ["arm64.dmg", "x64.dmg"]) {
       const fileName = `CareerdenUnplugged-${unpluggedRelease.version}-${suffix}`;
       expect(screen.getByRole("link", { name: new RegExp(fileName, "i") })).toHaveAttribute(
         "href",
         `${base}/${fileName}`,
       );
     }
+    expect(container.querySelector('a[href$=".exe"], a[href$=".AppImage"]')).toBeNull();
+    expect(screen.queryByRole("heading", { name: /Windows|Linux/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/is available for macOS\./)).toBeVisible();
     expect(screen.getByRole("link", { name: /Explore Careerden on GitHub/i })).toHaveAttribute(
       "href",
       "https://github.com/ErtanOzdemir/careerden",
@@ -60,7 +63,7 @@ describe("desktop download page", () => {
     expect(metadata.title).toEqual({
       absolute: "Download Careerden Unplugged for Desktop | Careerden",
     });
-    expect(metadata.description).toMatch(/macOS, Windows, or Linux/);
+    expect(metadata.description).toMatch(/for macOS:/);
     expect(metadata.description).toMatch(/keeps your data on your computer/);
     expect(metadata.alternates).toMatchObject({
       canonical: expect.stringMatching(/\/download$/),

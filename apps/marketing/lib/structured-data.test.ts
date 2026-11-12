@@ -32,7 +32,7 @@ describe("structured data", () => {
     expect(softwareApplicationJsonLd()).toMatchObject({
       "@type": "SoftwareApplication",
       name: "Careerden Unplugged",
-      operatingSystem: "macOS, Windows, Linux",
+      operatingSystem: "macOS",
       softwareVersion: unpluggedRelease.version,
       codeRepository: githubUrl,
       isAccessibleForFree: true,

@@ -49,7 +49,7 @@ describe("marketing workflow story", () => {
     const structuredData = container.querySelector(
       'script[type="application/ld+json"]',
     )?.textContent;
-    expect(structuredData).toContain('"operatingSystem":"macOS, Windows, Linux"');
+    expect(structuredData).toContain('"operatingSystem":"macOS"');
     expect(structuredData).toContain('"@type":"FAQPage"');
     expect(structuredData).toContain('"name":"What is Careerden Unplugged?"');
     expect(structuredData).toContain(

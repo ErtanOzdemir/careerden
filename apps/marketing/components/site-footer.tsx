@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { contactEmail, githubUrl } from "@/lib/site";
+import { contactEmail, githubUrl, legalPagesEnabled } from "@/lib/site";
 import { BrandMark } from "./brand-mark";
 import { GitHubMark } from "./GitHubMark";
 
@@ -37,14 +37,16 @@ export function SiteFooter() {
           <Link href="/download">Download</Link>
           <Link href="/#faq">FAQ</Link>
         </nav>
-        <nav aria-label="Legal links">
-          <h2>Legal</h2>
-          <Link href="/privacy">Privacy Policy</Link>
-          <Link href="/cookies">Cookie Policy</Link>
-          <Link href="/terms">Terms of Service</Link>
-          <Link href="/gdpr">GDPR &amp; data rights</Link>
-          <Link href="/data-deletion">Account &amp; data deletion</Link>
-        </nav>
+        {legalPagesEnabled ? (
+          <nav aria-label="Legal links">
+            <h2>Legal</h2>
+            <Link href="/privacy">Privacy Policy</Link>
+            <Link href="/cookies">Cookie Policy</Link>
+            <Link href="/terms">Terms of Service</Link>
+            <Link href="/gdpr">GDPR &amp; data rights</Link>
+            <Link href="/data-deletion">Account &amp; data deletion</Link>
+          </nav>
+        ) : null}
         <div className="footer-contact">
           <h2>Contact</h2>
           <p>{contactEmail}</p>

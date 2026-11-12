@@ -30,6 +30,8 @@ describe("marketing navigation", () => {
     for (const link of screen.getAllByRole("link", { name: "Download" })) {
       expect(link).toHaveAttribute("href", "/download");
     }
+    // The legal drafts stay unlinked until legalPagesEnabled is turned on.
+    expect(screen.queryByRole("navigation", { name: "Legal links" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View Careerden on GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/ErtanOzdemir/careerden",

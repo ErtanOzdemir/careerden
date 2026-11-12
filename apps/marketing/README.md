@@ -54,12 +54,13 @@ requirements belong to their own policies.
   credit plans at /#pricing
 - /download — public OS-aware desktop download page for the latest verified release
 - /onboarding — legacy noindex route that redirects to /#how-it-works
-- /privacy, /cookies, /terms, /gdpr, /data-deletion — public legal/data-rights drafts
+- /privacy, /cookies, /terms, /gdpr, /data-deletion — legal/data-rights drafts, answering 404 and
+  left out of links, the sitemap, and robots.txt while `legalPagesEnabled` in `lib/site.ts` is false
 - /robots.txt, /sitemap.xml, /llms.txt, /llms-full.txt — crawler resources
 
 The landing page positions Careerden as an open-source desktop job application tracker with a profile-aware CV creator and cover letter creator. It explains the current setup and preparation workflow with five fictional, presentation-only product previews: enter profile data, upload DOCX templates for custom layouts, map template variables to profile data, capture a job, and review or edit the resulting tracked application and document pack. The authenticated product imports publicly available LinkedIn job data through the desktop app without connecting the user's LinkedIn account, and it also accepts manually pasted job and company details from any source. Its pricing section explains the 10-credit free UTC monthly allowance and the $10 USD monthly Creem subscription that grants 100 credits per confirmed paid period; taxes may be added at checkout. The public experience does not collect or persist the displayed profile, template, job, or document data.
 
-The public service does not link to browser-based login, signup, or authenticated application routes. Careerden is presented as a desktop-only product. The `/download` page detects macOS, Windows, or Linux in the browser and promotes the matching installer from the latest verified release. When a platform has multiple architecture-specific installers, the page groups them under one platform and asks the visitor to choose instead of inferring hardware architecture from browser data. It also lists direct DMG, EXE, and AppImage links for visitors who need another platform.
+The public service does not link to browser-based login, signup, or authenticated application routes. Careerden is presented as a desktop-only product. The `/download` page detects the visitor's platform in the browser and promotes the matching installer from the latest verified release. When a platform has multiple architecture-specific installers, the page groups them under one platform and asks the visitor to choose instead of inferring hardware architecture from browser data. It also lists every offered installer directly. Only platforms in `enabledDesktopPlatforms` (`lib/desktop-release.ts`) are offered; it is macOS only for now, so Windows and Linux visitors see the generic download choice and the page copy names only the offered platforms.
 
 The landing page links directly to https://github.com/ErtanOzdemir/careerden and presents Careerden as an open-source project under the GNU Affero General Public License v3.0. Confirm that anonymous visitors can access the repository before production deployment.
 

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { legalPagesEnabled } from "@/lib/site";
 
 export type LegalSection = { id: string; title: string; content: ReactNode };
 
@@ -14,6 +16,8 @@ export function LegalPage({
   summary: string;
   sections: LegalSection[];
 }) {
+  if (!legalPagesEnabled) notFound();
+
   return (
     <main id="main-content" className="legal-main">
       <div className="container legal-layout">

@@ -23,7 +23,7 @@ import {
 } from "@/components/workflow-preview";
 import { JsonLd } from "@/components/json-ld";
 import { pageMetadata } from "@/lib/metadata";
-import { githubUrl } from "@/lib/site";
+import { githubUrl, legalPagesEnabled } from "@/lib/site";
 import { faqPageJsonLd, softwareApplicationJsonLd, type FaqEntry } from "@/lib/structured-data";
 
 export const metadata: Metadata = pageMetadata({
@@ -72,7 +72,7 @@ const faqs: readonly FaqEntry[] = [
   ],
   [
     "How is my data handled?",
-    "Careerden Unplugged stores your profile, applications, and documents on your computer. Job details and profile content are sent only to the AI provider you configure when you run an analysis. The Privacy Policy describes the intended data model for the upcoming cloud edition and the items still awaiting owner and legal confirmation.",
+    `Careerden Unplugged stores your profile, applications, and documents on your computer. Job details and profile content are sent only to the AI provider you configure when you run an analysis.${legalPagesEnabled ? " The Privacy Policy describes the intended data model for the upcoming cloud edition and the items still awaiting owner and legal confirmation." : ""}`,
   ],
 ];
 
@@ -90,9 +90,10 @@ export default function HomePage() {
             <span>job application.</span>
           </h1>
           <p className="hero-lede">
-            Careerden Unplugged is an open-source desktop job application tracker with profile-aware
-            CV and cover-letter tools. Track opportunities, follow-ups, match insights, and
-            documents in one place, all stored on your computer.
+            Careerden Unplugged is an open-source desktop job application tracker with AI that
+            improves your CV for every role. It compares each job posting with your profile,
+            highlights the skills and experience that matter, and drafts a tailored CV and cover
+            letter for you to review, all stored on your computer.
           </p>
           <div className="hero-actions">
             <Link className="button button-primary button-large" href="/download">
@@ -103,7 +104,7 @@ export default function HomePage() {
             </a>
           </div>
           <p className="hero-note">
-            Tracking is the foundation. Automated capture and AI-assisted documents support it.
+            AI runs on your own provider key, and you review every draft before it goes out.
             <span aria-hidden="true"> · </span>
             <a href={githubUrl} rel="noreferrer" target="_blank">
               Explore Careerden on GitHub
@@ -512,7 +513,7 @@ export default function HomePage() {
                 AI drafts can be incomplete or wrong. Review every output and learn how profile,
                 tracking, and document data are intended to be handled.
               </p>
-              <Link href="/privacy">Read the Privacy Policy →</Link>
+              {legalPagesEnabled ? <Link href="/privacy">Read the Privacy Policy →</Link> : null}
             </article>
           </div>
         </div>

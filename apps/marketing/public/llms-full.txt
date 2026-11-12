@@ -26,10 +26,9 @@ Careerden is a TypeScript open-source desktop job application tracker with a pro
 Careerden is not an automatic job-application service. It does not promise employment outcomes or guarantee the accuracy of AI output. Users should verify every generated statement.
 
 The public marketing website presents Careerden Unplugged as the edition available today. It does
-not expose sign-in, signup, or browser-application links. Its `/download` page detects the
-visitor's operating system and promotes the matching Careerden Unplugged installer, lists the macOS
-(Apple silicon and Intel) DMG, Windows EXE, and Linux AppImage downloads, and notes that Careerden
-Cloud is coming soon.
+not expose sign-in, signup, or browser-application links. Its `/download` page offers the Careerden
+Unplugged macOS (Apple silicon and Intel) DMGs and notes that Careerden Cloud is coming soon.
+Windows and Linux downloads are not offered yet.
 
 The public pricing section presents Careerden Unplugged as free, with AI billed by the user's own
 provider, and Careerden Cloud as coming soon. Cloud's planned credit model, which may change before
@@ -60,15 +59,15 @@ device and sends no data to a Careerden server. AI features use the user's own O
 Gemini, DeepSeek, or OpenRouter API key, stored with the operating system's secure storage. It has
 no accounts, billing, or credits, and installs side by side with Careerden.
 
-## Data categories described by the public policies
+## Data categories described by the draft policies
 
 The intended workflow may process account and authentication data; professional profile information; job and company source/normalized data; application workflow events and preferences; match analysis; generated and uploaded documents; rendered files; support messages; reminders; security records; and essential technical/browser data.
 
-Production controller details, lawful-basis mapping, subprocessor names, provider regions, international transfer mechanisms, retention periods, deletion timelines, security-control descriptions, analytics choices, contact details, company identity, complete billing and refund terms, governing law, and related business/legal details are not yet confirmed. The published draft pages mark these items explicitly for owner and legal review and do not claim GDPR certification or guaranteed compliance.
+Production controller details, lawful-basis mapping, subprocessor names, provider regions, international transfer mechanisms, retention periods, deletion timelines, security-control descriptions, analytics choices, contact details, company identity, complete billing and refund terms, governing law, and related business/legal details are not yet confirmed. The legal pages are not published until these items pass owner and legal review, and Careerden does not claim GDPR certification or guaranteed compliance.
 
 ## Crawling guidance
 
-Public product and policy pages may be indexed. `/onboarding` is a legacy noindex route that redirects
+Public product pages may be indexed. `/onboarding` is a legacy noindex route that redirects
 to the landing-page workflow. Authenticated application routes such as login, signup, applications,
 profile, templates, settings, support, and API routes should not be indexed on any deployment that
 shares a host.
@@ -76,8 +75,3 @@ shares a host.
 ## Public documents
 
 - `/download`
-- `/privacy`
-- `/cookies`
-- `/terms`
-- `/gdpr`
-- `/data-deletion`

@@ -1,5 +1,22 @@
 export type DesktopPlatformId = "macos" | "windows" | "linux";
 
+// Platforms whose downloads the site offers. Windows and Linux installers are still published
+// with each release but stay hidden until those builds are ready for the public beta.
+export const enabledDesktopPlatforms: readonly DesktopPlatformId[] = ["macos"];
+
+function enabledDownloads(downloads: DesktopDownload[]): DesktopDownload[] {
+  return downloads.filter(({ platform }) => enabledDesktopPlatforms.includes(platform));
+}
+
+// "macOS", "macOS or Windows", "macOS, Windows, or Linux", from a release's offered downloads.
+export function formatPlatformNames(
+  downloads: readonly DesktopDownload[],
+  type: "conjunction" | "disjunction" = "conjunction",
+): string {
+  const names = [...new Set(downloads.map(({ platformName }) => platformName))];
+  return new Intl.ListFormat("en", { style: "long", type }).format(names);
+}
+
 export type DesktopDownload = {
   platform: DesktopPlatformId;
   platformName: string;
@@ -15,7 +32,7 @@ export const desktopRelease = {
   version: "0.2.0",
   publishedLabel: "July 23, 2026",
   releaseNotesUrl: "https://github.com/ErtanOzdemir/careerden/releases/tag/v0.2.0",
-  downloads: [
+  downloads: enabledDownloads([
     {
       platform: "macos",
       platformName: "macOS",
@@ -43,7 +60,7 @@ export const desktopRelease = {
       size: "133.0 MB",
       url: "https://github.com/ErtanOzdemir/careerden/releases/download/v0.2.0/Careerden-0.2.0-x86_64.AppImage",
     },
-  ] satisfies DesktopDownload[],
+  ]),
 } as const;
 
 // Careerden Unplugged's installers, published by the desktop release workflow with the
@@ -63,7 +80,7 @@ function unpluggedDownload(
 export const unpluggedRelease = {
   version: unpluggedVersion,
   releaseNotesUrl: `https://github.com/ErtanOzdemir/careerden/releases/tag/v${unpluggedVersion}`,
-  downloads: [
+  downloads: enabledDownloads([
     unpluggedDownload({
       platform: "macos",
       platformName: "macOS",
@@ -92,5 +109,5 @@ export const unpluggedRelease = {
       architecture: "64-bit",
       suffix: "x86_64.AppImage",
     }),
-  ] satisfies DesktopDownload[],
+  ]),
 } as const;

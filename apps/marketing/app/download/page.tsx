@@ -16,15 +16,14 @@ import {
 import { GitHubMark } from "@/components/GitHubMark";
 import { JsonLd } from "@/components/json-ld";
 import { UnpluggedWordmark } from "@/components/unplugged-badge";
-import { unpluggedRelease } from "@/lib/desktop-release";
+import { formatPlatformNames, unpluggedRelease } from "@/lib/desktop-release";
 import { pageMetadata } from "@/lib/metadata";
 import { githubUrl } from "@/lib/site";
 import { softwareApplicationJsonLd } from "@/lib/structured-data";
 
 export const metadata: Metadata = pageMetadata({
   title: "Download Careerden Unplugged for Desktop",
-  description:
-    "Download Careerden Unplugged for macOS, Windows, or Linux: a free, open-source job application tracker that keeps your data on your computer.",
+  description: `Download Careerden Unplugged for ${formatPlatformNames(unpluggedRelease.downloads, "disjunction")}: a free, open-source job application tracker that keeps your data on your computer.`,
   path: "/download",
 });
 
@@ -82,8 +81,9 @@ export default function DownloadPage() {
               <h2 id="all-downloads-title">Download Careerden Unplugged.</h2>
             </div>
             <p>
-              Version {unpluggedRelease.version} is available for macOS, Windows, and Linux. Choose
-              the package that matches your computer.
+              Version {unpluggedRelease.version} is available for{" "}
+              {formatPlatformNames(unpluggedRelease.downloads)}. Choose the package that matches
+              your computer.
             </p>
           </div>
 

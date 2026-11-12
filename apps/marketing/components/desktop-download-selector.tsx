@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ArrowDown, Download } from "lucide-react";
 import {
   desktopRelease,
+  formatPlatformNames,
   type DesktopDownload,
   type DesktopPlatformId,
 } from "@/lib/desktop-release";
@@ -119,7 +120,7 @@ export function DetectedDownloadButton({
             <span>Choose your download</span>
             <ArrowDown aria-hidden="true" />
           </a>
-          <p>Available for macOS, Windows, and Linux</p>
+          <p>Available for {formatPlatformNames(release.downloads)}</p>
         </>
       )}
     </div>

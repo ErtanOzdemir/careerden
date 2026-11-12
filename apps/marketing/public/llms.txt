@@ -6,13 +6,8 @@
 
 - [Home](/): Product overview, four-step workflow, latest features, Careerden Unplugged, pricing,
   privacy principles, and FAQ.
-- [Download](/download): OS-aware Careerden Unplugged downloads for macOS (Apple silicon and Intel),
-  Windows, and Linux, and a note that Careerden Cloud is coming soon.
-- [Privacy Policy](/privacy): Intended personal-data practices and explicit owner/legal placeholders.
-- [Cookie Policy](/cookies): Browser storage and cookie information.
-- [Terms of Service](/terms): Draft service terms requiring legal review.
-- [GDPR and data rights](/gdpr): Intended data-rights request process.
-- [Account and data deletion](/data-deletion): Intended deletion process and current limitations.
+- [Download](/download): Careerden Unplugged downloads for macOS (Apple silicon and Intel), and a
+  note that Careerden Cloud is coming soon.
 
 ## Important context
 
@@ -32,8 +27,8 @@
 - LinkedIn is the automated desktop capture source, not the product boundary. Users can also paste
   job and company details manually for applications from any source.
 - The public marketing website does not expose login, signup, or browser-application links. Its
-  download page detects the visitor's operating system and links the matching Careerden Unplugged
-  installer, with macOS DMG, Windows EXE, and Linux AppImage links also listed.
+  download page offers the Careerden Unplugged macOS DMGs for Apple silicon and Intel. Windows and
+  Linux downloads are not offered yet.
 - Careerden links directly to its repository at https://github.com/ErtanOzdemir/careerden. The current
   repository license is GNU Affero General Public License v3.0.
 - CVs use built-in layouts. The Base resume page previews six of them (Classic, Editorial, Modern,
@@ -43,7 +38,7 @@
   a Careerden server, and uses the user's own AI provider key without accounts or credits.
 - Users can review generated CV and cover-letter content, edit it, and apply changes with Update
   pack. This page does not claim a separate AI-regeneration action.
-- Legal copy is a working draft wherever marked and must not be treated as a compliance guarantee.
+- Legal pages are not published yet while their drafts await owner and legal review.
 - The legacy `/onboarding` route redirects to the public workflow and remains excluded from indexing.
 - Authenticated application routes should not be indexed.
 

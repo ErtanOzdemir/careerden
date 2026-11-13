@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "turbo run test --concurrency=50%"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -40,6 +40,6 @@
     "turbo": "2.11.10",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.72.2",
-    "vitest": "^2.1.8"
+    "vitest": "^5.1.0"
   }
 }

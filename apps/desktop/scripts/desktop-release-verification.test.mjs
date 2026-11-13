@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   directoryAssets,
   parseReleaseEditions,
+  parseReleasePlatforms,
   parseUpdateMetadata,
   requiredMetadataFiles,
   verifyDesktopRelease,
@@ -79,8 +80,13 @@ describe("desktop release verification", () => {
     );
   }
 
-  async function verify(tag = "v0.8.0", editions = ["cloud", "local"]) {
-    return verifyDesktopRelease({ tag, editions, assets: await directoryAssets(directory) });
+  async function verify(tag = "v0.8.0", editions = ["cloud", "local"], platforms = undefined) {
+    return verifyDesktopRelease({
+      tag,
+      editions,
+      platforms,
+      assets: await directoryAssets(directory),
+    });
   }
 
   it("requires the three platform metadata files of every edition", () => {
@@ -91,6 +97,31 @@ describe("desktop release verification", () => {
       "local-mac.yml",
       "local.yml",
       "local-linux.yml",
+    ]);
+  });
+
+  it("requires only the metadata files of the released platforms", () => {
+    expect(requiredMetadataFiles(["local"], ["macos"])).toEqual(["local-mac.yml"]);
+    expect(() => requiredMetadataFiles(["local"], ["solaris"])).toThrow(
+      'Unknown desktop platform "solaris"',
+    );
+  });
+
+  it("accepts a macOS-only release without Windows or Linux metadata", async () => {
+    await writeRelease("0.8.0", ["local"]);
+    for (const name of [
+      "local.yml",
+      "local-linux.yml",
+      "CareerdenUnplugged-0.8.0-x64.exe",
+      "CareerdenUnplugged-0.8.0-x86_64.AppImage",
+    ]) {
+      await rm(join(directory, name));
+    }
+
+    await expect(verify("v0.8.0", ["local"], ["macos"])).resolves.toEqual([]);
+    await expect(verify("v0.8.0", ["local"])).resolves.toEqual([
+      "Missing updater metadata local.yml",
+      "Missing updater metadata local-linux.yml",
     ]);
   });
 
@@ -232,6 +263,14 @@ describe("desktop release verification", () => {
     expect(() => parseReleaseEditions({ editions: ["desktop"] })).toThrow();
   });
 
+  it("reads the released platforms and rejects unknown or duplicate ones", () => {
+    expect(parseReleasePlatforms({ platforms: ["macos"] })).toEqual(["macos"]);
+    expect(() => parseReleasePlatforms({ editions: ["local"] })).toThrow();
+    expect(() => parseReleasePlatforms({ platforms: [] })).toThrow();
+    expect(() => parseReleasePlatforms({ platforms: ["macos", "macos"] })).toThrow();
+    expect(() => parseReleasePlatforms({ platforms: ["windows-x64"] })).toThrow();
+  });
+
   it("exits non-zero from the command line when a release is incomplete", async () => {
     await writeRelease("0.8.0", ["cloud"]);
 
@@ -256,5 +295,19 @@ describe("desktop release verification", () => {
       "cloud",
     ]);
     expect(success.stdout).toContain("Release v0.8.0 is complete for editions cloud");
+
+    await rm(join(directory, "latest-linux.yml"));
+    const linuxFailure = await run(process.execPath, [
+      cliPath,
+      "v0.8.0",
+      "--dir",
+      directory,
+      "--editions",
+      "cloud",
+      "--platforms",
+      "macos,windows,linux",
+    ]).catch((error) => error);
+    expect(linuxFailure.code).toBe(1);
+    expect(linuxFailure.stderr).toContain("Missing updater metadata latest-linux.yml");
   });
 });

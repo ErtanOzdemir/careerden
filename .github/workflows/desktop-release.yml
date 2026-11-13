@@ -30,19 +30,22 @@ jobs:
             echo "::warning title=Missing database upgrade fixture::No ${fixture}. Run 'pnpm --filter @careerden/api-app fixture:pglite --ref ${GITHUB_REF_NAME}' and commit the result so later migrations are tested against ${GITHUB_REF_NAME} databases."
           fi
 
-  # The editions every release contains come from apps/desktop/release-editions.json, which the
-  # build matrix and the release verification both read. cloud is Careerden; local is Careerden
-  # Unplugged, whose data stays on the device. Only Unplugged is released for now.
+  # The editions and platforms every release contains come from
+  # apps/desktop/release-editions.json, which the build matrix and the release verification both
+  # read. cloud is Careerden; local is Careerden Unplugged, whose data stays on the device. Only
+  # Unplugged on macOS is released for now.
   #
   # TODO: the cloud edition is deferred, not dropped. When it ships, add `cloud` to that file.
-  # Nothing else needs to change: every step below already handles both editions and gives them
-  # distinct artifact names and updater channels (latest*.yml and local*.yml) inside one
-  # release, and the verification then requires all six metadata files.
+  # Windows and Linux are deferred until they are tested; add `windows` and `linux` there to
+  # release them. Nothing else needs to change: every step below already handles both editions
+  # and all three platforms, gives the editions distinct artifact names and updater channels
+  # (latest*.yml and local*.yml) inside one release, and the verification then requires each
+  # listed edition's metadata for each listed platform.
   plan:
-    name: Read released editions
+    name: Read released editions and platforms
     runs-on: ubuntu-latest
     outputs:
-      editions: ${{ steps.editions.outputs.editions }}
+      matrix: ${{ steps.editions.outputs.matrix }}
       title: ${{ steps.editions.outputs.title }}
     steps:
       - uses: actions/checkout@v4
@@ -53,12 +56,25 @@ jobs:
         run: |
           node --input-type=module >> "${GITHUB_OUTPUT}" <<'NODE'
           import { readFile } from "node:fs/promises";
-          import { parseReleaseEditions } from "./apps/desktop/scripts/desktop-release-verification.mjs";
+          import {
+            parseReleaseEditions,
+            parseReleasePlatforms,
+          } from "./apps/desktop/scripts/desktop-release-verification.mjs";
 
-          const editions = parseReleaseEditions(
-            JSON.parse(await readFile("./apps/desktop/release-editions.json", "utf8")),
+          const releaseFile = JSON.parse(
+            await readFile("./apps/desktop/release-editions.json", "utf8"),
           );
-          console.log(`editions=${JSON.stringify(editions)}`);
+          const editions = parseReleaseEditions(releaseFile);
+          const platforms = parseReleasePlatforms(releaseFile);
+          const runners = {
+            macos: { name: "macOS x64 and arm64", os: "macos-latest" },
+            windows: { name: "Windows x64 NSIS", os: "windows-latest" },
+            linux: { name: "Linux x64 AppImage", os: "ubuntu-latest" },
+          };
+          const include = editions.flatMap((edition) =>
+            platforms.map((platform) => ({ edition, platform, ...runners[platform] })),
+          );
+          console.log(`matrix=${JSON.stringify({ include })}`);
           // A release of Unplugged alone is titled after it; with both editions it is Careerden's.
           console.log(`title=${editions.includes("cloud") ? "Careerden" : "Careerden Unplugged"}`);
           NODE
@@ -69,19 +85,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        edition: ${{ fromJSON(needs.plan.outputs.editions) }}
-        platform: [macos, windows-x64, linux-x64]
-        include:
-          - platform: macos
-            name: macOS x64 and arm64
-            os: macos-latest
-          - platform: windows-x64
-            name: Windows x64 NSIS
-            os: windows-latest
-          - platform: linux-x64
-            name: Linux x64 AppImage
-            os: ubuntu-latest
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       CAREERDEN_EDITION: ${{ matrix.edition }}
       VITE_CAREERDEN_EDITION: ${{ matrix.edition }}
@@ -341,8 +345,9 @@ jobs:
 
       # Each build job checked only its own metadata. An installed app reads only its own
       # edition's and platform's file and treats a missing one as "no update", so check the
-      # release as a whole before it exists: every edition's three metadata files at this tag's
-      # version, every file they reference present with a matching sha512, and a valid policy.
+      # release as a whole before it exists: every listed edition's metadata for every listed
+      # platform at this tag's version, every file they reference present with a matching
+      # sha512, and a valid policy.
       - name: Verify release completeness
         run: node apps/desktop/scripts/verify-desktop-release.mjs "${GITHUB_REF_NAME}" --dir release-assets
 

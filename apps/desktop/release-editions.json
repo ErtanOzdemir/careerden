@@ -1,3 +1,4 @@
 {
-  "editions": ["local"]
+  "editions": ["local"],
+  "platforms": ["macos"]
 }

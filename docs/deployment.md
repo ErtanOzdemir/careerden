@@ -15,24 +15,26 @@ it as "no update" and fails open, so a release without one edition or one platfo
 stops that edition's updates on that platform until a complete release is published.
 
 Releasing only one edition, such as a cloud-only hotfix, is therefore not supported. Every
-release must contain every edition listed in `apps/desktop/release-editions.json`. Once an
-edition has been released, it stays in that file. Before creating the draft release, the
+release must contain every edition and platform listed in `apps/desktop/release-editions.json`.
+Once an edition or platform has been released, it stays in that file. Before creating the draft release, the
 release workflow runs `apps/desktop/scripts/verify-desktop-release.mjs`, which fails the job
 unless the release meets all of these:
 
-- every listed edition's three metadata files are present
+- every listed edition's metadata file for every listed platform is present
 - each file's `version` equals the tag
 - every installer or ZIP each file references is in the release with a matching `sha512` and
   size
 - `careerden-desktop-update-policy.json` is a valid policy no newer than the release
 
-Only Careerden Unplugged is listed for now, so three files are required; adding `cloud` makes
-it six. Check a draft or published release the same way before or after publishing it:
+Only Careerden Unplugged on macOS is listed for now, so only `local-mac.yml` is required. Each
+added edition or platform adds its files: Unplugged on all three platforms needs three, and both
+editions on all three need six. Windows and Linux stay out of releases until they are tested.
+Check a draft or published release the same way before or after publishing it:
 
 ```bash
-pnpm verify:desktop-release v0.8.0
-# or for another repository, or both editions regardless of the file:
-pnpm verify:desktop-release v0.8.0 --repo owner/careerden --editions cloud,local
+pnpm verify:desktop-release v1.0.0
+# or for another repository, or other editions and platforms regardless of the file:
+pnpm verify:desktop-release v1.0.0 --repo owner/careerden --editions cloud,local --platforms macos,windows,linux
 ```
 
 The command downloads the release with `gh`, so it needs an authenticated GitHub CLI and room

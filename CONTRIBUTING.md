@@ -245,8 +245,10 @@ pnpm vitest --filter @careerden/contracts
 
 Desktop releases are built from a `v*.*.*` tag by
 `.github/workflows/desktop-release.yml`. The tag must match the version in
-`apps/desktop/package.json`. The workflow builds separate macOS x64 and arm64 DMGs and
-ZIPs, a Windows x64 NSIS installer, and a Linux x64 AppImage. It also attaches
+`apps/desktop/package.json`. The workflow builds the platforms listed in
+`apps/desktop/release-editions.json`: separate macOS x64 and arm64 DMGs and ZIPs, and, once
+they are listed, a Windows x64 NSIS installer and a Linux x64 AppImage. Only macOS is released
+for now. It also attaches
 electron-updater metadata, blockmaps, the validated minimum-version policy, and
 `SHA256SUMS.txt` to a draft GitHub release.
 

@@ -8,7 +8,8 @@
 //     Checks release assets in a local directory; the release workflow uses this before it
 //     creates the draft release.
 //
-// The editions come from apps/desktop/release-editions.json unless --editions lists them.
+// The editions and platforms come from apps/desktop/release-editions.json unless --editions or
+// --platforms lists them.
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -19,6 +20,7 @@ import { parseArgs, promisify } from "node:util";
 import {
   directoryAssets,
   parseReleaseEditions,
+  parseReleasePlatforms,
   requiredMetadataFiles,
   verifyDesktopRelease,
 } from "./desktop-release-verification.mjs";
@@ -32,22 +34,28 @@ const { values, positionals } = parseArgs({
     dir: { type: "string" },
     repo: { type: "string" },
     editions: { type: "string" },
+    platforms: { type: "string" },
   },
 });
 
 const [tag] = positionals;
 if (!tag || positionals.length > 1) {
   console.error(
-    "Usage: verify-desktop-release.mjs <tag> [--dir <directory> | --repo owner/name] [--editions local,cloud]",
+    "Usage: verify-desktop-release.mjs <tag> [--dir <directory> | --repo owner/name] [--editions local,cloud] [--platforms macos,windows,linux]",
   );
   process.exit(2);
 }
 
-const editions = values.editions
-  ? parseReleaseEditions({ editions: values.editions.split(",").map((value) => value.trim()) })
-  : parseReleaseEditions(
-      JSON.parse(await readFile(join(desktopDirectory, "release-editions.json"), "utf8")),
-    );
+const listed = (value) => value.split(",").map((item) => item.trim());
+const releaseFile = JSON.parse(
+  await readFile(join(desktopDirectory, "release-editions.json"), "utf8"),
+);
+const editions = parseReleaseEditions(
+  values.editions ? { editions: listed(values.editions) } : releaseFile,
+);
+const platforms = parseReleasePlatforms(
+  values.platforms ? { platforms: listed(values.platforms) } : releaseFile,
+);
 
 let downloadDirectory;
 try {
@@ -75,6 +83,7 @@ try {
   const problems = await verifyDesktopRelease({
     tag,
     editions,
+    platforms,
     assets: await directoryAssets(directory),
   });
 
@@ -83,12 +92,16 @@ try {
       // GitHub Actions shows these as error annotations; elsewhere they are plain lines.
       console.error(process.env.GITHUB_ACTIONS ? `::error::${problem}` : `error: ${problem}`);
     }
-    console.error(`Release ${tag} is not complete for editions ${editions.join(", ")}.`);
+    console.error(
+      `Release ${tag} is not complete for editions ${editions.join(", ")} ` +
+        `on ${platforms.join(", ")}.`,
+    );
     process.exitCode = 1;
   } else {
     console.log(
-      `Release ${tag} is complete for editions ${editions.join(", ")}: ` +
-        `${requiredMetadataFiles(editions).join(", ")}, every referenced file, and the update policy.`,
+      `Release ${tag} is complete for editions ${editions.join(", ")} on ${platforms.join(", ")}: ` +
+        `${requiredMetadataFiles(editions, platforms).join(", ")}, every referenced file, ` +
+        "and the update policy.",
     );
   }
 } catch (error) {

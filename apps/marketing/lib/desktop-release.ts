@@ -1,7 +1,8 @@
 export type DesktopPlatformId = "macos" | "windows" | "linux";
 
-// Platforms whose downloads the site offers. Windows and Linux installers are still published
-// with each release but stay hidden until those builds are ready for the public beta.
+// Platforms whose downloads the site offers. Releases contain only the platforms in
+// apps/desktop/release-editions.json, macOS for now; the Windows and Linux entries below stay so
+// they can be offered again once those platforms are released.
 export const enabledDesktopPlatforms: readonly DesktopPlatformId[] = ["macos"];
 
 function enabledDownloads(downloads: DesktopDownload[]): DesktopDownload[] {

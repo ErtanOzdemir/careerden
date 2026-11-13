@@ -6,7 +6,8 @@ import { join } from "node:path";
 // Shared by the release workflow, which checks the assets before creating the draft release, and
 // by verify-desktop-release.mjs, which checks a draft or published release on GitHub. Both
 // editions ship in one release, and an installed app reads only its own channel's metadata, so a
-// release missing one edition or platform breaks that edition's updates without any error.
+// release missing one edition or released platform breaks that edition's updates without any
+// error.
 
 // electron-builder's updater channel per edition, set by `publish.channel` in its config.
 export const editionChannels = { cloud: "latest", local: "local" };
@@ -21,12 +22,18 @@ export const checksumsAssetName = "SHA256SUMS.txt";
 
 const stableSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
-// The metadata files a release of these editions must contain, e.g. local-mac.yml.
-export function requiredMetadataFiles(editions) {
+const allPlatforms = Object.keys(platformMetadataFiles);
+
+// The metadata files a release of these editions and platforms must contain, e.g. local-mac.yml.
+export function requiredMetadataFiles(editions, platforms = allPlatforms) {
   return editions.flatMap((edition) => {
     const channel = editionChannels[edition];
     if (!channel) throw new Error(`Unknown desktop edition ${JSON.stringify(edition)}`);
-    return Object.values(platformMetadataFiles).map((fileName) => fileName(channel));
+    return platforms.map((platform) => {
+      const fileName = platformMetadataFiles[platform];
+      if (!fileName) throw new Error(`Unknown desktop platform ${JSON.stringify(platform)}`);
+      return fileName(channel);
+    });
   });
 }
 
@@ -46,6 +53,23 @@ export function parseReleaseEditions(value) {
   return editions;
 }
 
+// Parses the platforms in apps/desktop/release-editions.json: the platforms every edition is built
+// and released for. Installed apps on a platform outside the list receive no updates.
+export function parseReleasePlatforms(value) {
+  const platforms = value?.platforms;
+  if (
+    !Array.isArray(platforms) ||
+    platforms.length === 0 ||
+    platforms.some((platform) => !Object.hasOwn(platformMetadataFiles, platform)) ||
+    new Set(platforms).size !== platforms.length
+  ) {
+    throw new Error(
+      `release-editions.json must list one or more distinct platforms from ${allPlatforms.join(", ")}`,
+    );
+  }
+  return platforms;
+}
+
 // Release assets in a local directory, such as the workflow's merged build artifacts or a
 // downloaded release.
 export async function directoryAssets(directory) {
@@ -62,7 +86,7 @@ export async function directoryAssets(directory) {
 
 // Returns every problem found, so one run reports them all. An empty list means the release is
 // complete and consistent.
-export async function verifyDesktopRelease({ tag, editions, assets }) {
+export async function verifyDesktopRelease({ tag, editions, platforms = allPlatforms, assets }) {
   const problems = [];
   const version = tag.startsWith("v") ? tag.slice(1) : tag;
   if (!stableSemver.test(version)) {
@@ -70,7 +94,7 @@ export async function verifyDesktopRelease({ tag, editions, assets }) {
   }
   const available = new Set(assets.names);
 
-  for (const metadataFile of requiredMetadataFiles(editions)) {
+  for (const metadataFile of requiredMetadataFiles(editions, platforms)) {
     if (!available.has(metadataFile)) {
       problems.push(`Missing updater metadata ${metadataFile}`);
       continue;

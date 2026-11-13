@@ -137,7 +137,7 @@ test(contracts): add schema validation tests for profiles
 3. **Ensure CI passes** — all checks must be green.
 4. **Request review** from a maintainer.
 5. **Address feedback** — push additional commits as needed.
-6. **Squash and merge** once approved.
+6. **Rebase and merge** once approved. Every commit lands on `master` as is, so keep each one focused and follow the commit message conventions.
 
 ### PR Checklist
 

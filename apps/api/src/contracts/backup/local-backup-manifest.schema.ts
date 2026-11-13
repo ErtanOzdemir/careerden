@@ -23,6 +23,6 @@ export const localBackupManifestSchema = z.object({
 });
 
 // One table's rows exactly as Postgres's json_agg renders them.
-export const localBackupTableRowsSchema = z.array(z.record(z.unknown()));
+export const localBackupTableRowsSchema = z.array(z.record(z.string(), z.unknown()));
 
 export type LocalBackupManifest = z.infer<typeof localBackupManifestSchema>;

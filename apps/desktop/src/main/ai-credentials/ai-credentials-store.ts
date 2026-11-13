@@ -26,7 +26,7 @@ export interface AiCredentialsStatus {
 
 const storedCredentialsSchema = z.object({
   activeProvider: z.enum(aiProviderNames).nullable(),
-  providers: z.record(
+  providers: z.partialRecord(
     z.enum(aiProviderNames),
     z.object({ apiKey: z.string().min(1), model: z.string().min(1).optional() }),
   ),

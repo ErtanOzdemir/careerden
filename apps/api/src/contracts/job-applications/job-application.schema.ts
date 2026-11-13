@@ -43,7 +43,7 @@ const tagsSchema = z.array(z.string().min(1)).default([]);
 export const createJobApplicationSchema = z
   .object({
     profileId: z.string().min(1),
-    applicationPackPreferences: applicationPackPreferencesSchema.default({}),
+    applicationPackPreferences: applicationPackPreferencesSchema.prefault({}),
     sourceUrl: linkedInJobUrlSchema.optional(),
     companyName: z.string().trim().min(1).max(200).optional(),
     roleTitle: z.string().trim().min(1).max(200).optional(),

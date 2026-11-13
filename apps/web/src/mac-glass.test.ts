@@ -1,7 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initializeMacGlass, macGlassAttribute, supportsMacGlass } from "./mac-glass.js";
 
 describe("macOS sidebar glass", () => {
+  beforeAll(() => {
+    // jsdom has no matchMedia, and vi.spyOn only replaces an existing function.
+    window.matchMedia ??= () => {
+      throw new Error("Each test installs its own matchMedia.");
+    };
+  });
+
   beforeEach(() => {
     delete window.electronAPI;
     document.documentElement.removeAttribute(macGlassAttribute);

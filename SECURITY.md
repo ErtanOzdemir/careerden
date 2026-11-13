@@ -12,11 +12,11 @@ minor release; older release lines are not patched.
 
 | Version | Careerden          | Careerden Unplugged |
 | ------- | ------------------ | ------------------- |
-| 0.7.x   | :white_check_mark: | :white_check_mark:  |
-| < 0.7   | :x:                | :x:                 |
+| 1.0.x   | :white_check_mark: | :white_check_mark:  |
+| < 1.0   | :x:                | :x:                 |
 
-When the next minor release is published (the first public beta will be 0.8.0), it
-becomes the only supported line and the table moves with it.
+When the next minor release is published, it becomes the only supported line and the table
+moves with it.
 
 Installed desktop apps check public GitHub Releases for updates at startup, hourly, and on
 demand, and download new versions automatically. When a fix must reach every user, the

@@ -65,7 +65,7 @@ body:
       label: Diagnostic info
       description: |
         Paste the app version. It is shown at the bottom of **Settings** ("Careerden · Version x.y.z"); Careerden Unplugged also shows it in the sidebar footer.
-      placeholder: "Version: 0.7.0"
+      placeholder: "Version: 1.0.0"
     validations:
       required: true
   - type: textarea

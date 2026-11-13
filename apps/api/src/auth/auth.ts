@@ -119,6 +119,9 @@ export function createAuth(config: AuthConfig): CareerdenAuth {
       emailOTP({
         allowedAttempts: otpAllowedAttemptsPerCode,
         expiresIn: otpExpiresInSeconds,
+        // Signing in before verifying requests another code, which the per-email send limit may
+        // not deliver. Reusing the live code keeps the one already in the user's inbox valid.
+        resendStrategy: "reuse",
         changeEmail: {
           enabled: true,
           verifyCurrentEmail: false,

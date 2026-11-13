@@ -37,6 +37,23 @@ describe("createAuth", () => {
     );
   });
 
+  it("resends the live verification code instead of replacing it", () => {
+    createAuth({
+      baseUrl: "http://localhost:3000",
+      creditProvisioner: { execute: vi.fn(async () => undefined) },
+      databaseUrl: "postgres://localhost/careerden",
+      emailSender: createEmailSender(),
+      secret: "test-auth-secret-with-enough-length",
+      trustedOrigins: ["http://localhost:5173"],
+      rateLimitEnabled: true,
+      trustedProxies: [],
+    });
+
+    const options = vi.mocked(betterAuth).mock.lastCall?.[0];
+    const emailOtpPlugin = options?.plugins?.find((plugin) => plugin.id === "email-otp");
+    expect(emailOtpPlugin?.options).toMatchObject({ resendStrategy: "reuse" });
+  });
+
   it("stores rate limits in the database and resolves client IPs through trusted proxies", () => {
     createAuth({
       baseUrl: "http://localhost:3000",

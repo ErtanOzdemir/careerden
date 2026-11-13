@@ -120,6 +120,11 @@ The Vite proxy also exposes the health check at <http://localhost:5173/api/healt
 | `pnpm typecheck`                                               | Type-check every workspace                               |
 | `pnpm lint:fix` / `pnpm format`                                | Apply mechanical lint/format fixes                       |
 
+`pnpm test` runs half the cores' worth of packages at a time with two Vitest workers each, so the
+whole run uses about one process per core. Starting more makes the jsdom and PGlite suites time out
+at random. Set `VITEST_MAX_WORKERS` to change the per-package count, and pass Turbo flags after
+`--`, for example `pnpm test -- --force`.
+
 Backend development commands run `tsx watch` with Node's `development` export condition. Internal
 `@careerden/*` packages therefore resolve directly to their TypeScript sources and trigger an app
 restart when a dependency changes. `NODE_ENV` still controls runtime behavior independently; even

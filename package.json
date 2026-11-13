@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test --concurrency=50%"
+    "test": "node scripts/test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

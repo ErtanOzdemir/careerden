@@ -54,7 +54,8 @@ const requirementSignals =
 
 function requirementsFromDescription(job: ScrapedJob): string[] {
   const chunks = job.description
-    .replaceAll(/<[^>]+>/g, " ")
+    // Excluding "<" keeps an unclosed run of "<" linear instead of rescanning to the end each time.
+    .replaceAll(/<[^<>]+>/g, " ")
     .split(/\r?\n+|(?<=[.!?])\s+/)
     .map((chunk) =>
       chunk

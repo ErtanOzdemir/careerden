@@ -112,7 +112,7 @@ export function mergeRichDocumentsAsProse(
     .map((text) => text.trim().replace(/\s+/g, " "))
     .filter(Boolean)
     .filter((text) => {
-      const key = text.toLocaleLowerCase().replace(/[.!?]+$/, "");
+      const key = withoutTrailingPunctuation(text.toLocaleLowerCase());
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -120,6 +120,14 @@ export function mergeRichDocumentsAsProse(
     .map((text) => (/[.!?]$/.test(text) ? text : `${text}.`));
 
   return sentences.length > 0 ? richDocumentFromText(sentences.join(" ")) : undefined;
+}
+
+// A loop rather than /[.!?]+$/, which rescans a long run of punctuation from every position when
+// the text does not end in one.
+function withoutTrailingPunctuation(text: string): string {
+  let end = text.length;
+  while (end > 0 && ".!?".includes(text.charAt(end - 1))) end -= 1;
+  return text.slice(0, end);
 }
 
 function blockToPlainText(block: RichBlock): string {

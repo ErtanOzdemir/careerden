@@ -99,4 +99,31 @@ describe("ExtractJobRequirementsUseCase", () => {
 
     expect(enriched.requirements).toEqual(["Role: Backend Engineer"]);
   });
+
+  it("strips HTML tags from fallback requirements and stays linear on unclosed angle brackets", async () => {
+    const provider: AiProvider = {
+      async generate<T>(params: AiGenerateParams<T>): Promise<T> {
+        return params.outputSchema.parse({ requirements: [] }) as T;
+      },
+    };
+    const extract = (description: string) =>
+      new ExtractJobRequirementsUseCase(provider).execute({
+        jobApplicationId: "manual-job-application-3",
+        job: {
+          title: "Backend Engineer",
+          companyName: "Example Inc",
+          description,
+          requirements: [],
+          raw: { strategy: "manual" },
+        },
+      });
+
+    await expect(
+      extract("<p>You will <b>build</b> TypeScript services.</p>"),
+    ).resolves.toMatchObject({ requirements: ["You will build TypeScript services."] });
+
+    const started = performance.now();
+    await extract("<".repeat(250_000));
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });

@@ -20,7 +20,7 @@ jobs:
     name: Check database upgrade fixture
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Warn when this version has no upgrade fixture
         shell: bash
@@ -48,7 +48,7 @@ jobs:
       matrix: ${{ steps.editions.outputs.matrix }}
       title: ${{ steps.editions.outputs.title }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: editions
         name: Read release-editions.json
@@ -99,13 +99,13 @@ jobs:
       ARTIFACT_PREFIX: ${{ matrix.edition == 'local' && 'CareerdenUnplugged' || 'Careerden' }}
       UPDATE_CHANNEL: ${{ matrix.edition == 'local' && 'local' || 'latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9.15.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -302,7 +302,7 @@ jobs:
           }
 
       - name: Upload installer and updater metadata
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.edition }}-${{ matrix.platform }}
           path: |
@@ -327,16 +327,16 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download installers and updater metadata
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: desktop-*
           merge-multiple: true
           path: release-assets
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 

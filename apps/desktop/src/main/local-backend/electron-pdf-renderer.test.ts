@@ -54,7 +54,7 @@ describe("ElectronPdfRenderer", () => {
     expect(windows[0]?.printToPDF).toHaveBeenCalledWith({
       pageSize: "A4",
       printBackground: true,
-      margins: { marginType: "none" },
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
     });
     expect(windows[0]?.destroy).toHaveBeenCalled();
   });

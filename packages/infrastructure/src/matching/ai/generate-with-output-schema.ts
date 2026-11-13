@@ -24,7 +24,7 @@ export async function generateWithOutputSchema<T>(
     const { output } = await generateText({
       model,
       output: Output.object({ schema: params.outputSchema }),
-      system: params.system,
+      instructions: params.system,
       prompt: params.prompt,
       temperature: 0.2,
       maxRetries: 2,

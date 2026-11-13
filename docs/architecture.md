@@ -282,7 +282,7 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 | Authentication      | Better Auth with email OTP verification                                  |
 | Database            | PostgreSQL 16 via Knex 3 and `pg`; PGlite in Unplugged                   |
 | Queues and realtime | Redis 7 and BullMQ 5; in-process in Unplugged                            |
-| AI                  | Vercel AI SDK 6 with OpenAI, Gemini, DeepSeek, Anthropic, and OpenRouter |
+| AI                  | Vercel AI SDK 7 with OpenAI, Gemini, DeepSeek, Anthropic, and OpenRouter |
 | Scraping            | Public guest HTTP responses and HTML parsing                             |
 | PDF                 | Playwright 1.60; Electron `printToPDF` in Unplugged                      |
 | Documents           | Predefined HTML templates                                                |

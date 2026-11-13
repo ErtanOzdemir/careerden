@@ -9,7 +9,18 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    # A PGlite release can embed a newer PostgreSQL that cannot open existing Unplugged data, so
+    # PGlite moves only through the upgrade checklist in docs/architecture.md.
+    ignore:
+      - dependency-name: "@electric-sql/pglite"
+      - dependency-name: "@electric-sql/pglite-tools"
+      - dependency-name: "knex-pglite"
     groups:
+      # OpenTelemetry is still 0.x, where a minor bump can break the API. Keep it out of the
+      # shared group so it cannot block the other updates.
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
       minor-and-patch:
         update-types:
           - minor

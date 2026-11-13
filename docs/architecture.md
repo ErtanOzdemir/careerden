@@ -206,9 +206,9 @@ renderer. New routes and use cases belong in the shared composition, so both edi
   range. After the database opens and migrates, and after an import is staged, the app writes
   `data/pglite-engine.json` with the PGlite release and the embedded PostgreSQL version, such as
   `{ "pglite": "0.5.10", "postgres": "17.5", "recordedAt": "…" }`. The record lives next to
-  `pglite`, so snapshots and restores carry it with the data it describes. No dependency bot is
-  configured; any that is added must ignore `@electric-sql/pglite`, `@electric-sql/pglite-tools`,
-  and `knex-pglite`.
+  `pglite`, so snapshots and restores carry it with the data it describes. Dependabot
+  (`.github/dependabot.yml`) ignores `@electric-sql/pglite`, `@electric-sql/pglite-tools`, and
+  `knex-pglite`; keep them ignored there and in any other dependency bot that is added.
 
   When a release has to move to a PGlite whose data format changed, it ships this migration:
   1. Keep the previous engine as an aliased dependency, for example

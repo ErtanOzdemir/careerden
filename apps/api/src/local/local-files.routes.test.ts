@@ -31,7 +31,7 @@ describe("createLocalFileRouter", () => {
       createLocalFileRouter({ readSignedFile: new ReadSignedFileUseCase(storage) }),
     );
     app.use(errorHandler);
-    server = app.listen(0);
+    server = app.listen(0, "127.0.0.1");
     await new Promise<void>((resolve) => server!.once("listening", () => resolve()));
     return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   }

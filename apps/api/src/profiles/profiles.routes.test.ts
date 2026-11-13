@@ -33,7 +33,7 @@ describe("profile CV import routes", () => {
     app.use("/profiles", createProfileRouter(dependencies));
     app.use(createErrorHandler(() => undefined));
 
-    const server = app.listen(0);
+    const server = app.listen(0, "127.0.0.1");
     servers.push(server);
     await new Promise<void>((resolve) => server.once("listening", () => resolve()));
     return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

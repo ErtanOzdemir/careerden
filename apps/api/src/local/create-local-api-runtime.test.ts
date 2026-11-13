@@ -63,7 +63,7 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
       ...overrides,
     });
     runtimes.push(runtime);
-    const server = runtime.app.listen(0);
+    const server = runtime.app.listen(0, "127.0.0.1");
     servers.push(server);
     await new Promise<void>((resolve) => server.once("listening", () => resolve()));
     const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

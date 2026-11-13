@@ -2,7 +2,12 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiProfileSkillGroup } from "../api/types.js";
-import { editableSkillGroups, SkillGroupsEditor, SkillGroupsView } from "./SkillGroupsEditor.js";
+import {
+  editableSkillGroups,
+  SkillGroupsEditor,
+  skillGroupsError,
+  SkillGroupsView,
+} from "./SkillGroupsEditor.js";
 
 afterEach(() => {
   cleanup();
@@ -53,6 +58,41 @@ describe("SkillGroupsView", () => {
 
     expect(screen.getByRole("heading", { name: "DevOps" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Other" })).toBeInTheDocument();
+  });
+});
+
+describe("editableSkillGroups", () => {
+  it("puts one uncategorized group last", () => {
+    expect(
+      editableSkillGroups([
+        { name: "", skills: ["Git"] },
+        { name: "DevOps", skills: ["Docker"] },
+      ]),
+    ).toEqual([
+      { name: "DevOps", skills: ["Docker"] },
+      { name: "", skills: ["Git"] },
+    ]);
+    expect(editableSkillGroups([{ name: "DevOps", skills: ["Docker"] }])).toEqual([
+      { name: "DevOps", skills: ["Docker"] },
+      { name: "", skills: [] },
+    ]);
+  });
+});
+
+describe("skillGroupsError", () => {
+  it("rejects a category whose name was cleared", () => {
+    expect(
+      skillGroupsError([
+        { name: " ", skills: ["Docker"] },
+        { name: "", skills: ["Git"] },
+      ]),
+    ).toBe("Name every category or remove it before saving.");
+    expect(
+      skillGroupsError([
+        { name: "DevOps", skills: ["Docker"] },
+        { name: "", skills: ["Git"] },
+      ]),
+    ).toBeNull();
   });
 });
 
@@ -107,6 +147,32 @@ describe("SkillGroupsEditor", () => {
     });
 
     expect(latest()?.[0]).toEqual({ name: "DevOps", skills: ["AWS"] });
+  });
+
+  it("keeps a category editable while its name is cleared and retyped", () => {
+    const latest = renderEditor([
+      { name: "DevOps", skills: ["Docker"] },
+      { name: "", skills: ["Git"] },
+    ]);
+
+    const nameInput = screen.getByLabelText("Category name for DevOps");
+    nameInput.focus();
+    fireEvent.change(nameInput, { target: { value: "" } });
+
+    expect(screen.getByLabelText("Category name for Unnamed category")).toBe(nameInput);
+    expect(nameInput).toHaveFocus();
+    expect(screen.getByText("Name this category or remove it.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Uncategorized" })).toBeInTheDocument();
+    expect(screen.getAllByRole("textbox", { name: /^Category name/ })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Remove category Other" })).not.toBeInTheDocument();
+
+    fireEvent.change(nameInput, { target: { value: "Cloud" } });
+
+    expect(latest()).toEqual([
+      { name: "Cloud", skills: ["Docker"] },
+      { name: "", skills: ["Git"] },
+    ]);
+    expect(screen.queryByText("Name this category or remove it.")).not.toBeInTheDocument();
   });
 
   it("keeps the skills of a removed category as uncategorized", () => {

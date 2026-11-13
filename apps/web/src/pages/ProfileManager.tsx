@@ -8,6 +8,7 @@ import { CvImportDialog } from "../components/CvImportDialog.js";
 import {
   editableSkillGroups,
   SkillGroupsEditor,
+  skillGroupsError,
   SkillGroupsView,
 } from "../components/SkillGroupsEditor.js";
 import { emptyRichDocument, richDocumentFromText } from "@careerden/contracts";
@@ -398,6 +399,11 @@ export default function ProfileManager() {
                   setIsEditingSkills(true);
                 }}
                 onSave={() => {
+                  const invalid = skillGroupsError(skillGroups);
+                  if (invalid) {
+                    setError(invalid);
+                    return;
+                  }
                   void savePartial({ skillGroups }).then((updated) => {
                     if (updated) {
                       setSkillGroups(updated.skillGroups);

@@ -112,6 +112,28 @@ describe("ProfileManager", () => {
     expect(screen.getByRole("heading", { name: "Other" })).toBeInTheDocument();
   });
 
+  it("does not save skills while a category has no name", async () => {
+    const profile = {
+      ...createProfile(createRichText()),
+      skillGroups: [
+        { name: "DevOps", skills: ["Docker"] },
+        { name: "", skills: ["Git"] },
+      ],
+    };
+    vi.mocked(profilesApi.me).mockResolvedValue(profile);
+
+    render(<ProfileManager />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit skills" }));
+    fireEvent.change(screen.getByLabelText("Category name for DevOps"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save skills" }));
+
+    expect(
+      await screen.findByText("Name every category or remove it before saving."),
+    ).toBeInTheDocument();
+    expect(profilesApi.update).not.toHaveBeenCalled();
+  });
+
   it("highlights the navigation item for the section being edited", async () => {
     const profile = createProfile(createRichText());
     vi.mocked(profilesApi.me).mockResolvedValue(profile);

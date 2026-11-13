@@ -15,12 +15,30 @@ const dashedButtonClassName =
   "flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground";
 
 /**
- * Returns the groups the editor starts from: the saved ones plus an uncategorized group, so there is
- * always somewhere to add a skill that does not belong to a category yet.
+ * Returns the groups the editor starts from: the saved categories followed by exactly one
+ * uncategorized group, so there is always somewhere to add a skill that does not belong to a
+ * category yet. The editor identifies the uncategorized group by this last position rather than by
+ * its empty name, so clearing a category's name to retype it keeps it a category.
  */
 export function editableSkillGroups(groups: ApiProfileSkillGroup[]): ApiProfileSkillGroup[] {
-  const copy = groups.map((group) => ({ name: group.name, skills: [...group.skills] }));
-  return copy.some((group) => !group.name.trim()) ? copy : [...copy, { name: "", skills: [] }];
+  const named = groups
+    .filter((group) => group.name.trim())
+    .map((group) => ({ name: group.name, skills: [...group.skills] }));
+  const uncategorized = groups
+    .filter((group) => !group.name.trim())
+    .flatMap((group) => group.skills);
+  return [...named, { name: "", skills: uncategorized }];
+}
+
+/**
+ * Returns why the edited groups cannot be saved yet, or null when they can. A category whose name
+ * was cleared would otherwise merge into the uncategorized group on save and lose its category.
+ */
+export function skillGroupsError(groups: ApiProfileSkillGroup[]): string | null {
+  const categories = groups.slice(0, -1);
+  return categories.some((group) => !group.name.trim())
+    ? "Name every category or remove it before saving."
+    : null;
 }
 
 export function SkillGroupsView({ groups }: { groups: ApiProfileSkillGroup[] }) {
@@ -74,7 +92,7 @@ export function SkillGroupsEditor({
   const [newGroupName, setNewGroupName] = useState("");
   const usedNames = new Set(groups.map((group) => skillKey(group.name)));
   const suggestions = SUGGESTED_SKILL_GROUP_NAMES.filter((name) => !usedNames.has(skillKey(name)));
-  const uncategorizedIndex = groups.findIndex((group) => !group.name.trim());
+  const uncategorizedIndex = groups.length - 1;
 
   function hasSkill(skill: string) {
     const key = skillKey(skill);
@@ -116,15 +134,11 @@ export function SkillGroupsEditor({
     const removed = groups[index];
     if (!removed) return;
     const remaining = groups.filter((_group, groupIndex) => groupIndex !== index);
-    const target = remaining.findIndex((group) => !group.name.trim());
+    const target = remaining.length - 1;
     onChange(
-      target === -1
-        ? [...remaining, { name: "", skills: removed.skills }]
-        : remaining.map((group, groupIndex) =>
-            groupIndex === target
-              ? { ...group, skills: [...group.skills, ...removed.skills] }
-              : group,
-          ),
+      remaining.map((group, groupIndex) =>
+        groupIndex === target ? { ...group, skills: [...group.skills, ...removed.skills] } : group,
+      ),
     );
   }
 
@@ -132,21 +146,25 @@ export function SkillGroupsEditor({
     const name = newGroupName.trim();
     if (!name || usedNames.has(skillKey(name))) return;
     // New categories go before the uncategorized group, which always comes last.
-    const insertAt = uncategorizedIndex === -1 ? groups.length : uncategorizedIndex;
-    onChange([...groups.slice(0, insertAt), { name, skills: [] }, ...groups.slice(insertAt)]);
+    onChange([
+      ...groups.slice(0, uncategorizedIndex),
+      { name, skills: [] },
+      ...groups.slice(uncategorizedIndex),
+    ]);
     setNewGroupName("");
   }
 
-  const moveTargets = groups.map((group, index) => ({
-    index,
-    label: group.name.trim() || UNCATEGORIZED_SKILL_GROUP_LABEL,
-  }));
+  const groupLabel = (group: ApiProfileSkillGroup, index: number) =>
+    group.name.trim() ||
+    (index === uncategorizedIndex ? UNCATEGORIZED_SKILL_GROUP_LABEL : UNNAMED_CATEGORY_LABEL);
+  const moveTargets = groups.map((group, index) => ({ index, label: groupLabel(group, index) }));
 
   return (
     <div className="space-y-4">
       {groups.map((group, index) => {
-        const isUncategorized = !group.name.trim() && index === uncategorizedIndex;
-        const label = group.name.trim() || UNCATEGORIZED_SKILL_GROUP_LABEL;
+        const isUncategorized = index === uncategorizedIndex;
+        const label = groupLabel(group, index);
+        const isUnnamed = !isUncategorized && !group.name.trim();
 
         return (
           <div key={index} className="rounded-lg border border-border p-3">
@@ -164,7 +182,8 @@ export function SkillGroupsEditor({
                       update(index, (current) => ({ ...current, name: event.target.value }))
                     }
                     placeholder="Category name"
-                    className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1 text-xs font-semibold text-foreground outline-none focus:border-ring"
+                    aria-invalid={isUnnamed || undefined}
+                    className={`min-w-0 flex-1 rounded-md border bg-transparent px-2 py-1 text-xs font-semibold text-foreground outline-none focus:border-ring ${isUnnamed ? "border-destructive" : "border-border"}`}
                   />
                   <button
                     aria-label={`Remove category ${label}`}
@@ -177,6 +196,9 @@ export function SkillGroupsEditor({
                 </>
               )}
             </div>
+            {isUnnamed && (
+              <p className="mb-2 text-xs text-destructive">Name this category or remove it.</p>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               {group.skills.map((skill) => (
                 <span
@@ -240,6 +262,8 @@ export function SkillGroupsEditor({
     </div>
   );
 }
+
+const UNNAMED_CATEGORY_LABEL = "Unnamed category";
 
 function NewSkillInput({ label, onAdd }: { label: string; onAdd: (value: string) => boolean }) {
   const [value, setValue] = useState("");

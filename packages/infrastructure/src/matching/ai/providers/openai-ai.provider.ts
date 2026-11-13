@@ -11,6 +11,10 @@ export class OpenAiAiProvider implements AiProvider {
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
     const openai = createOpenAI({ apiKey: this.apiKey });
 
-    return generateWithOutputSchema("openai", openai(this.model), params);
+    // Strict structured outputs require every property to be required, and the lenient match
+    // result schema has optional fields. @ai-sdk/openai 4 turned strict mode on by default.
+    return generateWithOutputSchema("openai", openai(this.model), params, {
+      openai: { strictJsonSchema: false },
+    });
   }
 }

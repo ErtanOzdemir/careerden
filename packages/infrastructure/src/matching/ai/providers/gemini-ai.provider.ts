@@ -1,5 +1,5 @@
 import type { AiGenerateParams, AiProvider } from "@careerden/domain";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGoogle } from "@ai-sdk/google";
 import { generateWithOutputSchema } from "../generate-with-output-schema.js";
 
 export class GeminiAiProvider implements AiProvider {
@@ -9,7 +9,7 @@ export class GeminiAiProvider implements AiProvider {
   ) {}
 
   async generate<T>(params: AiGenerateParams<T>): Promise<T> {
-    const google = createGoogleGenerativeAI({ apiKey: this.apiKey });
+    const google = createGoogle({ apiKey: this.apiKey });
 
     // Gemini 2.5 Flash thinks by default, which dominates latency on interactive revisions.
     return generateWithOutputSchema(

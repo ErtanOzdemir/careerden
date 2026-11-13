@@ -22,13 +22,7 @@ export interface ApiBillingRedirect {
 }
 
 export type ApiBillingPaymentStatus =
-  | "pending"
-  | "paid"
-  | "refunded"
-  | "partially_refunded"
-  | "charged_back"
-  | "failed"
-  | "canceled";
+  "pending" | "paid" | "refunded" | "partially_refunded" | "charged_back" | "failed" | "canceled";
 
 export interface ApiBillingPayment {
   id: string;

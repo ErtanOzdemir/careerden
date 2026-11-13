@@ -156,8 +156,7 @@ export type ApiCvTip = string | { text: string; requirement?: string; evidence?:
 export type ApiCvListTip = string | { item: string; text: string; requirement?: string };
 
 export type ApiGapQuestionField =
-  | { type: "summary" }
-  | { type: "education" | "experience" | "project"; index: number };
+  { type: "summary" } | { type: "education" | "experience" | "project"; index: number };
 
 export interface ApiGapQuestion {
   field: ApiGapQuestionField;

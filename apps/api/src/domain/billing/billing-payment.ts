@@ -1,11 +1,5 @@
 export type BillingPaymentStatus =
-  | "pending"
-  | "paid"
-  | "refunded"
-  | "partially_refunded"
-  | "charged_back"
-  | "failed"
-  | "canceled";
+  "pending" | "paid" | "refunded" | "partially_refunded" | "charged_back" | "failed" | "canceled";
 
 /** A payment collected by the billing provider, with amounts in the currency's minor unit. */
 export interface BillingPayment {

@@ -41,15 +41,13 @@ export function normalizeAiMatchResult(
       .filter((evaluation) => evaluation.requirement.length > 0),
     missingSkills: cleanStrings(candidate.missingSkills),
     missingSkillResources: candidate.missingSkillResources
-      ?.map(
-        (resource): MissingSkillResource => ({
-          skill: resource.skill.trim(),
-          title: resource.title.trim(),
-          url: resource.url.trim(),
-          type: resource.type,
-          reason: resource.reason.trim(),
-        }),
-      )
+      ?.map((resource): MissingSkillResource => ({
+        skill: resource.skill.trim(),
+        title: resource.title.trim(),
+        url: resource.url.trim(),
+        type: resource.type,
+        reason: resource.reason.trim(),
+      }))
       .filter(
         (resource) =>
           resource.skill.length > 0 &&

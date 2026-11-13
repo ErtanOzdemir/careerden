@@ -19,14 +19,12 @@ function retiredModelError(model: string): APICallError {
 
 function fakeProviders(behavior: Record<string, () => Promise<unknown>>) {
   const generate = vi.fn();
-  const createForModel = vi.fn(
-    (model: string): AiProvider => ({
-      generate: async <T>(request: AiGenerateParams<T>) => {
-        generate(model, request);
-        return (await behavior[model]!()) as T;
-      },
-    }),
-  );
+  const createForModel = vi.fn((model: string): AiProvider => ({
+    generate: async <T>(request: AiGenerateParams<T>) => {
+      generate(model, request);
+      return (await behavior[model]!()) as T;
+    },
+  }));
   return { createForModel, generate };
 }
 

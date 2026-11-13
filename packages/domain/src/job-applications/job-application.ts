@@ -106,12 +106,7 @@ export interface UpdateJobApplicationTrackingInput {
 }
 
 export type JobApplicationEventType =
-  | "created"
-  | "status_changed"
-  | "note"
-  | "comment"
-  | "reminder"
-  | "processing";
+  "created" | "status_changed" | "note" | "comment" | "reminder" | "processing";
 
 export interface JobApplicationEvent {
   id: string;

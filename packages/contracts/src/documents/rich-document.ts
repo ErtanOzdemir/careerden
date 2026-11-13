@@ -12,10 +12,7 @@
  */
 
 export type RichTextMark =
-  | { type: "bold" }
-  | { type: "italic" }
-  | { type: "underline" }
-  | { type: "link"; href: string };
+  { type: "bold" } | { type: "italic" } | { type: "underline" } | { type: "link"; href: string };
 
 export interface RichTextNode {
   type: "text";

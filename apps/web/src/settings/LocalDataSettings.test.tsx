@@ -11,20 +11,16 @@ const summary: LocalBackupSummary = {
 
 function createBridge(overrides: Partial<LocalDataBridge> = {}): LocalDataBridge {
   return {
-    exportData: vi.fn(
-      async (): Promise<LocalDataExportResult> => ({
-        status: "exported",
-        fileName: "careerden-unplugged-backup-2026-11-06.careerden",
-        summary,
-      }),
-    ),
-    importData: vi.fn(
-      async (): Promise<LocalDataImportResult> => ({
-        status: "imported",
-        snapshotFileName: "before-import-2026-11-06T10-15-30Z.careerden",
-        summary,
-      }),
-    ),
+    exportData: vi.fn(async (): Promise<LocalDataExportResult> => ({
+      status: "exported",
+      fileName: "careerden-unplugged-backup-2026-11-06.careerden",
+      summary,
+    })),
+    importData: vi.fn(async (): Promise<LocalDataImportResult> => ({
+      status: "imported",
+      snapshotFileName: "before-import-2026-11-06T10-15-30Z.careerden",
+      summary,
+    })),
     openDataFolder: vi.fn(async () => undefined),
     ...overrides,
   };

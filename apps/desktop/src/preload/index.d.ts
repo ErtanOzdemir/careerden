@@ -6,14 +6,7 @@ export interface DesktopNotificationActivation {
 }
 
 export type DesktopUpdateStatus =
-  | "disabled"
-  | "idle"
-  | "checking"
-  | "up-to-date"
-  | "available"
-  | "downloading"
-  | "ready"
-  | "error";
+  "disabled" | "idle" | "checking" | "up-to-date" | "available" | "downloading" | "ready" | "error";
 
 export interface DesktopUpdateState {
   availableVersion?: string;
@@ -51,8 +44,7 @@ export type AiProviderErrorCategory =
   | "invalid_output";
 
 export type AiCredentialsTestResult =
-  | { ok: true }
-  | { ok: false; message: string; category?: AiProviderErrorCategory };
+  { ok: true } | { ok: false; message: string; category?: AiProviderErrorCategory };
 
 // Present when the key was saved although the provider could not confirm it.
 export type AiCredentialsSaveResult = AiCredentialsStatus & { warning?: string };
@@ -106,11 +98,7 @@ export interface LocalDataAPI {
 }
 
 export type StartupRecoveryReason =
-  | "database-open"
-  | "migration"
-  | "newer-version"
-  | "start-failed"
-  | "crash-loop";
+  "database-open" | "migration" | "newer-version" | "start-failed" | "crash-loop";
 
 export interface LocalDataSnapshot {
   id: string;
@@ -126,8 +114,7 @@ export interface StartupRecoveryState {
 }
 
 export type StartupRecoveryRestoreResult =
-  | { status: "restored" }
-  | { status: "error"; message: string };
+  { status: "restored" } | { status: "error"; message: string };
 
 export interface StartupRecoveryAPI {
   // Null unless the local data failed to open in this launch.

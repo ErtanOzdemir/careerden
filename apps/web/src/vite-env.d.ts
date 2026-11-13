@@ -10,14 +10,7 @@ interface DesktopNotificationActivation {
 }
 
 type DesktopUpdateStatus =
-  | "disabled"
-  | "idle"
-  | "checking"
-  | "up-to-date"
-  | "available"
-  | "downloading"
-  | "ready"
-  | "error";
+  "disabled" | "idle" | "checking" | "up-to-date" | "available" | "downloading" | "ready" | "error";
 
 interface DesktopUpdateState {
   availableVersion?: string;
@@ -52,8 +45,7 @@ type AiProviderErrorCategory =
   | "invalid_output";
 
 type AiCredentialsTestResult =
-  | { ok: true }
-  | { ok: false; message: string; category?: AiProviderErrorCategory };
+  { ok: true } | { ok: false; message: string; category?: AiProviderErrorCategory };
 
 // Present when the key was saved although the provider could not confirm it.
 type AiCredentialsSaveResult = AiCredentialsStatus & { warning?: string };
@@ -77,11 +69,7 @@ type LocalDataImportResult =
   | { status: "imported"; snapshotFileName: string; summary: LocalBackupSummary }
   | { status: "error"; message: string };
 type StartupRecoveryReason =
-  | "database-open"
-  | "migration"
-  | "newer-version"
-  | "start-failed"
-  | "crash-loop";
+  "database-open" | "migration" | "newer-version" | "start-failed" | "crash-loop";
 
 interface StartupRecoveryState {
   reason: StartupRecoveryReason;

@@ -23,8 +23,7 @@ export interface StartupRecoveryState {
 }
 
 export type StartupRecoveryRestoreResult =
-  | { status: "restored" }
-  | { status: "error"; message: string };
+  { status: "restored" } | { status: "error"; message: string };
 
 export interface StartupRecoveryOptions {
   snapshots: LocalDataSnapshotSource;

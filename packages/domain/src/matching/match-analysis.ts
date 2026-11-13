@@ -29,8 +29,7 @@ export interface MatchAnalysisResult {
 
 /** The CV field a gap question's answer belongs in. */
 export type GapQuestionField =
-  | { type: "summary" }
-  | { type: "experience" | "education" | "project"; index: number };
+  { type: "summary" } | { type: "experience" | "education" | "project"; index: number };
 
 /**
  * A question for the candidate about experience the job asks for but the profile does not show

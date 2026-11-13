@@ -6,14 +6,7 @@ export const desktopUpdateIpcChannels = {
 } as const;
 
 export type DesktopUpdateStatus =
-  | "disabled"
-  | "idle"
-  | "checking"
-  | "up-to-date"
-  | "available"
-  | "downloading"
-  | "ready"
-  | "error";
+  "disabled" | "idle" | "checking" | "up-to-date" | "available" | "downloading" | "ready" | "error";
 
 export interface DesktopUpdateState {
   availableVersion?: string;

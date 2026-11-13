@@ -39,12 +39,7 @@ import {
 import type { ReactNode } from "react";
 
 type WorkspaceSection =
-  | "Dashboard"
-  | "Applications"
-  | "Profile"
-  | "Base resume"
-  | "Credits & billing"
-  | "Settings";
+  "Dashboard" | "Applications" | "Profile" | "Base resume" | "Credits & billing" | "Settings";
 
 const workspaceNavigation: { label: WorkspaceSection; Icon: LucideIcon }[] = [
   { label: "Dashboard", Icon: LayoutDashboard },

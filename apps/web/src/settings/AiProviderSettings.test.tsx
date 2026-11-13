@@ -9,12 +9,11 @@ function status(overrides: Partial<AiCredentialsStatus> = {}): AiCredentialsStat
 function installBridge(initial: AiCredentialsStatus) {
   const bridge = {
     getStatus: vi.fn(async () => initial),
-    save: vi.fn(
-      async (input: AiCredentialsInput): Promise<AiCredentialsSaveResult> =>
-        status({
-          activeProvider: input.provider,
-          providers: [{ provider: input.provider, keyHint: (input.apiKey ?? "0000").slice(-4) }],
-        }),
+    save: vi.fn(async (input: AiCredentialsInput): Promise<AiCredentialsSaveResult> =>
+      status({
+        activeProvider: input.provider,
+        providers: [{ provider: input.provider, keyHint: (input.apiKey ?? "0000").slice(-4) }],
+      }),
     ),
     remove: vi.fn(async () => status()),
     setActive: vi.fn(async (provider: AiProviderName) =>

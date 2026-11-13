@@ -1,10 +1,10 @@
-import opentelemetry from "@opentelemetry/sdk-node";
+import { NodeSDK } from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import type { ApiEnv } from "./env.js";
 
 export function setupTracing(env: ApiEnv) {
-  const sdk = new opentelemetry.NodeSDK({
+  const sdk = new NodeSDK({
     traceExporter: new OTLPTraceExporter({
       url: env.OPEN_OBSERVE_URL,
       headers: {

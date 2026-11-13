@@ -25,8 +25,7 @@ const saveInputSchema = z
 const testInputSchema = saveInputSchema;
 
 export type AiCredentialsTestResult =
-  | { ok: true }
-  | { ok: false; message: string; category?: AiProviderErrorCategory };
+  { ok: true } | { ok: false; message: string; category?: AiProviderErrorCategory };
 
 // A saved status, plus a note when the provider could not confirm the key but it may still work.
 export type AiCredentialsSaveResult = AiCredentialsStatus & { warning?: string };

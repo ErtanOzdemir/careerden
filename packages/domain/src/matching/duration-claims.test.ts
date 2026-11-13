@@ -15,6 +15,23 @@ describe("extractDurationClaims", () => {
     expect(extractDurationClaims("5+ years")).toEqual(["5 year"]);
     expect(extractDurationClaims("No durations here")).toEqual([]);
   });
+
+  it("allows whitespace around the plus sign", () => {
+    expect(extractDurationClaims("5 + years, 6+  yrs and seven\t+\tyears")).toEqual([
+      "5 year",
+      "6 year",
+      "7 year",
+    ]);
+  });
+
+  it("stays linear on long whitespace runs that never reach a unit", () => {
+    const started = performance.now();
+
+    expect(extractDurationClaims(`1${"\t".repeat(250_000)}x`)).toEqual([]);
+    expect(extractDurationClaims(`one${"\t".repeat(250_000)}x`)).toEqual([]);
+    expect(redactDurationPhrases(`1${"\t".repeat(250_000)}x`, new Set())).toBe("1 x");
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });
 
 describe("durationClaimsFromDates", () => {

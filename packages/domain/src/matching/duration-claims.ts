@@ -9,9 +9,9 @@ import type { UserProfile } from "../profiles/user-profile.js";
  * instead, so a single bad claim cannot empty a cover letter or summary that has other content.
  */
 
-const numericDurationPattern = /\b(\d{1,2})\s*\+?\s*(years?|yrs?)\b/gi;
+const numericDurationPattern = /\b(\d{1,2})\s*(?:\+\s*)?(years?|yrs?)\b/gi;
 const wordDurationPattern =
-  /\b(one|two|three|four|five|six|seven|eight|nine|ten)\s*\+?\s*(years?|yrs?)\b/gi;
+  /\b(one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:\+\s*)?(years?|yrs?)\b/gi;
 const numberWords: Record<string, number> = {
   one: 1,
   two: 2,
@@ -147,7 +147,7 @@ export function stripUnsupportedDurationSentences(text: string, supported: Set<s
 export function redactDurationPhrases(text: string, supported: Set<string>): string {
   const leadIn =
     "(\\b(?:with|over|of|for|nearly|about|around|approximately|more\\s+than|at\\s+least|up\\s+to)\\s+)?";
-  const duration = `\\b(?:\\d{1,2}|${Object.keys(numberWords).join("|")})\\s*\\+?\\s*(?:years?|yrs?)\\b`;
+  const duration = `\\b(?:\\d{1,2}|${Object.keys(numberWords).join("|")})\\s*(?:\\+\\s*)?(?:years?|yrs?)\\b`;
   const pattern = new RegExp(`${leadIn}${duration}(\\s+of\\b)?`, "gi");
 
   const redacted = text.replaceAll(pattern, (match, lead: string | undefined, governedOf) =>

@@ -71,8 +71,10 @@ describe("DesktopNotificationBridge", () => {
     const result = renderBridge();
 
     await waitFor(() => expect(markRead).toHaveBeenCalledWith("notification-1"));
-    expect(screen.getByTestId("location")).toHaveTextContent(
-      "/applications/application-1?tab=timeline",
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/applications/application-1?tab=timeline",
+      ),
     );
 
     result.unmount();

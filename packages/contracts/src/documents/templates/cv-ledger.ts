@@ -108,14 +108,41 @@ export const cvLedgerHtml = `<!doctype html>
       .items > li:last-child {
         margin-bottom: 0;
       }
+      /* The title and meta line (dates, degree, links, technologies) share the first row when
+         they fit; a long meta line wraps below the title instead of overlapping it. */
+      .items > li {
+        align-items: baseline;
+        column-gap: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        row-gap: 3px;
+      }
+      /* Flex items' margins do not collapse, so the row gap spaces the entry instead. */
+      .items > li > h3,
+      .items > li > p {
+        margin: 0;
+      }
+      .items > li > ul {
+        margin: 1px 0;
+      }
+      .items > li > ul > li:first-child > :first-child {
+        margin-top: 0;
+      }
+      .items > li > ul > li:last-child > :last-child {
+        margin-bottom: 0;
+      }
+      /* Kept weaker than one attribute selector: Paged.js rewrites the sibling selector below into
+         one, and it must still win. flex-basis has no effect on other lists' items. */
+      li > * {
+        flex: 1 1 100%;
+      }
       .items > li > h3 {
-        padding-right: 42mm;
+        flex: 1 1 auto;
       }
       .items > li > h3 + p:has(> em:only-child) {
-        margin: 0;
-        position: absolute;
-        right: 0;
-        top: 0;
+        flex: 0 1 auto;
+        margin: 0 0 0 auto;
+        text-align: right;
       }
       .inline-list {
         display: flex;

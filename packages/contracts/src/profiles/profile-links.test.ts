@@ -75,6 +75,15 @@ describe("profileLinkKey", () => {
       profileLinkKey("http://github.com/ada"),
     );
   });
+
+  it("stays linear on a long run of slashes that does not end the URL", () => {
+    const url = `https://ada.dev/${"/".repeat(250_000)}a`;
+    const started = performance.now();
+
+    profileLinkKey(url);
+    formatProfileLinkLabel(url);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });
 
 describe("normalizeProfileLinks", () => {

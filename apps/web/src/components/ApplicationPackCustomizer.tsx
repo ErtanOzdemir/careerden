@@ -351,6 +351,7 @@ function ProfileIdentity({ profile }: { profile?: ApiProfile }) {
             <p className="mt-1 break-words text-xs text-muted-foreground">
               {[
                 profile.email,
+                profile.phone,
                 profile.location,
                 ...profile.links.map((link) => formatProfileLinkLabel(link.url)),
               ]

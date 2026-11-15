@@ -12,6 +12,7 @@ export function Field({
   placeholder,
   readOnly,
   type = "text",
+  autoComplete,
   className,
 }: {
   label: string;
@@ -21,6 +22,7 @@ export function Field({
   placeholder?: string;
   readOnly?: boolean;
   type?: string;
+  autoComplete?: string;
   className?: string;
 }) {
   const id = useId();
@@ -38,6 +40,7 @@ export function Field({
         onChange={onChange}
         placeholder={placeholder}
         readOnly={readOnly}
+        autoComplete={autoComplete}
         className={inputClass}
       />
     </div>

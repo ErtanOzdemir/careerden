@@ -212,6 +212,7 @@ export const cvLedgerHtml = `<!doctype html>
       {{/profile_title}}
       <p class="contact">
         {{#email}}<span>{{email}}</span>{{/email}}
+        {{#phone}}<span>{{phone}}</span>{{/phone}}
         {{#location}}<span>{{location}}</span>{{/location}}
       </p>
       {{#links}}

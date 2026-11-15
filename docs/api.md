@@ -98,6 +98,12 @@ scheme, `www.`, case, and a trailing slash) is dropped. CV import suggests each 
 its hostname. CV templates show each link in the header as a clickable icon and short URL, such as
 `linkedin.com/in/ada`.
 
+An optional `phone` is stored as free text of at most 40 characters after trimming, so
+international formats work: only digits, spaces, and `+ - ( ) .` are accepted, with at least one
+digit. An empty string clears it. The phone appears in the contact line of every CV and cover
+letter template, is read by CV import like any other single-value field, and is never sent to the
+AI provider for match analysis or document content.
+
 CV and cover-letter documents are always rendered from the predefined HTML templates in
 `@careerden/contracts` (`html-template-registry.ts`); there is no upload step. A profile can
 set `defaultCvTemplateId`/`defaultCoverLetterTemplateId` through `PATCH /profiles/:id`, and a

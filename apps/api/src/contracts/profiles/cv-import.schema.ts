@@ -3,6 +3,7 @@ import { aiFieldTipRevisionBlockSchema } from "../matching/ai-field-tip-revision
 import {
   profileEducationSchema,
   profileExperienceSchema,
+  profilePhoneSchema,
   profileProjectSchema,
   profileLinksSchema,
   profileSkillGroupSchema,
@@ -17,6 +18,7 @@ import {
 export const aiCvExtractionSchema = z.object({
   fullName: z.string(),
   email: z.string(),
+  phone: z.string(),
   profession: z.string(),
   headline: z.string(),
   location: z.string(),
@@ -60,6 +62,7 @@ export const applyProfileImportSchema = z
   .object({
     fullName: z.string().min(1).optional(),
     email: z.string().email().optional(),
+    phone: profilePhoneSchema.refine((value) => value !== "", "Phone is empty").optional(),
     profession: z.string().min(1).optional(),
     headline: z.string().min(1).optional(),
     location: z.string().min(1).optional(),

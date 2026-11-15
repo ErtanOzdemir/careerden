@@ -46,6 +46,29 @@ describe("CV templates", () => {
   );
 });
 
+describe("CV contact line", () => {
+  it.each(listHtmlTemplates("cv").map((template) => [template.id]))(
+    "%s shows the phone between email and location when it is set",
+    (templateId) => {
+      const html = renderHtmlTemplate(templateId, { ...cvData, phone: "+44 20 7946 0958" });
+
+      expect(html).toMatch(
+        /<span>ada@example\.com<\/span>\s*<span>\+44 20 7946 0958<\/span>\s*<span>London<\/span>/,
+      );
+    },
+  );
+
+  it.each(listHtmlTemplates("cv").map((template) => [template.id]))(
+    "%s leaves no empty span behind without a phone",
+    (templateId) => {
+      const html = renderHtmlTemplate(templateId, { ...cvData, phone: "" });
+
+      expect(html).toMatch(/<span>ada@example\.com<\/span>\s*<span>London<\/span>\s*<\/p>/);
+      expect(html).not.toContain("<span></span>");
+    },
+  );
+});
+
 describe("CV skills section", () => {
   it.each(listHtmlTemplates("cv").map((template) => [template.id]))(
     "%s keeps one plain skills list when nothing is categorized",

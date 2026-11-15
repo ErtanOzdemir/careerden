@@ -20,6 +20,7 @@ function emptyExtraction(overrides: Partial<AiCvExtractionDto> = {}): AiCvExtrac
   return {
     fullName: "",
     email: "",
+    phone: "",
     profession: "",
     headline: "",
     location: "",
@@ -99,6 +100,26 @@ describe("ExtractProfileFromCvUseCase", () => {
 });
 
 describe("normalizeExtraction", () => {
+  it("keeps the phone number as written and drops one that is not a phone number", () => {
+    expect(normalizeExtraction(emptyExtraction({ phone: " +44 20 7946 0958 " }))).toEqual({
+      phone: "+44 20 7946 0958",
+    });
+    expect(normalizeExtraction(emptyExtraction({ phone: "on request" }))).toEqual({});
+  });
+
+  it("asks for the candidate's own phone number and offers it in the draft", async () => {
+    const { useCase, aiProvider } = setup({
+      extraction: emptyExtraction({ phone: "(555) 010-0100" }),
+    });
+
+    await expect(
+      useCase.execute("profile-1", "user-1", { kind: "text", body: Buffer.from(cvText) }),
+    ).resolves.toEqual({ phone: "(555) 010-0100" });
+    expect(vi.mocked(aiProvider.generate).mock.calls[0]![0].system).toContain(
+      "phone is their own phone number exactly as written",
+    );
+  });
+
   it("drops empty and invalid values and keeps bullet structure", () => {
     const draft = normalizeExtraction(
       emptyExtraction({

@@ -34,6 +34,15 @@ describe("mergeProfileImport", () => {
     expect(update).toEqual({ email: "ada@example.com", headline: "Analyst" });
   });
 
+  it("fills an empty phone and never overwrites the user's own", () => {
+    expect(mergeProfileImport(profile(), { phone: "+44 20 7946 0958" })).toEqual({
+      phone: "+44 20 7946 0958",
+    });
+    expect(
+      mergeProfileImport(profile({ phone: "555 0100" }), { phone: "+44 20 7946 0958" }),
+    ).toEqual({});
+  });
+
   it("appends list entries the profile does not have yet", () => {
     const update = mergeProfileImport(
       profile({

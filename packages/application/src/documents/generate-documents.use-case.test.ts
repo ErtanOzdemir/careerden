@@ -19,6 +19,7 @@ describe("GenerateDocumentsUseCase", () => {
     const profile = await profiles.create({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
+      phone: "+44 20 7946 0958",
       skillGroups: [{ name: "", skills: ["TypeScript"] }],
       experience: [],
     });
@@ -50,7 +51,11 @@ describe("GenerateDocumentsUseCase", () => {
       { kind: "cv", format: "pdf" },
       { kind: "cover_letter", format: "pdf" },
     ]);
-    expect(htmlTemplates.render).toHaveBeenNthCalledWith(1, "cv.default", expect.any(Object));
+    expect(htmlTemplates.render).toHaveBeenNthCalledWith(
+      1,
+      "cv.default",
+      expect.objectContaining({ phone: "+44 20 7946 0958" }),
+    );
     expect(htmlTemplates.render).toHaveBeenNthCalledWith(
       2,
       "cover-letter.default",

@@ -7,6 +7,7 @@ import { runPostgresMigrations, runPostgresMigrationsThrough } from "./postgres-
 import { PostgresUserProfileRepository } from "./profiles/postgres-user-profile.repository.js";
 
 const previousMigration = "20261108000000_job_application_ai_failure.cjs";
+const skillGroupsMigration = "20261112000000_profile_skill_groups.cjs";
 const migrationConfig: Knex.MigratorConfig = {
   directory: join(fileURLToPath(new URL(".", import.meta.url)), "postgres-migrations"),
   extension: "cjs",
@@ -57,7 +58,8 @@ describe("profile skill groups migration", { timeout: 30_000 }, () => {
 
   it("flattens the groups back into the old list when rolled back", async () => {
     const db = await openDbWithFlatSkills({ ada: ["TypeScript"] });
-    await runPostgresMigrations(db);
+    // migrate.down undoes only the newest migration, so stop at this one.
+    await runPostgresMigrationsThrough(db, skillGroupsMigration);
     await new PostgresUserProfileRepository(db).update("ada-profile", {
       skillGroups: [
         { name: "Frontend", skills: ["React", "CSS"] },

@@ -74,6 +74,7 @@ export const coverLetterDefaultHtml = `<!doctype html>
       <h1>{{full_name}}</h1>
       <p class="contact">
         {{#email}}<span>{{email}}</span>{{/email}}
+        {{#phone}}<span>{{phone}}</span>{{/phone}}
         {{#location}}<span>{{location}}</span>{{/location}}
       </p>
     </header>

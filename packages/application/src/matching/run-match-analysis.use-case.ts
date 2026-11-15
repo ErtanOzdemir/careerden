@@ -309,7 +309,13 @@ function indexList(count: number): number[] {
 // Skills reach the model as the flat list they have always been, so categorizing them never
 // changes what the analysis sees.
 function toPlainTextProfile(profile: UserProfile) {
-  const { summaryRichText: _summaryRichText, skillGroups, ...plainProfile } = profile;
+  // The phone number plays no part in matching, so it stays out of the prompt.
+  const {
+    summaryRichText: _summaryRichText,
+    skillGroups,
+    phone: _phone,
+    ...plainProfile
+  } = profile;
 
   return {
     ...plainProfile,

@@ -328,6 +328,7 @@ export interface ApiProfile {
   location?: string;
   onboardingChecklistDismissedAt?: string;
   onboardingCompletedAt?: string;
+  phone?: string;
   profession?: string;
   projects: ApiProfileProject[];
   skillGroups: ApiProfileSkillGroup[];
@@ -348,6 +349,7 @@ export type ApiProfileImportDraft = Partial<
     | "headline"
     | "links"
     | "location"
+    | "phone"
     | "profession"
     | "projects"
     | "skillGroups"
@@ -376,6 +378,7 @@ export type ApiUpdateProfilePayload = Partial<
     | "headline"
     | "links"
     | "location"
+    | "phone"
     | "profession"
     | "projects"
     | "skillGroups"

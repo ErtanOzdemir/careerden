@@ -20,6 +20,30 @@ describe("profile schemas", () => {
     expect(result.autoRunMatchAnalysis).toBe(false);
   });
 
+  it("leaves fields an update omits out of the result instead of defaulting them", () => {
+    expect(updateProfileSchema.parse({ autoRunMatchAnalysis: false })).toEqual({
+      autoRunMatchAnalysis: false,
+    });
+    expect(updateProfileSchema.parse({ phone: "+1 555 0100" })).toEqual({ phone: "+1 555 0100" });
+    expect(updateProfileSchema.parse({ defaultCvTemplateId: "cv.modern" })).toEqual({
+      defaultCvTemplateId: "cv.modern",
+    });
+  });
+
+  it("still defaults lists and toggles when a profile is created", () => {
+    expect(
+      createProfileSchema.parse({ fullName: "Ada Lovelace", email: "ada@example.com" }),
+    ).toMatchObject({
+      followUpRemindersEnabled: true,
+      links: [],
+      skillGroups: [],
+      experience: [],
+      education: [],
+      certifications: [],
+      projects: [],
+    });
+  });
+
   it("accepts international phone formats as trimmed free text", () => {
     for (const phone of ["+44 20 7946 0958", "(555) 010-0100", "+90 (212) 555.01.01"]) {
       expect(updateProfileSchema.parse({ phone: ` ${phone} ` }).phone).toBe(phone);

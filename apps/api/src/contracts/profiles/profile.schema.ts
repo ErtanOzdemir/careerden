@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { richDocumentSchema } from "../documents/rich-document.schema.js";
-import { getHtmlTemplateById } from "@careerden/contracts";
+import {
+  getHtmlTemplateById,
+  isHttpProfileLinkUrl,
+  MAX_PROFILE_LINKS,
+  PROFILE_LINK_KINDS,
+} from "@careerden/contracts";
 
 export const profileExperienceSchema = z.object({
   company: z.string().min(1),
@@ -30,6 +35,22 @@ export const profileProjectSchema = z.object({
   achievements: z.array(z.string().min(1)).default([]),
 });
 
+/**
+ * A typed profile link. The URL becomes an `href` in rendered CVs, so only absolute `http:` and
+ * `https:` URLs are accepted; `javascript:`, `data:`, `mailto:`, and other schemes are refused.
+ */
+export const profileLinkSchema = z.object({
+  kind: z.enum(PROFILE_LINK_KINDS),
+  url: z
+    .string()
+    .trim()
+    .max(2048)
+    .url()
+    .refine(isHttpProfileLinkUrl, { message: "Links must be http or https URLs" }),
+});
+
+export const profileLinksSchema = z.array(profileLinkSchema).max(MAX_PROFILE_LINKS);
+
 /** A skill category; an empty name holds uncategorized skills. */
 export const profileSkillGroupSchema = z.object({
   name: z.string(),
@@ -45,7 +66,7 @@ const profileObjectSchema = z.object({
   profession: z.string().optional(),
   headline: z.string().optional(),
   location: z.string().optional(),
-  links: z.array(z.string().url()).default([]),
+  links: profileLinksSchema.default([]),
   summary: z.string().optional(),
   summaryRichText: richDocumentSchema.optional(),
   skillGroups: z.array(profileSkillGroupSchema).default([]),

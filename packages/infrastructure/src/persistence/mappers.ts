@@ -1,6 +1,7 @@
 import {
   isAiProviderErrorCategory,
   normalizeApplicationPackPreferences,
+  normalizeProfileLinks,
   normalizeSkillGroups,
   richDocumentFromText,
 } from "@careerden/domain";
@@ -149,7 +150,7 @@ export function toUserProfile(row: Record<string, unknown>): UserProfile {
     profession: nullableString(row.profession),
     headline: nullableString(row.headline),
     location: nullableString(row.location),
-    links: stringArray(row.links),
+    links: normalizeProfileLinks(jsonArray<unknown>(row.links)),
     summary,
     summaryRichText:
       toRichDocument(row.summary_rich_text) ??

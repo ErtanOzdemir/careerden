@@ -1,5 +1,9 @@
 import {
+  inferProfileLinkKind,
+  MAX_PROFILE_LINKS,
+  normalizeProfileLinkUrl,
   normalizeSkillGroups,
+  profileLinkKey,
   richDocumentToPlainText,
   type AiProvider,
   type ProfileEducation,
@@ -20,7 +24,7 @@ import {
   type CvFile,
   type CvTextExtractor,
 } from "../../domain/profiles/cv-text-extractor.js";
-import { linkKey, type ProfileImportDraft } from "../../domain/profiles/profile-import.js";
+import type { ProfileImportDraft } from "../../domain/profiles/profile-import.js";
 import { revisionBlocksToRichDocument } from "../job-applications/field-tip-revision-blocks.js";
 import { getAccessibleProfile } from "./profile-access.js";
 
@@ -138,10 +142,13 @@ export function normalizeExtraction(extraction: AiCvExtractionDto): ProfileImpor
     if (value) draft[field] = value;
   }
 
+  // The model returns plain URLs; each link's kind is suggested from its hostname, never by the AI.
   const links = unique(
     extraction.links.map(normalizeLink).filter((link) => link !== undefined),
-    linkKey,
-  );
+    profileLinkKey,
+  )
+    .slice(0, MAX_PROFILE_LINKS)
+    .map((url) => ({ kind: inferProfileLinkKind(url), url }));
   if (links.length > 0) draft.links = links;
   const skillGroups = normalizeSkillGroups(
     extraction.skillGroups.map((group) => ({
@@ -220,15 +227,7 @@ function unique(values: string[], key = (value: string) => value.toLowerCase()):
 
 // CVs often print links without a scheme ("github.com/ada"); profile links must be absolute URLs.
 function normalizeLink(value: string): string | undefined {
-  const trimmed = clean(value);
-  if (!trimmed || /\s/.test(trimmed) || trimmed.includes("@")) return undefined;
-  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  try {
-    const url = new URL(candidate);
-    return url.hostname.includes(".") ? url.href : undefined;
-  } catch {
-    return undefined;
-  }
+  return normalizeProfileLinkUrl(clean(value));
 }
 
 function dates(item: { startDate: string; endDate: string }) {

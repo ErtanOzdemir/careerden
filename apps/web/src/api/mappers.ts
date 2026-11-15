@@ -216,7 +216,9 @@ export function mapApiProfileToUi(profile: ApiProfile): Profile {
     location: profile.location ?? "Location not set",
     email: profile.email,
     portfolio:
-      profile.links?.[0] ?? profile.projects.find((project) => project.url)?.url ?? "Links not set",
+      profile.links?.[0]?.url ??
+      profile.projects.find((project) => project.url)?.url ??
+      "Links not set",
     experiences: profile.experience.map((experience, index) => ({
       id: `${profile.id}-experience-${index}`,
       title: experience.title,

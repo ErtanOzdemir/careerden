@@ -104,7 +104,7 @@ function createProfile(): UserProfile {
     followUpRemindersEnabled: true,
     fullName: "Ada Lovelace",
     id: "profile-1",
-    links: ["https://ada.example.com"],
+    links: [{ kind: "website", url: "https://ada.example.com" }],
     projects: [
       {
         achievements: ["Original project achievement one.", "Original project achievement two."],

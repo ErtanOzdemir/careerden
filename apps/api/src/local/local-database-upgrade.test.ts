@@ -121,7 +121,7 @@ describe.each(fixtureVersions)(
       const { json } = await start();
       const { expectations } = manifest;
 
-      const profile = await json<{ id: string; fullName: string }>("/profiles/me");
+      const profile = await json<{ id: string; fullName: string; links: unknown }>("/profiles/me");
       const active = await json<JobApplicationPage>(
         `/job-applications?profileId=${expectations.profileId}&pageSize=100`,
       );
@@ -132,6 +132,8 @@ describe.each(fixtureVersions)(
       expect(profile).toMatchObject({
         id: expectations.profileId,
         fullName: expectations.profileFullName,
+        // Every fixture seeds one GitHub link, stored as a plain URL before typed links.
+        links: [{ kind: "github", url: "https://github.com/example" }],
       });
       expect(statusById(active)).toEqual(expectations.activeApplications);
       expect(statusById(archived)).toEqual(expectations.archivedApplications);

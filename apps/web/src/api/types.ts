@@ -1,4 +1,9 @@
-import type { AiProviderFailureDto, ProfileSkillGroup, RichDocument } from "@careerden/contracts";
+import type {
+  AiProviderFailureDto,
+  ProfileLink,
+  ProfileSkillGroup,
+  RichDocument,
+} from "@careerden/contracts";
 
 export type ApiApplicationStatus =
   | "saved"
@@ -299,6 +304,9 @@ export interface ApiProfileProject {
   url?: string;
 }
 
+/** A typed profile link such as a LinkedIn profile or a personal website. */
+export type ApiProfileLink = ProfileLink;
+
 /** A skill category; an empty name holds uncategorized skills. */
 export type ApiProfileSkillGroup = ProfileSkillGroup;
 
@@ -316,7 +324,7 @@ export interface ApiProfile {
   fullName: string;
   headline?: string;
   id: string;
-  links: string[];
+  links: ApiProfileLink[];
   location?: string;
   onboardingChecklistDismissedAt?: string;
   onboardingCompletedAt?: string;

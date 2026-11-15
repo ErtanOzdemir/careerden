@@ -111,9 +111,10 @@ describe("prepareLocalDatabase", { timeout: 60_000 }, () => {
   it("snapshots before a failing migration and reports it for the recovery screen", async () => {
     await close(await launch("0.7.0"));
     const db = await launch("0.7.0");
-    // Forgetting that a migration ran makes it run again and fail on its own columns.
-    const [latest] = await db("knex_migrations").orderBy("name", "desc").limit(1).pluck("name");
-    await db("knex_migrations").where({ name: latest }).delete();
+    // Forgetting that the initial schema migration ran makes it run again and fail on its own
+    // tables. A later data-only migration may be safe to run twice, so it would not fail.
+    const [initial] = await db("knex_migrations").orderBy("name", "asc").limit(1).pluck("name");
+    await db("knex_migrations").where({ name: initial }).delete();
     await close(db);
 
     const failure = await launch("0.8.0").catch((error: unknown) => error);

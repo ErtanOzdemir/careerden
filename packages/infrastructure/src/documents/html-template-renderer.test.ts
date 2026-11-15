@@ -12,7 +12,7 @@ describe("HtmlTemplateRenderer", () => {
       email: "ada@example.com",
       experience_content: [richDocumentFromText("Engineer at Acme")],
       full_name: "Ada Lovelace",
-      links: ["https://ada.example.com"],
+      links: [{ kind: "website", url: "https://ada.example.com" }],
       location: "London",
       profile_title: "Product Engineer",
       project_content: [],

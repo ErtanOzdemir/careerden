@@ -7,7 +7,7 @@ const cvData = {
   profile_title: "Programmer",
   email: "ada@example.com",
   location: "London",
-  links: ["ada.example.com"],
+  links: [{ kind: "website", url: "https://ada.example.com/" }],
   summary: richDocumentFromText("Wrote the first published algorithm."),
   experience_content: [richDocumentFromText("Analytical Engine notes")],
   skills: ["Mathematics"],
@@ -94,5 +94,79 @@ describe("CV skills section", () => {
     const html = renderHtmlTemplate("cv.default", { ...cvData, skills: [], skill_groups: [] });
 
     expect(html).not.toContain('data-field-ref="skills"');
+  });
+});
+
+describe("CV header links", () => {
+  const links = [
+    { kind: "linkedin", url: "https://www.linkedin.com/in/ada/" },
+    { kind: "github", url: "https://github.com/ada" },
+    { kind: "website", url: "https://ada.example.com/" },
+    { kind: "portfolio", url: "https://ada.example.com/work?a=1&b=2" },
+    { kind: "other", url: "https://ada.example.org/notes" },
+  ];
+
+  it.each(listHtmlTemplates("cv").map((template) => [template.id]))(
+    "%s links each profile link with its icon and short URL",
+    (templateId) => {
+      const html = renderHtmlTemplate(templateId, { ...cvData, links });
+      const items = [...html.matchAll(/<li><a class="profile-link"[\s\S]*?<\/a><\/li>/g)].map(
+        (match) => match[0],
+      );
+
+      expect(items).toHaveLength(5);
+      expect(items[0]).toContain('href="https://www.linkedin.com/in/ada/"');
+      expect(items[0]).toContain("<span>linkedin.com/in/ada</span>");
+      expect(items[1]).toContain('href="https://github.com/ada"');
+      expect(items[1]).toContain("<span>github.com/ada</span>");
+      expect(items[3]).toContain('href="https://ada.example.com/work?a=1&amp;b=2"');
+      expect(items[3]).toContain("<span>ada.example.com/work?a=1&amp;b=2</span>");
+      for (const item of items) {
+        expect(item).toMatch(/<svg class="link-icon"[^>]*aria-hidden="true"/);
+        expect(item).toContain('width="1em" height="1em"');
+        expect(item).toContain("currentColor");
+      }
+      // Every kind has its own icon.
+      expect(new Set(items.map((item) => item.match(/<svg[\s\S]*<\/svg>/)?.[0])).size).toBe(5);
+      expect(html).toContain(".inline-list .link-icon {");
+    },
+  );
+
+  it.each(listHtmlTemplates("cv").map((template) => [template.id]))(
+    "%s leaves out the links list when there are no links",
+    (templateId) => {
+      for (const value of [[], undefined, [{ kind: "website", url: "javascript:alert(1)" }]]) {
+        const html = renderHtmlTemplate(templateId, { ...cvData, links: value });
+
+        expect(html).not.toContain('<ul class="inline-list">');
+        expect(html).not.toContain("profile-link");
+      }
+    },
+  );
+
+  it("never turns a non-http URL into an href and escapes the rest", () => {
+    const html = renderHtmlTemplate("cv.default", {
+      ...cvData,
+      links: [
+        { kind: "website", url: 'javascript:alert("x")' },
+        { kind: "website", url: "data:text/html,hi" },
+        { kind: "github", url: 'https://github.com/ada"><script>' },
+      ],
+    });
+
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("data:text");
+    expect(html).not.toContain("<script>");
+    expect(html).toContain('href="https://github.com/ada&quot;&gt;&lt;script&gt;"');
+  });
+
+  it("still renders legacy plain URL strings", () => {
+    const html = renderHtmlTemplate("cv.default", {
+      ...cvData,
+      links: ["https://github.com/ada"],
+    });
+
+    expect(html).toContain('href="https://github.com/ada"');
+    expect(html).toContain("<span>github.com/ada</span>");
   });
 });

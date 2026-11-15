@@ -22,7 +22,7 @@ import type {
   ApiProfile,
   RichDocument,
 } from "../api/types.js";
-import type { HtmlTemplateDefinition } from "@careerden/contracts";
+import { formatProfileLinkLabel, type HtmlTemplateDefinition } from "@careerden/contracts";
 import { cn } from "../lib/utils.js";
 import RichTextEditor from "./RichTextEditor.js";
 import { buttonVariants } from "./ui/button.js";
@@ -349,7 +349,13 @@ function ProfileIdentity({ profile }: { profile?: ApiProfile }) {
           </p>
           {profile && (
             <p className="mt-1 break-words text-xs text-muted-foreground">
-              {[profile.email, profile.location, ...profile.links].filter(Boolean).join(" · ")}
+              {[
+                profile.email,
+                profile.location,
+                ...profile.links.map((link) => formatProfileLinkLabel(link.url)),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">

@@ -11,6 +11,14 @@ import {
   skillGroupsError,
   SkillGroupsView,
 } from "../components/SkillGroupsEditor.js";
+import {
+  editableProfileLinks,
+  profileLinkErrors,
+  ProfileLinksEditor,
+  ProfileLinksView,
+  toProfileLinks,
+  type ProfileLinkDraft,
+} from "../components/ProfileLinksEditor.js";
 import { emptyRichDocument, richDocumentFromText } from "@careerden/contracts";
 import type {
   ApiProfile,
@@ -35,6 +43,7 @@ import {
   Save,
   X,
   FileUp,
+  Link2,
 } from "lucide-react";
 
 const sections = [
@@ -77,6 +86,9 @@ export default function ProfileManager() {
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [isEditingSkills, setIsEditingSkills] = useState(false);
   const [isEditingCertifications, setIsEditingCertifications] = useState(false);
+  const [isEditingLinks, setIsEditingLinks] = useState(false);
+  const [linkRows, setLinkRows] = useState<ProfileLinkDraft[]>([]);
+  const [showLinkErrors, setShowLinkErrors] = useState(false);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -191,6 +203,19 @@ export default function ProfileManager() {
     setIsEditingBasics(false);
   }
 
+  async function saveLinks() {
+    if (profileLinkErrors(linkRows).some(Boolean)) {
+      setShowLinkErrors(true);
+      return;
+    }
+    const updated = await savePartial({ links: toProfileLinks(linkRows) });
+    if (updated) {
+      setLinkRows(editableProfileLinks(updated.links));
+      setShowLinkErrors(false);
+      setIsEditingLinks(false);
+    }
+  }
+
   function addCert() {
     const c = newCert.trim();
     if (c && !certifications.includes(c)) {
@@ -257,6 +282,7 @@ export default function ProfileManager() {
             setIsEditingSummary(false);
             setIsEditingSkills(false);
             setIsEditingCertifications(false);
+            setIsEditingLinks(false);
             showProfile(updated);
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
@@ -326,6 +352,37 @@ export default function ProfileManager() {
                 <ProfileValue className="sm:col-span-2" label="Headline" value={headline} />
               </div>
             )}
+          </Panel>
+          <Panel className="mt-6 p-6">
+            <div className="flex items-center justify-between gap-3">
+              <SectionTitle icon={Link2} title="Links" />
+              <SectionEditActions
+                editing={isEditingLinks}
+                isSaving={isSaving}
+                label="links"
+                onCancel={() => {
+                  setLinkRows(editableProfileLinks(profile.links));
+                  setShowLinkErrors(false);
+                  setIsEditingLinks(false);
+                }}
+                onEdit={() => {
+                  setLinkRows(editableProfileLinks(profile.links));
+                  setIsEditingLinks(true);
+                }}
+                onSave={() => void saveLinks()}
+              />
+            </div>
+            <div className="mt-5">
+              {isEditingLinks ? (
+                <ProfileLinksEditor
+                  rows={linkRows}
+                  onChange={setLinkRows}
+                  showAllErrors={showLinkErrors}
+                />
+              ) : (
+                <ProfileLinksView links={profile.links} />
+              )}
+            </div>
           </Panel>
         </section>
 

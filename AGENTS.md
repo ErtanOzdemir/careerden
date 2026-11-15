@@ -90,6 +90,16 @@ review or download.
   `profileSkills` list, so categories never change analysis. A document's `skillSuggestions` stay
   a flat, per-application list that `groupSkillsBySkillGroups` groups by the profile's categories
   when the CV renders `{{skill_groups}}`. `ProfileProject.skills` stays a flat list.
+- Profile links are typed `{ kind, url }` entries (`linkedin`, `github`, `website`, `portfolio`,
+  `other`). The kind is stored, not derived, because a personal site and a portfolio share no
+  hostname pattern; `inferProfileLinkKind` only suggests one, in the editor and for CV import,
+  where the AI returns plain URLs. Helpers live in `@careerden/contracts` (`profile-links.ts`):
+  `normalizeProfileLinkUrl` adds `https://` to schemeless input and refuses every scheme other
+  than `http(s)`, and `normalizeProfileLinks` runs on every write and read, keeps only `http(s)`
+  URLs, and reads legacy plain strings. Readers infer an unknown kind from the URL, so new kinds
+  stay additive. The template registry renders `{{links}}` itself, like `{{skill_groups}}`, as
+  anchors with escaped URLs and inline SVG icons (`profile-link-icons.ts`, `aria-hidden`,
+  `currentColor`) so PDFs render offline and the link text stays the only text ATS parsers see.
 - Use explicit workflow status transitions for job applications.
 - Job application archiving is orthogonal to tracker and processing status. Only stable
   `scraped` applications without queued analysis, `review_ready`, `completed`, or `failed`

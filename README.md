@@ -73,7 +73,8 @@ with separate data, keychain entries, and update channels.
 - Filter by status, search by company or role, and sort by match, interest, salary, or date
   added; select a column again to reverse it, once more to return to recently updated first.
 - Maintain a reusable profile with experience, education, projects, certifications,
-  links, and analysis/reminder preferences.
+  LinkedIn, GitHub, website, and portfolio links, and analysis/reminder preferences. Every CV
+  template shows the links in its header as clickable icons.
 - Preview that profile as an A4 page in Classic, Editorial, Modern, Minimal, Technical, or
   Ledger, and set one as the default every tailored CV starts from.
 - Analyze each role against the profile with OpenAI, Gemini, DeepSeek, Anthropic, or

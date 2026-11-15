@@ -1,7 +1,11 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { Link } from "react-router-dom";
-import { aiProviderFailureSchema } from "@careerden/contracts";
+import {
+  aiProviderFailureSchema,
+  formatProfileLinkLabel,
+  PROFILE_LINK_KIND_LABELS,
+} from "@careerden/contracts";
 import { FileUp, Loader2 } from "lucide-react";
 import { Modal } from "./careerden/modal.js";
 import { Button, buttonVariants } from "./ui/button.js";
@@ -326,7 +330,9 @@ function previewLines(draft: ApiProfileImportDraft, section: CvImportSection): s
           draft.fullName,
           [draft.headline ?? draft.profession, draft.location].filter(Boolean).join(" · "),
           draft.email,
-          ...(draft.links ?? []),
+          ...(draft.links ?? []).map(
+            (link) => `${PROFILE_LINK_KIND_LABELS[link.kind]}: ${formatProfileLinkLabel(link.url)}`,
+          ),
         ].filter((line): line is string => Boolean(line));
       case "summary":
         return [draft.summary ?? ""];

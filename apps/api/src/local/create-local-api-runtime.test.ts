@@ -171,6 +171,46 @@ describe("createLocalApiRuntime", { timeout: 60_000 }, () => {
     expect(reopened).toMatchObject({ id: created.id, fullName: "Ada Lovelace" });
   });
 
+  // The web app saves the profile one section or setting at a time, so a PATCH must change only
+  // the fields it sends.
+  it("keeps every profile field a PATCH leaves out", async () => {
+    const { request } = await start();
+    const patch = async (body: Record<string, unknown>) =>
+      (await (
+        await request("/profiles/me", { method: "PATCH", body: JSON.stringify(body) })
+      ).json()) as Record<string, unknown>;
+    const filled = await patch({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      phone: "+44 20 7946 0958",
+      autoRunMatchAnalysis: false,
+      followUpRemindersEnabled: false,
+      links: [{ kind: "github", url: "https://github.com/ada" }],
+      skillGroups: [{ name: "DevOps", skills: ["AWS"] }],
+      experience: [{ company: "Analytical Engines", title: "Engineer" }],
+      education: [{ institution: "University of London" }],
+      certifications: ["CKA"],
+      projects: [{ name: "Difference Engine" }],
+    });
+    const kept = {
+      phone: filled.phone,
+      followUpRemindersEnabled: false,
+      links: filled.links,
+      skillGroups: filled.skillGroups,
+      experience: filled.experience,
+      education: filled.education,
+      certifications: filled.certifications,
+      projects: filled.projects,
+    };
+
+    expect(await patch({ autoRunMatchAnalysis: true })).toMatchObject(kept);
+    expect(await patch({ defaultCvTemplateId: "cv.modern" })).toMatchObject(kept);
+    expect(await patch({ headline: "Engineer" })).toMatchObject({
+      ...kept,
+      autoRunMatchAnalysis: true,
+    });
+  });
+
   async function createManualJob(request: Awaited<ReturnType<typeof start>>["request"]) {
     const profile = (await (
       await request("/profiles/me", {

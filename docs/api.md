@@ -90,6 +90,14 @@ keeps each skill in one group, drops empty groups, and puts uncategorized skills
 show each category under its name, or a single plain list when nothing is categorized; match
 analysis reads the skills as one flat list.
 
+A profile stores at most 10 `links`, each `{ "kind": "github", "url": "https://github.com/ada" }`
+where `kind` is `linkedin`, `github`, `website`, `portfolio`, or `other`. The URL must be an
+absolute `http:` or `https:` URL; other schemes such as `javascript:` or `mailto:` return
+`400 validation`. Links keep the order they are sent in, and a repeat of an earlier URL (ignoring
+scheme, `www.`, case, and a trailing slash) is dropped. CV import suggests each link's kind from
+its hostname. CV templates show each link in the header as a clickable icon and short URL, such as
+`linkedin.com/in/ada`.
+
 CV and cover-letter documents are always rendered from the predefined HTML templates in
 `@careerden/contracts` (`html-template-registry.ts`); there is no upload step. A profile can
 set `defaultCvTemplateId`/`defaultCoverLetterTemplateId` through `PATCH /profiles/:id`, and a

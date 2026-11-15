@@ -76,7 +76,10 @@ export const sampleResumeProfile: ApiProfile = {
   fullName: "Jane Doe",
   headline: "Senior Product Designer",
   id: "sample",
-  links: ["example.com", "linkedin.com/in/janedoe-example"],
+  links: [
+    { kind: "website", url: "https://example.com/" },
+    { kind: "linkedin", url: "https://linkedin.com/in/janedoe-example" },
+  ],
   location: "Rotterdam, Netherlands",
   projects: [],
   skillGroups: [

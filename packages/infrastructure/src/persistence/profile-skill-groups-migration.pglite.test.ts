@@ -65,7 +65,8 @@ describe("profile skill groups migration", { timeout: 30_000 }, () => {
       ],
     });
 
-    await db.migrate.down(migrationConfig);
+    // Rolls back this migration by name, since later migrations are applied on top of it.
+    await db.migrate.down({ ...migrationConfig, name: "20261112000000_profile_skill_groups.cjs" });
 
     const row = await db("user_profiles").where({ id: "ada-profile" }).first();
     expect(row.skills).toEqual(["React", "CSS", "TypeScript"]);

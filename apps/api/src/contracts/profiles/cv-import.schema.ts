@@ -4,6 +4,7 @@ import {
   profileEducationSchema,
   profileExperienceSchema,
   profileProjectSchema,
+  profileLinksSchema,
   profileSkillGroupSchema,
 } from "./profile.schema.js";
 
@@ -62,7 +63,7 @@ export const applyProfileImportSchema = z
     profession: z.string().min(1).optional(),
     headline: z.string().min(1).optional(),
     location: z.string().min(1).optional(),
-    links: z.array(z.string().url()).optional(),
+    links: profileLinksSchema.optional(),
     summary: z.string().min(1).optional(),
     skillGroups: z.array(profileSkillGroupSchema).optional(),
     certifications: z.array(z.string().min(1)).optional(),

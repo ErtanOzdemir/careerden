@@ -41,7 +41,7 @@ describe("mergeProfileImport", () => {
           { name: "Languages", skills: ["TypeScript"] },
           { name: "", skills: ["Excel"] },
         ],
-        links: ["https://www.linkedin.com/in/ada/"],
+        links: [{ kind: "linkedin", url: "https://www.linkedin.com/in/ada/" }],
         experience: [{ company: "Analytical Engines", title: "Engineer" }],
       }),
       {
@@ -49,7 +49,10 @@ describe("mergeProfileImport", () => {
           { name: "languages", skills: ["typescript", "Python"] },
           { name: "Data", skills: ["PostgreSQL", "postgresql", "excel"] },
         ],
-        links: ["https://linkedin.com/in/ada", "https://github.com/ada"],
+        links: [
+          { kind: "linkedin", url: "https://linkedin.com/in/ada" },
+          { kind: "github", url: "https://github.com/ada" },
+        ],
         experience: [
           { company: "analytical engines", title: "Engineer " },
           { company: "Babbage & Co", title: "Translator" },
@@ -63,7 +66,10 @@ describe("mergeProfileImport", () => {
         { name: "Data", skills: ["PostgreSQL"] },
         { name: "", skills: ["Excel"] },
       ],
-      links: ["https://www.linkedin.com/in/ada/", "https://github.com/ada"],
+      links: [
+        { kind: "linkedin", url: "https://www.linkedin.com/in/ada/" },
+        { kind: "github", url: "https://github.com/ada" },
+      ],
       experience: [
         { company: "Analytical Engines", title: "Engineer" },
         { company: "Babbage & Co", title: "Translator" },

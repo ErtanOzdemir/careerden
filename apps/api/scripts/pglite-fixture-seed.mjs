@@ -536,7 +536,7 @@ export const seedTables = [
         profession: "Senior Backend Engineer",
         headline: "Backend engineer building reliable TypeScript and Node.js platforms",
         location: "Istanbul, Turkey (open to remote)",
-        links: json(["https://github.com/example"]),
+        links: json([{ kind: "github", url: "https://github.com/example" }]),
         summary: "Backend engineer with eight years of experience in TypeScript and Node.js.",
         skill_groups: json([
           { name: "Backend", skills: skills.slice(0, 4) },

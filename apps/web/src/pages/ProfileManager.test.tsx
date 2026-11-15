@@ -134,6 +134,66 @@ describe("ProfileManager", () => {
     expect(profilesApi.update).not.toHaveBeenCalled();
   });
 
+  it("adds, retypes, and removes links, keeping their order", async () => {
+    const profile = {
+      ...createProfile(createRichText()),
+      links: [
+        { kind: "website" as const, url: "https://ada.example.com/" },
+        { kind: "github" as const, url: "https://github.com/ada" },
+      ],
+    };
+    const savedLinks = [
+      { kind: "portfolio" as const, url: "https://ada.example.com/" },
+      { kind: "linkedin" as const, url: "https://linkedin.com/in/ada" },
+    ];
+    vi.mocked(profilesApi.me).mockResolvedValue(profile);
+    vi.mocked(profilesApi.update).mockResolvedValue({ ...profile, links: savedLinks });
+
+    render(<ProfileManager />);
+
+    const view = await screen.findByRole("list", { name: "Profile links" });
+    expect(view).toHaveTextContent("ada.example.com");
+    expect(screen.getByRole("link", { name: "github.com/ada" })).toHaveAttribute(
+      "href",
+      "https://github.com/ada",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit links" }));
+    fireEvent.change(screen.getByLabelText("Link 1 type"), { target: { value: "portfolio" } });
+    fireEvent.click(screen.getByRole("button", { name: "Remove link 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add link" }));
+    fireEvent.change(screen.getByLabelText("Link 2 URL"), {
+      target: { value: "linkedin.com/in/ada" },
+    });
+    expect(screen.getByLabelText("Link 2 type")).toHaveValue("linkedin");
+    fireEvent.click(screen.getByRole("button", { name: "Add link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save links" }));
+
+    await waitFor(() => {
+      expect(profilesApi.update).toHaveBeenCalledWith("profile-1", { links: savedLinks });
+    });
+    expect(await screen.findByRole("link", { name: "linkedin.com/in/ada" })).toBeInTheDocument();
+  });
+
+  it("shows an inline error and does not save an invalid link", async () => {
+    vi.mocked(profilesApi.me).mockResolvedValue(createProfile(createRichText()));
+
+    render(<ProfileManager />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit links" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add link" }));
+    fireEvent.change(screen.getByLabelText("Link 1 URL"), {
+      target: { value: "javascript:alert(1)" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save links" }));
+
+    expect(
+      await screen.findByText("Enter a valid http or https link, such as github.com/ada."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Link 1 URL")).toHaveAttribute("aria-invalid", "true");
+    expect(profilesApi.update).not.toHaveBeenCalled();
+  });
+
   it("highlights the navigation item for the section being edited", async () => {
     const profile = createProfile(createRichText());
     vi.mocked(profilesApi.me).mockResolvedValue(profile);

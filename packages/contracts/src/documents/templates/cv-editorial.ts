@@ -145,6 +145,18 @@ export const cvEditorialHtml = `<!doctype html>
         color: #78716c;
         font-size: 8.5pt;
       }
+      .inline-list a {
+        align-items: center;
+        color: inherit;
+        display: inline-flex;
+        gap: 0.35em;
+        text-decoration: none;
+      }
+      .inline-list .link-icon {
+        flex-shrink: 0;
+        height: 1em;
+        width: 1em;
+      }
       .skills-list {
         list-style: none;
         margin: 0;

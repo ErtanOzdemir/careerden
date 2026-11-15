@@ -103,7 +103,15 @@ describe("normalizeExtraction", () => {
     const draft = normalizeExtraction(
       emptyExtraction({
         email: "Not an email",
-        links: ["github.com/ada", "ada@example.com", "https://github.com/ada/", "not a link"],
+        links: [
+          "github.com/ada",
+          "ada@example.com",
+          "https://github.com/ada/",
+          "not a link",
+          "javascript:alert(1)",
+          "linkedin.com/in/ada",
+          "ada.dev",
+        ],
         skillGroups: [
           { name: " Languages ", skills: ["TypeScript", " typescript ", ""] },
           { name: "languages", skills: ["Python"] },
@@ -128,7 +136,11 @@ describe("normalizeExtraction", () => {
     );
 
     expect(draft).toEqual({
-      links: ["https://github.com/ada"],
+      links: [
+        { kind: "github", url: "https://github.com/ada" },
+        { kind: "linkedin", url: "https://linkedin.com/in/ada" },
+        { kind: "website", url: "https://ada.dev/" },
+      ],
       skillGroups: [
         { name: "Languages", skills: ["TypeScript", "Python"] },
         { name: "", skills: ["Excel"] },

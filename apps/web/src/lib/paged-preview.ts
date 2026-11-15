@@ -55,6 +55,7 @@ export function renderPagedPreview(html: string, container: HTMLElement): PagedP
       rendered = true;
       const height = iframe.contentDocument?.documentElement.scrollHeight;
       if (height) iframe.style.height = `${height}px`;
+      iframe.contentDocument?.addEventListener("click", openPreviewLink);
       resolveResult({ totalPages: event.data.total });
       return;
     }
@@ -105,6 +106,19 @@ export function renderPagedPreview(html: string, container: HTMLElement): PagedP
   }
 
   return { result, cancel: cleanup, highlightField };
+}
+
+// A CV's profile links would otherwise navigate the preview iframe itself, and most sites refuse to
+// be framed. Opens http(s) links in a new window instead, which the desktop app hands to the
+// system browser, and ignores every other scheme.
+function openPreviewLink(event: MouseEvent) {
+  const target = event.target as Element | null;
+  const anchor = target?.closest?.("a[href]") as HTMLAnchorElement | null;
+  if (!anchor) return;
+  event.preventDefault();
+  if (anchor.protocol === "http:" || anchor.protocol === "https:") {
+    window.open(anchor.href, "_blank", "noopener,noreferrer");
+  }
 }
 
 // Paged.js ships no default screen-preview chrome (confirmed empirically: rendered `.pagedjs_page`

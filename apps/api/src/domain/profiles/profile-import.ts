@@ -1,12 +1,13 @@
 import type {
   ProfileEducation,
   ProfileExperience,
+  ProfileLink,
   ProfileProject,
   ProfileSkillGroup,
   UpdateUserProfileInput,
   UserProfile,
 } from "@careerden/domain";
-import { normalizeSkillGroups, profileSkills } from "@careerden/domain";
+import { normalizeSkillGroups, profileLinkKey, profileSkills } from "@careerden/domain";
 
 /**
  * Profile details read from a CV, shown to the user before anything is saved. The user may drop
@@ -18,7 +19,7 @@ export interface ProfileImportDraft {
   profession?: string;
   headline?: string;
   location?: string;
-  links?: string[];
+  links?: ProfileLink[];
   summary?: string;
   skillGroups?: ProfileSkillGroup[];
   certifications?: string[];
@@ -55,7 +56,7 @@ export function mergeProfileImport(
     if (value && !profile[field]?.trim()) update[field] = value;
   }
 
-  const links = appendMissing(profile.links, draft.links, linkKey);
+  const links = appendMissing(profile.links, draft.links, (link) => profileLinkKey(link.url));
   if (links) update.links = links;
   const skillGroups = appendMissingSkills(profile.skillGroups, draft.skillGroups);
   if (skillGroups) update.skillGroups = skillGroups;
@@ -105,11 +106,4 @@ function appendMissingSkills(
 
 function textKey(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
-}
-
-/** Treats links that differ only in scheme, `www.`, case, or a trailing slash as the same link. */
-export function linkKey(value: string): string {
-  return textKey(value)
-    .replace(/^https?:\/\/(www\.)?/, "")
-    .replace(/\/+$/, "");
 }

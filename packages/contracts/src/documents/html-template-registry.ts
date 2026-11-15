@@ -1,6 +1,9 @@
 import { isRichDocument, renderRichDocumentToHtml } from "./rich-document-html.js";
 import type { ProfileSkillGroup } from "../profiles/skill-groups.js";
 import { hasNamedSkillGroups, UNCATEGORIZED_SKILL_GROUP_LABEL } from "../profiles/skill-groups.js";
+import type { ProfileLink } from "../profiles/profile-links.js";
+import { formatProfileLinkLabel, normalizeProfileLinks } from "../profiles/profile-links.js";
+import { renderProfileLinkIconSvg } from "./profile-link-icons.js";
 import { cvDefaultHtml } from "./templates/cv-default.js";
 import { cvEditorialHtml } from "./templates/cv-editorial.js";
 import { cvLedgerHtml } from "./templates/cv-ledger.js";
@@ -90,13 +93,16 @@ export function renderHtmlTemplate(templateId: string, data: Record<string, unkn
     throw new Error(`Unknown HTML template: ${templateId}`);
   }
 
+  const links = normalizeProfileLinks(data.links);
   const withConditionalSections = template.html.replace(
     /\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g,
-    (_match, key: string, body: string) => (hasTemplateValue(data[key]) ? body : ""),
+    (_match, key: string, body: string) =>
+      (key === "links" ? links.length > 0 : hasTemplateValue(data[key])) ? body : "",
   );
 
   return withConditionalSections.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_match, key: string) => {
     if (key === "skill_groups") return renderSkillGroups(data);
+    if (key === "links") return renderProfileLinks(links);
     return stringifyTemplateValue(data[key], key);
   });
 }
@@ -122,6 +128,23 @@ function renderSkillGroups(data: Record<string, unknown>): string {
         `<div class="skill-group"><h3 class="skill-group-name">${escapeHtml(
           group.name.trim() || UNCATEGORIZED_SKILL_GROUP_LABEL,
         )}</h3>${list(group.skills)}</div>`,
+    )
+    .join("");
+}
+
+/**
+ * Renders `{{links}}`: one `<li>` per profile link holding a clickable anchor with the kind's icon
+ * and the short, schemeless URL as its text. The icon is `aria-hidden`, so the text is what ATS
+ * parsers and copy and paste see. Links pass through `normalizeProfileLinks` first, so only
+ * `http(s)` URLs become an `href`, and legacy plain URL strings still render.
+ */
+function renderProfileLinks(links: readonly ProfileLink[]): string {
+  return links
+    .map(
+      (link) =>
+        `<li><a class="profile-link" href="${escapeHtml(link.url)}">${renderProfileLinkIconSvg(
+          link.kind,
+        )}<span>${escapeHtml(formatProfileLinkLabel(link.url))}</span></a></li>`,
     )
     .join("");
 }

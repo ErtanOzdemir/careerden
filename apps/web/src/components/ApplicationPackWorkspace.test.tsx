@@ -722,7 +722,7 @@ function createProfile(): ApiProfile {
     fullName: "Ada Lovelace",
     headline: "Product Engineer",
     id: "profile-1",
-    links: ["https://ada.example.com"],
+    links: [{ kind: "website", url: "https://ada.example.com" }],
     location: "Remote",
     projects: [
       {

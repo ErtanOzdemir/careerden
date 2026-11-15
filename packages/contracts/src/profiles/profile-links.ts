@@ -67,12 +67,12 @@ export function normalizeProfileLinkUrl(value: string): string | undefined {
 
 /** Treats links that differ only in scheme, `www.`, case, or a trailing slash as the same link. */
 export function profileLinkKey(url: string): string {
-  return url
+  const key = url
     .trim()
     .replace(/\s+/g, " ")
     .toLowerCase()
-    .replace(/^https?:\/\/(www\.)?/, "")
-    .replace(/\/+$/, "");
+    .replace(/^https?:\/\/(www\.)?/, "");
+  return withoutTrailingSlashes(key);
 }
 
 /** The short, schemeless form a CV shows, such as `linkedin.com/in/ada`. */
@@ -80,7 +80,7 @@ export function formatProfileLinkLabel(url: string): string {
   const parsed = parseUrl(url);
   if (!parsed) return url.trim();
   const host = parsed.host.replace(/^www\./i, "");
-  const path = parsed.pathname.replace(/\/+$/, "");
+  const path = withoutTrailingSlashes(parsed.pathname);
   return `${host}${path}${parsed.search}${parsed.hash}`;
 }
 
@@ -112,6 +112,14 @@ export function normalizeProfileLinks(value: unknown): ProfileLink[] {
   }
 
   return links;
+}
+
+// A loop rather than /\/+$/, which rescans a long run of slashes from every position when the
+// run does not reach the end of the string.
+function withoutTrailingSlashes(text: string): string {
+  let end = text.length;
+  while (end > 0 && text.charAt(end - 1) === "/") end -= 1;
+  return text.slice(0, end);
 }
 
 function hostMatches(hostname: string, domain: string): boolean {

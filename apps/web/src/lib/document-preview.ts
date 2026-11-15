@@ -90,6 +90,7 @@ export function buildPreviewTemplateData(
     full_name: profile.fullName,
     profile_title: profile.headline ?? profile.profession ?? "",
     email: profile.email,
+    phone: profile.phone ?? "",
     location: profile.location ?? "",
     links: profile.links,
     summary: content.customizedSummary,

@@ -46,10 +46,35 @@ describe("ProfileManager", () => {
       expect(profilesApi.update).toHaveBeenCalledWith("profile-1", {
         fullName: "Ada Lovelace",
         email: "ada@example.com",
+        phone: "",
         profession: "",
         location: "",
         headline: "Computing pioneer",
       });
+    });
+  });
+
+  it("saves a phone number from a tel input and clears it with an empty value", async () => {
+    const profile = { ...createProfile(createRichText()), phone: "+44 20 7946 0958" };
+    vi.mocked(profilesApi.me).mockResolvedValue(profile);
+    vi.mocked(profilesApi.update).mockResolvedValue({ ...profile, phone: undefined });
+
+    render(<ProfileManager />);
+
+    expect(await screen.findByText("+44 20 7946 0958")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit basic information" }));
+    const phone = screen.getByLabelText("Phone");
+    expect(phone).toHaveAttribute("type", "tel");
+    expect(phone).toHaveAttribute("autocomplete", "tel");
+    expect(phone).toHaveValue("+44 20 7946 0958");
+    fireEvent.change(phone, { target: { value: "  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Save basic information" }));
+
+    await waitFor(() => {
+      expect(profilesApi.update).toHaveBeenCalledWith(
+        "profile-1",
+        expect.objectContaining({ phone: "" }),
+      );
     });
   });
 

@@ -92,6 +92,7 @@ export default function ProfileManager() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [profession, setProfession] = useState("");
   const [location, setLocation] = useState("");
   const [headline, setHeadline] = useState("");
@@ -108,6 +109,7 @@ export default function ProfileManager() {
     setProfile(p);
     setFullName(p.fullName ?? "");
     setEmail(p.email ?? "");
+    setPhone(p.phone ?? "");
     setProfession(p.profession ?? "");
     setLocation(p.location ?? "");
     setHeadline(p.headline ?? "");
@@ -186,6 +188,7 @@ export default function ProfileManager() {
     const updated = await savePartial({
       fullName: fullName.trim(),
       email: email.trim(),
+      phone: phone.trim(),
       profession: profession.trim(),
       location: location.trim(),
       headline: headline.trim(),
@@ -197,6 +200,7 @@ export default function ProfileManager() {
     if (!profile) return;
     setFullName(profile.fullName ?? "");
     setEmail(profile.email ?? "");
+    setPhone(profile.phone ?? "");
     setProfession(profile.profession ?? "");
     setLocation(profile.location ?? "");
     setHeadline(profile.headline ?? "");
@@ -327,6 +331,13 @@ export default function ProfileManager() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <Field
+                  label="Phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                <Field
                   label="Profession"
                   value={profession}
                   onChange={(e) => setProfession(e.target.value)}
@@ -340,16 +351,16 @@ export default function ProfileManager() {
                   label="Headline"
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
-                  className="sm:col-span-2"
                 />
               </div>
             ) : (
               <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                 <ProfileValue label="Full name" value={fullName} />
                 <ProfileValue label="Email" value={email} />
+                <ProfileValue label="Phone" value={phone} />
                 <ProfileValue label="Profession" value={profession} />
                 <ProfileValue label="Location" value={location} />
-                <ProfileValue className="sm:col-span-2" label="Headline" value={headline} />
+                <ProfileValue label="Headline" value={headline} />
               </div>
             )}
           </Panel>

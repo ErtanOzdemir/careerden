@@ -19,6 +19,7 @@ import {
   type AiCvExtractionDto,
 } from "../../contracts/profiles/cv-import.schema.js";
 import type { AiFieldTipRevisionBlockDto } from "../../contracts/matching/ai-field-tip-revision.schema.js";
+import { profilePhoneSchema } from "../../contracts/profiles/profile.schema.js";
 import {
   CvTextUnreadableError,
   type CvFile,
@@ -103,7 +104,7 @@ function extractionSystemPrompt(): string {
     "Copy facts only as they appear in the CV. Never invent, infer, embellish, or summarize away employers, titles, dates, degrees, skills, metrics, or links.",
     "Use an empty string or an empty list for anything the CV does not state.",
     "Keep the CV's language for all text. Do not translate.",
-    "fullName is the candidate's name. email is their own email address. location is where they live, as written. headline is the short professional title near the name, if any. profession is their occupation in two to four words, taken from the headline or most recent title.",
+    "fullName is the candidate's name. email is their own email address. phone is their own phone number exactly as written, without a label such as 'Tel:'. location is where they live, as written. headline is the short professional title near the name, if any. profession is their occupation in two to four words, taken from the headline or most recent title.",
     "summary is the profile or summary paragraph as written, or an empty string when the CV has none. Do not write one.",
     "links are the candidate's own profile or portfolio URLs, such as LinkedIn, GitHub, or a personal site. Return full URLs.",
     "skillGroups hold the CV's skills, tools, technologies, and languages, one per entry and without levels, under a short category name. Use the CV's own skill headings when it has them. Otherwise group related skills under short names such as DevOps, Frontend, Backend, Mobile, Data, Cloud, Languages, or Tools, in the CV's language. Put a skill that fits no category in a group with an empty name, and list each skill only once.",
@@ -137,6 +138,8 @@ export function normalizeExtraction(extraction: AiCvExtractionDto): ProfileImpor
   if (fullName) draft.fullName = fullName;
   const email = clean(extraction.email).toLowerCase();
   if (emailSchema.safeParse(email).success) draft.email = email;
+  const phone = profilePhoneSchema.safeParse(clean(extraction.phone));
+  if (phone.success && phone.data) draft.phone = phone.data;
   for (const field of ["profession", "headline", "location", "summary"] as const) {
     const value = clean(extraction[field]);
     if (value) draft[field] = value;

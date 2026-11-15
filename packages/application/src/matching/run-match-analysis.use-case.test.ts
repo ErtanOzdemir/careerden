@@ -116,6 +116,20 @@ describe("RunMatchAnalysisUseCase", () => {
     expect(groupedPrompt).toEqual(flatPrompt);
   });
 
+  it("keeps the profile's phone number out of the prompt", async () => {
+    const { aiProvider, calls } = createAiProvider([completeResponse()]);
+
+    await new RunMatchAnalysisUseCase(aiProvider).execute({
+      jobApplicationId: "job-1",
+      profile: { ...createProfile(), phone: "+44 20 7946 0958" },
+      scrape: createScrape(),
+    });
+
+    expect(parsePrompt(calls[0]).userProfile).not.toHaveProperty("phone");
+    expect(calls[0]?.prompt).not.toContain("7946");
+    expect(calls[0]?.system).not.toContain("7946");
+  });
+
   it("sends the posting as untrusted data, separate from the instructions and without raw payloads", async () => {
     const { aiProvider, calls } = createAiProvider([completeResponse()]);
     const injection =

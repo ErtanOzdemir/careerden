@@ -81,6 +81,7 @@ export const sampleResumeProfile: ApiProfile = {
     { kind: "linkedin", url: "https://linkedin.com/in/janedoe-example" },
   ],
   location: "Rotterdam, Netherlands",
+  phone: "+31 10 555 0100",
   projects: [],
   skillGroups: [
     {

@@ -16,6 +16,7 @@ import { normalizeSkillGroups, profileLinkKey, profileSkills } from "@careerden/
 export interface ProfileImportDraft {
   fullName?: string;
   email?: string;
+  phone?: string;
   profession?: string;
   headline?: string;
   location?: string;
@@ -28,11 +29,13 @@ export interface ProfileImportDraft {
   projects?: ProfileProject[];
 }
 
-type ScalarField = "fullName" | "email" | "profession" | "headline" | "location" | "summary";
+type ScalarField =
+  "fullName" | "email" | "phone" | "profession" | "headline" | "location" | "summary";
 
 const scalarFields: ScalarField[] = [
   "fullName",
   "email",
+  "phone",
   "profession",
   "headline",
   "location",

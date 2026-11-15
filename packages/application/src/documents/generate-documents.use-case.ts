@@ -308,6 +308,7 @@ function toTemplateData(
     company_name: jobApplication.tracking.companyName ?? scrapedJob?.companyName ?? "",
     full_name: profile.fullName,
     email: profile.email,
+    phone: profile.phone ?? "",
     profession: profile.profession ?? "",
     headline: profile.headline ?? "",
     profile_title: profile.headline ?? profile.profession ?? "",

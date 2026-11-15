@@ -42,7 +42,15 @@ const sectionLabels: Record<CvImportSection, string> = {
   certifications: "Certifications",
 };
 
-const basicFields = ["fullName", "email", "headline", "profession", "location", "links"] as const;
+const basicFields = [
+  "fullName",
+  "email",
+  "phone",
+  "headline",
+  "profession",
+  "location",
+  "links",
+] as const;
 
 /** The sections the draft has content for, in display order. */
 export function availableSections(draft: ApiProfileImportDraft): CvImportSection[] {
@@ -329,7 +337,7 @@ function previewLines(draft: ApiProfileImportDraft, section: CvImportSection): s
         return [
           draft.fullName,
           [draft.headline ?? draft.profession, draft.location].filter(Boolean).join(" · "),
-          draft.email,
+          [draft.email, draft.phone].filter(Boolean).join(" · "),
           ...(draft.links ?? []).map(
             (link) => `${PROFILE_LINK_KIND_LABELS[link.kind]}: ${formatProfileLinkLabel(link.url)}`,
           ),

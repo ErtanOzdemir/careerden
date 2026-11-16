@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { unpluggedRelease } from "./desktop-release";
 import {
+  blogPostingJsonLd,
   faqPageJsonLd,
   organizationJsonLd,
   serializeJsonLd,
@@ -37,6 +38,29 @@ describe("structured data", () => {
       codeRepository: githubUrl,
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    });
+  });
+
+  it("describes a blog post as an article published by the organization", () => {
+    const post = {
+      slug: "a-post",
+      path: "/blog/a-post",
+      title: "A post",
+      description: "What the post covers.",
+      publishedAt: "2026-11-16",
+      html: "<p>Body</p>",
+    } as const;
+
+    expect(blogPostingJsonLd(post)).toMatchObject({
+      "@type": "BlogPosting",
+      headline: "A post",
+      url: `${siteUrl}/blog/a-post`,
+      datePublished: "2026-11-16",
+      dateModified: "2026-11-16",
+      publisher: { "@id": organizationJsonLd()["@id"] },
+    });
+    expect(blogPostingJsonLd({ ...post, updatedAt: "2026-12-01" })).toMatchObject({
+      dateModified: "2026-12-01",
     });
   });
 

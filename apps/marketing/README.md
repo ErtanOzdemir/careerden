@@ -48,11 +48,37 @@ requirements belong to their own policies.
 - New public routes belong in `publicRoutes` in `lib/site.ts`, which feeds both the sitemap and
   the robots allow list.
 
+## Blog
+
+Posts are Markdown files in `content/blog`. The file name is the slug, so
+`content/blog/tailor-cv-to-job-description.md` is served at `/blog/tailor-cv-to-job-description`.
+Each file starts with front matter:
+
+    ---
+    title: How to tailor your CV to a job description
+    description: One or two sentences, at most 160 characters, shown in search results.
+    publishedAt: "2026-11-16"
+    updatedAt: "2026-12-01"
+    ---
+
+`title`, `description`, and `publishedAt` are required; `updatedAt` is optional. `lib/blog.ts`
+validates every file and fails the build and the tests on a malformed one. Adding a file is all a
+new post needs: the index at `/blog`, the sitemap, and the RSS feed at `/blog/feed.xml` read the
+same list, and each post gets a canonical URL, article Open Graph metadata, and `BlogPosting`
+JSON-LD.
+
+Posts are prerendered at build time, so a new post is published by the next deploy. The Markdown
+is repository-owned and rendered as trusted markup; never load post content from user input. Put
+images under `public/blog/` and reference them by absolute path, because the CSP allows only
+same-origin images.
+
 ## Routes
 
 - / — public landing page, including the five-step product workflow at /#how-it-works and current
   credit plans at /#pricing
 - /download — public OS-aware desktop download page for the latest verified release
+- /blog, /blog/[slug] — blog index and posts prerendered from `content/blog`
+- /blog/feed.xml — RSS feed of the blog posts
 - /onboarding — legacy noindex route that redirects to /#how-it-works
 - /privacy, /cookies, /terms, /gdpr, /data-deletion — legal/data-rights drafts, answering 404 and
   left out of links, the sitemap, and robots.txt while `legalPagesEnabled` in `lib/site.ts` is false

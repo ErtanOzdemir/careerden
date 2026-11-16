@@ -1,3 +1,4 @@
+import type { BlogPost } from "./blog";
 import { unpluggedRelease } from "./desktop-release";
 import { absoluteUrl, githubUrl, siteDescription, siteName } from "./site";
 
@@ -75,6 +76,26 @@ export function faqPageJsonLd(faqs: readonly FaqEntry[]): JsonLdObject {
       name: question,
       acceptedAnswer: { "@type": "Answer", text: answer },
     })),
+  };
+}
+
+export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
+  const url = absoluteUrl(post.path);
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "@id": `${url}#article`,
+    headline: post.title,
+    description: post.description,
+    url,
+    mainEntityOfPage: url,
+    datePublished: post.publishedAt,
+    dateModified: post.updatedAt ?? post.publishedAt,
+    inLanguage: "en",
+    image: absoluteUrl("/opengraph-image"),
+    author: { "@id": organizationId },
+    publisher: { "@id": organizationId },
+    isPartOf: { "@id": websiteId },
   };
 }
 

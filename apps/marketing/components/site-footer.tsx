@@ -35,6 +35,7 @@ export function SiteFooter() {
           <Link href="/#unplugged">Unplugged</Link>
           <Link href="/#pricing">Pricing</Link>
           <Link href="/download">Download</Link>
+          <Link href="/blog">Blog</Link>
           <Link href="/#faq">FAQ</Link>
         </nav>
         {legalPagesEnabled ? (

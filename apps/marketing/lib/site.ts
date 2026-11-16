@@ -16,11 +16,12 @@ export const legalPagesEnabled: boolean = false;
 
 export const legalRoutes = ["/privacy", "/cookies", "/terms", "/gdpr", "/data-deletion"] as const;
 
-type PublicRoute = "/" | "/download" | (typeof legalRoutes)[number];
+type PublicRoute = "/" | "/download" | "/blog" | (typeof legalRoutes)[number];
 
 export const publicRoutes: readonly PublicRoute[] = [
   "/",
   "/download",
+  "/blog",
   ...(legalPagesEnabled ? legalRoutes : []),
 ];
 

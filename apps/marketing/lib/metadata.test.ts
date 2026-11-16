@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { metadata as rootMetadata } from "@/app/layout";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
+import { getBlogPosts } from "./blog";
 import { pageMetadata } from "./metadata";
 import { publicRoutes, siteUrl } from "./site";
 
@@ -10,7 +11,11 @@ describe("public routing and metadata", () => {
     const entries = sitemap();
     const sitemapUrls = entries.map((entry) => entry.url);
 
-    expect(sitemapUrls).toEqual(publicRoutes.map((route) => new URL(route, siteUrl).toString()));
+    expect(sitemapUrls).toEqual(
+      [...publicRoutes, ...getBlogPosts().map((post) => post.path)].map((route) =>
+        new URL(route, siteUrl).toString(),
+      ),
+    );
     expect(sitemapUrls.some((url) => url.includes("/onboarding"))).toBe(false);
     expect(entries[0]).toMatchObject({ priority: 1, changeFrequency: "weekly" });
     expect(entries.find((entry) => entry.url.endsWith("/download"))).toMatchObject({
@@ -47,6 +52,28 @@ describe("public routing and metadata", () => {
     });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
     expect(metadata.robots).toMatchObject({ index: false, follow: false });
+  });
+
+  it("lists blog posts in the sitemap with their last modification date", () => {
+    const [post] = getBlogPosts();
+    const entry = sitemap().find((item) => item.url === new URL(post.path, siteUrl).toString());
+
+    expect(entry).toMatchObject({ lastModified: post.updatedAt ?? post.publishedAt });
+  });
+
+  it("marks articles with their publication dates for social previews", () => {
+    const metadata = pageMetadata({
+      title: "Post",
+      description: "Post",
+      path: "/blog/post",
+      article: { publishedAt: "2026-11-16" },
+    });
+
+    expect(metadata.openGraph).toMatchObject({
+      type: "article",
+      publishedTime: "2026-11-16",
+      modifiedTime: "2026-11-16",
+    });
   });
 
   it("attaches the shared social image to nested pages", () => {

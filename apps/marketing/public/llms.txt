@@ -8,6 +8,8 @@
   privacy principles, and FAQ.
 - [Download](/download): Careerden Unplugged downloads for macOS (Apple silicon and Intel), and a
   note that Careerden Cloud is coming soon.
+- [Blog](/blog): Guides on tailoring CVs, writing cover letters, and organizing a job search, with
+  an RSS feed at [/blog/feed.xml](/blog/feed.xml).
 
 ## Important context
 

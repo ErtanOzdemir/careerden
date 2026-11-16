@@ -13,6 +13,7 @@ export function SiteHeader() {
           <Link href="/#application-tracking">Features</Link>
           <Link href="/#how-it-works">How it works</Link>
           <Link href="/#pricing">Pricing</Link>
+          <Link href="/blog">Blog</Link>
         </nav>
         <Link className="button button-primary header-download" href="/download">
           Download

@@ -18,11 +18,14 @@ export function pageMetadata({
   description,
   path,
   index = true,
+  article,
 }: {
   title: string;
   description: string;
   path: string;
   index?: boolean;
+  /** Marks the page as an article for social previews; dates are ISO calendar dates. */
+  article?: { publishedAt: string; updatedAt?: string };
 }): Metadata {
   const fullTitle = title === siteName ? siteName : titleTemplate.replace("%s", title);
   return {
@@ -32,7 +35,13 @@ export function pageMetadata({
     alternates: { canonical: absoluteUrl(path) },
     robots: { index, follow: index, googleBot: { index, follow: index } },
     openGraph: {
-      type: "website",
+      ...(article
+        ? {
+            type: "article" as const,
+            publishedTime: article.publishedAt,
+            modifiedTime: article.updatedAt ?? article.publishedAt,
+          }
+        : { type: "website" as const }),
       siteName,
       locale: "en_US",
       title: fullTitle,

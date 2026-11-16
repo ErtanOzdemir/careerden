@@ -30,6 +30,9 @@ describe("marketing navigation", () => {
     for (const link of screen.getAllByRole("link", { name: "Download" })) {
       expect(link).toHaveAttribute("href", "/download");
     }
+    for (const link of screen.getAllByRole("link", { name: "Blog" })) {
+      expect(link).toHaveAttribute("href", "/blog");
+    }
     // The legal drafts stay unlinked until legalPagesEnabled is turned on.
     expect(screen.queryByRole("navigation", { name: "Legal links" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View Careerden on GitHub" })).toHaveAttribute(
@@ -45,6 +48,7 @@ describe("marketing navigation", () => {
       "Features",
       "How it works",
       "Pricing",
+      "Blog",
     ]);
     expect(container.querySelector(".header-download")).toHaveAttribute("href", "/download");
     expect(container.querySelector('a[href*="/login"]')).not.toBeInTheDocument();

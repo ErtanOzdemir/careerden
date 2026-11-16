@@ -39,7 +39,8 @@ requirements belong to their own policies.
   `lib/metadata.ts`; pass `index: false` for routes that must stay out of search results.
 - `app/opengraph-image.tsx` renders the shared social image. Next.js attaches it only to the
   root segment, so `pageMetadata` references it explicitly for nested pages. `app/icon.svg` is
-  the favicon.
+  the favicon; its embedded `prefers-color-scheme` rule draws the mark black on light tabs and
+  white on dark ones.
 - `lib/structured-data.ts` builds schema.org JSON-LD: `Organization` and `WebSite` on every
   page, `SoftwareApplication` on `/` and `/download`, and `FAQPage` from the landing-page FAQ.
   Render it through `components/json-ld.tsx`, which escapes HTML-significant characters. JSON-LD

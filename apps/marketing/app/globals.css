@@ -896,8 +896,7 @@ a {
   text-transform: uppercase;
 }
 .site-footer nav a,
-.footer-contact a,
-.footer-contact p {
+.footer-contact a {
   margin: 0;
   color: #aaa;
   font-size: 0.75rem;
@@ -906,10 +905,6 @@ a {
 .site-footer nav a:hover,
 .footer-contact a:hover {
   color: #fff;
-}
-.footer-contact .review-note {
-  color: #777;
-  line-height: 1.5;
 }
 .footer-bottom {
   display: flex;

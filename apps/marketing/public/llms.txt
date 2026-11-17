@@ -44,4 +44,8 @@
 - The legacy `/onboarding` route redirects to the public workflow and remains excluded from indexing.
 - Authenticated application routes should not be indexed.
 
+## Contact
+
+- Email: hello@careerden.app
+
 See [/llms-full.txt](/llms-full.txt) for a fuller product and data-flow overview.

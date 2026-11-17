@@ -6,7 +6,7 @@ export const siteDescription =
 
 // An empty value falls back too, so a blank build variable cannot produce invalid canonical URLs.
 export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.careerden.example";
-export const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "[CONTACT EMAIL]";
+export const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "hello@careerden.app";
 export const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "[LEGAL COMPANY NAME]";
 export const companyAddress = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "[REGISTERED ADDRESS]";
 

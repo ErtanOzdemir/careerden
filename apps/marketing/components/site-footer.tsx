@@ -50,7 +50,7 @@ export function SiteFooter() {
         ) : null}
         <div className="footer-contact">
           <h2>Contact</h2>
-          <p>{contactEmail}</p>
+          <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
           <p className="review-note">Business details require owner review.</p>
         </div>
       </div>

@@ -28,7 +28,7 @@ Careerden is not an automatic job-application service. It does not promise emplo
 The public marketing website presents Careerden Unplugged as the edition available today. It does
 not expose sign-in, signup, or browser-application links. Its `/download` page offers the Careerden
 Unplugged macOS (Apple silicon and Intel) DMGs and notes that Careerden Cloud is coming soon.
-Windows and Linux downloads are not offered yet.
+Windows and Linux are listed as coming soon, without downloads.
 
 The public pricing section presents Careerden Unplugged as free, with AI billed by the user's own
 provider, and Careerden Cloud as coming soon. Cloud's planned credit model, which may change before

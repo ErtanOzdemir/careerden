@@ -2,11 +2,15 @@ export type DesktopPlatformId = "macos" | "windows" | "linux";
 
 // Platforms whose downloads the site offers. Releases contain only the platforms in
 // apps/desktop/release-editions.json, macOS for now; the Windows and Linux entries below stay so
-// they can be offered again once those platforms are released.
+// they can be offered again once those platforms are released, and show as coming soon until then.
 export const enabledDesktopPlatforms: readonly DesktopPlatformId[] = ["macos"];
 
 function enabledDownloads(downloads: DesktopDownload[]): DesktopDownload[] {
   return downloads.filter(({ platform }) => enabledDesktopPlatforms.includes(platform));
+}
+
+function comingSoonDownloads(downloads: DesktopDownload[]): DesktopDownload[] {
+  return downloads.filter(({ platform }) => !enabledDesktopPlatforms.includes(platform));
 }
 
 // "macOS", "macOS or Windows", "macOS, Windows, or Linux", from a release's offered downloads.
@@ -78,37 +82,41 @@ function unpluggedDownload(
   return { ...details, fileName, url: `${unpluggedDownloadBase}/${fileName}` };
 }
 
+const unpluggedDownloads = [
+  unpluggedDownload({
+    platform: "macos",
+    platformName: "macOS",
+    format: "DMG",
+    architecture: "Apple silicon",
+    suffix: "arm64.dmg",
+  }),
+  unpluggedDownload({
+    platform: "macos",
+    platformName: "macOS",
+    format: "DMG",
+    architecture: "Intel",
+    suffix: "x64.dmg",
+  }),
+  unpluggedDownload({
+    platform: "windows",
+    platformName: "Windows",
+    format: "EXE",
+    architecture: "64-bit",
+    suffix: "x64.exe",
+  }),
+  unpluggedDownload({
+    platform: "linux",
+    platformName: "Linux",
+    format: "AppImage",
+    architecture: "64-bit",
+    suffix: "x86_64.AppImage",
+  }),
+];
+
 export const unpluggedRelease = {
   version: unpluggedVersion,
   releaseNotesUrl: `https://github.com/ErtanOzdemir/careerden/releases/tag/v${unpluggedVersion}`,
-  downloads: enabledDownloads([
-    unpluggedDownload({
-      platform: "macos",
-      platformName: "macOS",
-      format: "DMG",
-      architecture: "Apple silicon",
-      suffix: "arm64.dmg",
-    }),
-    unpluggedDownload({
-      platform: "macos",
-      platformName: "macOS",
-      format: "DMG",
-      architecture: "Intel",
-      suffix: "x64.dmg",
-    }),
-    unpluggedDownload({
-      platform: "windows",
-      platformName: "Windows",
-      format: "EXE",
-      architecture: "64-bit",
-      suffix: "x64.exe",
-    }),
-    unpluggedDownload({
-      platform: "linux",
-      platformName: "Linux",
-      format: "AppImage",
-      architecture: "64-bit",
-      suffix: "x86_64.AppImage",
-    }),
-  ]),
+  downloads: enabledDownloads(unpluggedDownloads),
+  // Shown without a download link until their platform is enabled.
+  comingSoon: comingSoonDownloads(unpluggedDownloads),
 } as const;

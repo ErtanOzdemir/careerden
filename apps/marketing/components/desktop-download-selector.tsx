@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowDown, Download } from "lucide-react";
+import { ArrowDown, Clock, Download } from "lucide-react";
 import {
   desktopRelease,
   formatPlatformNames,
@@ -127,13 +127,44 @@ export function DetectedDownloadButton({
   );
 }
 
+function PlatformHeading({
+  platform,
+  platformName,
+  downloads,
+  detected,
+}: {
+  platform: DesktopPlatformId;
+  platformName: string;
+  downloads: readonly DesktopDownload[];
+  detected: boolean;
+}) {
+  return (
+    <div className="download-platform-heading">
+      <span className="download-platform-icon">
+        <DownloadIcon platform={platform} />
+      </span>
+      <div>
+        <h3>{platformName}</h3>
+        <p>
+          {formatArchitectureChoices(downloads)} · {formatDownloadFormats(downloads)}
+        </p>
+      </div>
+      {detected ? <small>Detected</small> : null}
+    </div>
+  );
+}
+
 export function DesktopDownloadGrid({
   downloads = desktopRelease.downloads,
+  comingSoon = [],
 }: {
   downloads?: readonly DesktopDownload[];
+  // Platforms shown with a "Coming soon" placeholder instead of download links.
+  comingSoon?: readonly DesktopDownload[];
 } = {}) {
   const detectedPlatform = useDetectedPlatform();
   const downloadGroups = groupDownloadsByPlatform(downloads);
+  const comingSoonGroups = groupDownloadsByPlatform(comingSoon);
 
   return (
     <div className="download-platform-grid" id="all-downloads">
@@ -143,19 +174,12 @@ export function DesktopDownloadGrid({
           id={`download-${platform}`}
           key={platform}
         >
-          <div className="download-platform-heading">
-            <span className="download-platform-icon">
-              <DownloadIcon platform={platform} />
-            </span>
-            <div>
-              <h3>{platformName}</h3>
-              <p>
-                {formatArchitectureChoices(platformDownloads)} ·{" "}
-                {formatDownloadFormats(platformDownloads)}
-              </p>
-            </div>
-            {platform === detectedPlatform ? <small>Detected</small> : null}
-          </div>
+          <PlatformHeading
+            detected={platform === detectedPlatform}
+            downloads={platformDownloads}
+            platform={platform}
+            platformName={platformName}
+          />
 
           <div className="download-file-list">
             {platformDownloads.map((download) => (
@@ -178,6 +202,32 @@ export function DesktopDownloadGrid({
                 <Download aria-hidden="true" />
               </DownloadLink>
             ))}
+          </div>
+        </article>
+      ))}
+      {comingSoonGroups.map(({ downloads: platformDownloads, platform, platformName }) => (
+        <article
+          className={
+            platform === detectedPlatform ? "is-coming-soon is-detected" : "is-coming-soon"
+          }
+          id={`download-${platform}`}
+          key={platform}
+        >
+          <PlatformHeading
+            detected={platform === detectedPlatform}
+            downloads={platformDownloads}
+            platform={platform}
+            platformName={platformName}
+          />
+
+          <div className="download-file-list">
+            <span aria-disabled="true" className="download-file-link is-disabled">
+              <span>
+                <strong>Coming soon</strong>
+                <small>{platformName} builds are on the way</small>
+              </span>
+              <Clock aria-hidden="true" />
+            </span>
           </div>
         </article>
       ))}

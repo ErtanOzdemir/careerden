@@ -30,7 +30,7 @@
   job and company details manually for applications from any source.
 - The public marketing website does not expose login, signup, or browser-application links. Its
   download page offers the Careerden Unplugged macOS DMGs for Apple silicon and Intel. Windows and
-  Linux downloads are not offered yet.
+  Linux are listed as coming soon, without downloads.
 - Careerden links directly to its repository at https://github.com/ErtanOzdemir/careerden. The current
   repository license is GNU Affero General Public License v3.0.
 - CVs use built-in layouts. The Base resume page previews six of them (Classic, Editorial, Modern,

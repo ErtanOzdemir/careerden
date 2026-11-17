@@ -50,7 +50,7 @@ export function SiteFooter() {
         ) : null}
         <div className="footer-contact">
           <h2>Contact</h2>
-          <a href={`mailto:${contactEmail}`}>{contactEmail}</a>{" "}
+          <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
         </div>
       </div>
       <div className="container footer-bottom">

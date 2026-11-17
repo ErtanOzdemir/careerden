@@ -82,12 +82,16 @@ export default function DownloadPage() {
             </div>
             <p>
               Version {unpluggedRelease.version} is available for{" "}
-              {formatPlatformNames(unpluggedRelease.downloads)}. Choose the package that matches
-              your computer.
+              {formatPlatformNames(unpluggedRelease.downloads)}, with{" "}
+              {formatPlatformNames(unpluggedRelease.comingSoon)} coming soon. Choose the package
+              that matches your computer.
             </p>
           </div>
 
-          <DesktopDownloadGrid downloads={unpluggedRelease.downloads} />
+          <DesktopDownloadGrid
+            comingSoon={unpluggedRelease.comingSoon}
+            downloads={unpluggedRelease.downloads}
+          />
 
           <div className="unplugged-panel" id="unplugged">
             <div>

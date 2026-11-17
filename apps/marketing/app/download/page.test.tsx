@@ -6,7 +6,7 @@ import { unpluggedRelease } from "@/lib/desktop-release";
 import DownloadPage, { metadata } from "./page";
 
 describe("desktop download page", () => {
-  it("offers the Careerden Unplugged macOS packages and hides Windows and Linux", () => {
+  it("offers the Careerden Unplugged macOS packages and shows Windows and Linux as coming soon", () => {
     const { container } = render(<DownloadPage />);
 
     expect(
@@ -24,8 +24,17 @@ describe("desktop download page", () => {
       );
     }
     expect(container.querySelector('a[href$=".exe"], a[href$=".AppImage"]')).toBeNull();
-    expect(screen.queryByRole("heading", { name: /Windows|Linux/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/is available for macOS\./)).toBeVisible();
+    for (const platform of ["windows", "linux"]) {
+      const card = container.querySelector(`#download-${platform}`);
+      expect(card).toHaveClass("is-coming-soon");
+      expect(card).toHaveTextContent("Coming soon");
+      expect(card?.querySelector("a")).toBeNull();
+    }
+    expect(screen.getByRole("heading", { name: "Windows" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Linux" })).toBeVisible();
+    expect(
+      screen.getByText(/is available for macOS, with Windows and Linux coming soon\./),
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: /Explore Careerden on GitHub/i })).toHaveAttribute(
       "href",
       "https://github.com/ErtanOzdemir/careerden",

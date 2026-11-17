@@ -1574,6 +1574,15 @@ a {
   flex: 0 0 auto;
   color: var(--muted-foreground);
 }
+.download-file-link.is-disabled {
+  border-style: dashed;
+  color: var(--muted-foreground);
+  cursor: default;
+}
+.download-file-link.is-disabled:hover {
+  border-color: var(--border);
+  background: oklch(0.985 0 0);
+}
 .download-release-links {
   display: flex;
   align-items: center;

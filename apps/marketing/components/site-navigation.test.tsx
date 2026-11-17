@@ -43,6 +43,10 @@ describe("marketing navigation", () => {
       "target",
       "_blank",
     );
+    expect(screen.getByRole("link", { name: "hello@careerden.app" })).toHaveAttribute(
+      "href",
+      "mailto:hello@careerden.app",
+    );
     const primaryNavigation = screen.getByRole("navigation", { name: "Primary navigation" });
     expect([...primaryNavigation.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
       "Features",

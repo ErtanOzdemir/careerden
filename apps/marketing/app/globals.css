@@ -896,13 +896,15 @@ a {
   text-transform: uppercase;
 }
 .site-footer nav a,
+.footer-contact a,
 .footer-contact p {
   margin: 0;
   color: #aaa;
   font-size: 0.75rem;
   text-decoration: none;
 }
-.site-footer nav a:hover {
+.site-footer nav a:hover,
+.footer-contact a:hover {
   color: #fff;
 }
 .footer-contact .review-note {

@@ -18,7 +18,7 @@ The service listens on http://localhost:3001. Production builds use:
 | Variable                    | Purpose                                                          | Development fallback          |
 | --------------------------- | ---------------------------------------------------------------- | ----------------------------- |
 | NEXT_PUBLIC_SITE_URL        | Canonical marketing origin used by metadata, sitemap, and robots | https://www.careerden.example |
-| NEXT_PUBLIC_CONTACT_EMAIL   | Public footer contact                                            | [CONTACT EMAIL]               |
+| NEXT_PUBLIC_CONTACT_EMAIL   | Public footer contact                                            | hello@careerden.app           |
 | NEXT_PUBLIC_COMPANY_NAME    | Reserved legal-company value pending approved copy               | [LEGAL COMPANY NAME]          |
 | NEXT_PUBLIC_COMPANY_ADDRESS | Reserved legal-address value pending approved copy               | [REGISTERED ADDRESS]          |
 

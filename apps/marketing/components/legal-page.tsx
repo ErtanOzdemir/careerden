@@ -10,11 +10,16 @@ export function LegalPage({
   title,
   summary,
   sections,
+  updated = "18 July 2026",
+  draft = true,
 }: {
   eyebrow: string;
   title: string;
   summary: string;
   sections: LegalSection[];
+  updated?: string;
+  // Pages still awaiting owner and legal review show a notice and label their date as a draft.
+  draft?: boolean;
 }) {
   if (!legalPagesEnabled) notFound();
 
@@ -34,15 +39,19 @@ export function LegalPage({
             <span className="kicker">{eyebrow}</span>
             <h1>{title}</h1>
             <p>{summary}</p>
-            <div className="legal-review" role="note">
-              <strong>Legal review required</strong>
-              <span>
-                This working copy describes the intended product behavior. Company-specific terms,
-                dates, providers, retention periods, contacts, and governing law remain explicit
-                placeholders until confirmed by the owner and legal counsel.
-              </span>
-            </div>
-            <p className="updated">Draft last updated: 18 July 2026</p>
+            {draft ? (
+              <div className="legal-review" role="note">
+                <strong>Legal review required</strong>
+                <span>
+                  This working copy describes the intended product behavior. Company-specific terms,
+                  dates, providers, retention periods, contacts, and governing law remain explicit
+                  placeholders until confirmed by the owner and legal counsel.
+                </span>
+              </div>
+            ) : null}
+            <p className="updated">
+              {draft ? "Draft last updated" : "Last updated"}: {updated}
+            </p>
           </header>
           {sections.map((section) => (
             <section id={section.id} className="legal-section" key={section.id}>

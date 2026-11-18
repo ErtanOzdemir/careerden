@@ -10,6 +10,11 @@ export const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "hello@care
 export const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "[LEGAL COMPANY NAME]";
 export const companyAddress = process.env.NEXT_PUBLIC_COMPANY_ADDRESS ?? "[REGISTERED ADDRESS]";
 
+// Umami analytics loads only when both values are set, so local and preview builds send nothing.
+export const umamiOrigin = process.env.NEXT_PUBLIC_UMAMI_ORIGIN || "";
+export const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || "";
+export const analyticsEnabled = Boolean(umamiOrigin && umamiWebsiteId);
+
 // The legal pages are drafts awaiting owner and legal review (LEGAL_PLACEHOLDERS.md). While this
 // is false they answer 404, nothing links to them, and crawlers are not pointed at them.
 export const legalPagesEnabled: boolean = false;

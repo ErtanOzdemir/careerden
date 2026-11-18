@@ -27,12 +27,14 @@ the variable is marked required.
 `apps/marketing` reads these at build time, because Next.js inlines public variables into the
 static output. See [apps/marketing/README.md](../apps/marketing/README.md).
 
-| Variable                      | Description                                                                 | Default                         |
-| ----------------------------- | --------------------------------------------------------------------------- | ------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`        | Canonical origin for metadata, Open Graph, JSON-LD, the sitemap, and robots | `https://www.careerden.example` |
-| `NEXT_PUBLIC_CONTACT_EMAIL`   | Public footer contact                                                       | `hello@careerden.app`           |
-| `NEXT_PUBLIC_COMPANY_NAME`    | Reserved legal-company value pending approved copy                          | `[LEGAL COMPANY NAME]`          |
-| `NEXT_PUBLIC_COMPANY_ADDRESS` | Reserved legal-address value pending approved copy                          | `[REGISTERED ADDRESS]`          |
+| Variable                       | Description                                                                 | Default                         |
+| ------------------------------ | --------------------------------------------------------------------------- | ------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`         | Canonical origin for metadata, Open Graph, JSON-LD, the sitemap, and robots | `https://www.careerden.example` |
+| `NEXT_PUBLIC_CONTACT_EMAIL`    | Public footer contact                                                       | `hello@careerden.app`           |
+| `NEXT_PUBLIC_COMPANY_NAME`     | Reserved legal-company value pending approved copy                          | `[LEGAL COMPANY NAME]`          |
+| `NEXT_PUBLIC_COMPANY_ADDRESS`  | Reserved legal-address value pending approved copy                          | `[REGISTERED ADDRESS]`          |
+| `NEXT_PUBLIC_UMAMI_ORIGIN`     | Umami analytics origin, added to the CSP when analytics is on               | unset (analytics off)           |
+| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Umami website ID; analytics loads only when both are set                    | unset (analytics off)           |
 
 ## Creem Billing
 

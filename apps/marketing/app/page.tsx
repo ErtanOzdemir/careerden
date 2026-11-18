@@ -27,9 +27,9 @@ import { githubUrl, legalPagesEnabled } from "@/lib/site";
 import { faqPageJsonLd, softwareApplicationJsonLd, type FaqEntry } from "@/lib/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Desktop Job Application Tracker & CV Creator",
+  title: "AI CV Tailoring & Job Application Tracker",
   description:
-    "Careerden is an open-source desktop job application tracker and CV creator for managing statuses, follow-ups, match insights, CVs, and cover letters.",
+    "Tailor your CV to every job description with AI and track every application until you get the offer. Free and open source, with your data on your computer.",
   path: "/",
 });
 
@@ -86,14 +86,13 @@ export default function HomePage() {
         <div className="container hero-copy">
           <UnpluggedWordmark size="large" />
           <h1>
-            Track every <br />
-            <span>job application.</span>
+            Tailor every CV. <br />
+            <span>Track every application.</span>
           </h1>
           <p className="hero-lede">
-            Careerden Unplugged is an open-source desktop job application tracker with AI that
-            improves your CV for every role. It compares each job posting with your profile,
-            highlights the skills and experience that matter, and drafts a tailored CV and cover
-            letter for you to review, all stored on your computer.
+            Careerden&apos;s AI matches each job description with your profile and drafts a tailored
+            CV and cover letter, then tracks every application until you get the offer. It&apos;s
+            free, open source, and your data stays on your computer.
           </p>
           <div className="hero-actions">
             <Link className="button button-primary button-large" href="/download">

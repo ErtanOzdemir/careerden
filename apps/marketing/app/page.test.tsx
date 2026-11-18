@@ -6,7 +6,7 @@ describe("marketing workflow story", () => {
   it("presents the four real product stages in order", () => {
     const { container } = render(<HomePage />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Track every job application." }),
+      screen.getByRole("heading", { level: 1, name: "Tailor every CV. Track every application." }),
     ).toBeVisible();
     const steps = [...container.querySelectorAll("#how-it-works .workflow-step-copy > h3")].map(
       (heading) => heading.textContent,
@@ -109,13 +109,15 @@ describe("marketing workflow story", () => {
     expect(screen.queryByRole("link", { name: /guided setup/i })).not.toBeInTheDocument();
   });
 
-  it("uses tracking-first search and social metadata", () => {
+  it("leads search and social metadata with CV tailoring and tracking", () => {
     expect(metadata.title).toEqual({
-      absolute: "Desktop Job Application Tracker & CV Creator | Careerden",
+      absolute: "AI CV Tailoring & Job Application Tracker | Careerden",
     });
-    expect(metadata.description).toMatch(/open-source desktop job application tracker/);
+    expect(metadata.description).toMatch(/^Tailor your CV to every job description with AI/);
+    expect(metadata.description).toMatch(/track every application/);
+    expect(String(metadata.description).length).toBeLessThanOrEqual(160);
     expect(metadata.openGraph).toMatchObject({
-      description: expect.stringMatching(/open-source desktop job application tracker/),
+      description: expect.stringMatching(/^Tailor your CV to every job description/),
     });
   });
 });

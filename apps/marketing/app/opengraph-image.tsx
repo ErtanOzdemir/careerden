@@ -49,19 +49,19 @@ export default function OpenGraphImage() {
             letterSpacing: "-4px",
           }}
         >
-          <span>Every application.</span>
-          <span>One clear workspace.</span>
+          <span>Tailor every CV.</span>
+          <span>Track every application.</span>
         </div>
         <div style={{ marginTop: "28px", color: "#686868", fontSize: "25px" }}>
-          Open-source job application tracker, CV creator, and cover letter creator.
+          AI tailors your CV to every job description. Free and open source.
         </div>
       </div>
       <div style={{ display: "flex", gap: "12px", color: "#777", fontSize: "18px" }}>
+        <span>Tailor your CV</span>
+        <span>·</span>
         <span>Track applications</span>
         <span>·</span>
-        <span>Create tailored documents</span>
-        <span>·</span>
-        <span>Review every draft</span>
+        <span>Your data stays on your computer</span>
       </div>
     </div>,
     size,

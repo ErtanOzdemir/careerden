@@ -17,7 +17,7 @@ import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
 import "./globals.css";
 import "./native-previews.css";
 
-const defaultTitle = `${siteName} — Desktop job application tracker and CV creator`;
+const defaultTitle = `${siteName} — AI CV tailoring and job application tracker`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

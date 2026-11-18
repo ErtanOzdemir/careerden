@@ -2,7 +2,7 @@ export const siteName = "Careerden";
 export const githubUrl = "https://github.com/ErtanOzdemir/careerden";
 
 export const siteDescription =
-  "An open-source desktop job application tracker, CV creator, and cover letter creator for managing statuses, follow-ups, match insights, and editable documents.";
+  "Tailor your CV to every job description with AI and track every application until you get the offer. Free and open source, with your data on your computer.";
 
 // An empty value falls back too, so a blank build variable cannot produce invalid canonical URLs.
 export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.careerden.example";

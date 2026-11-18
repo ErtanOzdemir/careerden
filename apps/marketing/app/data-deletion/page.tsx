@@ -1,99 +1,67 @@
 import type { Metadata } from "next";
-import { LegalPage, Placeholder, type LegalSection } from "@/components/legal-page";
+import { LegalPage, type LegalSection } from "@/components/legal-page";
 import { pageMetadata } from "@/lib/metadata";
+import { contactEmail } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Account and Data Deletion",
-  description: "How to request deletion of a Careerden account and associated personal data.",
+  title: "Deleting Your Data",
+  description:
+    "How to delete your Careerden data from your computer, and how to ask us to delete website or email data.",
   path: "/data-deletion",
 });
 
 const sections: LegalSection[] = [
   {
-    id: "before",
-    title: "Before you delete",
-    content: (
-      <p>
-        Account deletion is intended to remove access and begin deletion of associated personal
-        data. Export any CVs, cover letters, profile details, or application records you want to
-        keep first. Deletion may not be reversible after the stated recovery window:{" "}
-        <Placeholder>[RECOVERY WINDOW OR “NO RECOVERY WINDOW”]</Placeholder>.
-      </p>
-    ),
-  },
-  {
-    id: "request",
-    title: "Request account deletion",
+    id: "app",
+    title: "Data in the desktop app",
     content: (
       <>
-        <ol>
-          <li>
-            Use the desktop application account-deletion control at{" "}
-            <Placeholder>[DESKTOP SETTINGS PATH — NOT YET CONFIRMED]</Placeholder>, or contact{" "}
-            <Placeholder>[DELETION REQUEST EMAIL]</Placeholder>.
-          </li>
-          <li>
-            Confirm the request using the account session or proportionate identity verification.
-          </li>
-          <li>
-            Receive confirmation when the account is disabled and when deletion from active systems
-            is complete.
-          </li>
-        </ol>
         <p>
-          The current product settings do not yet expose a verified self-service deletion control.
-          Do not claim otherwise until that workflow is implemented.
+          Careerden Unplugged has no account and keeps everything on your computer, so you delete
+          your data yourself and nothing remains with us.
+        </p>
+        <ul>
+          <li>
+            To remove a single job application, document, or profile detail, delete or edit it in
+            the app.
+          </li>
+          <li>
+            To keep a copy first, use <strong>Settings → Your data → Export data</strong>.
+          </li>
+          <li>
+            To delete everything, open <strong>Settings → Your data → Open data folder</strong>,
+            quit the app, and delete the folder that opened. On macOS it is{" "}
+            <code>~/Library/Application Support/Careerden Unplugged</code>. This also removes your
+            saved AI keys, earlier automatic backups, and logs, and it cannot be undone.
+          </li>
+        </ul>
+        <p>
+          Uninstalling the app alone does not delete this folder. Backups you exported elsewhere
+          stay where you saved them.
         </p>
       </>
     ),
   },
   {
-    id: "scope",
-    title: "What deletion should cover",
-    content: (
-      <p>
-        Subject to verified production behavior, deletion should cover account/profile records, job
-        applications, raw and normalized scrape data, match analyses, generated and uploaded
-        documents, stored files, reminders, preferences, and directly identifying support data. The
-        public five-step workflow preview uses fictional data and does not create account or
-        onboarding records.
-      </p>
-    ),
-  },
-  {
-    id: "exceptions",
-    title: "What may remain",
-    content: (
-      <p>
-        Limited records may remain when required for legal obligations, fraud and security
-        prevention, disputes, or proof that a request was fulfilled. Backups may expire on a delayed
-        cycle and should not be restored to normal use. Confirm categories, legal bases, access
-        restrictions, and time limits:{" "}
-        <Placeholder>[DELETION EXCEPTIONS AND BACKUP EXPIRY]</Placeholder>.
-      </p>
-    ),
-  },
-  {
     id: "providers",
-    title: "Processors and timing",
+    title: "Data held by your AI provider",
     content: (
       <p>
-        The operator should propagate verified deletion requests to relevant processors unless
-        retention is legally required. Publish a realistic completion target based on database,
-        object storage, queue, log, backup, AI-provider, email, and support systems:{" "}
-        <Placeholder>[ACTIVE-SYSTEM AND BACKUP DELETION TIMELINES]</Placeholder>.
+        Requests the app sent to your AI provider are kept under that provider&apos;s own terms. Ask
+        the provider directly if you want them deleted.
       </p>
     ),
   },
   {
-    id: "partial",
-    title: "Delete or correct specific data",
+    id: "website",
+    title: "Website and email data",
     content: (
       <p>
-        If you want to keep the account but remove or correct specific profile, application, or
-        document information, use available edit/delete controls or make a data-rights request.
-        Contact <Placeholder>[DATA-RIGHTS CONTACT]</Placeholder> for records without a self-service
-        control.
+        To delete emails you sent us or any other data described in the{" "}
+        <a href="/privacy">Privacy Policy</a>, write to{" "}
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>. We confirm the request is yours and
+        reply within one month. Visit statistics contain no IP address or other detail that lets us
+        find your visits, so we cannot single them out for deletion.
       </p>
     ),
   },
@@ -102,10 +70,12 @@ const sections: LegalSection[] = [
 export default function DataDeletionPage() {
   return (
     <LegalPage
-      eyebrow="Account controls"
-      title="Account and data deletion"
-      summary="What to expect when you ask Careerden to delete an account or specific personal data."
+      eyebrow="Your data"
+      title="Deleting your data"
+      summary="Your Careerden data lives on your computer, so you can delete it yourself at any time."
       sections={sections}
+      updated="18 November 2026"
+      draft={false}
     />
   );
 }

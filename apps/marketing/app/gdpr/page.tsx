@@ -1,23 +1,27 @@
 import type { Metadata } from "next";
-import { LegalPage, Placeholder, type LegalSection } from "@/components/legal-page";
+import { LegalPage, type LegalSection } from "@/components/legal-page";
 import { pageMetadata } from "@/lib/metadata";
+import { contactEmail } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   title: "GDPR and Data Rights",
-  description: "How to understand and exercise privacy and GDPR rights relating to Careerden data.",
+  description:
+    "How to exercise your privacy rights under the GDPR, UK GDPR, and KVKK for Careerden.",
   path: "/gdpr",
 });
+
+const contactLink = <a href={`mailto:${contactEmail}`}>{contactEmail}</a>;
 
 const sections: LegalSection[] = [
   {
     id: "scope",
-    title: "Scope and roles",
+    title: "What these rights cover",
     content: (
       <p>
-        This page explains the intended rights process for people covered by the GDPR or UK GDPR.
-        The owner must confirm the controller identity, EU/UK establishment, representative
-        obligations, and whether Careerden ever acts as a processor for business customers:{" "}
-        <Placeholder>[CONTROLLER, REPRESENTATIVE, AND PROCESSOR ROLES]</Placeholder>.
+        The rights below apply to the personal data the careerden.app website processes and to
+        emails you send us, as described in the <a href="/privacy">Privacy Policy</a>. Data in the
+        Careerden Unplugged desktop app stays on your computer, so we hold none of it and you
+        control it directly.
       </p>
     ),
   },
@@ -26,14 +30,17 @@ const sections: LegalSection[] = [
     title: "Your rights",
     content: (
       <>
+        <p>Depending on where you live, you may ask us to:</p>
+        <ul>
+          <li>confirm whether we process your personal data and give you a copy;</li>
+          <li>correct data that is wrong or incomplete;</li>
+          <li>delete your data;</li>
+          <li>restrict processing, or stop processing based on our legitimate interests;</li>
+          <li>give you your data in a format you can take elsewhere.</li>
+        </ul>
         <p>
-          Subject to conditions and exceptions, you may request access to personal data; correction;
-          deletion; restriction; objection to processing; portability; and withdrawal of consent.
-          You may also complain to your local supervisory authority.
-        </p>
-        <p>
-          These rights are not absolute. The service may need to retain limited data to meet legal
-          obligations, establish claims, protect security, or document a completed request.
+          These rights have legal limits. For example, we may keep a record that we handled your
+          request, or data we need for a legal claim.
         </p>
       </>
     ),
@@ -43,10 +50,8 @@ const sections: LegalSection[] = [
     title: "AI and automated decisions",
     content: (
       <p>
-        Careerden uses AI-supported analysis and drafting, but the intended product leaves
-        application decisions and document review to the user. The owner must assess and document
-        whether any production processing creates legal or similarly significant solely automated
-        decisions: <Placeholder>[ARTICLE 22 ASSESSMENT]</Placeholder>.
+        We make no automated decisions about you. AI analysis and drafting in the desktop app run on
+        your computer with the AI provider you choose, and you decide what to do with the results.
       </p>
     ),
   },
@@ -56,60 +61,28 @@ const sections: LegalSection[] = [
     content: (
       <>
         <ol>
+          <li>Email {contactLink} and say which right you want to use.</li>
           <li>
-            Contact <Placeholder>[DATA-RIGHTS EMAIL OR PORTAL]</Placeholder> and describe the right
-            you want to exercise.
+            We may ask for information to confirm the request is yours, such as replying from the
+            email address concerned.
           </li>
           <li>
-            The operator may request proportionate information to verify your identity and protect
-            account data.
-          </li>
-          <li>
-            The request will be assessed, scoped across active systems and relevant processors, and
-            answered within the legally applicable period.
+            We answer within one month, or within 30 days for requests under KVKK. For complex
+            requests the GDPR allows up to two more months, and we tell you if we need them.
           </li>
         </ol>
-        <p>
-          Confirm intake, identity verification, authorized-agent handling, response templates,
-          escalation, and request records before launch:{" "}
-          <Placeholder>[DATA-SUBJECT REQUEST PROCEDURE]</Placeholder>.
-        </p>
+        <p>Requests are free unless they are clearly unfounded or excessive.</p>
       </>
     ),
   },
   {
-    id: "timing",
-    title: "Timing and fees",
-    content: (
-      <p>
-        GDPR requests are generally answered without undue delay and within one month, subject to
-        lawful extensions for complexity or volume. A reasonable fee or refusal may be allowed for
-        manifestly unfounded or excessive requests. Counsel should confirm the operational timeline
-        for every market served.
-      </p>
-    ),
-  },
-  {
-    id: "export",
-    title: "Access and export",
-    content: (
-      <p>
-        An export may include account and profile data, job-application records, preferences,
-        generated content, and other personal data required by law, in a commonly used format where
-        portability applies. Confirm the available in-product export and secure delivery process:{" "}
-        <Placeholder>[EXPORT SCOPE, FORMAT, AND DELIVERY]</Placeholder>.
-      </p>
-    ),
-  },
-  {
     id: "complaints",
-    title: "Questions and complaints",
+    title: "Complaints",
     content: (
       <p>
-        Contact the operator first at <Placeholder>[PRIVACY CONTACT]</Placeholder> so it can
-        investigate. You retain the right to contact the competent supervisory authority. Identify
-        the lead authority only after the operator’s establishment and processing arrangements are
-        confirmed: <Placeholder>[LEAD SUPERVISORY AUTHORITY, IF APPLICABLE]</Placeholder>.
+        Please contact us first so we can try to fix the problem. You can also complain to the data
+        protection authority in the country where you live or work, or in Türkiye to the Kişisel
+        Verileri Koruma Kurulu.
       </p>
     ),
   },
@@ -120,8 +93,10 @@ export default function GdprPage() {
     <LegalPage
       eyebrow="Data rights"
       title="GDPR and your data"
-      summary="A practical overview of privacy rights and the request process intended for Careerden."
+      summary="How to see, correct, or delete the personal data Careerden holds about you."
       sections={sections}
+      updated="18 November 2026"
+      draft={false}
     />
   );
 }

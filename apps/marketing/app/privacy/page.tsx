@@ -1,123 +1,156 @@
 import type { Metadata } from "next";
-import { LegalPage, Placeholder, type LegalSection } from "@/components/legal-page";
+import { LegalPage, type LegalSection } from "@/components/legal-page";
 import { pageMetadata } from "@/lib/metadata";
+import { companyAddress, companyName, contactEmail } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
   description:
-    "How Careerden is intended to collect, use, store, share, and protect personal data.",
+    "What personal data the Careerden website and the Careerden Unplugged desktop app process, why, and your rights under the GDPR and KVKK.",
   path: "/privacy",
 });
 
+const contactLink = <a href={`mailto:${contactEmail}`}>{contactEmail}</a>;
+
 const sections: LegalSection[] = [
   {
-    id: "controller",
-    title: "Who is responsible",
+    id: "who",
+    title: "Who we are",
     content: (
       <>
         <p>
-          The intended data controller is{" "}
-          <Placeholder>[LEGAL COMPANY NAME, REGISTRATION NUMBER, AND ADDRESS]</Placeholder>. Privacy
-          questions may be sent to <Placeholder>[PRIVACY CONTACT EMAIL]</Placeholder>. The owner
-          must confirm whether different entities act as controller for hosted, desktop, or
-          enterprise use.
+          This policy covers the careerden.app website and the Careerden Unplugged desktop app. The
+          controller for the website is {companyName}
+          {companyAddress ? `, ${companyAddress}` : ""}. You can reach us about privacy at{" "}
+          {contactLink}.
+        </p>
+        <p>
+          In short: the desktop app keeps your data on your computer and never sends it to us. The
+          website collects only what it needs to load pages and count visits, without cookies.
         </p>
       </>
     ),
   },
   {
-    id: "collection",
-    title: "Data we expect to collect",
+    id: "app",
+    title: "The desktop app keeps your data on your device",
     content: (
       <>
-        <p>Depending on how you use Careerden, the service may process:</p>
+        <p>
+          Your profile, CVs, job postings, match analyses, generated documents, reminders, and
+          settings are stored in the app&apos;s data folder on your computer. Careerden Unplugged
+          has no account, and it sends no telemetry, analytics, or crash reports. We cannot see,
+          access, or recover this data.
+        </p>
+        <p>
+          AI provider keys are encrypted with your operating system&apos;s keychain. Backups you
+          export and log files stay on your computer unless you choose to send them to someone, for
+          example by attaching diagnostics to an email.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "connections",
+    title: "Connections the app makes from your device",
+    content: (
+      <>
+        <p>
+          The app connects directly to the following services. These requests go from your computer
+          to the service, not through us, and each service processes them under its own privacy
+          terms:
+        </p>
         <ul>
           <li>
-            account details, such as name, email address, authentication records, and security
-            events;
+            <strong>GitHub</strong>, to check for and download updates and to fetch the list of
+            available AI models. GitHub sees your IP address and app version.
           </li>
           <li>
-            profile content, including contact details, summary, skills, experience, education,
-            projects, certifications, and templates you upload;
+            <strong>LinkedIn</strong>, when you import a job posting by its link. The app fetches
+            the public posting without signing in to any LinkedIn account.
           </li>
           <li>
-            job and company information captured from URLs you submit, plus raw and normalized
-            scrape results;
-          </li>
-          <li>
-            match analysis, prompts or structured AI inputs, generated CV and cover-letter content,
-            edits, and rendered files;
-          </li>
-          <li>
-            application workflow state, events, reminders, preferences, and support messages; and
-          </li>
-          <li>
-            technical information such as IP address, device/browser data, request logs, and
-            essential cookie identifiers.
+            <strong>The AI provider you choose</strong> (OpenAI, Anthropic, Google Gemini, DeepSeek,
+            or OpenRouter), when you run an analysis or generate a document. The app sends the
+            relevant profile and job details with your own API key, under your agreement with that
+            provider. Check the provider&apos;s terms for how long it keeps requests and whether it
+            uses them for training.
           </li>
         </ul>
-        <p>Do not submit sensitive personal information that is unnecessary for an application.</p>
       </>
     ),
   },
   {
-    id: "purposes",
-    title: "Why data is used",
+    id: "website",
+    title: "What the website processes",
     content: (
       <>
+        <ul>
+          <li>
+            <strong>Request data.</strong> To deliver pages and protect the server, our web server
+            receives your IP address, browser user agent, the page requested, and the time.
+          </li>
+          <li>
+            <strong>Visit statistics.</strong> We run our own copy of Umami, a privacy-focused
+            analytics tool. It sets no cookies and does not store your IP address: the address is
+            used only for a moment to work out your country and region and to create an anonymous
+            visit identifier that cannot be traced back to you. Umami records the pages you view,
+            the referring site, your browser, operating system, device type, screen size, language,
+            and country, and which installer you download (file, platform, and architecture).
+          </li>
+          <li>
+            <strong>Email.</strong> If you write to us, we receive your name, email address, and
+            whatever you include in the message.
+          </li>
+        </ul>
         <p>
-          The intended purposes are to authenticate users; store and manage profiles; retrieve
-          user-requested job information; analyze role fit; generate, edit, render, store, and
-          deliver documents; operate reminders; provide support; secure and troubleshoot the
-          service; and meet legal obligations.
-        </p>
-        <p>
-          The lawful bases for each purpose require confirmation:{" "}
-          <Placeholder>
-            [GDPR LAWFUL-BASIS MATRIX: CONTRACT, LEGITIMATE INTERESTS, CONSENT, AND/OR LEGAL
-            OBLIGATION]
-          </Placeholder>
-          .
-        </p>
-      </>
-    ),
-  },
-  {
-    id: "ai",
-    title: "AI processing",
-    content: (
-      <>
-        <p>
-          Profile and job information relevant to a request may be sent to configured AI providers
-          to extract requirements, assess alignment, or draft application content. AI output can be
-          inaccurate and must be reviewed. The service should not use your content to train provider
-          models unless the selected provider terms and configuration explicitly allow it and the
-          owner gives clear notice.
-        </p>
-        <p>
-          Provider choices, regions, retention, and training controls:{" "}
-          <Placeholder>
-            [CONFIRM EACH AI PROVIDER, MODEL, REGION, RETENTION SETTING, AND DATA-USE TERMS]
-          </Placeholder>
-          .
+          We do not use advertising, tracking pixels, or third-party analytics, and we do not sell
+          or share personal data for marketing.
         </p>
       </>
     ),
   },
   {
-    id: "sharing",
-    title: "Processors and recipients",
+    id: "basis",
+    title: "Why we use it and on what basis",
+    content: (
+      <ul>
+        <li>
+          Delivering the website, keeping it secure, and fixing errors: our legitimate interest in
+          running a working and safe website (GDPR Article 6(1)(f)).
+        </li>
+        <li>
+          Counting visits and downloads to understand how the website is used: our legitimate
+          interest in improving it, using cookieless analytics that does not identify you (GDPR
+          Article 6(1)(f)).
+        </li>
+        <li>
+          Answering your messages: our legitimate interest in responding to you, or steps you ask
+          for before using a service (GDPR Article 6(1)(b) and (f)).
+        </li>
+      </ul>
+    ),
+  },
+  {
+    id: "recipients",
+    title: "Service providers",
     content: (
       <>
+        <p>We use these providers to run the website and handle email:</p>
+        <ul>
+          <li>
+            <strong>OVH</strong>, which hosts the website and our analytics server in Germany.
+          </li>
+          <li>
+            <strong>Google Workspace</strong>, which hosts our email.
+          </li>
+          <li>
+            <strong>GitHub</strong>, which hosts the installer files the download page links to.
+            Downloading an installer connects your browser to GitHub.
+          </li>
+        </ul>
         <p>
-          Expected categories include hosting, PostgreSQL database, Redis queue, S3-compatible
-          object storage, document rendering, AI model, email/notification, logging, security, and
-          customer-support providers. A current subprocessor list must be published at{" "}
-          <Placeholder>[SUBPROCESSOR LIST URL]</Placeholder> before launch.
-        </p>
-        <p>
-          Data may also be disclosed when required by law, to protect people or the service, or
-          during a properly governed business transaction.
+          We may also disclose data when the law requires it or to protect people or the service.
         </p>
       </>
     ),
@@ -126,63 +159,119 @@ const sections: LegalSection[] = [
     id: "transfers",
     title: "International transfers",
     content: (
-      <>
-        <p>
-          Provider locations and transfer mechanisms have not yet been confirmed. Before launch,
-          document where data is processed and the applicable safeguards, such as adequacy decisions
-          or standard contractual clauses:{" "}
-          <Placeholder>[TRANSFER COUNTRIES AND SAFEGUARDS]</Placeholder>.
-        </p>
-      </>
+      <p>
+        The website and analytics run on servers in Germany, in the European Union. Google may
+        process email in other countries, and GitHub is based in the United States. Where data
+        leaves the country you are in, we rely on the safeguards the law provides, such as adequacy
+        decisions and standard contractual clauses offered by these providers.
+      </p>
     ),
   },
   {
     id: "retention",
-    title: "Retention",
+    title: "How long we keep it",
     content: (
-      <>
-        <p>
-          Keep personal data only as long as needed for the stated purposes, security, disputes, and
-          legal obligations. The owner must approve a schedule for accounts, profiles, raw scrapes,
-          generated files, logs, backups, support records, and deleted-account remnants:{" "}
-          <Placeholder>[RETENTION SCHEDULE AND BACKUP DELETION WINDOW]</Placeholder>.
-        </p>
-      </>
+      <ul>
+        <li>Server request logs: no longer than 30 days.</li>
+        <li>Visit statistics: no longer than 24 months.</li>
+        <li>
+          Emails: as long as needed to deal with your message, and no longer than two years after
+          the conversation ends, unless we need them for a legal claim.
+        </li>
+        <li>Data in the desktop app: on your computer until you delete it.</li>
+      </ul>
     ),
   },
   {
     id: "rights",
-    title: "Your choices and rights",
+    title: "Your rights",
     content: (
       <>
         <p>
-          Depending on your location, you may have rights to access, correct, delete, restrict,
-          object, port your data, withdraw consent, or complain to a supervisory authority. See{" "}
-          <a href="/gdpr">GDPR and data rights</a> and{" "}
-          <a href="/data-deletion">account and data deletion</a>.
+          You may ask for access to, correction of, or deletion of your personal data; ask us to
+          restrict or stop processing it; ask for a copy to take elsewhere; and object to processing
+          based on legitimate interests. Write to {contactLink}. We answer within one month and may
+          ask for information to confirm the request is yours. See{" "}
+          <a href="/gdpr">your data rights</a> for details.
         </p>
         <p>
-          Request channel and identity-verification process:{" "}
-          <Placeholder>[DATA-RIGHTS EMAIL OR REQUEST PORTAL]</Placeholder>.
+          Because the desktop app keeps your data on your computer, you can view, export, and delete
+          it yourself at any time; see <a href="/data-deletion">deleting your data</a>. You can also
+          complain to the data protection authority where you live.
         </p>
       </>
     ),
   },
   {
-    id: "security",
-    title: "Security and changes",
+    id: "children",
+    title: "Children",
+    content: <p>Careerden is not intended for children under 16.</p>,
+  },
+  {
+    id: "changes",
+    title: "Changes to this policy",
     content: (
-      <>
+      <p>
+        When this policy changes, we update the date at the top of this page. If a change is
+        significant, we also say so in the release notes of the next app version.
+      </p>
+    ),
+  },
+  {
+    id: "kvkk",
+    title: "Türkiye: KVKK aydınlatma metni",
+    content: (
+      <div lang="tr">
         <p>
-          Careerden should use proportionate technical and organizational safeguards, but no service
-          can promise absolute security. The owner must document confirmed controls and incident
-          contacts rather than making unverified guarantees.
+          6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) madde 10 uyarınca, Türkiye&apos;deki
+          kullanıcılar için aşağıdaki bilgileri sunuyoruz.
         </p>
-        <p>
-          Material policy changes should be dated and communicated through{" "}
-          <Placeholder>[NOTICE METHOD AND ADVANCE-NOTICE PERIOD]</Placeholder>.
-        </p>
-      </>
+        <ul>
+          <li>
+            <strong>Veri sorumlusu:</strong> {companyName}
+            {companyAddress ? `, ${companyAddress}` : ""}. İletişim: {contactLink}.
+          </li>
+          <li>
+            <strong>İşlenen veriler:</strong> careerden.app web sitesini ziyaret ettiğinizde IP
+            adresiniz, tarayıcı bilgileriniz, ziyaret ettiğiniz sayfalar ve indirdiğiniz kurulum
+            dosyası; bize e-posta gönderirseniz adınız, e-posta adresiniz ve mesajınızın içeriği.
+            Careerden Unplugged masaüstü uygulamasındaki profil, CV ve başvuru verileriniz yalnızca
+            sizin bilgisayarınızda tutulur; bunlara erişimimiz yoktur ve bu verileri işlemeyiz.
+          </li>
+          <li>
+            <strong>İşleme amaçları:</strong> web sitesini sunmak ve güvenliğini sağlamak, çerez
+            kullanmadan ziyaret ve indirme istatistiği tutmak, mesajlarınızı yanıtlamak.
+          </li>
+          <li>
+            <strong>Toplama yöntemi ve hukuki sebep:</strong> veriler web sitesi ve e-posta
+            aracılığıyla otomatik ve kısmen otomatik yollarla toplanır. Hukuki sebep, temel hak ve
+            özgürlüklerinize zarar vermemek kaydıyla veri sorumlusunun meşru menfaatidir (KVKK madde
+            5/2-f). İstatistik aracımız IP adresinizi saklamaz.
+          </li>
+          <li>
+            <strong>Aktarım:</strong> web sitesi ve istatistik sunucusu Almanya&apos;da bulunan OVH
+            tarafından barındırılır; e-postalarımız Google Workspace üzerinden yönetilir. Bu nedenle
+            verileriniz KVKK madde 9 kapsamında yurt dışına aktarılır. Kanunen zorunlu hâllerde
+            yetkili kurumlarla paylaşılabilir. Verileriniz pazarlama amacıyla paylaşılmaz.
+          </li>
+          <li>
+            <strong>Haklarınız (KVKK madde 11):</strong> kişisel verilerinizin işlenip işlenmediğini
+            öğrenme, işlenmişse bilgi talep etme, işlenme amacını ve amacına uygun kullanılıp
+            kullanılmadığını öğrenme, yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri
+            bilme, eksik veya yanlış işlenmişse düzeltilmesini isteme, silinmesini veya yok
+            edilmesini isteme, bu işlemlerin aktarıldığı üçüncü kişilere bildirilmesini isteme,
+            münhasıran otomatik sistemlerle analiz edilmesi sonucu aleyhinize bir sonucun ortaya
+            çıkmasına itiraz etme ve kanuna aykırı işleme nedeniyle zarara uğramanız hâlinde zararın
+            giderilmesini talep etme.
+          </li>
+          <li>
+            <strong>Başvuru:</strong> taleplerinizi {contactLink} adresine iletebilirsiniz.
+            Başvurunuzu niteliğine göre en kısa sürede ve en geç 30 gün içinde ücretsiz olarak
+            yanıtlarız. Yanıtımızdan memnun kalmazsanız Kişisel Verileri Koruma Kurulu&apos;na
+            şikâyette bulunabilirsiniz.
+          </li>
+        </ul>
+      </div>
     ),
   },
 ];
@@ -192,8 +281,10 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Privacy"
       title="Privacy Policy"
-      summary="A transparent working description of the personal data Careerden needs to provide its profile-aware application workflow."
+      summary="Careerden Unplugged keeps your data on your computer. This page explains the little the website processes, the services the app connects to, and your rights."
       sections={sections}
+      updated="18 November 2026"
+      draft={false}
     />
   );
 }

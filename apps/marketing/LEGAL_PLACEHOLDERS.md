@@ -11,25 +11,24 @@ The public legal copy is a working product draft, not legal advice or a complian
 - Approval of the current $10 USD monthly product price and 100-credit paid-period scope, plus final
   taxes, renewals, trials, refunds, cancellation, and price-change terms.
 
-## Privacy and data governance
+## Privacy, cookies, data rights, and deletion
 
-- Controller/processor roles, EU/UK establishment or representative, and lead supervisory authority.
-- Purpose-by-purpose lawful-basis matrix and legitimate-interest assessments.
-- Complete subprocessor list: hosting, PostgreSQL, Redis/BullMQ, S3-compatible storage, rendering, AI providers/models, email/notification, support, logging, and security.
-- Processing regions, international-transfer countries, adequacy decisions, SCCs, UK addendum, and supplementary safeguards.
-- AI-provider model, region, request retention, abuse monitoring, and training/data-use settings.
-- Retention schedule for accounts, profiles, raw scrapes, normalized records, generated/uploaded documents, object storage, queue data, logs, support records, request records, and backups.
-- Verified security controls and incident/breach contacts; do not convert these into guarantees.
-- Data-subject request intake, identity verification, authorized agents, response/export format, secure delivery, escalation, and statutory timing by market.
-- Article 22 / solely automated decision-making assessment.
-- Self-service export and deletion paths, recovery window, active-system deletion target, backup expiry, legal exceptions, and processor propagation.
-- Privacy and terms change-notice method and notice period.
+`/privacy` (with a Turkish KVKK notice), `/cookies`, `/gdpr`, and `/data-deletion` describe the
+Unplugged edition and the website as they run today and no longer show the draft notice. Before
+the legal pages go live:
 
-## Cookies, analytics, and marketing
+- Set `NEXT_PUBLIC_COMPANY_NAME` to the controller's identity; the pages show
+  `[LEGAL COMPANY NAME]` until then. `NEXT_PUBLIC_COMPANY_ADDRESS` is optional and shown only
+  when set.
+- Make the stated retention true: server request logs at most 30 days, Umami statistics at most
+  24 months, emails at most two years after a conversation ends.
+- Confirm the KVKK Article 9 transfer safeguards for OVH (Germany) and Google Workspace.
+- Rewrite all four pages before the cloud edition opens to the public: accounts, server-side
+  profiles and documents, server AI keys, Creem billing, Resend email, R2 storage, and account
+  deletion are not covered.
 
-- Production cookie/storage inventory with names, providers, purposes, domains, durations, and Secure/HttpOnly/SameSite attributes.
-- Analytics, error monitoring, experimentation, embeds, advertising, or confirmation that each category is absent.
-- Consent platform, geographic rules, consent-log retention, and preference-revocation behavior.
+## Marketing
+
 - Final Open Graph/site artwork and approved brand/trademark wording if the generated default is replaced.
 
 ## Terms and operational policy

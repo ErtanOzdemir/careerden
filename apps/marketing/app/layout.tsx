@@ -1,10 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import { JsonLd } from "@/components/json-ld";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { titleTemplate } from "@/lib/metadata";
-import { siteDescription, siteName, siteUrl } from "@/lib/site";
+import {
+  analyticsEnabled,
+  siteDescription,
+  siteName,
+  siteUrl,
+  umamiOrigin,
+  umamiWebsiteId,
+} from "@/lib/site";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/structured-data";
 import "./globals.css";
 import "./native-previews.css";
@@ -52,6 +60,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <SiteHeader />
         {children}
         <SiteFooter />
+        {analyticsEnabled ? (
+          <Script
+            data-domains={new URL(siteUrl).hostname}
+            data-website-id={umamiWebsiteId}
+            src={`${umamiOrigin}/script.js`}
+            strategy="afterInteractive"
+          />
+        ) : null}
       </body>
     </html>
   );

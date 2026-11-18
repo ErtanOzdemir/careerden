@@ -32,6 +32,19 @@ describe("marketing security headers", () => {
     });
   });
 
+  it("allows only the Umami origin for scripts and requests when analytics is configured", () => {
+    const contentSecurityPolicy = createMarketingContentSecurityPolicy(
+      false,
+      "https://analytics.careerden.app",
+    );
+
+    expect(contentSecurityPolicy).toContain(
+      "script-src 'self' 'unsafe-inline' https://analytics.careerden.app;",
+    );
+    expect(contentSecurityPolicy).toContain("connect-src 'self' https://analytics.careerden.app;");
+    expect(contentSecurityPolicy.match(/https:/g)).toHaveLength(2);
+  });
+
   it("allows the Next.js development runtime and omits HSTS", () => {
     const headers = createMarketingSecurityHeaders(true);
 

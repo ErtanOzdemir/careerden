@@ -56,10 +56,12 @@ describe("architecture-specific desktop downloads", () => {
 
     render(<DetectedDownloadButton release={desktopRelease} />);
 
-    expect(await screen.findByRole("link", { name: /Download for macOS/i })).toHaveAttribute(
-      "href",
-      desktopRelease.downloads[0].url,
-    );
+    const link = await screen.findByRole("link", { name: /Download for macOS/i });
+    expect(link).toHaveAttribute("href", desktopRelease.downloads[0].url);
+    // Umami records installer clicks as a Download event with the file details.
+    expect(link).toHaveAttribute("data-umami-event", "Download");
+    expect(link).toHaveAttribute("data-umami-event-file", desktopRelease.downloads[0].fileName);
+    expect(link).toHaveAttribute("data-umami-event-platform", "macOS");
   });
 
   it("groups Apple Silicon and Intel artifacts under one macOS card", () => {

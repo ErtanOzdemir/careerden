@@ -10,14 +10,24 @@ export type MarketingSecurityHeader = {
   value: string;
 };
 
-export function createMarketingContentSecurityPolicy(developmentMode: boolean): string {
+// The Umami origin, when analytics is configured, is the only other origin the site loads from.
+const analyticsOrigin =
+  process.env.NEXT_PUBLIC_UMAMI_ORIGIN && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID
+    ? new URL(process.env.NEXT_PUBLIC_UMAMI_ORIGIN).origin
+    : undefined;
+
+export function createMarketingContentSecurityPolicy(
+  developmentMode: boolean,
+  analytics?: string,
+): string {
+  const analyticsSource = analytics ? ` ${analytics}` : "";
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${developmentMode ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'unsafe-inline'${developmentMode ? " 'unsafe-eval'" : ""}${analyticsSource}`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
     "img-src 'self' data:",
-    "connect-src 'self'",
+    `connect-src 'self'${analyticsSource}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -30,11 +40,12 @@ export function createMarketingContentSecurityPolicy(developmentMode: boolean): 
 
 export function createMarketingSecurityHeaders(
   developmentMode: boolean,
+  analytics?: string,
 ): MarketingSecurityHeader[] {
   return [
     {
       key: "Content-Security-Policy",
-      value: createMarketingContentSecurityPolicy(developmentMode),
+      value: createMarketingContentSecurityPolicy(developmentMode, analytics),
     },
     { key: "Permissions-Policy", value: permissionsPolicy },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -49,7 +60,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        headers: createMarketingSecurityHeaders(development),
+        headers: createMarketingSecurityHeaders(development, analyticsOrigin),
         source: "/:path*",
       },
     ];

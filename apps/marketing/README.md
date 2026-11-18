@@ -15,12 +15,14 @@ The service listens on http://localhost:3001. Production builds use:
 
 ## Runtime configuration
 
-| Variable                    | Purpose                                                          | Development fallback          |
-| --------------------------- | ---------------------------------------------------------------- | ----------------------------- |
-| NEXT_PUBLIC_SITE_URL        | Canonical marketing origin used by metadata, sitemap, and robots | https://www.careerden.example |
-| NEXT_PUBLIC_CONTACT_EMAIL   | Public footer contact                                            | hello@careerden.app           |
-| NEXT_PUBLIC_COMPANY_NAME    | Reserved legal-company value pending approved copy               | [LEGAL COMPANY NAME]          |
-| NEXT_PUBLIC_COMPANY_ADDRESS | Reserved legal-address value pending approved copy               | [REGISTERED ADDRESS]          |
+| Variable                     | Purpose                                                          | Development fallback          |
+| ---------------------------- | ---------------------------------------------------------------- | ----------------------------- |
+| NEXT_PUBLIC_SITE_URL         | Canonical marketing origin used by metadata, sitemap, and robots | https://www.careerden.example |
+| NEXT_PUBLIC_CONTACT_EMAIL    | Public footer contact                                            | hello@careerden.app           |
+| NEXT_PUBLIC_COMPANY_NAME     | Reserved legal-company value pending approved copy               | [LEGAL COMPANY NAME]          |
+| NEXT_PUBLIC_COMPANY_ADDRESS  | Reserved legal-address value pending approved copy               | [REGISTERED ADDRESS]          |
+| NEXT_PUBLIC_UMAMI_ORIGIN     | Umami analytics origin, added to the CSP when analytics is on    | unset (analytics off)         |
+| NEXT_PUBLIC_UMAMI_WEBSITE_ID | Umami website ID; analytics loads only when both are set         | unset (analytics off)         |
 
 Set public environment variables before the Next.js build because Next.js inlines them into the static output.
 
@@ -30,6 +32,14 @@ Set public environment variables before the Next.js build because Next.js inline
 referrer and permissions policies, and production HSTS to every route. Keep the policy
 limited to resources used by this public service; authenticated web or Electron resource
 requirements belong to their own policies.
+
+## Analytics
+
+Production uses self-hosted Umami at `https://analytics.careerden.app` (a Coolify service). It
+sets no cookies. The script loads only when `NEXT_PUBLIC_UMAMI_ORIGIN` and
+`NEXT_PUBLIC_UMAMI_WEBSITE_ID` are both set at build time, and its origin is then the only one
+added to `script-src` and `connect-src`. `data-domains` limits counting to the `NEXT_PUBLIC_SITE_URL`
+host. Installer links send a `Download` event with the file, platform, and architecture.
 
 ## Search metadata
 

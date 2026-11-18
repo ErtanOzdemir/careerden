@@ -61,7 +61,15 @@ function DownloadLink({
   children: ReactNode;
 }) {
   return (
-    <a className={className} href={download.url} rel="noreferrer">
+    <a
+      className={className}
+      data-umami-event="Download"
+      data-umami-event-architecture={download.architecture}
+      data-umami-event-file={download.fileName}
+      data-umami-event-platform={download.platformName}
+      href={download.url}
+      rel="noreferrer"
+    >
       {children}
     </a>
   );

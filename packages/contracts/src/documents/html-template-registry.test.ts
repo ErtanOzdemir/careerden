@@ -193,3 +193,17 @@ describe("CV header links", () => {
     expect(html).toContain("<span>github.com/ada</span>");
   });
 });
+
+describe("Cover letter header", () => {
+  it("renders the contact sections nested inside the name section", () => {
+    const html = renderHtmlTemplate("cover-letter.default", {
+      full_name: "Ada Lovelace",
+      email: "ada@example.com",
+      location: "London",
+      cover_letter_content: "Dear team",
+    });
+
+    expect(html).not.toContain("{{");
+    expect(html).toMatch(/<span>ada@example\.com<\/span>\s*<span>London<\/span>/);
+  });
+});

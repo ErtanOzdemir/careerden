@@ -94,11 +94,19 @@ export function renderHtmlTemplate(templateId: string, data: Record<string, unkn
   }
 
   const links = normalizeProfileLinks(data.links);
-  const withConditionalSections = template.html.replace(
-    /\{\{#([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/\1\}\}/g,
-    (_match, key: string, body: string) =>
-      (key === "links" ? links.length > 0 : hasTemplateValue(data[key])) ? body : "",
-  );
+  // Resolve innermost sections first and repeat, so sections nested inside another section
+  // (the cover letter's contact fields inside `full_name`) are rendered rather than leaked.
+  const innermostSection = /\{\{#([a-zA-Z0-9_]+)\}\}((?:(?!\{\{#)[\s\S])*?)\{\{\/\1\}\}/g;
+  let withConditionalSections = template.html;
+  for (;;) {
+    const next = withConditionalSections.replace(
+      innermostSection,
+      (_match, key: string, body: string) =>
+        (key === "links" ? links.length > 0 : hasTemplateValue(data[key])) ? body : "",
+    );
+    if (next === withConditionalSections) break;
+    withConditionalSections = next;
+  }
 
   return withConditionalSections.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_match, key: string) => {
     if (key === "skill_groups") return renderSkillGroups(data);

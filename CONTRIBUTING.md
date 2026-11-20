@@ -79,6 +79,10 @@ pnpm build
 ```
 
 GitHub Actions runs the same gates for every pull request targeting `master`.
+CodeQL code scanning runs from `.github/workflows/codeql.yml` on pull requests, on `master`,
+and weekly. `.github/codeql/codeql-config.yml` excludes third-party bundles copied into the
+repository, such as `apps/web/public/vendor/paged.polyfill.js`; add a path there only for
+code copied verbatim from another project.
 
 Use `pnpm lint:fix` and `pnpm format` for mechanical cleanup. Do not hand-format code to work around Prettier; let the formatter own whitespace and wrapping.
 

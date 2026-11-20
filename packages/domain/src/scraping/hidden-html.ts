@@ -31,7 +31,7 @@ const hiddenStyle =
  * payload. An unclosed hidden element hides the rest of the input, so it fails closed.
  */
 export function stripHiddenHtmlElements(html: string): string {
-  const tokens = html.match(/<!--[\s\S]*?-->|<![^>]*>|<\/?[a-zA-Z][^>]*>|[^<]+|</g) ?? [];
+  const tokens = tokenizeHtml(html);
   const output: string[] = [];
   let hidden: { tag: string; depth: number } | undefined;
 
@@ -66,15 +66,68 @@ interface ParsedTag {
   selfClosing: boolean;
 }
 
+/**
+ * Splits HTML into comments, `<!...>` declarations, tags, text runs, and stray `<` characters.
+ * It scans with `indexOf` and remembers the next `>` and `-->` it found, so unclosed markup such
+ * as a long run of `<!--` or `<a` stays linear instead of rescanning the rest of the input.
+ */
+function tokenizeHtml(html: string): string[] {
+  const tokens: string[] = [];
+  const nextGreaterThan = createForwardSearch(html, ">");
+  const nextCommentEnd = createForwardSearch(html, "-->");
+  let index = 0;
+
+  while (index < html.length) {
+    const open = html.indexOf("<", index);
+    if (open === -1) {
+      tokens.push(html.slice(index));
+      break;
+    }
+    if (open > index) tokens.push(html.slice(index, open));
+
+    let end = open + 1;
+    if (html.startsWith("<!--", open) && nextCommentEnd(open + 4) !== -1) {
+      end = nextCommentEnd(open + 4) + 3;
+    } else if (html[open + 1] === "!" || startsTag(html, open)) {
+      const close = nextGreaterThan(open + 2);
+      if (close !== -1) end = close + 1;
+    }
+
+    tokens.push(html.slice(open, end));
+    index = end;
+  }
+
+  return tokens;
+}
+
+function startsTag(html: string, open: number): boolean {
+  const next = html[open + 1] === "/" ? open + 2 : open + 1;
+  return /[a-zA-Z]/.test(html[next] ?? "");
+}
+
+/** Returns a search for `needle` whose answers are reused while callers move forward. */
+function createForwardSearch(haystack: string, needle: string): (from: number) => number {
+  let found = -2;
+  return (from) => {
+    if (found === -1 || (found >= from && found !== -2)) return found;
+    found = haystack.indexOf(needle, from);
+    return found;
+  };
+}
+
 function parseTag(token: string): ParsedTag | undefined {
-  const match = /^<\s*(\/)?\s*([a-zA-Z][a-zA-Z0-9-]*)([\s\S]*?)(\/)?\s*>$/.exec(token);
+  if (!token.endsWith(">")) return undefined;
+  const match = /^<(\/)?([a-zA-Z][a-zA-Z0-9-]*)/.exec(token);
   if (!match) return undefined;
+
+  const rest = token.slice(match[0].length, -1).trimEnd();
+  const selfClosing = rest.endsWith("/");
 
   return {
     closing: Boolean(match[1]),
     name: (match[2] ?? "").toLowerCase(),
-    attributes: match[3] ?? "",
-    selfClosing: Boolean(match[4]),
+    attributes: selfClosing ? rest.slice(0, -1) : rest,
+    selfClosing,
   };
 }
 

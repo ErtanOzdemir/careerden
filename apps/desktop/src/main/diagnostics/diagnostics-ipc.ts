@@ -10,7 +10,7 @@ export type OpenLogFolderResult = { status: "opened" } | { status: "error" };
 
 export interface DiagnosticsIpcOptions {
   collect: () => Promise<string>;
-  writeClipboard: (text: string) => void;
+  writeClipboard: (text: string) => Promise<void>;
   // userData/logs, fixed by the main process.
   logsDirectory: string;
   ensureDirectory: (path: string) => Promise<void>;
@@ -31,7 +31,7 @@ export function registerDiagnosticsIpc(
 ): void {
   registry.register(diagnosticsIpcChannels.copy, async (): Promise<DiagnosticsCopyResult> => {
     try {
-      options.writeClipboard(await options.collect());
+      await options.writeClipboard(await options.collect());
       return { status: "copied" };
     } catch (error) {
       options.onError?.("diagnostics.copy_failed", error);

@@ -12,7 +12,7 @@ import {
 function register(overrides: Partial<DiagnosticsIpcOptions> = {}) {
   const options: DiagnosticsIpcOptions = {
     collect: vi.fn(async () => "## Careerden Unplugged diagnostics\n"),
-    writeClipboard: vi.fn(),
+    writeClipboard: vi.fn(async () => undefined),
     logsDirectory: "/user-data/logs",
     ensureDirectory: vi.fn(async () => undefined),
     openPath: vi.fn(async () => ""),
@@ -74,6 +74,19 @@ describe("registerDiagnosticsIpc", () => {
       status: "error",
     });
     expect(ipc.options.writeClipboard).not.toHaveBeenCalled();
+    expect(ipc.options.onError).toHaveBeenCalledWith("diagnostics.copy_failed", expect.any(Error));
+  });
+
+  it("reports a rejected clipboard write as an error", async () => {
+    const ipc = register({
+      writeClipboard: async () => {
+        throw new Error("clipboard unavailable");
+      },
+    });
+
+    await expect(ipc.fromMainFrame(diagnosticsIpcChannels.copy)).resolves.toEqual({
+      status: "error",
+    });
     expect(ipc.options.onError).toHaveBeenCalledWith("diagnostics.copy_failed", expect.any(Error));
   });
 

@@ -32,7 +32,7 @@ export interface StartupRecoveryOptions {
   formatDiagnostics: (failure: StartupFailure) => Promise<string>;
   // Strips local paths from what the renderer sees.
   redact: (text: string) => string;
-  writeClipboard: (text: string) => void;
+  writeClipboard: (text: string) => Promise<void>;
   openDataFolder: () => Promise<void>;
   // Relaunches the app so it opens the restored data.
   restart: () => Promise<void> | void;
@@ -111,7 +111,7 @@ export class StartupRecovery {
   // clipboard only and is not returned to the renderer.
   async copyDiagnostics(): Promise<void> {
     const failure = this.requireActive();
-    this.options.writeClipboard(await this.options.formatDiagnostics(failure));
+    await this.options.writeClipboard(await this.options.formatDiagnostics(failure));
   }
 
   quit(): void {

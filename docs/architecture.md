@@ -273,7 +273,7 @@ renderer. New routes and use cases belong in the shared composition, so both edi
 | Area                | Technology                                                               |
 | ------------------- | ------------------------------------------------------------------------ |
 | Runtime             | Node.js 22                                                               |
-| Language            | TypeScript 5.7, strict ESM, NodeNext resolution                          |
+| Language            | TypeScript 6.0, strict ESM, NodeNext resolution                          |
 | Package management  | pnpm 9.15 and Turborepo 2.9                                              |
 | Desktop             | Electron 43                                                              |
 | Web                 | React 19, React Router 7, Vite 6, Tailwind CSS 4                         |

@@ -30,7 +30,9 @@ export class LinkedInJobScraper implements JobSiteScraper {
 
   canHandle(url: string): boolean {
     const parsed = parseUrl(url);
-    return Boolean(parsed?.hostname.endsWith("linkedin.com") && parsed.pathname.includes("/jobs/"));
+    return Boolean(
+      parsed && isLinkedInHostname(parsed.hostname) && parsed.pathname.includes("/jobs/"),
+    );
   }
 
   async scrapeJob(url: string): Promise<ScrapedJob> {
@@ -199,9 +201,9 @@ export function extractLinkedInCompanyLogoUrlFromHtml(html: string): string | un
       /(?:artdeco-entity-image|base-search-card__entity-image|entity-image|logo)/i.test(
         className,
       ) ||
-      src?.includes("media.licdn.com") ||
-      delayedUrl?.includes("media.licdn.com") ||
-      srcset?.includes("media.licdn.com")
+      isLinkedInMediaUrl(src) ||
+      isLinkedInMediaUrl(delayedUrl) ||
+      parseSrcset(srcset).some(isLinkedInMediaUrl)
     ) {
       candidates.push({ delayedUrl, src, srcset });
     }
@@ -290,14 +292,18 @@ export function sanitizeLinkedInJobDescriptionHtml(html: string): string {
   return removeEmptyBlocks(output.join("").replace(/\s+/g, " ").replace(/>\s+</g, "><").trim());
 }
 
+/**
+ * The sanitized HTML escapes every `<` in text, so each `<...>` part is one of its allowlisted tags.
+ * Tags become line breaks or nothing, and only text parts are decoded.
+ */
 export function htmlToLinkedInJobDescriptionText(html: string): string {
-  return decodeHtml(
-    sanitizeLinkedInJobDescriptionHtml(html)
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/(?:p|h[1-3]|li)>/gi, "\n")
-      .replace(/<\/(?:ul|ol)>/gi, "\n")
-      .replace(/<[^>]+>/g, ""),
-  )
+  return sanitizeLinkedInJobDescriptionHtml(html)
+    .split(/(<[^>]*>)/)
+    .map((part) => {
+      if (!part.startsWith("<")) return decodeHtml(part);
+      return /^<(?:br\b|\/(?:p|h[1-3]|li|ul|ol)>)/i.test(part) ? "\n" : "";
+    })
+    .join("")
     .split(/\r?\n/)
     .map((line) => normalizeWhitespace(line))
     .filter(Boolean)
@@ -363,19 +369,23 @@ function removeEmptyBlocks(html: string): string {
   return next;
 }
 
+const namedEntities: Record<string, string> = {
+  amp: "&",
+  gt: ">",
+  lt: "<",
+  nbsp: " ",
+  quot: '"',
+};
+
+/** Decodes in one pass, so `&amp;lt;` becomes `&lt;` rather than `<`. */
 function decodeHtml(value: string): string {
-  return value
-    .replaceAll(/&#(\d+);/g, (entity, code: string) => decodeCodePoint(entity, Number(code)))
-    .replaceAll(/&#x([0-9a-f]+);/gi, (entity, code: string) =>
-      decodeCodePoint(entity, Number.parseInt(code, 16)),
-    )
-    .replaceAll("&nbsp;", " ")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#039;", "'")
-    .replaceAll("&#39;", "'");
+  return value.replaceAll(
+    /&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|(amp|gt|lt|nbsp|quot));/g,
+    (entity, decimal?: string, hex?: string, name?: string) => {
+      if (name) return namedEntities[name] ?? entity;
+      return decodeCodePoint(entity, decimal ? Number(decimal) : Number.parseInt(hex ?? "", 16));
+    },
+  );
 }
 
 function decodeCodePoint(entity: string, value: number): string {
@@ -507,14 +517,8 @@ function chooseLinkedInJobCompanyLogoUrl(
     );
 
     for (const url of urls) {
-      const parsed = parseUrl(url);
-
-      if (
-        parsed &&
-        parsed.protocol === "https:" &&
-        (parsed.hostname === "media.licdn.com" || parsed.hostname.endsWith(".licdn.com"))
-      ) {
-        return parsed.href;
+      if (isLinkedInMediaUrl(url)) {
+        return new URL(url).href;
       }
     }
   }
@@ -527,6 +531,19 @@ function parseSrcset(srcset: string | undefined): string[] {
     .split(",")
     .map((entry) => entry.trim().split(/\s+/)[0])
     .filter((value): value is string => Boolean(value));
+}
+
+function isLinkedInHostname(hostname: string): boolean {
+  return hostname === "linkedin.com" || hostname.endsWith(".linkedin.com");
+}
+
+function isLinkedInMediaUrl(value: string | undefined): boolean {
+  const parsed = parseUrl(value);
+  return Boolean(
+    parsed &&
+    parsed.protocol === "https:" &&
+    (parsed.hostname === "media.licdn.com" || parsed.hostname.endsWith(".licdn.com")),
+  );
 }
 
 function parseUrl(value: string | undefined): URL | undefined {

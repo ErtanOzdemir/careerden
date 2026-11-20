@@ -229,4 +229,20 @@ describe("parseLinkedInGuestCompanyHtml", () => {
       logoUrl: "https://media.licdn.com/dms/image/job-post-logo",
     });
   });
+
+  it("reads structured data wrapped in a comment and decodes entities once", () => {
+    const html = `
+      <script type="application/ld+json"><!--{"@type":"Organization","name":"Fish &amp;amp; Chips"}--!></script>
+      <meta property="og:title" content="Fish &amp;amp; Chips | LinkedIn">
+    `;
+
+    expect(
+      parseLinkedInGuestCompanyHtml(html, {
+        companyUrl: "https://www.linkedin.com/company/fish/",
+        finalUrl: "https://www.linkedin.com/company/fish/",
+        input: { companyName: "Fallback", linkedInUrl: "https://www.linkedin.com/company/fish" },
+        strategy: "guest",
+      }),
+    ).toMatchObject({ name: "Fish &amp; Chips" });
+  });
 });

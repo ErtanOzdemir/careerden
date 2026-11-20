@@ -199,7 +199,10 @@ function extractLinkedInOrganizationData(html: string): Record<string, unknown> 
   let match: RegExpExecArray | null;
 
   while ((match = scriptPattern.exec(html)) !== null) {
-    const source = match[1]?.trim().replace(/^<!--/, "").replace(/-->$/, "");
+    const source = match[1]
+      ?.trim()
+      .replace(/^<!--/, "")
+      .replace(/--!?>$/, "");
 
     if (!source) {
       continue;
@@ -311,15 +314,19 @@ function getHtmlAttribute(tag: string, name: string): string | undefined {
   return value ? decodeHtml(value) : undefined;
 }
 
+const namedEntities: Record<string, string> = {
+  amp: "&",
+  gt: ">",
+  lt: "<",
+  nbsp: " ",
+  quot: '"',
+};
+
+/** Decodes in one pass, so `&amp;lt;` becomes `&lt;` rather than `<`. */
 function decodeHtml(value: string): string {
-  return value
-    .replaceAll("&nbsp;", " ")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#039;", "'")
-    .replaceAll("&#39;", "'");
+  return value.replaceAll(/&(?:#0*39|(amp|gt|lt|nbsp|quot));/g, (entity, name?: string) =>
+    name ? (namedEntities[name] ?? entity) : "'",
+  );
 }
 
 function asString(value: unknown): string | undefined {

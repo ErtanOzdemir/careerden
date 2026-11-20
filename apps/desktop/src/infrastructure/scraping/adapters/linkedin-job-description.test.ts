@@ -43,6 +43,17 @@ describe("extractLinkedInJobDescription", () => {
     expect(htmlToLinkedInJobDescriptionText(html)).toBe("Apply here");
     expect(sanitizeLinkedInJobDescriptionHtml(html)).toBe("<p>Apply here</p>");
   });
+
+  it("decodes each entity once and keeps escaped markup as text", () => {
+    const html = "<p>Write &amp;lt;script&amp;gt; tags &amp; docs</p><p>Next&#39;s line</p>";
+
+    expect(htmlToLinkedInJobDescriptionText(html)).toBe(
+      "Write &lt;script&gt; tags & docs\nNext's line",
+    );
+    expect(sanitizeLinkedInJobDescriptionHtml(html)).toBe(
+      "<p>Write &amp;lt;script&amp;gt; tags &amp; docs</p><p>Next&#039;s line</p>",
+    );
+  });
 });
 
 describe("extractLinkedInJobId", () => {
@@ -162,9 +173,27 @@ describe("extractLinkedInCompanyLogoUrlFromHtml", () => {
       `),
     ).toBe("https://media.licdn.com/dms/image/company-logo.png");
   });
+
+  it("ignores images that only mention the LinkedIn media host in their URL", () => {
+    expect(
+      extractLinkedInCompanyLogoUrlFromHtml(`
+        <img src="https://evil.example/media.licdn.com/logo.png">
+        <img srcset="https://media.licdn.com.evil.example/logo.png 2x">
+      `),
+    ).toBeUndefined();
+  });
 });
 
 describe("LinkedInJobScraper", () => {
+  it.each([
+    ["https://www.linkedin.com/jobs/view/123", true],
+    ["https://linkedin.com/jobs/view/123", true],
+    ["https://notlinkedin.com/jobs/view/123", false],
+    ["https://www.linkedin.com.evil.example/jobs/view/123", false],
+  ])("decides whether it can handle %s", (url, expected) => {
+    expect(new LinkedInJobScraper().canHandle(url)).toBe(expected);
+  });
+
   it("uses the guest endpoint as the default strategy", async () => {
     const fetchCalls: string[] = [];
     const scraper = new LinkedInJobScraper({

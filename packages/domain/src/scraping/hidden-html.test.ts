@@ -54,4 +54,25 @@ describe("stripHiddenHtmlElements", () => {
       "a < b <!-- note --> &amp; c",
     );
   });
+
+  it("keeps unclosed comments, declarations, and tags as text", () => {
+    expect(stripHiddenHtmlElements("<!-- open <!x <a b <p>Kept</p>")).toBe(
+      "<!-- open <!x <a b <p>Kept</p>",
+    );
+  });
+
+  it("reads self-closing tags and whitespace before the closing bracket", () => {
+    expect(stripHiddenHtmlElements("<span hidden />Kept<p\t>Also</p >")).toBe("Kept<p\t>Also</p >");
+  });
+
+  it.each([
+    ["repeated comment openers", "<!--".repeat(50_000)],
+    ["repeated tag openers", "<a".repeat(50_000)],
+    ["a tag with long whitespace runs", `<${"\t".repeat(100_000)}`],
+    ["a closing tag with long whitespace runs", `<a${"\t".repeat(100_000)}`],
+  ])("stays fast on %s", (_name, html) => {
+    const started = performance.now();
+    expect(stripHiddenHtmlElements(html)).toBe(html);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });

@@ -134,4 +134,49 @@ describe("HttpRemoteImageFetcher", () => {
       "https://media.licdn.com//evil.example/logo.png",
     ]);
   });
+
+  it("requests a signed LinkedIn media URL unchanged", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(Buffer.from("logo"), {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const logoUrl =
+      "https://media.licdn.com/dms/image/v2/D4E0BAQH_x-y/company-logo_200_200/" +
+      "company-logo_200_200/0/1700000000000?e=2147483647&v=beta&t=AbC-dEf_123";
+
+    await new HttpRemoteImageFetcher().fetch(logoUrl);
+
+    expect(fetchMock.mock.calls.map(([url]) => (url as URL).href)).toEqual([logoUrl]);
+  });
+
+  it("re-encodes characters that could end the path early", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(Buffer.from("logo"), {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new HttpRemoteImageFetcher().fetch("https://media.licdn.com/a%2F..%2Fb%3Fx/logo.png");
+
+    expect(fetchMock.mock.calls.map(([url]) => (url as URL).href)).toEqual([
+      "https://media.licdn.com/a%2F..%2Fb%3Fx/logo.png",
+    ]);
+  });
+
+  it("rejects a path with a malformed percent escape", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      new HttpRemoteImageFetcher().fetch("https://media.licdn.com/logo%zz.png"),
+    ).rejects.toThrow("LinkedIn media host");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

@@ -117,4 +117,21 @@ describe("HttpRemoteImageFetcher", () => {
     ).rejects.toThrow("too many redirects");
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
+
+  it("keeps a path that starts with two slashes on the LinkedIn host", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(Buffer.from("logo"), {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new HttpRemoteImageFetcher().fetch("https://media.licdn.com//evil.example/logo.png");
+
+    expect(fetchMock.mock.calls.map(([url]) => (url as URL).href)).toEqual([
+      "https://media.licdn.com//evil.example/logo.png",
+    ]);
+  });
 });

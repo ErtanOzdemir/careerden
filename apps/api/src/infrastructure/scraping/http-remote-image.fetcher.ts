@@ -61,23 +61,24 @@ async function fetchFollowingLinkedInRedirects(url: URL): Promise<Response> {
   }
 }
 
-/** LinkedIn serves company logos from these hosts; any other host is refused. */
-const linkedInMediaOrigins = new Map([
-  ["media.licdn.com", "https://media.licdn.com"],
-  ["static.licdn.com", "https://static.licdn.com"],
-]);
-
 /**
- * Rebuilds the URL on a constant origin, so the request host never comes from the input; only the
- * path and query do.
+ * Rebuilds the URL behind a literal LinkedIn media origin, so the request host never comes from
+ * the input; only the path and query do. Concatenation keeps a path such as `//evil.example/x` on
+ * the LinkedIn host, where resolving it against a base URL would switch hosts.
  */
 function linkedInMediaUrl(url: string, message: string): URL {
   const parsed = new URL(url);
-  const origin = linkedInMediaOrigins.get(parsed.hostname);
-
-  if (parsed.protocol !== "https:" || parsed.port || parsed.username || !origin) {
+  if (parsed.protocol !== "https:" || parsed.port || parsed.username || parsed.password) {
     throw new Error(message);
   }
 
-  return new URL(`${parsed.pathname}${parsed.search}`, origin);
+  const pathAndQuery = `${parsed.pathname.slice(1)}${parsed.search}`;
+  switch (parsed.hostname) {
+    case "media.licdn.com":
+      return new URL(`https://media.licdn.com/${pathAndQuery}`);
+    case "static.licdn.com":
+      return new URL(`https://static.licdn.com/${pathAndQuery}`);
+    default:
+      throw new Error(message);
+  }
 }

@@ -11,7 +11,7 @@ review or download.
 
 - Runtime: Node.js 22 (`.nvmrc`)
 - Package manager: pnpm 9.15.0
-- Language: TypeScript 5.7, strict mode, ESM, `moduleResolution: "NodeNext"`
+- Language: TypeScript 6.0, strict mode, ESM, `moduleResolution: "NodeNext"`
 - Monorepo orchestration: Turborepo 2.9
 - Linting and formatting: ESLint 10, typescript-eslint 8.61, Prettier 3.8
 - Testing: Vitest 2.1

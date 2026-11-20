@@ -61,15 +61,23 @@ async function fetchFollowingLinkedInRedirects(url: URL): Promise<Response> {
   }
 }
 
+/** LinkedIn serves company logos from these hosts; any other host is refused. */
+const linkedInMediaOrigins = new Map([
+  ["media.licdn.com", "https://media.licdn.com"],
+  ["static.licdn.com", "https://static.licdn.com"],
+]);
+
+/**
+ * Rebuilds the URL on a constant origin, so the request host never comes from the input; only the
+ * path and query do.
+ */
 function linkedInMediaUrl(url: string, message: string): URL {
   const parsed = new URL(url);
+  const origin = linkedInMediaOrigins.get(parsed.hostname);
 
-  if (
-    parsed.protocol !== "https:" ||
-    !(parsed.hostname === "media.licdn.com" || parsed.hostname.endsWith(".licdn.com"))
-  ) {
+  if (parsed.protocol !== "https:" || parsed.port || parsed.username || !origin) {
     throw new Error(message);
   }
 
-  return parsed;
+  return new URL(`${parsed.pathname}${parsed.search}`, origin);
 }

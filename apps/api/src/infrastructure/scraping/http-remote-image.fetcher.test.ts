@@ -91,20 +91,20 @@ describe("HttpRemoteImageFetcher", () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.any(URL), { redirect: "manual" });
   });
 
-  it.each(["http://169.254.169.254/latest/meta-data", "https://media.licdn.com.evil.example/x"])(
-    "rejects a redirect to %s without requesting it",
-    async (location) => {
-      const fetchMock = vi.fn(
-        async () => new Response(null, { status: 301, headers: { location } }),
-      );
-      vi.stubGlobal("fetch", fetchMock);
+  it.each([
+    "http://169.254.169.254/latest/meta-data",
+    "https://media.licdn.com.evil.example/x",
+    "https://unknown.licdn.com/x",
+    "https://media.licdn.com:8443/x",
+  ])("rejects a redirect to %s without requesting it", async (location) => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 301, headers: { location } }));
+    vi.stubGlobal("fetch", fetchMock);
 
-      await expect(
-        new HttpRemoteImageFetcher().fetch("https://media.licdn.com/logo.png"),
-      ).rejects.toThrow("redirect must remain on a LinkedIn media host");
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    },
-  );
+    await expect(
+      new HttpRemoteImageFetcher().fetch("https://media.licdn.com/logo.png"),
+    ).rejects.toThrow("redirect must remain on a LinkedIn media host");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
   it("stops after too many redirects", async () => {
     const fetchMock = vi.fn(

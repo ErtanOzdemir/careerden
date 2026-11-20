@@ -71,7 +71,7 @@ export const desktopRelease = {
 // Careerden Unplugged's installers, published by the desktop release workflow with the
 // CareerdenUnplugged artifact prefix. The version must match apps/desktop/package.json, because
 // release tags do.
-const unpluggedVersion = "1.1.0";
+const unpluggedVersion = "1.2.0";
 const unpluggedDownloadBase = `https://github.com/ErtanOzdemir/careerden/releases/download/v${unpluggedVersion}`;
 
 function unpluggedDownload(

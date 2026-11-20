@@ -12,8 +12,8 @@ minor release; older release lines are not patched.
 
 | Version | Careerden          | Careerden Unplugged |
 | ------- | ------------------ | ------------------- |
-| 1.1.x   | :white_check_mark: | :white_check_mark:  |
-| < 1.1   | :x:                | :x:                 |
+| 1.2.x   | :white_check_mark: | :white_check_mark:  |
+| < 1.2   | :x:                | :x:                 |
 
 When the next minor release is published, it becomes the only supported line and the table
 moves with it.

@@ -1,0 +1,6 @@
+name: Careerden CodeQL config
+
+# Third-party bundles copied verbatim into the repository. Their alerts belong upstream; fix them
+# by updating the copied version.
+paths-ignore:
+  - apps/web/public/vendor/paged.polyfill.js

@@ -72,13 +72,34 @@ function linkedInMediaUrl(url: string, message: string): URL {
     throw new Error(message);
   }
 
-  const pathAndQuery = `${parsed.pathname.slice(1)}${parsed.search}`;
+  const pathAndQuery = encodedPathAndQuery(parsed, message);
   switch (parsed.hostname) {
     case "media.licdn.com":
-      return new URL(`https://media.licdn.com/${pathAndQuery}`);
+      return new URL(`https://media.licdn.com${pathAndQuery}`);
     case "static.licdn.com":
-      return new URL(`https://static.licdn.com/${pathAndQuery}`);
+      return new URL(`https://static.licdn.com${pathAndQuery}`);
     default:
       throw new Error(message);
   }
+}
+
+/**
+ * Re-encodes every path segment and query key and value, so no input character can end the path
+ * early or start a new authority. CodeQL also recognizes `encodeURIComponent` as the sanitizer.
+ */
+function encodedPathAndQuery(url: URL, message: string): string {
+  let path = "";
+  let query = "";
+  try {
+    for (const segment of url.pathname.slice(1).split("/")) {
+      path += `/${encodeURIComponent(decodeURIComponent(segment))}`;
+    }
+  } catch {
+    // A malformed percent escape cannot be a LinkedIn media path.
+    throw new Error(message);
+  }
+  for (const [key, value] of url.searchParams) {
+    query += `${query ? "&" : "?"}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+  }
+  return `${path}${query}`;
 }

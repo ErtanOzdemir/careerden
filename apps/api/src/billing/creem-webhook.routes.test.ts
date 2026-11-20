@@ -71,7 +71,32 @@ describe("createCreemWebhookRouter", () => {
     expect(processEvent.execute).not.toHaveBeenCalled();
   });
 
-  async function startServer(processEvent: { execute: ReturnType<typeof vi.fn> }): Promise<number> {
+  it("rate-limits deliveries before reading or verifying them", async () => {
+    const processEvent = { execute: vi.fn() };
+    const port = await startServer(processEvent, { limit: 2, windowMs: 60_000 });
+    const send = () =>
+      fetch(`http://127.0.0.1:${port}/billing/webhooks/creem`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "creem-signature": "invalid" },
+        body: "{}",
+      });
+
+    expect((await send()).status).toBe(401);
+    expect((await send()).status).toBe(401);
+    const limited = await send();
+
+    expect(limited.status).toBe(429);
+    await expect(limited.json()).resolves.toEqual({
+      code: "rate_limited",
+      error: "Too many webhook requests",
+    });
+    expect(processEvent.execute).not.toHaveBeenCalled();
+  });
+
+  async function startServer(
+    processEvent: { execute: ReturnType<typeof vi.fn> },
+    rateLimit?: { limit: number; windowMs: number },
+  ): Promise<number> {
     const app = express();
     app.use(
       "/billing/webhooks/creem",
@@ -82,6 +107,7 @@ describe("createCreemWebhookRouter", () => {
           planKey: "pro",
         }),
         processEvent,
+        ...(rateLimit ? { rateLimit } : {}),
       }),
     );
     const server = app.listen(0, "127.0.0.1");

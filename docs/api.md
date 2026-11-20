@@ -46,7 +46,9 @@ Configure the Creem dashboard webhook destination as
 `CREEM_WEBHOOK_SECRET`. Paid events grant credits exactly once. Scheduled cancellation,
 final cancellation, past-due, expired, and subscription-update events synchronize the
 provider-neutral subscription state; a cancellation does not expire an already-paid
-credit lot before its recorded period end.
+credit lot before its recorded period end. The route accepts at most 120 requests per minute
+in total and answers `429` with the code `rate_limited` beyond that; Creem retries those
+deliveries.
 
 Bullstudio runs as a separate, opt-in Docker service and discovers Careerden's BullMQ queues
 from Redis. Start it with:

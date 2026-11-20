@@ -16,7 +16,7 @@ review or download.
 - Linting and formatting: ESLint 10, typescript-eslint 8.61, Prettier 3.8
 - Testing: Vitest 2.1
 - API: Express 4.21, Zod 3.24 for validation
-- Desktop runtime: Electron 43 with a Vite renderer in development and a bundled custom
+- Desktop runtime: Electron 45 with a Vite renderer in development and a bundled custom
   protocol renderer in packaged builds
 - Web app: React 19, React Router 7, Vite 6, Tailwind CSS 4, Tiptap 3
 - Persistence: PostgreSQL via `pg` and Knex 3.1 for API database access and

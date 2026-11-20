@@ -32,7 +32,7 @@ function createRecovery(overrides: Partial<StartupRecoveryOptions> = {}) {
     appVersion: "0.7.0",
     formatDiagnostics: vi.fn(async () => "diagnostics"),
     redact: (text: string) => text.split("/Users/ada").join("~"),
-    writeClipboard: vi.fn(),
+    writeClipboard: vi.fn(async () => undefined),
     openDataFolder: vi.fn(async () => undefined),
     restart: vi.fn(),
     quit: vi.fn(),
